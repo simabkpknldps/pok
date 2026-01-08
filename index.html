@@ -1,37 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Login SiMAB</title>
+
+<style>
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f0f2f5;
+    font-family: Arial, sans-serif;
+}
+
+.login-box {
+    background: white;
+    padding: 30px;
+    width: 360px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+label {
+    font-weight: bold;
+    font-size: 13px;
+}
+
+input {
+    width: 100%;
+    padding: 8px;
+    margin: 6px 0 14px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #0066cc;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.error {
+    margin-top: 10px;
+    color: red;
+    text-align: center;
+    font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="login-box">
+    <h2>Selamat Datang di<br>SiMAB KPKNL Denpasar</h2>
+
+    <label>NIP</label>
+    <input type="text" id="nip">
+
+    <label>Password</label>
+    <input type="password" id="password">
+
+    <button onclick="login()">Login</button>
+
+    <div class="error" id="errorMsg"></div>
+</div>
+
 <script>
-const apiURL = "https://script.google.com/macros/s/AKfycbyJW9AA2Bf2B2zSdCBoKxKrVEz1V9Fk_hUne0gZjVI3R8G1r9gD6aToTj4Gl_Basuxj/exec";
+const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=1082476110&single=true&output=csv";
 
 async function login() {
-    const nip = document.getElementById("nip").value.trim();
-    const password = document.getElementById("password").value.trim();
+    const nipInput = document.getElementById("nip").value.trim();
+    const passInput = document.getElementById("password").value.trim();
     const errorMsg = document.getElementById("errorMsg");
 
     errorMsg.textContent = "Memeriksa data...";
 
-    try {
-        const response = await fetch(apiURL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                nip: nip,
-                password: password
-            })
-        });
+    const response = await fetch(sheetURL + "&t=" + new Date().getTime());
+    const text = await response.text();
 
-        const result = await response.json();
+    const rows = text.split("\n").slice(1); // skip header
+    let found = false;
 
-        if (result.status === "success") {
-            sessionStorage.setItem("nama", result.nama);
-            sessionStorage.setItem("unit", result.unit);
-            window.location.href = "data_pok.html";
-        } else {
-            errorMsg.textContent = result.message;
+    for (let row of rows) {
+        const cols = row.split(",");
+
+        const nip = cols[1]?.trim();   // kolom B
+        const pass = cols[6]?.trim();  // kolom G
+
+        if (nip === nipInput && pass === passInput) {
+            found = true;
+            break;
         }
+    }
 
-    } catch (err) {
-        errorMsg.textContent = "Gagal terhubung ke server";
+    if (found) {
+        window.location.href = "index.html";
+    } else {
+        errorMsg.textContent = "NIP atau Password salah";
     }
 }
 </script>
+
+</body>
+</html>
