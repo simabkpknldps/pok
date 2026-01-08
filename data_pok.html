@@ -282,6 +282,10 @@ window.rekamKegiatan = function(kode, uraian) {
     // simpan data row terpilih
     sessionStorage.setItem("mak", kode);
     sessionStorage.setItem("uraian", uraian);
+    sessionStorage.setItem("pagu", r[idxPagu]);
+    sessionStorage.setItem("blokir", r[idxBlokir]);
+    sessionStorage.setItem("realisasi", r[idxRealisasi]);
+    sessionStorage.setItem("sisa", r[idxSisa]);
 
     // pindah halaman
     window.location.href = "/pok/rekam_kegiatan.html";
@@ -294,6 +298,7 @@ setInterval(loadData,60000);
 </script>
 </body>
 </html>
+
 
 
 
