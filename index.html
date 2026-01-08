@@ -5,6 +5,7 @@
 <title>POK</title>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
 body {
@@ -12,9 +13,20 @@ body {
     margin: 20px;
 }
 
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+input[type="text"] {
+    padding: 6px;
+    width: 300px;
+}
+
 select {
     padding: 6px;
-    margin-bottom: 15px;
 }
 
 table {
@@ -32,7 +44,6 @@ th {
     background: #f2f2f2;
 }
 
-/* WARNA ROW */
 .rm {
     color: blue;
     font-weight: bold;
@@ -42,32 +53,54 @@ th {
     color: orange;
     font-weight: bold;
 }
+
+.menu a {
+    margin-right: 15px;
+    text-decoration: none;
+    font-weight: bold;
+    color: #0066cc;
+}
 </style>
 </head>
 
 <body>
 
+<div class="menu">
+    <a href="pok.html">POK</a>
+    <a href="kegiatan.html">Kegiatan</a>
+</div>
+
 <h2>POK</h2>
 
-<select id="cmbFilter">
-    <option value="Semua">Semua</option>
-    <option value="Umum">Umum</option>
-    <option value="PKN">PKN</option>
-    <option value="PN">PN</option>
-    <option value="Penilaian">Penilaian</option>
-    <option value="Lelang">Lelang</option>
-    <option value="HI">HI</option>
-    <option value="KI">KI</option>
-</select>
+<div class="topbar">
+    <div>
+        <select id="cmbFilter">
+            <option value="Semua">Semua</option>
+            <option value="Umum">Umum</option>
+            <option value="PKN">PKN</option>
+            <option value="PN">PN</option>
+            <option value="Penilaian">Penilaian</option>
+            <option value="Lelang">Lelang</option>
+            <option value="HI">HI</option>
+            <option value="KI">KI</option>
+        </select>
+
+        <input type="text" id="txtCari" placeholder="Cari Kode / Uraian...">
+    </div>
+
+    <button onclick="downloadPDF()">Download PDF</button>
+</div>
 
 <div style="font-size:12px;color:#666;margin-bottom:6px;">
     Last update: <span id="lastUpdate">-</span>
 </div>
 
+<div id="areaPDF">
 <table id="tblData">
     <thead></thead>
     <tbody></tbody>
 </table>
+</div>
 
 <script>
 const BASE_CSV =
@@ -77,9 +110,7 @@ let data = [];
 let col = {};
 
 function loadData() {
-    const url = BASE_CSV + "&t=" + Date.now(); // anti cache
-
-    Papa.parse(url, {
+    Papa.parse(BASE_CSV + "&t=" + Date.now(), {
         download: true,
         skipEmptyLines: true,
         complete: res => {
@@ -92,12 +123,11 @@ function loadData() {
 }
 
 cmbFilter.addEventListener("change", renderTable);
+txtCari.addEventListener("input", renderTable);
 
 function mapKolom() {
     col = {};
-    data[0].forEach((h, i) => {
-        col[h.trim().toUpperCase()] = i;
-    });
+    data[0].forEach((h, i) => col[h.trim().toUpperCase()] = i);
 }
 
 function renderTable() {
@@ -109,6 +139,7 @@ function renderTable() {
     if (data.length < 2) return;
 
     const idxKode = col["KODE"];
+    const idxUraian = col["URAIAN"];
     const idxSD = col["SD"];
     const idxSeksi = col["SEKSI"];
     const idxVol = col["VOL"];
@@ -117,7 +148,11 @@ function renderTable() {
     const idxRealisasi = col["REALISASI"];
     const idxSisa = col["SISA"];
 
-    /* HEADER */
+    const filter = cmbFilter.value;
+    const keyword = txtCari.value.toLowerCase();
+    const uniqueKode = new Set();
+
+    // HEADER
     const trh = document.createElement("tr");
     data[0].forEach((h, i) => {
         if (i === idxSeksi) return;
@@ -127,13 +162,11 @@ function renderTable() {
     });
     thead.appendChild(trh);
 
-    const filter = cmbFilter.value;
-    const uniqueKode = new Set();
-
-    /* DATA */
+    // DATA
     for (let i = 1; i < data.length; i++) {
         const r = data[i];
         const kode = r[idxKode]?.trim();
+        const uraian = r[idxUraian]?.toLowerCase() || "";
         const sd = r[idxSD]?.trim().toUpperCase();
         const seksi = r[idxSeksi]?.trim();
 
@@ -144,6 +177,12 @@ function renderTable() {
             if (uniqueKode.has(kode)) continue;
             uniqueKode.add(kode);
         }
+
+        if (
+            keyword &&
+            !kode.toLowerCase().includes(keyword) &&
+            !uraian.includes(keyword)
+        ) continue;
 
         const tr = document.createElement("tr");
 
@@ -167,7 +206,18 @@ function renderTable() {
     }
 }
 
-/* LOAD PERTAMA + AUTO REFRESH TIAP 1 MENIT */
+function downloadPDF() {
+    html2pdf()
+        .set({
+            margin: 5,
+            filename: 'POK.pdf',
+            html2canvas: { scale: 2 },
+            jsPDF: { orientation: 'landscape' }
+        })
+        .from(document.getElementById("areaPDF"))
+        .save();
+}
+
 loadData();
 setInterval(loadData, 60000);
 </script>
