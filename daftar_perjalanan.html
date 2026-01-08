@@ -54,6 +54,16 @@ th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-al
 </div>
 
 <script>
+
+// Cek apakah halaman diakses via tombol
+if(sessionStorage.getItem("allowDaftar") !== "true"){
+    alert("Anda tidak bisa membuka halaman ini langsung!");
+    window.location.href = "data_pok.html"; // redirect ke page asal
+} else {
+    // hapus flag supaya tidak bisa reload langsung
+    sessionStorage.removeItem("allowDaftar");
+}
+
 const URL_GAS = "https://script.google.com/macros/s/AKfycbyCoVfbvOtnM08_VLs3k20_gXhS21buKGV3Wszf6DgCZxvSOHo0RBzK3BFv23Ll4LMiPw/exec";
 const tblData = document.getElementById("tblData");
 const txtCari = document.getElementById("txtCari");
@@ -189,3 +199,4 @@ window.addEventListener("DOMContentLoaded", () => {
 
 </body>
 </html>
+
