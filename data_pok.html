@@ -94,8 +94,10 @@ th {
         </select>
         <input type="text" id="txtCari" placeholder="Cari Kode / Uraian...">
     </div>
-    <button onclick="downloadPDF()">Download PDF</button>
-    <button onclick="logout()" style="background:#e74c3c">Logout</button>
+    <div style="display:flex; gap:8px;">
+        <button onclick="downloadPDF()">Download PDF</button>
+        <button onclick="logout()" style="background:#e74c3c">Logout</button>
+    </div>
 </div>
 
 <div id="lastUpdateContainer">Last update: <span id="lastUpdate">-</span></div>
@@ -224,13 +226,21 @@ window.addEventListener("DOMContentLoaded", () => {
             .save();
     }
 
-    function logout() {
+    window.logout = function () {
     if (confirm("Yakin ingin logout?")) {
-        sessionStorage.clear(); // hapus session login
+        sessionStorage.clear();
         window.location.href = "/pok/index.html";
     }
-    }
+    };
 
+
+    window.addEventListener("pageshow", () => {
+        if (!sessionStorage.getItem("nama")) {
+            window.location.replace("/pok/index.html");
+        }
+    });
+
+    
     window.downloadPDF = downloadPDF;
 
     loadData();
@@ -239,6 +249,7 @@ window.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+
 
 
 
