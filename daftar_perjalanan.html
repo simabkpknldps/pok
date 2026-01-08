@@ -8,14 +8,12 @@
 body { font-family: 'Inter', Arial, sans-serif; margin:20px; background:#f5f6fa; color:#333; }
 h2 { margin-bottom:10px; }
 
-.filter-bar { margin-bottom:5px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.filter-bar { margin-bottom:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .filter-bar label { font-size:14px; }
 .filter-bar select, .filter-bar input { padding:6px; font-size:13px; }
 .filter-bar input { flex:1; min-width:150px; }
 
-.last-update { font-size:12px; color:#555; margin-left:4px; margin-bottom:10px; }
-
-.table-container { max-height: calc(100vh - 180px); overflow:auto; background:white; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+.table-container { max-height: calc(100vh - 160px); overflow:auto; background:white; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
 table { border-collapse:collapse; width:100%; min-width:900px; font-size:13px; table-layout:fixed; }
 th, td { border:1px solid #ddd; padding:8px; word-wrap:break-word; }
 th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-align:left; white-space:normal; font-size:12px; }
@@ -48,9 +46,6 @@ th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-al
     <button class="btn-back" onclick="window.location.href='data_pok.html'">Kembali</button>
 </div>
 
-<!-- Label Last Update -->
-<div class="last-update">Last Update: <span id="lblLastUpdate">-</span></div>
-
 <div class="table-container">
     <table id="tblData">
         <thead></thead>
@@ -63,7 +58,6 @@ const URL_GAS = "https://script.google.com/macros/s/AKfycbyCoVfbvOtnM08_VLs3k20_
 const tblData = document.getElementById("tblData");
 const txtCari = document.getElementById("txtCari");
 const cmbFilter = document.getElementById("cmbFilter");
-const lblLastUpdate = document.getElementById("lblLastUpdate");
 let data = [];
 
 // Format tanggal ke yyyy-MM-dd
@@ -117,6 +111,7 @@ function renderTable() {
     const keyword = txtCari.value.toLowerCase();
     const filterVal = cmbFilter.value;
 
+    // Mulai dari index 1
     let rows = data.slice(1);
 
     // Filter Belum Terbayar
@@ -176,17 +171,7 @@ function renderTable() {
 function loadData() {
     fetch(URL_GAS + "?t=" + Date.now())
         .then(res => res.json())
-        .then(json => {
-            data=json;
-            renderTable();
-
-            // Update Last Update
-            const now = new Date();
-            const hh = String(now.getHours()).padStart(2,'0');
-            const mm = String(now.getMinutes()).padStart(2,'0');
-            const ss = String(now.getSeconds()).padStart(2,'0');
-            lblLastUpdate.textContent = `${hh}:${mm}:${ss}`;
-        })
+        .then(json => { data=json; renderTable(); })
         .catch(err => console.error(err));
 }
 
@@ -198,7 +183,7 @@ window.addEventListener("DOMContentLoaded", () => {
     loadData();
 
     // Auto reload tiap 1 menit
-    setInterval(loadData, 60000);
+    setInterval(loadData, 60000); // 60.000 ms = 1 menit
 });
 </script>
 
