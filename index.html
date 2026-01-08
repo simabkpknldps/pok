@@ -46,8 +46,9 @@ button { width: 100%; padding: 10px; background: #0066cc; color: white; border: 
     <div class="error" id="errorMsg"></div>
 </div>
 
-<!-- Script PapaParse dan login -->
+<!-- PapaParse -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
 <script>
 const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=1082476110&single=true&output=csv";
 
@@ -62,6 +63,7 @@ async function login() {
     }
 
     errorMsg.textContent = "Memeriksa data...";
+    console.log("Input NIP:", nipInput, "Password:", passInput); // debug
 
     try {
         const response = await fetch(sheetURL + "&t=" + Date.now());
@@ -75,11 +77,15 @@ async function login() {
                 for (let row of results.data) {
                     const nip  = row.NIP?.toString().trim();
                     const pass = row.Password?.toString().trim();
+
+                    console.log("CSV NIP:", nip, "Password:", pass); // debug
+
                     if (nip === nipInput && pass === passInput) {
                         found = true;
                         break;
                     }
                 }
+
                 if (found) {
                     alert("Login berhasil");
                     window.location.href = "/pok/data_pok.html";
