@@ -12,7 +12,6 @@ body {
     color: #333;
 }
 h2 { margin-bottom: 10px; }
-
 .filter-bar {
     margin-bottom: 10px;
     display: flex;
@@ -24,7 +23,6 @@ h2 { margin-bottom: 10px; }
     padding: 6px;
     font-size: 13px;
 }
-.filter-bar input { flex: 1; } /* textbox mengisi sisa ruang */
 
 .table-container {
     max-height: calc(100vh - 150px);
@@ -58,13 +56,8 @@ th {
 
 <div class="filter-bar">
     <label>Filter</label>
-    <select id="cmbFilter">
-        <option value="Nama">Nama</option>
-        <option value="NomorST">Nomor ST</option>
-        <option value="BelumTerbayar">Belum Terbayar</option>
-        <option value="Terbayar">Terbayar</option>
-    </select>
-    <input type="text" id="txtCari" placeholder="Ketik kata kunci...">
+    <select id="cmbFilter"></select>
+    <input type="text" id="txtCari" placeholder="Cari...">
 </div>
 
 <div class="table-container">
@@ -75,7 +68,7 @@ th {
 </div>
 
 <script>
-const URL_GAS = "https://script.google.com/macros/s/AKfycbxFiX8IJYwpRvu9pVR_41M_e-SApAyKxGcU9TvKbeEmIwvgx7syWYVKQyGwz-KonnR9/exec"; // ganti URL GASmu
+const URL_GAS = "https://script.google.com/macros/s/YOUR_GAS_URL/exec"; // ganti dengan URL GAS
 
 const tblData = document.getElementById("tblData");
 const cmbFilter = document.getElementById("cmbFilter");
@@ -88,18 +81,32 @@ function loadData() {
         .then(res => res.json())
         .then(json => {
             data = json;
+            if(data.length < 1) return;
+
+            // isi combobox filter dengan nama header (misal kolom Nama, No ST, Status Bayar)
+            cmbFilter.innerHTML = "";
+            const headers = data[0];
+            // contoh filter: ambil kolom yang relevan (Nama, No ST, Status Bayar)
+            const filterCols = headers.filter(h => /Nama|ST|Status/i.test(h));
+            filterCols.forEach(h=>{
+                const opt = document.createElement("option");
+                opt.value = h;
+                opt.textContent = h;
+                cmbFilter.appendChild(opt);
+            });
+
             renderTable();
         })
         .catch(err => console.error("Gagal load data:", err));
 }
 
 function renderTable() {
+    if(data.length < 1) return;
+
     const thead = tblData.tHead || tblData.createTHead();
     const tbody = tblData.tBodies[0] || tblData.createTBody();
     thead.innerHTML = "";
     tbody.innerHTML = "";
-
-    if(data.length < 1) return;
 
     // HEADER
     const trh = document.createElement("tr");
@@ -110,23 +117,18 @@ function renderTable() {
     });
     thead.appendChild(trh);
 
-    const filter = cmbFilter.value.toLowerCase();
-    const keyword = txtCari.value.toLowerCase();
-
     // DATA
+    const filterColName = cmbFilter.value;
+    const keyword = txtCari.value.toLowerCase();
+    const filterIndex = data[0].findIndex(h=>h===filterColName);
+
     for(let i=1; i<data.length; i++){
         const row = data[i];
 
-        // Filter berdasarkan combobox + textbox
-        let include = true;
-        if(keyword){
-            const colIndex = getColumnIndex(filter);
-            if(colIndex !== -1){
-                const val = row[colIndex]?.toString().toLowerCase() || "";
-                include = val.includes(keyword);
-            }
+        if(filterIndex >= 0 && keyword) {
+            const cellVal = (row[filterIndex] ?? "").toString().toLowerCase();
+            if(!cellVal.includes(keyword)) continue;
         }
-        if(!include) continue;
 
         const tr = document.createElement("tr");
         row.forEach(c=>{
@@ -138,21 +140,8 @@ function renderTable() {
     }
 }
 
-// Helper: ambil indeks kolom berdasarkan nama filter
-function getColumnIndex(name){
-    const header = data[0].map(h => h.toString().toLowerCase());
-    switch(name){
-        case "nama": return header.indexOf("nama");
-        case "nomorst": return header.indexOf("nomor st");
-        case "belumterbayar": return header.indexOf("belum terbayar");
-        case "terbayar": return header.indexOf("terbayar");
-        default: return -1;
-    }
-}
-
-// Event listener textbox & combobox
-txtCari.addEventListener("input", renderTable);
 cmbFilter.addEventListener("change", renderTable);
+txtCari.addEventListener("input", renderTable);
 
 window.addEventListener("DOMContentLoaded", loadData);
 </script>
