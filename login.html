@@ -2,118 +2,111 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>POK</title>
-
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<title>Login SiMAB</title>
 
 <style>
-body { font-family: Arial; margin: 20px; }
-select { padding: 6px; margin-bottom: 15px; }
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 13px;
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f0f2f5;
+    font-family: Arial, sans-serif;
 }
 
-th, td {
-  border: 1px solid #ccc;
-  padding: 6px;
+.login-box {
+    background: white;
+    padding: 30px;
+    width: 360px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-th { background: #f2f2f2; }
+h2 {
+    text-align: center;
+    margin-bottom: 25px;
+}
 
-.rm { color: blue; font-weight: bold; }
-.pnbp { color: orange; font-weight: bold; }
+label {
+    font-weight: bold;
+    font-size: 13px;
+}
+
+input {
+    width: 100%;
+    padding: 8px;
+    margin: 6px 0 14px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #0066cc;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.error {
+    margin-top: 10px;
+    color: red;
+    text-align: center;
+    font-size: 12px;
+}
 </style>
 </head>
 
 <body>
 
-<h2>POK</h2>
+<div class="login-box">
+    <h2>Selamat Datang di<br>SiMAB KPKNL Denpasar</h2>
 
-<select id="cmbFilter">
-  <option value="Semua">Semua</option>
-  <option>Umum</option>
-  <option>PKN</option>
-  <option>PN</option>
-  <option>Penilaian</option>
-  <option>Lelang</option>
-  <option>HI</option>
-  <option>KI</option>
-</select>
+    <label>NIP</label>
+    <input type="text" id="nip">
 
-<table id="tblData">
-  <thead></thead>
-  <tbody></tbody>
-</table>
+    <label>Password</label>
+    <input type="password" id="password">
+
+    <button onclick="login()">Login</button>
+
+    <div class="error" id="errorMsg"></div>
+</div>
 
 <script>
-const CSV_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?output=csv";
+const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=1082476110&single=true&output=csv";
 
-let data = [];
+async function login() {
+    const nipInput = document.getElementById("nip").value.trim();
+    const passInput = document.getElementById("password").value.trim();
+    const errorMsg = document.getElementById("errorMsg");
 
-Papa.parse(CSV_URL, {
-  download: true,
-  skipEmptyLines: true,
-  complete: res => {
-    data = res.data;
-    console.log("ROW COUNT:", data.length); // DEBUG
-    render();
-  }
-});
+    errorMsg.textContent = "Memeriksa data...";
 
-cmbFilter.onchange = render;
+    const response = await fetch(sheetURL + "&t=" + new Date().getTime());
+    const text = await response.text();
 
-function render() {
-  const thead = tblData.tHead || tblData.createTHead();
-  const tbody = tblData.tBodies[0] || tblData.createTBody();
+    const rows = text.split("\n").slice(1); // skip header
+    let found = false;
 
-  thead.innerHTML = "";
-  tbody.innerHTML = "";
+    for (let row of rows) {
+        const cols = row.split(",");
 
-  if (data.length <= 1) return;
+        const nip = cols[1]?.trim();   // kolom B
+        const pass = cols[6]?.trim();  // kolom G
 
-  // HEADER
-  const hr = document.createElement("tr");
-  data[0].forEach(h => {
-    const th = document.createElement("th");
-    th.textContent = h;
-    hr.appendChild(th);
-  });
-  thead.appendChild(hr);
-
-  const seen = new Set();
-  const filter = cmbFilter.value;
-
-  for (let i = 1; i < data.length; i++) {
-    const r = data[i];
-    const kode = r[0]?.trim();
-    const sd   = r[1]?.trim();
-    const seksi= r[8]?.trim();
-
-    if (!kode) continue;
-    if (filter !== "Semua" && seksi !== filter) continue;
-
-    if (filter === "Semua") {
-      if (seen.has(kode)) continue;
-      seen.add(kode);
+        if (nip === nipInput && pass === passInput) {
+            found = true;
+            break;
+        }
     }
 
-    const tr = document.createElement("tr");
-
-    if (kode.length > 27 && sd === "RM") tr.className = "rm";
-    if (kode.length > 27 && sd === "PNBP") tr.className = "pnbp";
-
-    r.forEach(c => {
-      const td = document.createElement("td");
-      td.textContent = c ?? "";
-      tr.appendChild(td);
-    });
-
-    tbody.appendChild(tr);
-  }
+    if (found) {
+        window.location.href = "index.html";
+    } else {
+        errorMsg.textContent = "NIP atau Password salah";
+    }
 }
 </script>
 
