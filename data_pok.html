@@ -95,7 +95,7 @@ th {
         <input type="text" id="txtCari" placeholder="Cari Kode / Uraian...">
     </div>
     <button onclick="downloadPDF()">Download PDF</button>
-    <button onclick="logOut()">Log Out</button>
+    <button onclick="logout()" style="background:#e74c3c">Logout</button>
 </div>
 
 <div id="lastUpdateContainer">Last update: <span id="lastUpdate">-</span></div>
@@ -224,11 +224,11 @@ window.addEventListener("DOMContentLoaded", () => {
             .save();
     }
 
-    function logOut() {
-        html2pdf()
-            .set({margin:5, filename:'POK.pdf', html2canvas:{scale:2}, jsPDF:{orientation:'landscape'}})
-            .from(document.getElementById("areaPDF"))
-            .save();
+    function logout() {
+    if (confirm("Yakin ingin logout?")) {
+        sessionStorage.clear(); // hapus session login
+        window.location.href = "/pok/index.html";
+    }
     }
 
     window.downloadPDF = downloadPDF;
@@ -239,6 +239,7 @@ window.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+
 
 
 
