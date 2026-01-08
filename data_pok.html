@@ -48,12 +48,13 @@ button {
 button:hover { background: #0052a3; }
 
 .table-container {
-    max-height: 500px; /* tinggi scroll vertikal, bisa disesuaikan */
-    overflow: auto;    /* scroll vertikal + horizontal */
+    max-height: calc(100vh - 150px); /* 100% tinggi layar dikurangi header/topbar */
+    overflow: auto;                  /* scroll vertikal + horizontal */
     background: white;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
+
 
 table {
     border-collapse: collapse;
@@ -324,4 +325,5 @@ setInterval(loadData,60000);
 </script>
 </body>
 </html>
+
 
