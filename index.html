@@ -1,33 +1,44 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
 <script>
 const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=1082476110&single=true&output=csv";
 
 async function login() {
-    const nipInput = document.getElementById("nip").value.trim();
+    const nipInput  = document.getElementById("nip").value.trim();
     const passInput = document.getElementById("password").value.trim();
-    const errorMsg = document.getElementById("errorMsg");
+    const errorMsg  = document.getElementById("errorMsg");
+
+    if (!nipInput || !passInput) {
+        errorMsg.textContent = "NIP dan Password wajib diisi";
+        return;
+    }
+
     errorMsg.textContent = "Memeriksa data...";
 
     try {
-        const response = await fetch(sheetURL + "&t=" + new Date().getTime());
+        const response = await fetch(sheetURL + "&t=" + Date.now());
         const csvText = await response.text();
 
         Papa.parse(csvText, {
             header: true,
             skipEmptyLines: true,
-            complete: function(results) {
-                const data = results.data;
+            complete: function (results) {
+
                 let found = false;
 
-                for (let row of data) {
-                    if (row.NIP?.trim() === nipInput && row.Password?.trim() === passInput) {
+                for (let row of results.data) {
+                    const nip  = row.NIP?.toString().trim();
+                    const pass = row.Password?.toString().trim();
+
+                    if (nip === nipInput && pass === passInput) {
                         found = true;
                         break;
                     }
                 }
 
                 if (found) {
-                    window.location.href = "data_pok.html";
+                    alert("Login berhasil");
+                    window.location.href = "/pok/data_pok.html";
                 } else {
                     errorMsg.textContent = "NIP atau Password salah";
                 }
@@ -36,8 +47,7 @@ async function login() {
 
     } catch (err) {
         console.error(err);
-        errorMsg.textContent = "Terjadi kesalahan saat memeriksa data";
+        errorMsg.textContent = "Gagal mengambil data login";
     }
 }
 </script>
-
