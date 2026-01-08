@@ -201,16 +201,7 @@ input[readonly] {
 </div>
 
 <script>
-
-function showLoading() {
-    document.getElementById("loadingOverlay").style.display = "flex";
-}
-
-function hideLoading() {
-    document.getElementById("loadingOverlay").style.display = "none";
-}
-
-    
+   
 document.addEventListener("DOMContentLoaded", () => {
     const mak = sessionStorage.getItem("mak");
     const uraian = sessionStorage.getItem("uraian");
@@ -299,7 +290,13 @@ function simpan() {
     });
 }
 
+function showLoading() {
+    document.getElementById("loadingOverlay").style.display = "flex";
+}
 
+function hideLoading() {
+    document.getElementById("loadingOverlay").style.display = "none";
+}
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -444,6 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
 </body>
 </html>
+
 
 
 
