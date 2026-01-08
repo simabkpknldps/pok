@@ -32,7 +32,7 @@ th {
     background: #f2f2f2;
 }
 
-/* ===== WARNA ROW ===== */
+/* WARNA ROW */
 .rm {
     color: blue;
     font-weight: bold;
@@ -60,27 +60,36 @@ th {
     <option value="KI">KI</option>
 </select>
 
+<div style="font-size:12px;color:#666;margin-bottom:6px;">
+    Last update: <span id="lastUpdate">-</span>
+</div>
+
 <table id="tblData">
     <thead></thead>
     <tbody></tbody>
 </table>
 
 <script>
-const CSV_URL =
+const BASE_CSV =
 "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?output=csv";
 
 let data = [];
 let col = {};
 
-Papa.parse(CSV_URL, {
-    download: true,
-    skipEmptyLines: true,
-    complete: res => {
-        data = res.data;
-        mapKolom();
-        renderTable();
-    }
-});
+function loadData() {
+    const url = BASE_CSV + "&t=" + Date.now(); // anti cache
+
+    Papa.parse(url, {
+        download: true,
+        skipEmptyLines: true,
+        complete: res => {
+            data = res.data;
+            mapKolom();
+            renderTable();
+            lastUpdate.textContent = new Date().toLocaleTimeString();
+        }
+    });
+}
 
 cmbFilter.addEventListener("change", renderTable);
 
@@ -108,10 +117,10 @@ function renderTable() {
     const idxRealisasi = col["REALISASI"];
     const idxSisa = col["SISA"];
 
-    /* ===== HEADER ===== */
+    /* HEADER */
     const trh = document.createElement("tr");
     data[0].forEach((h, i) => {
-        if (i === idxSeksi) return; // hide SEKSI
+        if (i === idxSeksi) return;
         const th = document.createElement("th");
         th.textContent = h;
         trh.appendChild(th);
@@ -121,10 +130,9 @@ function renderTable() {
     const filter = cmbFilter.value;
     const uniqueKode = new Set();
 
-    /* ===== DATA ===== */
+    /* DATA */
     for (let i = 1; i < data.length; i++) {
         const r = data[i];
-
         const kode = r[idxKode]?.trim();
         const sd = r[idxSD]?.trim().toUpperCase();
         const seksi = r[idxSeksi]?.trim();
@@ -143,7 +151,7 @@ function renderTable() {
         if (kode.length > 27 && sd === "PNBP") tr.className = "pnbp";
 
         r.forEach((c, idx) => {
-            if (idx === idxSeksi) return; // hide SEKSI
+            if (idx === idxSeksi) return;
 
             const td = document.createElement("td");
             td.textContent = c ?? "";
@@ -158,6 +166,10 @@ function renderTable() {
         tbody.appendChild(tr);
     }
 }
+
+/* LOAD PERTAMA + AUTO REFRESH TIAP 1 MENIT */
+loadData();
+setInterval(loadData, 60000);
 </script>
 
 </body>
