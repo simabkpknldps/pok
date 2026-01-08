@@ -175,6 +175,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // set tanggal hari ini
     txtTanggal.value = new Date().toISOString().split("T")[0];
+
+    const txtPagu = document.getElementById("txtPagu");
+    const txtBlokir = document.getElementById("txtBlokir");
+    const txtRealisasi = document.getElementById("txtRealisasi");
+    const txtJumlah = document.getElementById("txtJumlah");
+    const txtSisa = document.getElementById("txtSisa");
+    const txtStatusDana = document.getElementById("txtStatusDana");
+
+    function hitungSisa() {
+        const pagu = toNumber(txtPagu.value);
+        const blokir = toNumber(txtBlokir.value);
+        const realisasi = toNumber(txtRealisasi.value);
+        const jumlah = toNumber(txtJumlah.value);
+
+        const sisa = pagu - blokir - realisasi - jumlah;
+
+        txtSisa.value = formatNumber(sisa);
+
+        if (sisa < 0) {
+            txtStatusDana.value = "Dana Tidak Mencukupi";
+            txtStatusDana.style.color = "red";
+        } else {
+            txtStatusDana.value = "Dana Cukup";
+            txtStatusDana.style.color = "green";
+        }
+    }
+
+    // Auto format saat mengetik JUMLAH
+    txtJumlah.addEventListener("input", () => {
+        const angka = toNumber(txtJumlah.value);
+        txtJumlah.value = formatNumber(angka);
+        hitungSisa();
+    });
+
+});
 });
 
 function batal(){
@@ -228,6 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 </body>
 </html>
+
 
 
 
