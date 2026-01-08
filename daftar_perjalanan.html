@@ -12,14 +12,7 @@ h2 { margin-bottom:10px; }
 .filter-bar label { font-size:14px; }
 .filter-bar input { padding:6px; font-size:13px; flex:1; }
 
-.table-container {
-    max-height: calc(100vh - 120px);
-    overflow:auto;
-    background:white;
-    border-radius:6px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.1);
-}
-
+.table-container { max-height: calc(100vh - 120px); overflow:auto; background:white; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
 table { border-collapse:collapse; width:100%; min-width:900px; font-size:13px; }
 th, td { border:1px solid #ddd; padding:8px; }
 th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-align:left; }
@@ -42,20 +35,20 @@ th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-al
 </div>
 
 <script>
-const URL_GAS = "https://script.google.com/macros/s/AKfycbzGQs-u2Z3W6c9rDd-Yb3dZqZv1TCQZ7ieFpH1t5dCpV6_EhO3vW_tAVXVR-3SQsWa7Qg/exec"; // ganti URL GAS-mu
+const URL_GAS = "https://script.google.com/macros/s/AKfycby9JpwyKhJGLnfca9KKxUsvJLShZ7w1p8H4YOxxD4iG6G-SqfD9kqHQ8QrD1HZ0uUQmeQ/exec"; // ganti URL GAS
 const tblData = document.getElementById("tblData");
 const txtCari = document.getElementById("txtCari");
 let data = [];
 
 function loadData() {
     fetch(URL_GAS + "?t=" + Date.now())
-    .then(res => res.json())
-    .then(json => {
-        data = json;
-        renderTable();
-        console.log("Data dari GAS:", data); // debug
-    })
-    .catch(err => console.error("Gagal load data:", err));
+        .then(res => res.json())
+        .then(json => {
+            data = json;
+            renderTable();
+            console.log("Data dari GAS:", data);
+        })
+        .catch(err => console.error("Gagal load data:", err));
 }
 
 function renderTable() {
@@ -66,20 +59,20 @@ function renderTable() {
     thead.innerHTML = "";
     tbody.innerHTML = "";
 
-    // Header dari sheet
+    // header = row pertama dari data
+    const header = data[0];
     const trh = document.createElement("tr");
-    data[0].forEach(h => {
+    header.forEach(h=>{
         const th = document.createElement("th");
         th.textContent = h ?? "";
         trh.appendChild(th);
     });
     thead.appendChild(trh);
 
-    // Filter client-side
     const keyword = txtCari.value.toLowerCase();
 
-    // Data
-    for(let i=1;i<data.length;i++){
+    // data = mulai index 1
+    for(let i=1; i<data.length; i++){
         const row = data[i];
         const rowText = row.join(" ").toLowerCase();
         if(keyword && !rowText.includes(keyword)) continue;
