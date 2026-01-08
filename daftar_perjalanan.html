@@ -8,16 +8,18 @@
 body { font-family: 'Inter', Arial, sans-serif; margin:20px; background:#f5f6fa; color:#333; }
 h2 { margin-bottom:10px; }
 
-.filter-bar { margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+.filter-bar { margin-bottom:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .filter-bar label { font-size:14px; }
 .filter-bar select, .filter-bar input { padding:6px; font-size:13px; }
+.filter-bar input { flex:1; min-width:150px; }
 
-.filter-bar input { flex:1; }
+.table-container { max-height: calc(100vh - 160px); overflow:auto; background:white; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+table { border-collapse:collapse; width:100%; min-width:900px; font-size:13px; table-layout:fixed; }
+th, td { border:1px solid #ddd; padding:8px; word-wrap:break-word; }
+th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-align:left; white-space:normal; }
 
-.table-container { max-height: calc(100vh - 120px); overflow:auto; background:white; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-table { border-collapse:collapse; width:100%; min-width:900px; font-size:13px; }
-th, td { border:1px solid #ddd; padding:8px; }
-th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-align:left; }
+.btn-back { padding:6px 12px; background:green; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px; }
+.btn-back:hover { opacity:0.85; }
 </style>
 </head>
 <body>
@@ -33,6 +35,8 @@ th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-al
 
     <label>Cari:</label>
     <input type="text" id="txtCari" placeholder="Cari data...">
+
+    <button class="btn-back" onclick="window.location.href='data_pok.html'">Kembali</button>
 </div>
 
 <div class="table-container">
@@ -43,21 +47,27 @@ th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-al
 </div>
 
 <script>
-const URL_GAS = "https://script.google.com/macros/s/AKfycby9JpwyKhJGLnfca9KKxUsvJLShZ7w1p8H4YOxxD4iG6G-SqfD9kqHQ8QrD1HZ0uUQmeQ/exec"; 
+const URL_GAS = "https://script.google.com/macros/s/AKfycby9JpwyKhJGLnfca9KKxUsvJLShZ7w1p8H4YOxxD4iG6G-SqfD9kqHQ8QrD1HZ0uUQmeQ/exec";
 const tblData = document.getElementById("tblData");
 const txtCari = document.getElementById("txtCari");
 const cmbFilter = document.getElementById("cmbFilter");
 let data = [];
 
-function loadData() {
-    fetch(URL_GAS + "?t=" + Date.now())
-        .then(res => res.json())
-        .then(json => {
-            data = json;
-            renderTable();
-            console.log("Data dari GAS:", data);
-        })
-        .catch(err => console.error("Gagal load data:", err));
+// Format tanggal ke yyyy-MM-dd
+function formatDate(str) {
+    if(!str) return "";
+    const d = new Date(str);
+    if(isNaN(d)) return str;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+// Format angka dengan ribuan separator
+function formatRupiah(num) {
+    if(num == null || num === "") return "";
+    return Number(num).toLocaleString('id-ID', {maximumFractionDigits:0});
 }
 
 function renderTable() {
@@ -68,12 +78,32 @@ function renderTable() {
     thead.innerHTML = "";
     tbody.innerHTML = "";
 
-    // header = row pertama dari data
-    const header = data[0];
+    // HEADER MANUAL
+    const headers = [
+        {text:"", hidden:true},           // kolom 1 hidden
+        {text:"MAK"},                      // kolom 2
+        {text:"Nomor ST"},                 // kolom 3
+        {text:"Tgl ST"},                   // kolom 4
+        {text:"Nama"},                      // kolom 5
+        {text:"Kota"},                      // kolom 6
+        {text:"Tgl ST", date:true},        // kolom 7
+        {text:"Tgl Mulai", date:true},     // kolom 8
+        {text:"Tgl Selesai", date:true},   // kolom 9
+        {text:"Tgl LPT", date:true},       // kolom 10
+        {text:"Tgl Bayar", date:true},     // kolom 11
+        {text:"Selisih LPT"},              // kolom 12
+        {text:"Selisih Bayar"},            // kolom 13
+        {text:"Jumlah", rupiah:true},      // kolom 14
+        {text:"", hidden:true},            // kolom 15 hidden
+        {text:"", hidden:true},            // kolom 16 hidden
+        {text:"Status"}                    // kolom 17
+    ];
+
     const trh = document.createElement("tr");
-    header.forEach(h=>{
+    headers.forEach(h=>{
         const th = document.createElement("th");
-        th.textContent = h ?? "";
+        th.textContent = h.text;
+        if(h.hidden) th.style.display = "none";
         trh.appendChild(th);
     });
     thead.appendChild(trh);
@@ -81,7 +111,6 @@ function renderTable() {
     const keyword = txtCari.value.toLowerCase();
     const filterVal = cmbFilter.value;
 
-    // data = mulai index 1
     for(let i=1; i<data.length; i++){
         const row = data[i];
         const rowText = row.join(" ").toLowerCase();
@@ -89,16 +118,35 @@ function renderTable() {
         // filter cari
         if(keyword && !rowText.includes(keyword)) continue;
 
-        // filter combobox (misal kolom status ada di index terakhir, bisa sesuaikan)
-        if(filterVal !== "Semua") {
-            const status = row[row.length - 1]; // misal kolom terakhir adalah status
-            if(status !== filterVal) continue;
+        // filter combobox
+        if(filterVal === "Belum Terbayar"){
+            const status = row[16]; // kolom 17 = Status
+            if(status === "Terbayar" || status === "Selesai") continue;
         }
 
         const tr = document.createElement("tr");
-        row.forEach(c=>{
+        row.forEach((c, idx)=>{
             const td = document.createElement("td");
-            td.textContent = c ?? "";
+
+            // sembunyikan kolom hidden
+            if(headers[idx]?.hidden){
+                td.style.display = "none";
+            }
+
+            // format tanggal
+            else if(headers[idx]?.date){
+                td.textContent = formatDate(c);
+            }
+
+            // format rupiah
+            else if(headers[idx]?.rupiah){
+                td.textContent = formatRupiah(c);
+            }
+
+            else{
+                td.textContent = c ?? "";
+            }
+
             tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -107,7 +155,13 @@ function renderTable() {
 
 txtCari.addEventListener("input", renderTable);
 cmbFilter.addEventListener("change", renderTable);
-window.addEventListener("DOMContentLoaded", loadData);
+
+window.addEventListener("DOMContentLoaded", () => {
+    fetch(URL_GAS + "?t=" + Date.now())
+        .then(res => res.json())
+        .then(json => { data=json; renderTable(); })
+        .catch(err => console.error(err));
+});
 </script>
 
 </body>
