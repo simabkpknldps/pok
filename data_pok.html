@@ -17,7 +17,13 @@ h2 { margin-bottom: 5px; }
     margin-bottom: 15px;
     color: #555;
 }
+
+/* === TOPBAR STICKY === */
 .topbar {
+    position: sticky;
+    top: 0;
+    background: #f5f6fa;
+    z-index: 3; /* di atas tabel */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -25,6 +31,7 @@ h2 { margin-bottom: 5px; }
     flex-wrap: wrap;
     gap: 10px;
 }
+
 .topbar select, .topbar input {
     padding: 6px;
     font-size: 13px;
@@ -41,27 +48,32 @@ button {
 button:hover { background: #0052a3; }
 
 .table-container {
-    overflow-x: auto;
+    max-height: 500px; /* tinggi scroll vertikal, bisa disesuaikan */
+    overflow: auto;    /* scroll vertikal + horizontal */
     background: white;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
+
 table {
     border-collapse: collapse;
     width: 100%;
     min-width: 900px;
     font-size: 13px;
 }
+
 th, td {
     border: 1px solid #ddd;
     padding: 8px;
 }
+
+/* === HEADER STICKY === */
 th {
-    background: #0066cc;
-    color: white;
     position: sticky;
     top: 0;
-    z-index: 1;
+    background: #0066cc;
+    color: white;
+    z-index: 2; /* pastikan di atas tbody */
     text-align: left;
 }
 
@@ -117,10 +129,10 @@ th {
 </div>
 
 <div class="table-container" id="areaPDF">
-<table id="tblData">
-    <thead></thead>
-    <tbody></tbody>
-</table>
+    <table id="tblData">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -282,16 +294,11 @@ window.logout = function(){
     }
 }
 
-
 window.rekamKegiatan = function(kode, uraian) {
-    // simpan data row terpilih
     sessionStorage.setItem("mak", kode);
     sessionStorage.setItem("uraian", uraian);
-    
-    // pindah halaman
     window.location.href = "/pok/rekam_kegiatan.html";
 };
-
 
 loadData();
 setInterval(loadData,60000);
@@ -299,14 +306,3 @@ setInterval(loadData,60000);
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
