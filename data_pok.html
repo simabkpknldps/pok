@@ -38,23 +38,20 @@ h2 { margin-bottom: 5px; }
 }
 button {
     padding: 7px 14px;
-    background: #0066cc;
-    color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 13px;
 }
-button:hover { background: #0052a3; }
+button:hover { opacity: 0.9; }
 
 .table-container {
-    max-height: calc(100vh - 150px); /* 100% tinggi layar dikurangi header/topbar */
-    overflow: auto;                  /* scroll vertikal + horizontal */
+    max-height: calc(100vh - 150px);
+    overflow: auto;
     background: white;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
-
 
 table {
     border-collapse: collapse;
@@ -68,13 +65,12 @@ th, td {
     padding: 8px;
 }
 
-/* === HEADER STICKY === */
 th {
     position: sticky;
     top: 0;
     background: #0066cc;
     color: white;
-    z-index: 2; /* pastikan di atas tbody */
+    z-index: 2;
     text-align: left;
 }
 
@@ -96,8 +92,8 @@ th {
     padding: 4px 8px;
     font-size: 11px;
 }
-.btn-rekam { background:#27ae60; }
-.btn-detil { background:#8e44ad; }
+.btn-rekam { background:#27ae60; color:white; }
+.btn-detil { background:#8e44ad; color:white; }
 </style>
 </head>
 <body>
@@ -120,10 +116,10 @@ th {
         <input type="text" id="txtCari" placeholder="Cari Kode / Uraian...">
     </div>
     <div style="display:flex; gap:8px;">
-        <button onclick="daftarPerjadin()" style="background:#8e44ad; color:#fff;">Daftar Perjalanan Dinas</button>
+        <button onclick="daftarPerjadin()" style="background:#8e44ad; color:white;">Daftar Perjalanan Dinas</button>
         <button onclick="downloadExcel()">Download Excel</button>
         <button onclick="downloadPDF()">Download PDF</button>
-        <button onclick="logout()" style="background:#e74c3c">Logout</button>
+        <button onclick="logout()" style="background:#e74c3c; color:white;">Logout</button>
     </div>
 </div>
 
@@ -142,162 +138,22 @@ th {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-    
 <script>
-window.addEventListener("DOMContentLoaded", () => {
-
-const nama = sessionStorage.getItem("nama");
-const unit = sessionStorage.getItem("unit");
-if(!nama){
-    window.location.href="/pok/index.html";
-    return;
-}
-document.getElementById("welcome").textContent = `Selamat datang, ${nama} (${unit})`;
-
-const BASE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=111618598&single=true&output=csv";
-
-let data = [];
-let col = {};
-
-const tblData = document.getElementById("tblData");
-const cmbFilter = document.getElementById("cmbFilter");
-const txtCari = document.getElementById("txtCari");
-const lastUpdate = document.getElementById("lastUpdate");
-
-function loadData(){
-    Papa.parse(BASE_CSV + "&t=" + Date.now(), {
-        download:true,
-        skipEmptyLines:true,
-        complete: res => {
-            data = res.data;
-            mapKolom();
-            renderTable();
-            lastUpdate.textContent = new Date().toLocaleTimeString();
-        }
-    });
-}
-
-cmbFilter.addEventListener("change", renderTable);
-txtCari.addEventListener("input", renderTable);
-
-function mapKolom(){
-    col = {};
-    data[0].forEach((h,i)=> col[h.trim().toUpperCase()] = i);
-}
-
-function renderTable(){
-    const thead = tblData.tHead || tblData.createTHead();
-    const tbody = tblData.tBodies[0] || tblData.createTBody();
-    thead.innerHTML = "";
-    tbody.innerHTML = "";
-
-    if(data.length < 2) return;
-
-    const idxKode = col["KODE"];
-    const idxUraian = col["URAIAN"];
-    const idxSD = col["SD"];
-    const idxSeksi = col["SEKSI"];
-    const idxVol = col["VOL"];
-    const idxPagu = col["PAGU"];
-    const idxBlokir = col["BLOKIR"];
-    const idxRealisasi = col["REALISASI"];
-    const idxSisa = col["SISA"];
-
-    const filter = cmbFilter.value;
-    const keyword = txtCari.value.toLowerCase();
-    const uniqueKode = new Set();
-
-    // HEADER
-    const trh = document.createElement("tr");
-    data[0].forEach((h,i)=>{
-        if(i===idxSeksi) return;
-        const th = document.createElement("th");
-        th.textContent = h;
-        trh.appendChild(th);
-    });
-    trh.appendChild(Object.assign(document.createElement("th"),{textContent:"Aksi"}));
-    thead.appendChild(trh);
-
-    // DATA
-    for(let i=1;i<data.length;i++){
-        const r = data[i];
-        const kode = r[idxKode]?.trim();
-        const uraian = r[idxUraian]?.toLowerCase() || "";
-        const sd = r[idxSD]?.trim().toUpperCase();
-        const seksi = r[idxSeksi]?.trim();
-
-        if(!kode) continue;
-        if(filter!=="Semua" && seksi!==filter) continue;
-
-        if(filter==="Semua"){
-            if(uniqueKode.has(kode)) continue;
-            uniqueKode.add(kode);
-        }
-
-        if(keyword && !kode.toLowerCase().includes(keyword) && !uraian.includes(keyword)) continue;
-
-        const tr = document.createElement("tr");
-        if(kode.length>27 && sd==="RM") tr.className="rm";
-        if(kode.length>27 && sd==="PNBP") tr.className="pnbp";
-
-        r.forEach((c,idx)=>{
-            if(idx===idxSeksi) return;
-            const td = document.createElement("td");
-            td.textContent = c ?? "";
-            if(idx===idxVol) td.style.textAlign="center";
-            if([idxPagu,idxBlokir,idxRealisasi,idxSisa].includes(idx))
-                td.style.textAlign="right";
-            tr.appendChild(td);
-        });
-
-        // === AKSI ===
-        const tdAksi = document.createElement("td");
-        if(kode.length > 27){
-            const div = document.createElement("div");
-            div.className="aksi-btn";
-        
-            const btnR = document.createElement("button");
-            btnR.textContent = "Rekam";
-            btnR.className = "btn-rekam";
-            btnR.onclick = () => {
-                sessionStorage.setItem("mak", r[idxKode]);
-                sessionStorage.setItem("uraian", r[idxUraian]);
-                sessionStorage.setItem("pagu", r[idxPagu]);
-                sessionStorage.setItem("blokir", r[idxBlokir]);
-                sessionStorage.setItem("realisasi", r[idxRealisasi]);
-                sessionStorage.setItem("sisa", r[idxSisa]);
-                window.location.href = "/pok/rekam_kegiatan.html";
-            };
-        
-            const btnD = document.createElement("button");
-            btnD.textContent="Detil";
-            btnD.className="btn-detil";
-            btnD.onclick=()=>alert("Detil:\n"+kode);
-        
-            div.append(btnR, btnD);
-            tdAksi.appendChild(div);
-        }
-
-        tr.appendChild(tdAksi);
-        tbody.appendChild(tr);
-    }
+// === GLOBAL FUNCTION ===
+function daftarPerjadin() {
+    window.location.href = "/pok/daftar_perjalanan.html";
 }
 
 window.downloadExcel = function() {
     const table = document.getElementById("tblData");
     const wb = XLSX.utils.table_to_book(table, {sheet:"POK"});
-    
-    // hapus kolom terakhir (Aksi) di setiap sheet
     const ws = wb.Sheets["POK"];
     const range = XLSX.utils.decode_range(ws['!ref']);
-    range.e.c -= 1; // kurangi kolom terakhir
+    range.e.c -= 1; // hapus kolom aksi
     ws['!ref'] = XLSX.utils.encode_range(range);
-
     XLSX.writeFile(wb, "POK.xlsx");
 }
 
-
-    
 window.downloadPDF = function(){
     html2pdf().set({
         margin:5,
@@ -320,17 +176,148 @@ window.rekamKegiatan = function(kode, uraian) {
     window.location.href = "/pok/rekam_kegiatan.html";
 };
 
-function daftarPerjadin() {
-    window.location.href = "/pok/daftar_perjalanan.html";
-}
-    
-loadData();
-setInterval(loadData,60000);
+// === MAIN CODE ===
+window.addEventListener("DOMContentLoaded", () => {
+    const nama = sessionStorage.getItem("nama");
+    const unit = sessionStorage.getItem("unit");
+    if(!nama){
+        window.location.href="/pok/index.html";
+        return;
+    }
+    document.getElementById("welcome").textContent = `Selamat datang, ${nama} (${unit})`;
+
+    const BASE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=111618598&single=true&output=csv";
+
+    let data = [];
+    let col = {};
+
+    const tblData = document.getElementById("tblData");
+    const cmbFilter = document.getElementById("cmbFilter");
+    const txtCari = document.getElementById("txtCari");
+    const lastUpdate = document.getElementById("lastUpdate");
+
+    function loadData(){
+        Papa.parse(BASE_CSV + "&t=" + Date.now(), {
+            download:true,
+            skipEmptyLines:true,
+            complete: res => {
+                data = res.data;
+                mapKolom();
+                renderTable();
+                lastUpdate.textContent = new Date().toLocaleTimeString();
+            }
+        });
+    }
+
+    cmbFilter.addEventListener("change", renderTable);
+    txtCari.addEventListener("input", renderTable);
+
+    function mapKolom(){
+        col = {};
+        data[0].forEach((h,i)=> col[h.trim().toUpperCase()] = i);
+    }
+
+    function renderTable(){
+        const thead = tblData.tHead || tblData.createTHead();
+        const tbody = tblData.tBodies[0] || tblData.createTBody();
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+
+        if(data.length < 2) return;
+
+        const idxKode = col["KODE"];
+        const idxUraian = col["URAIAN"];
+        const idxSD = col["SD"];
+        const idxSeksi = col["SEKSI"];
+        const idxVol = col["VOL"];
+        const idxPagu = col["PAGU"];
+        const idxBlokir = col["BLOKIR"];
+        const idxRealisasi = col["REALISASI"];
+        const idxSisa = col["SISA"];
+
+        const filter = cmbFilter.value;
+        const keyword = txtCari.value.toLowerCase();
+        const uniqueKode = new Set();
+
+        // HEADER
+        const trh = document.createElement("tr");
+        data[0].forEach((h,i)=>{
+            if(i===idxSeksi) return;
+            const th = document.createElement("th");
+            th.textContent = h;
+            trh.appendChild(th);
+        });
+        trh.appendChild(Object.assign(document.createElement("th"),{textContent:"Aksi"}));
+        thead.appendChild(trh);
+
+        // DATA
+        for(let i=1;i<data.length;i++){
+            const r = data[i];
+            const kode = r[idxKode]?.trim();
+            const uraian = r[idxUraian]?.toLowerCase() || "";
+            const sd = r[idxSD]?.trim().toUpperCase();
+            const seksi = r[idxSeksi]?.trim();
+
+            if(!kode) continue;
+            if(filter!=="Semua" && seksi!==filter) continue;
+
+            if(filter==="Semua"){
+                if(uniqueKode.has(kode)) continue;
+                uniqueKode.add(kode);
+            }
+
+            if(keyword && !kode.toLowerCase().includes(keyword) && !uraian.includes(keyword)) continue;
+
+            const tr = document.createElement("tr");
+            if(kode.length>27 && sd==="RM") tr.className="rm";
+            if(kode.length>27 && sd==="PNBP") tr.className="pnbp";
+
+            r.forEach((c,idx)=>{
+                if(idx===idxSeksi) return;
+                const td = document.createElement("td");
+                td.textContent = c ?? "";
+                if(idx===idxVol) td.style.textAlign="center";
+                if([idxPagu,idxBlokir,idxRealisasi,idxSisa].includes(idx))
+                    td.style.textAlign="right";
+                tr.appendChild(td);
+            });
+
+            // === AKSI ===
+            const tdAksi = document.createElement("td");
+            if(kode.length > 27){
+                const div = document.createElement("div");
+                div.className="aksi-btn";
+
+                const btnR = document.createElement("button");
+                btnR.textContent = "Rekam";
+                btnR.className = "btn-rekam";
+                btnR.onclick = () => {
+                    sessionStorage.setItem("mak", r[idxKode]);
+                    sessionStorage.setItem("uraian", r[idxUraian]);
+                    sessionStorage.setItem("pagu", r[idxPagu]);
+                    sessionStorage.setItem("blokir", r[idxBlokir]);
+                    sessionStorage.setItem("realisasi", r[idxRealisasi]);
+                    sessionStorage.setItem("sisa", r[idxSisa]);
+                    window.location.href = "/pok/rekam_kegiatan.html";
+                };
+
+                const btnD = document.createElement("button");
+                btnD.textContent="Detil";
+                btnD.className="btn-detil";
+                btnD.onclick=()=>alert("Detil:\n"+kode);
+
+                div.append(btnR, btnD);
+                tdAksi.appendChild(div);
+            }
+
+            tr.appendChild(tdAksi);
+            tbody.appendChild(tr);
+        }
+    }
+
+    loadData();
+    setInterval(loadData,60000);
 });
 </script>
 </body>
 </html>
-
-
-
-
