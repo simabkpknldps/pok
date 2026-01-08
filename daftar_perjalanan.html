@@ -22,11 +22,11 @@ th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-al
 .btn-back:hover { opacity:0.85; }
 
 /* Warna dusty */
-.status-dusty-pink { background:#D8A7B1; }   /* Rekam Data */
-.status-dusty-gray { background:#B0B0B0; }   /* Terlaksana */
-.status-dusty-yellow { background:#F0E68C; } /* LPT */
-.status-dusty-green { background:#A3D9A5; }  /* Terbayar */
-.status-dusty-blue { background:#A0C4FF; }   /* Selesai */
+.status-dusty-pink { background:#FAEBD7; }   /* Rekam Data */
+.status-dusty-gray { background:#F0F8FF; }   /* Terlaksana */
+.status-dusty-yellow { background:#9ACD32; } /* LPT */
+.status-dusty-green { background:#D8BFD8; }  /* Terbayar */
+.status-dusty-blue { background:#B0E0E6; }   /* Selesai */
 </style>
 </head>
 <body>
@@ -127,12 +127,13 @@ function renderTable() {
         rows = rows.filter(r => r.join(" ").toLowerCase().includes(keyword));
     }
 
-    // Sort berdasarkan Tgl Mulai (index 5), ascending (paling sekarang di atas)
-    rows.sort((a,b)=>{
-        const d1 = new Date(a[5]);
-        const d2 = new Date(b[5]);
-        return d1 - d2;
-    });
+   // Sort berdasarkan Tgl Mulai (index 5), descending (paling sekarang di atas)
+        rows.sort((a,b)=>{
+            const d1 = new Date(a[5]);
+            const d2 = new Date(b[5]);
+            return d2 - d1; // dibalik
+        });
+
 
     // Render tiap row
     rows.forEach(row=>{
@@ -182,3 +183,4 @@ window.addEventListener("DOMContentLoaded", () => {
 
 </body>
 </html>
+
