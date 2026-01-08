@@ -16,7 +16,7 @@ h2 { margin-bottom:10px; }
 .table-container { max-height: calc(100vh - 160px); overflow:auto; background:white; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
 table { border-collapse:collapse; width:100%; min-width:900px; font-size:13px; table-layout:fixed; }
 th, td { border:1px solid #ddd; padding:8px; word-wrap:break-word; }
-th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-align:left; white-space:normal; }
+th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-align:left; white-space:normal; font-size:12px; } /* header lebih kecil */
 
 .btn-back { padding:6px 12px; background:green; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px; }
 .btn-back:hover { opacity:0.85; }
@@ -64,6 +64,12 @@ function formatDate(str) {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+// Format angka dengan ribuan separator
+function formatRupiah(num) {
+    if(num == null || num === "") return "";
+    return Number(num).toLocaleString('id-ID', {maximumFractionDigits:0});
+}
+
 function renderTable() {
     if(!data || data.length<1) return;
 
@@ -103,17 +109,18 @@ function renderTable() {
         row.forEach((c, idx)=>{
             const td = document.createElement("td");
 
-            // Kolom Jumlah dan Selisih tidak diformat
-            const isJumlahCol = (idx === row.length - 3); // Jumlah
-            const isSelisihLPT = (idx === row.length - 5); // Selisih LPT
-            const isSelisihBayar = (idx === row.length - 4); // Selisih Bayar
+            // Kolom Selisih LPT, Selisih Bayar, Jumlah
+            const isSelisihLPT = (idx === row.length - 5);
+            const isSelisihBayar = (idx === row.length - 4);
+            const isJumlahCol = (idx === row.length - 3);
 
-            if(isJumlahCol){
+            if(isSelisihLPT || isSelisihBayar){
                 td.textContent = c ?? "";
-                td.style.textAlign = "right"; // alignment kanan
+                td.style.textAlign = "center"; // align tengah
             }
-            else if(isSelisihLPT || isSelisihBayar){
-                td.textContent = c ?? "";
+            else if(isJumlahCol){
+                td.textContent = formatRupiah(c);
+                td.style.textAlign = "right"; // align kanan
             }
             // format tanggal jika bisa
             else if(!isNaN(Date.parse(c))){
