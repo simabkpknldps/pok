@@ -46,58 +46,42 @@ button { width: 100%; padding: 10px; background: #0066cc; color: white; border: 
     <div class="error" id="errorMsg"></div>
 </div>
 
-<!-- PapaParse -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
 <script>
-const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=1082476110&single=true&output=csv";
+const apiURL = "https://script.google.com/macros/s/AKfycbyJW9AA2Bf2B2zSdCBoKxKrVEz1V9Fk_hUne0gZjVI3R8G1r9gD6aToTj4Gl_Basuxj/exec";
 
 async function login() {
-    const nipInput  = document.getElementById("nip").value.trim();
-    const passInput = document.getElementById("password").value.trim();
-    const errorMsg  = document.getElementById("errorMsg");
+    const nip = document.getElementById("nip").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const errorMsg = document.getElementById("errorMsg");
 
-    if (!nipInput || !passInput) {
+    if (!nip || !password) {
         errorMsg.textContent = "NIP dan Password wajib diisi";
         return;
     }
 
     errorMsg.textContent = "Memeriksa data...";
-    console.log("Input NIP:", nipInput, "Password:", passInput); // debug
 
     try {
-        const response = await fetch(sheetURL + "&t=" + Date.now());
-        const csvText = await response.text();
-
-        Papa.parse(csvText, {
-            header: true,
-            skipEmptyLines: true,
-            complete: function (results) {
-                let found = false;
-                for (let row of results.data) {
-                    const nip  = row.NIP?.toString().trim();
-                    const pass = row.Password?.toString().trim();
-
-                    console.log("CSV NIP:", nip, "Password:", pass); // debug
-
-                    if (nip === nipInput && pass === passInput) {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (found) {
-                    alert("Login berhasil");
-                    window.location.href = "/pok/data_pok.html";
-                } else {
-                    errorMsg.textContent = "NIP atau Password salah";
-                }
-            }
+        const response = await fetch(apiURL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nip: nip, password: password })
         });
+
+        const result = await response.json();
+
+        if (result.status === "success") {
+            // Simpan info user di sessionStorage
+            sessionStorage.setItem("nama", result.nama);
+            sessionStorage.setItem("unit", result.unit);
+            window.location.href = "/pok/data_pok.html";
+        } else {
+            errorMsg.textContent = result.message;
+        }
 
     } catch (err) {
         console.error(err);
-        errorMsg.textContent = "Gagal mengambil data login";
+        errorMsg.textContent = "Gagal terhubung ke server";
     }
 }
 </script>
