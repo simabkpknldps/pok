@@ -2,119 +2,129 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>POK</title>
-
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
+<title>Daftar Perjalanan Dinas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
-body { font-family: Arial; margin: 20px; }
-select { padding: 6px; margin-bottom: 15px; }
+body {
+    font-family: 'Inter', Arial, sans-serif;
+    margin: 20px;
+    background: #f5f6fa;
+    color: #333;
+}
+h2 { margin-bottom: 10px; }
+.filter-bar {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.filter-bar label { font-size: 14px; }
+.filter-bar select {
+    padding: 6px;
+    font-size: 13px;
+}
 
+.table-container {
+    max-height: calc(100vh - 150px);
+    overflow: auto;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
 table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 13px;
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 900px;
+    font-size: 13px;
 }
-
 th, td {
-  border: 1px solid #ccc;
-  padding: 6px;
+    border: 1px solid #ddd;
+    padding: 8px;
 }
-
-th { background: #f2f2f2; }
-
-.rm { color: blue; font-weight: bold; }
-.pnbp { color: orange; font-weight: bold; }
+th {
+    background: #8e44ad;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
 </style>
 </head>
-
 <body>
 
-<h2>POK</h2>
+<h2>Daftar Perjalanan Dinas</h2>
 
-<select id="cmbFilter">
-  <option value="Semua">Semua</option>
-  <option>Umum</option>
-  <option>PKN</option>
-  <option>PN</option>
-  <option>Penilaian</option>
-  <option>Lelang</option>
-  <option>HI</option>
-  <option>KI</option>
-</select>
+<div class="filter-bar">
+    <label>Filter</label>
+    <select id="cmbFilter">
+        <option value="Nama">Nama</option>
+        <option value="NomorST">Nomor ST</option>
+        <option value="BelumTerbayar">Belum Terbayar</option>
+        <option value="Terbayar">Terbayar</option>
+    </select>
+</div>
 
-<table id="tblData">
-  <thead></thead>
-  <tbody></tbody>
-</table>
+<div class="table-container">
+    <table id="tblData">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+</div>
 
 <script>
-const CSV_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?output=csv";
+const URL_GAS = "https://script.google.com/macros/s/AKfycbxkhB6lCA6mbq1hjbEAOFJ7k8eqFCTEgS3T93qPu5wQPLz9Tz_hETrZuoS1wwTSIMMpyg/exec"; // ganti dengan URL GASmu
+
+const tblData = document.getElementById("tblData");
+const cmbFilter = document.getElementById("cmbFilter");
 
 let data = [];
 
-Papa.parse(CSV_URL, {
-  download: true,
-  skipEmptyLines: true,
-  complete: res => {
-    data = res.data;
-    console.log("ROW COUNT:", data.length); // DEBUG
-    render();
-  }
-});
-
-cmbFilter.onchange = render;
-
-function render() {
-  const thead = tblData.tHead || tblData.createTHead();
-  const tbody = tblData.tBodies[0] || tblData.createTBody();
-
-  thead.innerHTML = "";
-  tbody.innerHTML = "";
-
-  if (data.length <= 1) return;
-
-  // HEADER
-  const hr = document.createElement("tr");
-  data[0].forEach(h => {
-    const th = document.createElement("th");
-    th.textContent = h;
-    hr.appendChild(th);
-  });
-  thead.appendChild(hr);
-
-  const seen = new Set();
-  const filter = cmbFilter.value;
-
-  for (let i = 1; i < data.length; i++) {
-    const r = data[i];
-    const kode = r[0]?.trim();
-    const sd   = r[1]?.trim();
-    const seksi= r[8]?.trim();
-
-    if (!kode) continue;
-    if (filter !== "Semua" && seksi !== filter) continue;
-
-    if (filter === "Semua") {
-      if (seen.has(kode)) continue;
-      seen.add(kode);
-    }
-
-    const tr = document.createElement("tr");
-
-    if (kode.length > 27 && sd === "RM") tr.className = "rm";
-    if (kode.length > 27 && sd === "PNBP") tr.className = "pnbp";
-
-    r.forEach(c => {
-      const td = document.createElement("td");
-      td.textContent = c ?? "";
-      tr.appendChild(td);
-    });
-
-    tbody.appendChild(tr);
-  }
+function loadData() {
+    fetch(URL_GAS + "?t=" + Date.now())
+        .then(res => res.json())
+        .then(json => {
+            data = json;
+            renderTable();
+        })
+        .catch(err => console.error("Gagal load data:", err));
 }
+
+function renderTable() {
+    const thead = tblData.tHead || tblData.createTHead();
+    const tbody = tblData.tBodies[0] || tblData.createTBody();
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+
+    if(data.length < 1) return;
+
+    // HEADER
+    const trh = document.createElement("tr");
+    data[0].forEach(h=>{
+        const th = document.createElement("th");
+        th.textContent = h;
+        trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+
+    // DATA
+    const filter = cmbFilter.value;
+    for(let i=1; i<data.length; i++){
+        const row = data[i];
+        const tr = document.createElement("tr");
+
+        row.forEach(c=>{
+            const td = document.createElement("td");
+            td.textContent = c ?? "";
+            tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+    }
+}
+
+cmbFilter.addEventListener("change", renderTable);
+
+window.addEventListener("DOMContentLoaded", loadData);
 </script>
 
 </body>
