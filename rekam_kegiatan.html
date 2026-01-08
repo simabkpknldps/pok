@@ -334,11 +334,18 @@ function pilihTujuan(nama) {
 }
 
 /* === SEARCH === */
-document.getElementById("txtCariTujuan").addEventListener("input", function () {
-    const key = this.value.toLowerCase();
-    const hasil = dataTujuan.filter(v => v.toLowerCase().includes(key));
-    renderTujuan(hasil);
+document.addEventListener("DOMContentLoaded", () => {
+    const inputCari = document.getElementById("txtCariTujuan");
+
+    inputCari.addEventListener("input", function () {
+        const key = this.value.toLowerCase();
+        const hasil = dataTujuan.filter(v =>
+            v.toLowerCase().includes(key)
+        );
+        renderTujuan(hasil);
+    });
 });
+
 
 
 </script>
@@ -357,6 +364,7 @@ document.getElementById("txtCariTujuan").addEventListener("input", function () {
 
 </body>
 </html>
+
 
 
 
