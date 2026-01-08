@@ -13,8 +13,21 @@ body {
 }
 h2 { margin-bottom: 10px; }
 
+.filter-bar {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.filter-bar label { font-size: 14px; }
+.filter-bar input {
+    padding: 6px;
+    font-size: 13px;
+    flex: 1;
+}
+
 .table-container {
-    max-height: calc(100vh - 100px);
+    max-height: calc(100vh - 120px);
     overflow: auto;
     background: white;
     border-radius: 6px;
@@ -43,6 +56,11 @@ th {
 
 <h2>Daftar Perjalanan Dinas</h2>
 
+<div class="filter-bar">
+    <label>Cari:</label>
+    <input type="text" id="txtCari" placeholder="Cari data...">
+</div>
+
 <div class="table-container">
     <table id="tblData">
         <thead></thead>
@@ -52,8 +70,8 @@ th {
 
 <script>
 const URL_GAS = "https://script.google.com/macros/s/YOUR_GAS_URL/exec"; // ganti dengan URL GAS-mu
-
 const tblData = document.getElementById("tblData");
+const txtCari = document.getElementById("txtCari");
 let data = [];
 
 function loadData() {
@@ -83,9 +101,15 @@ function renderTable() {
     });
     thead.appendChild(trh);
 
+    // FILTER CLIENT-SIDE
+    const keyword = txtCari.value.toLowerCase();
+
     // DATA
     for(let i=1; i<data.length; i++){
         const row = data[i];
+        const rowText = row.join(" ").toLowerCase();
+        if(keyword && !rowText.includes(keyword)) continue;
+
         const tr = document.createElement("tr");
         row.forEach(c=>{
             const td = document.createElement("td");
@@ -95,6 +119,9 @@ function renderTable() {
         tbody.appendChild(tr);
     }
 }
+
+// cari data saat mengetik
+txtCari.addEventListener("input", renderTable);
 
 window.addEventListener("DOMContentLoaded", loadData);
 </script>
