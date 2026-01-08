@@ -298,14 +298,22 @@ function tutupPopup() {
 }
 
 function loadTujuan() {
-    fetch(URL_TUJUAN)
+    fetch(URL_TUJUAN + "?action=kabupaten")
         .then(res => res.json())
         .then(data => {
+            if (!Array.isArray(data)) {
+                alert("Data tujuan tidak valid");
+                return;
+            }
             dataTujuan = data;
             renderTujuan(data);
         })
-        .catch(() => alert("Gagal memuat data tujuan"));
+        .catch(err => {
+            console.error(err);
+            alert("Gagal memuat data tujuan");
+        });
 }
+
 
 function renderTujuan(list) {
     const div = document.getElementById("listTujuan");
@@ -349,6 +357,7 @@ document.getElementById("txtCariTujuan").addEventListener("input", function () {
 
 </body>
 </html>
+
 
 
 
