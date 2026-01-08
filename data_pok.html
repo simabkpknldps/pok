@@ -4,16 +4,7 @@
 <meta charset="UTF-8">
 <title>POK</title>
 
-<script>
-const nama = sessionStorage.getItem("nama");
-const unit = sessionStorage.getItem("unit");
 
-if(!nama){
-    // Belum login → redirect ke login
-    window.location.href="/pok/index.html";
-} else {
-    document.getElementById("welcome").textContent = `Selamat datang, ${nama} (${unit})`;
-}
     
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -235,5 +226,6 @@ setInterval(loadData, 60000);
 
 </body>
 </html>
+
 
 
