@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>POK</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
 <style>
 body {
     font-family: 'Inter', Arial, sans-serif;
@@ -11,14 +13,14 @@ body {
     background: #f5f6fa;
     color: #333;
 }
-h2 {
-    margin-bottom: 5px;
-}
+h2 { margin-bottom: 5px; }
+
 #welcome {
     font-size: 14px;
     margin-bottom: 15px;
     color: #555;
 }
+
 .topbar {
     display: flex;
     justify-content: space-between;
@@ -27,10 +29,13 @@ h2 {
     flex-wrap: wrap;
     gap: 10px;
 }
-.topbar select, .topbar input {
+
+.topbar select,
+.topbar input {
     padding: 6px;
     font-size: 13px;
 }
+
 button {
     padding: 7px 14px;
     background: #0066cc;
@@ -48,16 +53,19 @@ button:hover { background: #0052a3; }
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
+
 table {
     border-collapse: collapse;
     width: 100%;
     min-width: 900px;
     font-size: 13px;
 }
+
 th, td {
     border: 1px solid #ddd;
     padding: 8px;
 }
+
 th {
     background: #0066cc;
     color: white;
@@ -66,15 +74,19 @@ th {
     z-index: 1;
     text-align: left;
 }
-.rm { background-color: #e0f7fa; }      /* RM */
-.pnbp { background-color: #fff3e0; }    /* PNBP */
-#lastUpdate {
+
+.rm { background-color: #e0f7fa; }
+.pnbp { background-color: #fff3e0; }
+
+#lastUpdateContainer,
+#loadingData {
     font-size: 12px;
     color: #666;
-    margin-top: 5px;
+    margin: 5px 0;
 }
 </style>
 </head>
+
 <body>
 
 <h2>POK</h2>
@@ -92,11 +104,14 @@ th {
             <option value="HI">HI</option>
             <option value="KI">KI</option>
         </select>
+
         <input type="text" id="txtCari" placeholder="Cari Kode / Uraian...">
     </div>
+
     <button onclick="downloadPDF()">Download PDF</button>
 </div>
 
+<div id="loadingData">Memuat data...</div>
 <div id="lastUpdateContainer">Last update: <span id="lastUpdate">-</span></div>
 
 <div class="table-container" id="areaPDF">
@@ -108,19 +123,25 @@ th {
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script>
 window.addEventListener("DOMContentLoaded", () => {
-    // SESSION
+
+    /* ================= SESSION ================= */
     const nama = sessionStorage.getItem("nama");
     const unit = sessionStorage.getItem("unit");
-    if(!nama){
-        window.location.href="/pok/index.html";
-        return;
-    } else {
-        document.getElementById("welcome").textContent = `Selamat datang, ${nama} (${unit})`;
-    }
 
-    const BASE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=111618598&single=true&output=csv";
+    if (!nama) {
+        window.location.href = "/pok/index.html";
+        return;
+    }
+    document.getElementById("welcome").textContent =
+        `Selamat datang, ${nama} (${unit})`;
+
+    /* ================= CONFIG ================= */
+    const BASE_CSV =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=GID_POK_SUMBER_2026&single=true&output=csv";
+
     let data = [];
     let col = {};
 
@@ -128,16 +149,30 @@ window.addEventListener("DOMContentLoaded", () => {
     const cmbFilter = document.getElementById("cmbFilter");
     const txtCari = document.getElementById("txtCari");
     const lastUpdate = document.getElementById("lastUpdate");
+    const loadingData = document.getElementById("loadingData");
 
+    /* ================= LOAD DATA ================= */
     function loadData() {
+        loadingData.textContent = "Memuat data...";
+
         Papa.parse(BASE_CSV + "&t=" + Date.now(), {
             download: true,
             skipEmptyLines: true,
             complete: res => {
                 data = res.data;
+                if (data.length < 2) return;
+
                 mapKolom();
                 renderTable();
-                lastUpdate.textContent = new Date().toLocaleTimeString();
+
+                lastUpdate.textContent =
+                    new Date().toLocaleTimeString("id-ID");
+
+                loadingData.textContent = "";
+            },
+            error: err => {
+                console.error(err);
+                loadingData.textContent = "Gagal memuat data";
             }
         });
     }
@@ -147,16 +182,18 @@ window.addEventListener("DOMContentLoaded", () => {
 
     function mapKolom() {
         col = {};
-        data[0].forEach((h, i) => col[h.trim().toUpperCase()] = i);
+        data[0].forEach((h, i) => {
+            col[h.trim().toUpperCase()] = i;
+        });
     }
 
+    /* ================= RENDER TABLE ================= */
     function renderTable() {
         const thead = tblData.tHead || tblData.createTHead();
         const tbody = tblData.tBodies[0] || tblData.createTBody();
+
         thead.innerHTML = "";
         tbody.innerHTML = "";
-
-        if (data.length < 2) return;
 
         const idxKode = col["KODE"];
         const idxUraian = col["URAIAN"];
@@ -172,7 +209,7 @@ window.addEventListener("DOMContentLoaded", () => {
         const keyword = txtCari.value.toLowerCase();
         const uniqueKode = new Set();
 
-        // HEADER
+        /* HEADER */
         const trh = document.createElement("tr");
         data[0].forEach((h, i) => {
             if (i === idxSeksi) return;
@@ -182,7 +219,7 @@ window.addEventListener("DOMContentLoaded", () => {
         });
         thead.appendChild(trh);
 
-        // DATA
+        /* DATA */
         for (let i = 1; i < data.length; i++) {
             const r = data[i];
             const kode = r[idxKode]?.trim();
@@ -198,7 +235,11 @@ window.addEventListener("DOMContentLoaded", () => {
                 uniqueKode.add(kode);
             }
 
-            if (keyword && !kode.toLowerCase().includes(keyword) && !uraian.includes(keyword)) continue;
+            if (
+                keyword &&
+                !kode.toLowerCase().includes(keyword) &&
+                !uraian.includes(keyword)
+            ) continue;
 
             const tr = document.createElement("tr");
             if (kode.length > 27 && sd === "RM") tr.className = "rm";
@@ -208,28 +249,36 @@ window.addEventListener("DOMContentLoaded", () => {
                 if (idx === idxSeksi) return;
                 const td = document.createElement("td");
                 td.textContent = c ?? "";
+
                 if (idx === idxVol) td.style.textAlign = "center";
-                if ([idxPagu, idxBlokir, idxRealisasi, idxSisa].includes(idx)) td.style.textAlign = "right";
+                if ([idxPagu, idxBlokir, idxRealisasi, idxSisa].includes(idx))
+                    td.style.textAlign = "right";
+
                 tr.appendChild(td);
             });
+
             tbody.appendChild(tr);
         }
     }
 
-    function downloadPDF() {
+    /* ================= PDF ================= */
+    window.downloadPDF = function () {
         html2pdf()
-            .set({margin:5, filename:'POK.pdf', html2canvas:{scale:2}, jsPDF:{orientation:'landscape'}})
+            .set({
+                margin: 5,
+                filename: "POK.pdf",
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: "landscape" }
+            })
             .from(document.getElementById("areaPDF"))
             .save();
-    }
+    };
 
-    window.downloadPDF = downloadPDF;
-
+    /* ================= INIT ================= */
     loadData();
-    setInterval(loadData, 60000);
+    setInterval(loadData, 60000); // refresh tiap 1 menit
 });
 </script>
+
 </body>
 </html>
-
-
