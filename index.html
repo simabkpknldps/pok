@@ -7,24 +7,40 @@
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
-body { font-family: Arial; margin: 20px; }
-select { padding: 6px; margin-bottom: 15px; }
+body {
+    font-family: Arial;
+    margin: 20px;
+}
+
+select {
+    padding: 6px;
+    margin-bottom: 15px;
+}
 
 table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 13px;
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
 }
 
 th, td {
-  border: 1px solid #ccc;
-  padding: 6px;
+    border: 1px solid #ccc;
+    padding: 6px;
 }
 
-th { background: #f2f2f2; }
+th {
+    background: #f2f2f2;
+}
 
-.rm { color: blue; font-weight: bold; }
-.pnbp { color: orange; font-weight: bold; }
+.rm {
+    color: blue;
+    font-weight: bold;
+}
+
+.pnbp {
+    color: orange;
+    font-weight: bold;
+}
 </style>
 </head>
 
@@ -33,19 +49,19 @@ th { background: #f2f2f2; }
 <h2>POK</h2>
 
 <select id="cmbFilter">
-  <option value="Semua">Semua</option>
-  <option>Umum</option>
-  <option>PKN</option>
-  <option>PN</option>
-  <option>Penilaian</option>
-  <option>Lelang</option>
-  <option>HI</option>
-  <option>KI</option>
+    <option value="Semua">Semua</option>
+    <option>Umum</option>
+    <option>PKN</option>
+    <option>PN</option>
+    <option>Penilaian</option>
+    <option>Lelang</option>
+    <option>HI</option>
+    <option>KI</option>
 </select>
 
 <table id="tblData">
-  <thead></thead>
-  <tbody></tbody>
+    <thead></thead>
+    <tbody></tbody>
 </table>
 
 <script>
@@ -55,65 +71,84 @@ const CSV_URL =
 let data = [];
 
 Papa.parse(CSV_URL, {
-  download: true,
-  skipEmptyLines: true,
-  complete: res => {
-    data = res.data;
-    console.log("ROW COUNT:", data.length); // DEBUG
-    render();
-  }
+    download: true,
+    skipEmptyLines: true,
+    complete: function(res) {
+        data = res.data;
+        render();
+    }
 });
 
-cmbFilter.onchange = render;
+cmbFilter.addEventListener("change", render);
 
 function render() {
-  const thead = tblData.tHead || tblData.createTHead();
-  const tbody = tblData.tBodies[0] || tblData.createTBody();
+    const thead = tblData.tHead || tblData.createTHead();
+    const tbody = tblData.tBodies[0] || tblData.createTBody();
 
-  thead.innerHTML = "";
-  tbody.innerHTML = "";
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
 
-  if (data.length <= 1) return;
+    if (data.length <= 1) return;
 
-  // HEADER
-  const hr = document.createElement("tr");
-  data[0].forEach(h => {
-    const th = document.createElement("th");
-    th.textContent = h;
-    hr.appendChild(th);
-  });
-  thead.appendChild(hr);
-
-  const seen = new Set();
-  const filter = cmbFilter.value;
-
-  for (let i = 1; i < data.length; i++) {
-    const r = data[i];
-    const kode = r[0]?.trim();
-    const sd   = r[1]?.trim();
-    const seksi= r[8]?.trim();
-
-    if (!kode) continue;
-    if (filter !== "Semua" && seksi !== filter) continue;
-
-    if (filter === "Semua") {
-      if (seen.has(kode)) continue;
-      seen.add(kode);
-    }
-
-    const tr = document.createElement("tr");
-
-    if (kode.length > 27 && sd === "RM") tr.className = "rm";
-    if (kode.length > 27 && sd === "PNBP") tr.className = "pnbp";
-
-    r.forEach(c => {
-      const td = document.createElement("td");
-      td.textContent = c ?? "";
-      tr.appendChild(td);
+    // HEADER
+    const trh = document.createElement("tr");
+    data[0].forEach(h => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        trh.appendChild(th);
     });
+    thead.appendChild(trh);
 
-    tbody.appendChild(tr);
-  }
+    const seenKode = new Set();
+    const filter = cmbFilter.value;
+
+    // DATA
+    for (let i = 1; i < data.length; i++) {
+        const r = data[i];
+
+        const kode = r[0]?.trim(); // KODE
+        const sd   = r[1]?.trim(); // SD
+        const seksi= r[8]?.trim(); // FILTER
+
+        if (!kode) continue;
+
+        if (filter !== "Semua" && seksi !== filter) continue;
+
+        if (filter === "Semua") {
+            if (seenKode.has(kode)) continue;
+            seenKode.add(kode);
+        }
+
+        const tr = document.createElement("tr");
+
+        const sdVal = (sd || "").toUpperCase();
+
+        // WARNA + TEBAL
+        if (kode.length > 27 && sdVal === "RM") {
+            tr.className = "rm";
+        } 
+        else if (kode.length > 27 && sdVal === "PNBP") {
+            tr.className = "pnbp";
+        }
+
+        // ISI CELL + ALIGNMENT
+        r.forEach((c, idx) => {
+            const td = document.createElement("td");
+            td.textContent = c ?? "";
+
+            // ALIGNMENT KHUSUS
+            if (idx === 2) {                 // VOL
+                td.style.textAlign = "center";
+            }
+            else if ([3,4,5,6].includes(idx)) { // PAGU, BLOKIR, REALISASI, SISA
+                td.style.textAlign = "right";
+            }
+
+            tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+    }
 }
 </script>
 
