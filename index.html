@@ -11,16 +11,23 @@ label { font-weight:bold; font-size:13px; }
 input { width:100%; padding:8px; margin:6px 0 14px; }
 button { width:100%; padding:10px; background:#0066cc; color:white; border:none; font-weight:bold; cursor:pointer; }
 .error { margin-top:10px; color:red; text-align:center; font-size:12px; }
+.loading { text-align:center; margin-bottom:10px; font-size:12px; color:#555; }
 </style>
 </head>
 <body>
 <div class="login-box">
     <h2>Selamat Datang di<br>SiMAB KPKNL Denpasar</h2>
+
     <label>NIP</label>
     <input type="text" id="nip">
+
     <label>Password</label>
     <input type="password" id="password">
+
+    <div class="loading" id="loadingMsg"></div>
+
     <button onclick="login()">Login</button>
+
     <div class="error" id="errorMsg"></div>
 </div>
 
@@ -31,19 +38,24 @@ async function login() {
     const nip = document.getElementById("nip").value.trim();
     const password = document.getElementById("password").value.trim();
     const errorMsg = document.getElementById("errorMsg");
+    const loadingMsg = document.getElementById("loadingMsg");
+
+    errorMsg.textContent = "";
+    loadingMsg.textContent = "";
 
     if(!nip || !password){ 
         errorMsg.textContent="NIP dan Password wajib diisi"; 
         return; 
     }
 
-    errorMsg.textContent="Memeriksa data...";
+    loadingMsg.textContent = "Memeriksa data...";
 
     try {
-        // GET request dengan query parameter
         const url = `${apiURL}?nip=${encodeURIComponent(nip)}&password=${encodeURIComponent(password)}`;
         const response = await fetch(url);
         const result = await response.json();
+
+        loadingMsg.textContent = "";
 
         if(result.status==="success"){
             sessionStorage.setItem("nama", result.nama);
@@ -54,6 +66,7 @@ async function login() {
         }
     } catch(err){
         console.error(err);
+        loadingMsg.textContent = "";
         errorMsg.textContent="Gagal terhubung ke server";
     }
 }
