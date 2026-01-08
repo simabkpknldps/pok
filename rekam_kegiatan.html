@@ -262,23 +262,29 @@ function simpan() {
     data.append("tgl_input", now);
     data.append("status", "Rekam Data");            // ⬅️ Kolom P
 
-    fetch("URL_GAS_DOPOST_KAMU", {
-        method: "POST",
-        body: data
+    fetch(URL_GAS, {
+    method: "POST",
+    body: new URLSearchParams({
+        mak: txtMAK.value,
+        uraian: txtUraian.value,
+        alamat: txtTujuan.value,
+        tgl_st: txtTanggal.value,
+        jumlah: txtJumlah.value.replace(/,/g, ""),
+        nama: sessionStorage.getItem("nama"),
+        tgl_input: new Date().toISOString().split("T")[0]
     })
-    .then(res => res.text())
-    .then(res => {
-        if (res === "OK") {
-            alert("Data berhasil disimpan");
-            window.location.href = "/pok/data_pok.html";
-        } else {
-            alert("Gagal simpan: " + res);
-        }
-    })
-    .catch(err => {
-        alert("Error koneksi");
-        console.error(err);
-    });
+})
+.then(res => res.text())
+.then(res => {
+    if(res === "OK"){
+        alert("Data berhasil disimpan");
+        window.location.href = "/pok/data_pok.html";
+    } else {
+        alert("Gagal: " + res);
+    }
+})
+.catch(err => alert("ERROR: " + err));
+
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -407,6 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 </body>
 </html>
+
 
 
 
