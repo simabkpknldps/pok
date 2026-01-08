@@ -6,6 +6,54 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
+
+/* === POPUP === */
+#popupTujuan {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.popup-content {
+    background: #fff;
+    width: 400px;
+    max-height: 80vh;
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.popup-content h3 {
+    margin: 0 0 10px;
+}
+
+.popup-content input {
+    padding: 6px;
+    margin-bottom: 10px;
+}
+
+#listTujuan {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+}
+
+.item-tujuan {
+    padding: 8px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.item-tujuan:hover {
+    background: #f0f6ff;
+}
+
+    
 body {
     font-family: 'Inter', Arial, sans-serif;
     background: #f5f6fa;
@@ -234,10 +282,73 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 });
+
+const URL_TUJUAN = "https://script.google.com/macros/s/AKfycbzb9zeVkhRJ1DiFVuTj5EFZ2sqlL5Ucr5slWtc16YVXZVHqe419s-6Nz_rlLVU1zhJpjA/exec";
+
+let dataTujuan = [];
+
+function bukaPopup() {
+    document.getElementById("popupTujuan").style.display = "flex";
+    if (dataTujuan.length === 0) loadTujuan();
+}
+
+function tutupPopup() {
+    document.getElementById("popupTujuan").style.display = "none";
+}
+
+function loadTujuan() {
+    fetch(URL_TUJUAN)
+        .then(res => res.json())
+        .then(data => {
+            dataTujuan = data;
+            renderTujuan(data);
+        })
+        .catch(() => alert("Gagal memuat data tujuan"));
+}
+
+function renderTujuan(list) {
+    const div = document.getElementById("listTujuan");
+    div.innerHTML = "";
+
+    list.forEach(nama => {
+        const item = document.createElement("div");
+        item.className = "item-tujuan";
+        item.textContent = nama;
+        item.onclick = () => pilihTujuan(nama);
+        div.appendChild(item);
+    });
+}
+
+function pilihTujuan(nama) {
+    document.getElementById("txtTujuan").value = nama;
+    tutupPopup();
+}
+
+/* === SEARCH === */
+document.getElementById("txtCariTujuan").addEventListener("input", function () {
+    const key = this.value.toLowerCase();
+    const hasil = dataTujuan.filter(v => v.toLowerCase().includes(key));
+    renderTujuan(hasil);
+});
+
+
 </script>
+
+<!-- === POPUP TUJUAN === -->
+<div id="popupTujuan" style="display:none;">
+  <div class="popup-content">
+    <h3>Pilih Tujuan</h3>
+    <input type="text" id="txtCariTujuan" placeholder="Cari kabupaten...">
+
+    <div id="listTujuan"></div>
+
+    <button onclick="tutupPopup()">Tutup</button>
+  </div>
+</div>
 
 </body>
 </html>
+
 
 
 
