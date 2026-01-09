@@ -79,7 +79,7 @@ table {
     border-collapse:collapse;
     width:100%;
     font-size:13px;
-    min-width:600px;
+    min-width:800px;
 }
 th, td {
     border:1px solid #ddd;
@@ -125,7 +125,7 @@ td.right { text-align:right; }
 
 <script>
 // --- KONFIG GAS ---
-const URL_GAS = "https://script.google.com/macros/s/AKfycbxDEtsDD9z_ANY7ILixej0NzNP3OuU2pzLXf_viAHWNjIQPTGjB0n6LztzrjrsxzQjcMw/exec"; // ganti dengan URL GAS mu
+const URL_GAS = "https://script.google.com/macros/s/AKfycbxDEtsDD9z_ANY7ILixej0NzNP3OuU2pzLXf_viAHWNjIQPTGjB0n6LztzrjrsxzQjcMw/exec";
 
 // Ambil nama dari sessionStorage
 const namaPegawai = sessionStorage.getItem("pegawai_nama");
@@ -155,11 +155,13 @@ fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
 
     // --- Isi Header ST dari row 3 ---
     const theadTr = document.getElementById("theadST");
-    theadTr.innerHTML = "<th>No</th>"; // nomor
+    theadTr.innerHTML = "<th>No</th>"; // nomor urut
     if(res.headerST && res.headerST.length>0){
-        res.headerST.forEach(h => {
+        // Kolom yang diambil: B,C,D,E,G,M,P → index 1,2,3,4,6,12,15
+        const idxs = [1,2,3,4,6,12,15];
+        idxs.forEach(i => {
             const th = document.createElement("th");
-            th.textContent = h ?? "";
+            th.textContent = res.headerST[i] ?? "";
             theadTr.appendChild(th);
         });
     }
@@ -178,7 +180,7 @@ fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
 
             r.forEach((c, idx)=>{
                 const td = document.createElement("td");
-                // Kolom P (jumlah) → index terakhir
+                // Kolom terakhir (P) → jumlah → rata kanan
                 if(idx === r.length - 1){
                     td.className="right";
                     td.textContent = Number(c).toLocaleString('id-ID');
