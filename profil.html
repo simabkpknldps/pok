@@ -67,7 +67,6 @@ h2.header-title {
     color:white;
     margin-left:10px;
 }
-
 .table-container {
     margin-top:10px;
     max-height:400px;
@@ -212,7 +211,16 @@ fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
         document.getElementById("nip").textContent = p.nip;
         document.getElementById("jabatan").textContent = p.jabatan;
         document.getElementById("pangkat").textContent = p.pangkat;
-        document.getElementById("foto").src = p.foto || "https://via.placeholder.com/150";
+
+        // --- pastikan foto tampil dari Google Drive ---
+        let fotoLink = p.foto || "https://via.placeholder.com/150";
+        if(fotoLink.includes("drive.google.com")){
+            const idMatch = fotoLink.match(/\/d\/(.*?)\//);
+            if(idMatch && idMatch[1]){
+                fotoLink = `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+            }
+        }
+        document.getElementById("foto").src = fotoLink;
     }
 
     // --- Isi Header ST dari row 3 ---
