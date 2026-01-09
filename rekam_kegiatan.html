@@ -260,7 +260,7 @@ function simpan() {
     const data = new URLSearchParams();
     data.append("id", kodeUnik);
     data.append("mak", txtMAK.value);
-    data.append("uraian", txtUraian.value);
+    data.append("uraian", txtNoST.value);
     data.append("tgl_st", txtTanggal.value);
     data.append("alamat", txtTujuan.value);
     data.append("jumlah", txtJumlah.value.replace(/,/g, ""));
@@ -441,6 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
 </body>
 </html>
+
 
 
 
