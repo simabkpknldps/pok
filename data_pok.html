@@ -2,192 +2,328 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Daftar Kegiatan</title>
+<title>POK</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
-body { font-family: 'Inter', Arial, sans-serif; margin:20px; background:#f5f6fa; color:#333; }
-h2 { margin-bottom:10px; }
+body {
+    font-family: 'Inter', Arial, sans-serif;
+    margin: 20px;
+    background: #f5f6fa;
+    color: #333;
+}
+h2 { margin-bottom: 5px; }
+#welcome {
+    font-size: 14px;
+    margin-bottom: 15px;
+    color: #555;
+}
 
-.filter-bar { margin-bottom:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.filter-bar label { font-size:14px; }
-.filter-bar select, .filter-bar input { padding:6px; font-size:13px; }
-.filter-bar input { flex:1; min-width:150px; }
+/* === TOPBAR STICKY === */
+.topbar {
+    position: sticky;
+    top: 0;
+    background: #f5f6fa;
+    z-index: 3; /* di atas tabel */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
 
-.table-container { max-height: calc(100vh - 160px); overflow:auto; background:white; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-table { border-collapse:collapse; width:100%; min-width:700px; font-size:13px; table-layout:fixed; }
-th, td { border:1px solid #ddd; padding:8px; word-wrap:break-word; }
-th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-align:left; white-space:normal; font-size:12px; }
+.topbar select, .topbar input {
+    padding: 6px;
+    font-size: 13px;
+}
+button {
+    padding: 7px 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+button:hover { opacity: 0.9; }
 
-.btn-back { padding:6px 12px; background:green; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px; }
-.btn-back:hover { opacity:0.85; }
+.table-container {
+    max-height: calc(100vh - 150px);
+    overflow: auto;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
 
-/* Warna dusty */
-.status-dusty-pink { background:#FAEBD7; }   /* Rekam Data */
-.status-dusty-gray { background:#F5F5DC; }   /* Terlaksana */
-.status-dusty-yellow { background:#F0FFFF; } /* LPT */
-.status-dusty-green { background:#E6E6FA; }  /* Terbayar */
-.status-dusty-blue { background:#ADD8E6; }   /* Selesai */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 900px;
+    font-size: 13px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+th {
+    position: sticky;
+    top: 0;
+    background: #0066cc;
+    color: white;
+    z-index: 2;
+    text-align: left;
+}
+
+.rm { background-color: #e0f7fa; }
+.pnbp { background-color: #fff3e0; }
+
+#lastUpdate {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* === AKSI BUTTON === */
+.aksi-btn {
+    display: flex;
+    gap: 6px;
+}
+.aksi-btn button {
+    padding: 4px 8px;
+    font-size: 11px;
+}
+.btn-rekam { background:#27ae60; color:white; }
+.btn-detil { background:#8e44ad; color:white; }
 </style>
 </head>
 <body>
 
-<h2>Daftar Kegiatan</h2>
+<h2>POK</h2>
+<p id="welcome"></p>
 
-<div class="filter-bar">
-    <label>Filter:</label>
-    <select id="cmbFilter">
-        <option value="Semua">Semua</option>
-        <option value="Belum Terbayar">Belum Terbayar</option>
-    </select>
-
-    <label>Cari:</label>
-    <input type="text" id="txtCari" placeholder="Cari data...">
-
-    <button class="btn-back" onclick="window.location.href='data_pok.html'">Kembali</button>
+<div class="topbar">
+    <div>
+        <label>Filter Seksi</label>
+        <select id="cmbFilter">
+            <option value="Semua">Semua</option>
+            <option value="Umum">Umum</option>
+            <option value="PKN">PKN</option>
+            <option value="PN">PN</option>
+            <option value="Penilaian">Penilaian</option>
+            <option value="Lelang">Lelang</option>
+            <option value="HI">HI</option>
+            <option value="KI">KI</option>
+        </select>
+        <input type="text" id="txtCari" placeholder="Cari Kode / Uraian...">
+    </div>
+    <div style="display:flex; gap:8px;">
+        <button onclick="daftarPerjadin()" style="background:#8e44ad; color:white;">Daftar Perjalanan Dinas</button>
+        <button onclick="downloadExcel()" style="background:#0066cc; color:white;">Download Excel</button>
+        <button onclick="downloadPDF()" style="background:#0066cc; color:white;">Download PDF</button>
+        <button onclick="logout()" style="background:#e74c3c; color:white;">Logout</button>
+    </div>
 </div>
 
-<div class="table-container">
+<div style="font-size:12px;">
+    Last update: <span id="lastUpdate">-</span>
+</div>
+
+<div class="table-container" id="areaPDF">
     <table id="tblData">
         <thead></thead>
         <tbody></tbody>
     </table>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <script>
-// Ambil kode yang dikirim dari data_pok.html
-let kodeFilter = sessionStorage.getItem("selectedKode") || "";
-
-// Cek akses halaman
-if(!kodeFilter){
-    alert("Anda tidak bisa membuka halaman ini langsung!");
-    window.location.href = "data_pok.html";
+// === GLOBAL FUNCTION ===
+function daftarPerjadin() {
+    sessionStorage.setItem("allowDaftar", "true");
+    window.location.href = "/pok/daftar_perjalanan.html";
 }
 
-const URL_GAS = "https://script.google.com/macros/s/AKfycbw-eg3L56fuD5NGj8VKE8jds8ZwUwRrMKs0cYulMXGHP-E8bb97SQWa8jYgpsRSG82XnQ/exec";
-const tblData = document.getElementById("tblData");
-const txtCari = document.getElementById("txtCari");
-const cmbFilter = document.getElementById("cmbFilter");
-let data = [];
-
-// Format tanggal ke yyyy-MM-dd
-function formatDate(str) {
-    if(!str) return "";
-    const d = new Date(str);
-    if(isNaN(d)) return str;
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    return `${yyyy}-${mm}-${dd}`;
+window.downloadExcel = function() {
+    const table = document.getElementById("tblData");
+    const wb = XLSX.utils.table_to_book(table, {sheet:"POK"});
+    const ws = wb.Sheets["POK"];
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    range.e.c -= 1; // hapus kolom aksi
+    ws['!ref'] = XLSX.utils.encode_range(range);
+    XLSX.writeFile(wb, "POK.xlsx");
 }
 
-// Warna baris berdasarkan status (kolom terakhir = P)
-function getStatusClass(status){
-    switch(status){
-        case "Rekam Data": return "status-dusty-pink";
-        case "Terlaksana": return "status-dusty-gray";
-        case "LPT": return "status-dusty-yellow";
-        case "Terbayar": return "status-dusty-green";
-        case "Selesai": return "status-dusty-blue";
-        default: return "";
+window.downloadPDF = function(){
+    html2pdf().set({
+        margin:5,
+        filename:'POK.pdf',
+        html2canvas:{scale:2},
+        jsPDF:{orientation:'landscape'}
+    }).from(document.getElementById("areaPDF")).save();
+}
+
+window.logout = function(){
+    if(confirm("Yakin ingin logout?")){
+        sessionStorage.clear();
+        window.location.href="/pok/index.html";
     }
 }
 
-// Render tabel
-function renderTable() {
-    if(!data || data.length<1) return;
+window.rekamKegiatan = function(kode, uraian) {
+    sessionStorage.setItem("mak", kode);
+    sessionStorage.setItem("uraian", uraian);
+    window.location.href = "/pok/rekam_kegiatan.html";
+};
 
-    const thead = tblData.tHead || tblData.createTHead();
-    const tbody = tblData.tBodies[0] || tblData.createTBody();
-    thead.innerHTML = "";
-    tbody.innerHTML = "";
-
-    const header = data[0];
-    const trh = document.createElement("tr");
-    header.forEach(h => {
-        const th = document.createElement("th");
-        th.textContent = h ?? "";
-        trh.appendChild(th);
-    });
-    trh.appendChild(Object.assign(document.createElement("th"),{textContent:"Aksi"}));
-    thead.appendChild(trh);
-
-    const keyword = txtCari.value.toLowerCase();
-    const filterVal = cmbFilter.value;
-
-    let rows = data.slice(1);
-
-    if(filterVal === "Belum Terbayar"){
-        rows = rows.filter(r => {
-            const status = r[r.length-1];
-            return status !== "Terbayar" && status !== "Selesai";
-        });
-    }
-
-    if(keyword){
-        rows = rows.filter(r => r.join(" ").toLowerCase().includes(keyword));
-    }
-
-    rows.sort((a,b)=>{
-        const d1 = new Date(a[4]);
-        const d2 = new Date(b[4]);
-        return d2 - d1;
-    });
-
-    rows.forEach(row=>{
-        const tr = document.createElement("tr");
-        tr.className = getStatusClass(row[row.length-1]);
-
-        row.forEach((c, idx)=>{
-            const td = document.createElement("td");
-            if(idx === 4) td.textContent = formatDate(c);
-            else td.textContent = c ?? "";
-            tr.appendChild(td);
-        });
-
-        // Tombol Detil
-        const tdAksi = document.createElement("td");
-        const div = document.createElement("div");
-        div.style.display = "flex";
-        div.style.gap = "6px";
-
-        const btnDetil = document.createElement("button");
-        btnDetil.textContent = "Detil";
-        btnDetil.style.background="#8e44ad";
-        btnDetil.style.color="white";
-        btnDetil.onclick = ()=>{
-            sessionStorage.setItem("selectedKode", row[0]);
-            window.location.href = "daftar_perjalanan.html"; // ganti jika berbeda
-        };
-
-        div.appendChild(btnDetil);
-        tdAksi.appendChild(div);
-        tr.appendChild(tdAksi);
-
-        tbody.appendChild(tr);
-    });
-}
-
-// Load data dari GAS
-function loadData() {
-    fetch(URL_GAS + "?kode=" + encodeURIComponent(kodeFilter) + "&t=" + Date.now())
-        .then(res => res.json())
-        .then(json => { 
-            data = json; 
-            renderTable(); 
-            // hapus selectedKode setelah berhasil load
-            sessionStorage.removeItem("selectedKode");
-        })
-        .catch(err => console.error(err));
-}
-
-txtCari.addEventListener("input", renderTable);
-cmbFilter.addEventListener("change", renderTable);
-
+// === MAIN CODE ===
 window.addEventListener("DOMContentLoaded", () => {
+    const nama = sessionStorage.getItem("nama");
+    const unit = sessionStorage.getItem("unit");
+    if(!nama){
+        window.location.href="/pok/index.html";
+        return;
+    }
+    document.getElementById("welcome").textContent = `Selamat datang, ${nama} (${unit})`;
+
+    const BASE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSi8QhfAg_PpNxxZ8XYaSF3g5ZB2rYJ4IwG8Zq3vHEGWvOLgsc21aO5V-18qOudsfJ-kkAxF_SyRbok/pub?gid=111618598&single=true&output=csv";
+
+    let data = [];
+    let col = {};
+
+    const tblData = document.getElementById("tblData");
+    const cmbFilter = document.getElementById("cmbFilter");
+    const txtCari = document.getElementById("txtCari");
+    const lastUpdate = document.getElementById("lastUpdate");
+
+    function loadData(){
+        Papa.parse(BASE_CSV + "&t=" + Date.now(), {
+            download:true,
+            skipEmptyLines:true,
+            complete: res => {
+                data = res.data;
+                mapKolom();
+                renderTable();
+                lastUpdate.textContent = new Date().toLocaleTimeString();
+            }
+        });
+    }
+
+    cmbFilter.addEventListener("change", renderTable);
+    txtCari.addEventListener("input", renderTable);
+
+    function mapKolom(){
+        col = {};
+        data[0].forEach((h,i)=> col[h.trim().toUpperCase()] = i);
+    }
+
+    function renderTable(){
+        const thead = tblData.tHead || tblData.createTHead();
+        const tbody = tblData.tBodies[0] || tblData.createTBody();
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+
+        if(data.length < 2) return;
+
+        const idxKode = col["KODE"];
+        const idxUraian = col["URAIAN"];
+        const idxSD = col["SD"];
+        const idxSeksi = col["SEKSI"];
+        const idxVol = col["VOL"];
+        const idxPagu = col["PAGU"];
+        const idxBlokir = col["BLOKIR"];
+        const idxRealisasi = col["REALISASI"];
+        const idxSisa = col["SISA"];
+
+        const filter = cmbFilter.value;
+        const keyword = txtCari.value.toLowerCase();
+        const uniqueKode = new Set();
+
+        // HEADER
+        const trh = document.createElement("tr");
+        data[0].forEach((h,i)=>{
+            if(i===idxSeksi) return;
+            const th = document.createElement("th");
+            th.textContent = h;
+            trh.appendChild(th);
+        });
+        trh.appendChild(Object.assign(document.createElement("th"),{textContent:"Aksi"}));
+        thead.appendChild(trh);
+
+        // DATA
+        for(let i=1;i<data.length;i++){
+            const r = data[i];
+            const kode = r[idxKode]?.trim();
+            const uraian = r[idxUraian]?.toLowerCase() || "";
+            const sd = r[idxSD]?.trim().toUpperCase();
+            const seksi = r[idxSeksi]?.trim();
+
+            if(!kode) continue;
+            if(filter!=="Semua" && seksi!==filter) continue;
+
+            if(filter==="Semua"){
+                if(uniqueKode.has(kode)) continue;
+                uniqueKode.add(kode);
+            }
+
+            if(keyword && !kode.toLowerCase().includes(keyword) && !uraian.includes(keyword)) continue;
+
+            const tr = document.createElement("tr");
+            if(kode.length>27 && sd==="RM") tr.className="rm";
+            if(kode.length>27 && sd==="PNBP") tr.className="pnbp";
+
+            r.forEach((c,idx)=>{
+                if(idx===idxSeksi) return;
+                const td = document.createElement("td");
+                td.textContent = c ?? "";
+                if(idx===idxVol) td.style.textAlign="center";
+                if([idxPagu,idxBlokir,idxRealisasi,idxSisa].includes(idx))
+                    td.style.textAlign="right";
+                tr.appendChild(td);
+            });
+
+            // === AKSI ===
+            const tdAksi = document.createElement("td");
+            if(kode.length > 27){
+                const div = document.createElement("div");
+                div.className="aksi-btn";
+
+                const btnR = document.createElement("button");
+                btnR.textContent = "Rekam";
+                btnR.className = "btn-rekam";
+                btnR.onclick = () => {
+                    sessionStorage.setItem("mak", r[idxKode]);
+                    sessionStorage.setItem("uraian", r[idxUraian]);
+                    sessionStorage.setItem("pagu", r[idxPagu]);
+                    sessionStorage.setItem("blokir", r[idxBlokir]);
+                    sessionStorage.setItem("realisasi", r[idxRealisasi]);
+                    sessionStorage.setItem("sisa", r[idxSisa]);
+                    window.location.href = "/pok/rekam_kegiatan.html";
+                };
+
+                const btnD = document.createElement("button");
+                btnD.textContent="Detil";
+                btnD.className="btn-detil";
+                btnD.onclick = () => {
+                    sessionStorage.setItem("selectedKode", kode);
+                    sessionStorage.setItem("selectedUraian", r[idxUraian]);
+                    window.location.href = "/pok/daftar_perjalanan.html"; // ganti jika halaman tujuan beda
+                };
+
+                div.append(btnR, btnD);
+                tdAksi.appendChild(div);
+            }
+
+            tr.appendChild(tdAksi);
+            tbody.appendChild(tr);
+        }
+    }
+
     loadData();
-    setInterval(loadData, 60000);
+    setInterval(loadData,60000);
 });
 </script>
-
 </body>
 </html>
