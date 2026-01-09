@@ -123,6 +123,13 @@ td.right { text-align:right; }
                     <th>Tanggal</th>
                     <th>Kegiatan</th>
                     <th>Jumlah</th>
+                    <th>Kolom B</th>
+                    <th>Kolom C</th>
+                    <th>Kolom E</th>
+                    <th>Kolom F</th>
+                    <th>Kolom G</th>
+                    <th>Kolom M</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -131,44 +138,66 @@ td.right { text-align:right; }
 </div>
 
 <script>
-// Ambil data pegawai dari sessionStorage
-const dataPegawai = {
-    nama: sessionStorage.getItem("pegawai_nama") || "John Doe",
-    nip: sessionStorage.getItem("pegawai_nip") || "123456789",
-    jabatan: sessionStorage.getItem("pegawai_jabatan") || "Staf",
-    pangkat: sessionStorage.getItem("pegawai_pangkat") || "Penata Muda",
-    foto: sessionStorage.getItem("pegawai_foto") || "https://via.placeholder.com/150"
-};
+// --- KONFIG GAS ---
+const URL_GAS = "URL_GAS_DEPLOY_ANDA"; // ganti dengan URL GAS yang sudah dideploy
 
-document.getElementById("nama").textContent = dataPegawai.nama;
-document.getElementById("nip").textContent = dataPegawai.nip;
-document.getElementById("jabatan").textContent = dataPegawai.jabatan;
-document.getElementById("pangkat").textContent = dataPegawai.pangkat;
-document.getElementById("foto").src = dataPegawai.foto;
+// Ambil nama dari sessionStorage
+const namaPegawai = sessionStorage.getItem("pegawai_nama");
+if(!namaPegawai){
+    alert("Nama pegawai tidak ditemukan di session. Kembali ke halaman utama.");
+    window.location.href="data_pok.html";
+}
 
-// Contoh data ST
-const dataST = [
-    ["1","2026-01-01","Kegiatan A", 500000],
-    ["2","2026-01-05","Kegiatan B", 1200000],
-    ["3","2026-01-08","Kegiatan C", 750000]
-];
+// --- FETCH DATA ---
+fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
+.then(res => res.json())
+.then(res => {
+    if(res.error){
+        alert(res.error);
+        return;
+    }
 
-function renderST(){
+    // --- Isi Data Pegawai ---
+    if(res.pegawai && res.pegawai.length>0){
+        const p = res.pegawai[0];
+        document.getElementById("nama").textContent = p.nama;
+        document.getElementById("nip").textContent = p.nip;
+        document.getElementById("jabatan").textContent = p.jabatan;
+        document.getElementById("pangkat").textContent = p.pangkat;
+        document.getElementById("foto").src = p.foto || "https://via.placeholder.com/150";
+    }
+
+    // --- Isi Data ST ---
     const tbody = document.querySelector("#tblST tbody");
     tbody.innerHTML = "";
-    dataST.forEach(r=>{
-        const tr = document.createElement("tr");
-        r.forEach((c,idx)=>{
-            const td = document.createElement("td");
-            if(idx===3) td.className="right"; // jumlah
-            td.textContent = idx===3 ? Number(c).toLocaleString('id-ID') : c;
-            tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-    });
-}
-renderST();
+    if(res.st && res.st.length>0){
+        res.st.forEach((r, i)=>{
+            const tr = document.createElement("tr");
+            r.forEach((c, idx)=>{
+                const td = document.createElement("td");
+                if(idx===6){ // kolom jumlah (P)
+                    td.className="right";
+                    td.textContent = Number(c).toLocaleString('id-ID');
+                } else {
+                    td.textContent = c ?? "";
+                }
+                tr.appendChild(td);
+            });
+            // tambahkan nomor
+            const tdNo = document.createElement("td");
+            tdNo.textContent = i+1;
+            tr.insertBefore(tdNo, tr.firstChild);
 
+            tbody.appendChild(tr);
+        });
+    }
+})
+.catch(err => {
+    console.error(err);
+    alert("Gagal mengambil data pegawai/ST.");
+});
+
+// --- Fungsi Reset Password ---
 function resetPassword(){
     if(confirm("Reset password pegawai ini?")){
         alert("Password berhasil direset (simulasi).");
