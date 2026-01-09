@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Reset Password</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body {
+    margin:0;
+    padding:0;
+    font-family: 'Inter', Arial, sans-serif;
+    background:#eef2f7;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+.container {
+    background:white;
+    padding:30px 20px;
+    border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.2);
+    width:350px;
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+h2 {
+    text-align:center;
+    color:#8e44ad;
+    margin-bottom:10px;
+}
+label {
+    font-weight:600;
+}
+input[type=password] {
+    padding:8px;
+    border-radius:6px;
+    border:1px solid #ccc;
+    width:100%;
+}
+button {
+    padding:8px 12px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+.btn-show {
+    background:#3498db;
+    color:white;
+    margin-top:5px;
+}
+.btn-save {
+    background:#27ae60;
+    color:white;
+    margin-top:10px;
+}
+.btn-back {
+    background:#c0392b;
+    color:white;
+    margin-top:5px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Reset Password</h2>
+
+    <label>Password Lama</label>
+    <input type="password" id="pwdOld">
+
+    <label>Password Baru</label>
+    <input type="password" id="pwdNew">
+
+    <label>Konfirmasi Password Baru</label>
+    <input type="password" id="pwdConfirm">
+
+    <button class="btn-show" onclick="toggleShow()">Lihat Password</button>
+    <button class="btn-save" onclick="savePassword()">Simpan</button>
+    <button class="btn-back" onclick="window.location.href='profil.html'">Kembali</button>
+</div>
+
+<script>
+// ambil NIP atau username dari sessionStorage
+const namaPegawai = sessionStorage.getItem("pegawai_nama");
+if(!namaPegawai){
+    alert("Halaman hanya bisa diakses setelah login.");
+    window.location.href="data_pok.html";
+}
+
+let showPwd = false;
+function toggleShow(){
+    showPwd = !showPwd;
+    ['pwdOld','pwdNew','pwdConfirm'].forEach(id=>{
+        document.getElementById(id).type = showPwd ? "text" : "password";
+    });
+}
+
+// --- GAS RESET PASSWORD ---
+const URL_GAS_RESET = "https://script.google.com/macros/s/YOUR_GAS_ID_HERE/exec";
+
+function savePassword(){
+    const oldPwd = document.getElementById("pwdOld").value;
+    const newPwd = document.getElementById("pwdNew").value;
+    const confirmPwd = document.getElementById("pwdConfirm").value;
+
+    if(!oldPwd || !newPwd || !confirmPwd){
+        alert("Lengkapi semua kolom!");
+        return;
+    }
+    if(newPwd !== confirmPwd){
+        alert("Password baru dan konfirmasi tidak sama!");
+        return;
+    }
+
+    fetch(`${URL_GAS_RESET}?nip=${encodeURIComponent(namaPegawai)}&oldPwd=${encodeURIComponent(oldPwd)}&newPwd=${encodeURIComponent(newPwd)}`)
+    .then(res=>res.json())
+    .then(res=>{
+        if(res.success){
+            alert("Password berhasil diubah. Silakan login ulang.");
+            sessionStorage.clear(); // logout
+            window.location.href = "data_pok.html"; // atau halaman login
+        } else {
+            alert(res.error ?? "Gagal mereset password.");
+        }
+    })
+    .catch(err=>{
+        console.error(err);
+        alert("Gagal menghubungi server.");
+    });
+}
+</script>
+
+</body>
+</html>
