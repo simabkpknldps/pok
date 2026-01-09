@@ -21,7 +21,7 @@ body {
     box-shadow:0 6px 20px rgba(0,0,0,0.1);
 }
 h2.header-title {
-    margin-bottom:20px;
+    margin-bottom:10px;
     color:#8e44ad;
 }
 .header {
@@ -69,7 +69,7 @@ h2.header-title {
 }
 
 .table-container {
-    margin-top:20px;
+    margin-top:10px;
     max-height:400px;
     overflow:auto;
     border-radius:6px;
@@ -93,6 +93,17 @@ th {
     text-align:left;
 }
 td.right { text-align:right; }
+.filter-bar {
+    margin:10px 0;
+    display:flex;
+    gap:10px;
+    align-items:center;
+}
+.filter-bar input {
+    padding:5px;
+    flex:1;
+    min-width:200px;
+}
 </style>
 </head>
 <body>
@@ -115,6 +126,11 @@ td.right { text-align:right; }
         </div>
     </div>
 
+    <div class="filter-bar">
+        <label for="txtCariST">Cari:</label>
+        <input type="text" id="txtCariST" placeholder="Cari data ST...">
+    </div>
+
     <div class="table-container">
         <table id="tblST">
             <thead><tr id="theadST"></tr></thead>
@@ -132,6 +148,52 @@ const namaPegawai = sessionStorage.getItem("pegawai_nama");
 if(!namaPegawai){
     alert("Nama pegawai tidak ditemukan di session. Kembali ke halaman utama.");
     window.location.href="data_pok.html";
+}
+
+let stData = []; // simpan data asli untuk filter
+
+// --- FORMAT TANGGAL ---
+function formatDate(str){
+    if(!str) return "";
+    const d = new Date(str);
+    if(isNaN(d)) return str;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+// --- RENDER TABEL ST ---
+function renderST(filter=""){
+    const tbody = document.querySelector("#tblST tbody");
+    tbody.innerHTML = "";
+    stData
+        .filter(r => r.join(" ").toLowerCase().includes(filter.toLowerCase()))
+        .forEach((r,i)=>{
+            const tr = document.createElement("tr");
+
+            // Nomor urut
+            const tdNo = document.createElement("td");
+            tdNo.textContent = i+1;
+            tr.appendChild(tdNo);
+
+            r.forEach((c,idx)=>{
+                const td = document.createElement("td");
+                if(idx === 4){ // kolom 5 → tanggal
+                    td.textContent = formatDate(c);
+                } else if(idx === 5){ // kolom 6 → jumlah
+                    td.className="right";
+                    td.textContent = Number(c).toLocaleString('id-ID');
+                } else if(idx === 6){ // kolom 7 → status
+                    td.textContent = c ?? "";
+                } else {
+                    td.textContent = c ?? "";
+                }
+                tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
+        });
 }
 
 // --- FETCH DATA ---
@@ -157,8 +219,7 @@ fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
     const theadTr = document.getElementById("theadST");
     theadTr.innerHTML = "<th>No</th>"; // nomor urut
     if(res.headerST && res.headerST.length>0){
-        // Kolom yang diambil: B,C,D,E,G,M,P → index 1,2,3,4,6,12,15
-        const idxs = [1,2,3,4,6,12,15];
+        const idxs = [1,2,3,4,6,12,15]; // B,C,D,E,G,M,P
         idxs.forEach(i => {
             const th = document.createElement("th");
             th.textContent = res.headerST[i] ?? "";
@@ -166,37 +227,18 @@ fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
         });
     }
 
-    // --- Isi Data ST ---
-    const tbody = document.querySelector("#tblST tbody");
-    tbody.innerHTML = "";
-    if(res.st && res.st.length>0){
-        res.st.forEach((r, i)=>{
-            const tr = document.createElement("tr");
-
-            // Nomor urut
-            const tdNo = document.createElement("td");
-            tdNo.textContent = i+1;
-            tr.appendChild(tdNo);
-
-            r.forEach((c, idx)=>{
-                const td = document.createElement("td");
-                // Kolom terakhir (P) → jumlah → rata kanan
-                if(idx === r.length - 1){
-                    td.className="right";
-                    td.textContent = Number(c).toLocaleString('id-ID');
-                } else {
-                    td.textContent = c ?? "";
-                }
-                tr.appendChild(td);
-            });
-
-            tbody.appendChild(tr);
-        });
-    }
+    // --- Simpan dan render data ST ---
+    stData = res.st || [];
+    renderST();
 })
 .catch(err => {
     console.error(err);
     alert("Gagal mengambil data pegawai/ST.");
+});
+
+// --- EVENT CARI ---
+document.getElementById("txtCariST").addEventListener("input", e=>{
+    renderST(e.target.value);
 });
 
 // --- Fungsi Reset Password ---
