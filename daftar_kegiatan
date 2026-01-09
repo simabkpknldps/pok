@@ -66,7 +66,7 @@ if(!kodeFilter){
     sessionStorage.removeItem("selectedKode");
 }
 
-const URL_GAS = "https://script.google.com/macros/s/AKfycbyCoVfbvOtnM08_VLs3k20_gXhS21buKGV3Wszf6DgCZxvSOHo0RBzK3BFv23Ll4LMiPw/exec";
+const URL_GAS = "https://script.google.com/macros/s/AKfycbw-eg3L56fuD5NGj8VKE8jds8ZwUwRrMKs0cYulMXGHP-E8bb97SQWa8jYgpsRSG82XnQ/exec";
 const tblData = document.getElementById("tblData");
 const txtCari = document.getElementById("txtCari");
 const cmbFilter = document.getElementById("cmbFilter");
