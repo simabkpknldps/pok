@@ -20,7 +20,7 @@ body {
     padding:30px 20px;
     border-radius:12px;
     box-shadow:0 6px 20px rgba(0,0,0,0.2);
-    width:350px;
+    width:360px;
     display:flex;
     flex-direction:column;
     gap:15px;
@@ -30,35 +30,45 @@ h2 {
     color:#8e44ad;
     margin-bottom:10px;
 }
+.field-wrapper {
+    position:relative;
+}
 label {
     font-weight:600;
+    display:block;
+    margin-bottom:5px;
 }
-input[type=password] {
-    padding:8px;
+input[type=password], input[type=text] {
+    padding:8px 35px 8px 8px;
     border-radius:6px;
     border:1px solid #ccc;
     width:100%;
+    box-sizing:border-box;
 }
-button {
-    padding:8px 12px;
+.show-btn {
+    position:absolute;
+    right:5px;
+    top:50%;
+    transform:translateY(-50%);
+    background:none;
     border:none;
-    border-radius:6px;
     cursor:pointer;
+    font-size:16px;
 }
-.btn-show {
-    background:#3498db;
-    color:white;
-    margin-top:5px;
-}
-.btn-save {
-    background:#27ae60;
-    color:white;
+.button-group {
+    display:flex;
+    gap:10px;
     margin-top:10px;
 }
-.btn-back {
+button.btn-save {
+    background:#27ae60;
+    color:white;
+    flex:1;
+}
+button.btn-back {
     background:#c0392b;
     color:white;
-    margin-top:5px;
+    flex:1;
 }
 </style>
 </head>
@@ -67,18 +77,28 @@ button {
 <div class="container">
     <h2>Reset Password</h2>
 
-    <label>Password Lama</label>
-    <input type="password" id="pwdOld">
+    <div class="field-wrapper">
+        <label>Password Lama</label>
+        <input type="password" id="pwdOld">
+        <button type="button" class="show-btn" onclick="toggleShow('pwdOld')">👁️</button>
+    </div>
 
-    <label>Password Baru</label>
-    <input type="password" id="pwdNew">
+    <div class="field-wrapper">
+        <label>Password Baru</label>
+        <input type="password" id="pwdNew">
+        <button type="button" class="show-btn" onclick="toggleShow('pwdNew')">👁️</button>
+    </div>
 
-    <label>Konfirmasi Password Baru</label>
-    <input type="password" id="pwdConfirm">
+    <div class="field-wrapper">
+        <label>Konfirmasi Password Baru</label>
+        <input type="password" id="pwdConfirm">
+        <button type="button" class="show-btn" onclick="toggleShow('pwdConfirm')">👁️</button>
+    </div>
 
-    <button class="btn-show" onclick="toggleShow()">Lihat Password</button>
-    <button class="btn-save" onclick="savePassword()">Simpan</button>
-    <button class="btn-back" onclick="window.location.href='profil.html'">Kembali</button>
+    <div class="button-group">
+        <button class="btn-save" onclick="savePassword()">Simpan</button>
+        <button class="btn-back" onclick="window.location.href='profil.html'">Kembali</button>
+    </div>
 </div>
 
 <script>
@@ -89,12 +109,9 @@ if(!namaPegawai){
     window.location.href="data_pok.html";
 }
 
-let showPwd = false;
-function toggleShow(){
-    showPwd = !showPwd;
-    ['pwdOld','pwdNew','pwdConfirm'].forEach(id=>{
-        document.getElementById(id).type = showPwd ? "text" : "password";
-    });
+function toggleShow(id){
+    const input = document.getElementById(id);
+    input.type = input.type === "password" ? "text" : "password";
 }
 
 // --- GAS RESET PASSWORD ---
@@ -120,7 +137,7 @@ function savePassword(){
         if(res.success){
             alert("Password berhasil diubah. Silakan login ulang.");
             sessionStorage.clear(); // logout
-            window.location.href = "data_pok.html"; // atau halaman login
+            window.location.href = "data_pok.html"; // halaman login
         } else {
             alert(res.error ?? "Gagal mereset password.");
         }
