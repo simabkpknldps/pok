@@ -5,9 +5,7 @@
 <title>Login | SiMAB KPKNL Denpasar</title>
 
 <style>
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
     margin: 0;
@@ -19,7 +17,6 @@ body {
     font-family: "Segoe UI", Arial, sans-serif;
 }
 
-/* ===== LOGIN CARD ===== */
 .login-card {
     background: #fff;
     width: 380px;
@@ -28,7 +25,6 @@ body {
     box-shadow: 0 15px 35px rgba(0,0,0,0.25);
 }
 
-/* HEADER */
 .login-header {
     background: linear-gradient(135deg,#005bea,#00c6fb);
     padding: 22px;
@@ -41,11 +37,6 @@ body {
     font-size: 20px;
 }
 
-.login-header small {
-    opacity: 0.9;
-}
-
-/* BODY */
 .login-body {
     padding: 25px;
 }
@@ -66,15 +57,7 @@ input {
     font-size: 14px;
 }
 
-input:focus {
-    outline: none;
-    border-color: #005bea;
-}
-
-/* PASSWORD WRAP */
-.pass-wrap {
-    position: relative;
-}
+.pass-wrap { position: relative; }
 
 .toggle-pass {
     position: absolute;
@@ -86,7 +69,6 @@ input:focus {
     color: #005bea;
 }
 
-/* BUTTON */
 button {
     margin-top: 22px;
     width: 100%;
@@ -100,16 +82,10 @@ button {
     cursor: pointer;
 }
 
-button:hover {
-    background: #0047c7;
-}
-
 button:disabled {
     background: #9bbcf5;
-    cursor: not-allowed;
 }
 
-/* FOOTER */
 .footer {
     margin-top: 15px;
     text-align: center;
@@ -117,7 +93,6 @@ button:disabled {
     color: #777;
 }
 
-/* ERROR */
 .error {
     margin-top: 12px;
     color: #d40000;
@@ -125,7 +100,7 @@ button:disabled {
     font-size: 12px;
 }
 
-/* ===== LOADING ===== */
+/* LOADING */
 .loading {
     position: fixed;
     inset: 0;
@@ -134,10 +109,6 @@ button:disabled {
     justify-content: center;
     align-items: center;
     z-index: 999;
-}
-
-.loader-box {
-    text-align: center;
 }
 
 .spinner {
@@ -149,25 +120,14 @@ button:disabled {
     animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.loader-box div {
-    margin-top: 10px;
-    font-size: 13px;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 
 <body>
 
-<!-- LOADING -->
 <div class="loading" id="loading">
-    <div class="loader-box">
-        <div class="spinner"></div>
-        <div>Memeriksa data...</div>
-    </div>
+    <div class="spinner"></div>
 </div>
 
 <div class="login-card">
@@ -189,9 +149,7 @@ button:disabled {
         <button id="btnLogin" onclick="login()">LOGIN</button>
         <div class="error" id="errorMsg"></div>
 
-        <div class="footer">
-            © 2026 KPKNL Denpasar
-        </div>
+        <div class="footer">© 2026 KPKNL Denpasar</div>
     </div>
 </div>
 
@@ -223,25 +181,31 @@ async function login(){
     showLoading(true);
 
     try{
-        const url = `${apiURL}?nip=${encodeURIComponent(nip)}&password=${encodeURIComponent(password)}`;
-        const res = await fetch(url);
+        const res = await fetch(`${apiURL}?nip=${nip}&password=${password}`);
         const result = await res.json();
 
         if(result.status === "success"){
             sessionStorage.setItem("nama", result.nama);
             sessionStorage.setItem("unit", result.unit);
+
+            if(result.isDefaultPassword === true){
+                alert(
+                    "⚠️ Password Anda masih password default (12345).\n" +
+                    "Silakan segera mengganti password melalui menu Profil."
+                );
+            }
+
             window.location.href = "/pok/data_pok.html";
         } else {
             showLoading(false);
             errorMsg.textContent = result.message;
         }
-    } catch(e){
+    } catch(err){
         showLoading(false);
         errorMsg.textContent = "Gagal terhubung ke server";
     }
 }
 
-/* ENTER KEY */
 document.addEventListener("keydown", e => {
     if(e.key === "Enter") login();
 });
@@ -249,6 +213,3 @@ document.addEventListener("keydown", e => {
 
 </body>
 </html>
-
-
-
