@@ -78,6 +78,12 @@ function formatDate(str) {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+function formatRibuan(num) {
+    if(num == null || num === "") return "";
+    if(isNaN(num)) return num;
+    return Number(num).toLocaleString('en-US', {maximumFractionDigits:0});
+}
+
 function getStatusClass(status){
     switch(status){
         case "Rekam Data": return "status-dusty-pink";
@@ -134,8 +140,14 @@ function renderTable() {
 
         row.forEach((c, idx)=>{
             const td = document.createElement("td");
-            if(idx === 4) td.textContent = formatDate(c);
-            else td.textContent = c ?? "";
+            if(idx === 5){ // kolom ke-5 (index 5) → rata kanan & ribuan
+                td.textContent = formatRibuan(c);
+                td.style.textAlign = "right";
+            } else if(idx === 4){
+                td.textContent = formatDate(c);
+            } else {
+                td.textContent = c ?? "";
+            }
             tr.appendChild(td);
         });
 
