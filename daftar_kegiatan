@@ -54,15 +54,13 @@ th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-al
 </div>
 
 <script>
-// Ambil kode yang dikirim dari tombol Detil
-const kodeFilter = sessionStorage.getItem("selectedKode") || "";
+// Ambil kode yang dikirim dari data_pok.html
+let kodeFilter = sessionStorage.getItem("selectedKode") || "";
 
-// Cek akses halaman
 if(!kodeFilter){
     alert("Anda tidak bisa membuka halaman ini langsung!");
     window.location.href = "data_pok.html";
 }
-// jangan hapus selectedKode di sini, biarkan dipakai untuk fetch
 
 const URL_GAS = "https://script.google.com/macros/s/AKfycbw-eg3L56fuD5NGj8VKE8jds8ZwUwRrMKs0cYulMXGHP-E8bb97SQWa8jYgpsRSG82XnQ/exec";
 const tblData = document.getElementById("tblData");
@@ -70,7 +68,6 @@ const txtCari = document.getElementById("txtCari");
 const cmbFilter = document.getElementById("cmbFilter");
 let data = [];
 
-// Format tanggal ke yyyy-MM-dd
 function formatDate(str) {
     if(!str) return "";
     const d = new Date(str);
@@ -81,7 +78,6 @@ function formatDate(str) {
     return `${yyyy}-${mm}-${dd}`;
 }
 
-// Warna baris berdasarkan status (kolom terakhir = P)
 function getStatusClass(status){
     switch(status){
         case "Rekam Data": return "status-dusty-pink";
@@ -93,7 +89,6 @@ function getStatusClass(status){
     }
 }
 
-// Render tabel
 function renderTable() {
     if(!data || data.length<1) return;
 
@@ -114,10 +109,8 @@ function renderTable() {
     const keyword = txtCari.value.toLowerCase();
     const filterVal = cmbFilter.value;
 
-    // Mulai dari index 1
     let rows = data.slice(1);
 
-    // Filter Belum Terbayar
     if(filterVal === "Belum Terbayar"){
         rows = rows.filter(r => {
             const status = r[r.length-1];
@@ -125,33 +118,24 @@ function renderTable() {
         });
     }
 
-    // Filter cari
     if(keyword){
         rows = rows.filter(r => r.join(" ").toLowerCase().includes(keyword));
     }
 
-    // Sort berdasarkan Tgl Mulai (kolom E = index 4), descending
     rows.sort((a,b)=>{
         const d1 = new Date(a[4]);
         const d2 = new Date(b[4]);
         return d2 - d1;
     });
 
-    // Render tiap row
     rows.forEach(row=>{
         const tr = document.createElement("tr");
         tr.className = getStatusClass(row[row.length-1]);
 
         row.forEach((c, idx)=>{
             const td = document.createElement("td");
-
-            // Kolom tanggal → kolom E = index 4
-            if(idx === 4){
-                td.textContent = formatDate(c);
-            } else {
-                td.textContent = c ?? "";
-            }
-
+            if(idx === 4) td.textContent = formatDate(c);
+            else td.textContent = c ?? "";
             tr.appendChild(td);
         });
 
@@ -159,15 +143,13 @@ function renderTable() {
     });
 }
 
-// Load data dari GAS
 function loadData() {
     fetch(URL_GAS + "?kode=" + encodeURIComponent(kodeFilter) + "&t=" + Date.now())
         .then(res => res.json())
         .then(json => { 
             data = json; 
             renderTable(); 
-            // Bisa hapus selectedKode setelah render jika ingin mencegah reload men-trigger alert
-            // sessionStorage.removeItem("selectedKode");
+            sessionStorage.removeItem("selectedKode"); // hapus supaya reload aman
         })
         .catch(err => console.error(err));
 }
@@ -175,11 +157,8 @@ function loadData() {
 txtCari.addEventListener("input", renderTable);
 cmbFilter.addEventListener("change", renderTable);
 
-// Load awal
 window.addEventListener("DOMContentLoaded", () => {
     loadData();
-
-    // Auto reload tiap 1 menit
     setInterval(loadData, 60000);
 });
 </script>
