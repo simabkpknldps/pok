@@ -14,7 +14,7 @@ h2 { margin-bottom:10px; }
 .filter-bar input { flex:1; min-width:150px; }
 
 .table-container { max-height: calc(100vh - 160px); overflow:auto; background:white; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-table { border-collapse:collapse; width:100%; min-width:900px; font-size:13px; table-layout:fixed; }
+table { border-collapse:collapse; width:100%; min-width:700px; font-size:13px; table-layout:fixed; }
 th, td { border:1px solid #ddd; padding:8px; word-wrap:break-word; }
 th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-align:left; white-space:normal; font-size:12px; }
 
@@ -54,14 +54,16 @@ th { background:#8e44ad; color:white; position:sticky; top:0; z-index:1; text-al
 </div>
 
 <script>
+// Ambil kode yang dikirim dari data_pok.html
+const kodeFilter = sessionStorage.getItem("selectedKode") || "";
 
 // Cek apakah halaman diakses via tombol
-if(sessionStorage.getItem("allowDaftar") !== "true"){
+if(!kodeFilter){
     alert("Anda tidak bisa membuka halaman ini langsung!");
     window.location.href = "data_pok.html"; // redirect ke page asal
 } else {
     // hapus flag supaya tidak bisa reload langsung
-    sessionStorage.removeItem("allowDaftar");
+    sessionStorage.removeItem("selectedKode");
 }
 
 const URL_GAS = "https://script.google.com/macros/s/AKfycbyCoVfbvOtnM08_VLs3k20_gXhS21buKGV3Wszf6DgCZxvSOHo0RBzK3BFv23Ll4LMiPw/exec";
@@ -88,7 +90,7 @@ function formatRupiah(num) {
     return Number(num).toLocaleString('id-ID', {maximumFractionDigits:0});
 }
 
-// Warna baris berdasarkan status
+// Warna baris berdasarkan status (kolom terakhir = P)
 function getStatusClass(status){
     switch(status){
         case "Rekam Data": return "status-dusty-pink";
@@ -124,7 +126,7 @@ function renderTable() {
     // Mulai dari index 1
     let rows = data.slice(1);
 
-    // Filter Belum Terbayar
+    // Filter Belum Terbayar (status ada di kolom terakhir = P)
     if(filterVal === "Belum Terbayar"){
         rows = rows.filter(r => {
             const status = r[r.length-1];
@@ -137,10 +139,10 @@ function renderTable() {
         rows = rows.filter(r => r.join(" ").toLowerCase().includes(keyword));
     }
 
-    // Sort berdasarkan Tgl Mulai (index 5), descending
+    // Sort berdasarkan Tgl Mulai (kolom E = index 4), descending
     rows.sort((a,b)=>{
-        const d1 = new Date(a[5]);
-        const d2 = new Date(b[5]);
+        const d1 = new Date(a[4]);
+        const d2 = new Date(b[4]);
         return d2 - d1;
     });
 
@@ -152,21 +154,10 @@ function renderTable() {
         row.forEach((c, idx)=>{
             const td = document.createElement("td");
 
-            // Selisih LPT & Selisih Bayar => tengah
-            if(idx === 9 || idx === 10){
-                td.textContent = c ?? "";
-                td.style.textAlign = "center";
-            }
-            // Jumlah => kanan + ribuan
-            else if(idx === 11){
-                td.textContent = formatRupiah(c);
-                td.style.textAlign = "right";
-            }
-            // Kolom tanggal
-            else if([4,5,6,7,8].includes(idx)){
+            // Kolom tanggal → kolom E = index 4
+            if(idx === 4){
                 td.textContent = formatDate(c);
-            }
-            else{
+            } else {
                 td.textContent = c ?? "";
             }
 
@@ -179,7 +170,7 @@ function renderTable() {
 
 // Load data dari GAS
 function loadData() {
-    fetch(URL_GAS + "?t=" + Date.now())
+    fetch(URL_GAS + "?kode=" + encodeURIComponent(kodeFilter) + "&t=" + Date.now())
         .then(res => res.json())
         .then(json => { data=json; renderTable(); })
         .catch(err => console.error(err));
