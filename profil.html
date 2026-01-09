@@ -91,6 +91,58 @@ td.right { text-align:right; }
     flex:1;
     min-width:200px;
 }
+
+/* --- POPUP --- */
+#popupReset {
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.5);
+    justify-content:center;
+    align-items:center;
+    z-index:1000;
+}
+#popupReset .popup-content {
+    background:white;
+    padding:20px;
+    border-radius:8px;
+    width:350px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+#popupReset label {
+    font-weight:600;
+}
+#popupReset input[type="password"] {
+    padding:6px;
+    width:100%;
+    border:1px solid #ccc;
+    border-radius:6px;
+}
+#popupReset button {
+    padding:6px 12px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+#popupReset .btn-submit { background:#8e44ad; color:white; }
+#popupReset .btn-cancel { background:#e67e22; color:white; }
+#popupReset .btn-show {
+    background:#ccc;
+    color:#333;
+    margin-left:5px;
+    font-size:12px;
+}
+.password-row {
+    display:flex;
+    align-items:center;
+}
+.password-row input {
+    flex:1;
+}
 </style>
 </head>
 <body>
@@ -105,7 +157,7 @@ td.right { text-align:right; }
         <div><span class="label">Pangkat:</span> <span id="pangkat" class="value">-</span></div>
 
         <div style="margin-top:10px;">
-            <button class="btn-small btn-reset" onclick="resetPassword()">Reset Password</button>
+            <button class="btn-small btn-reset" onclick="showPopup()">Reset Password</button>
             <button class="btn-small btn-back" onclick="window.location.href='data_pok.html'">Kembali</button>
         </div>
     </div>
@@ -123,6 +175,36 @@ td.right { text-align:right; }
     </div>
 </div>
 
+<!-- POPUP RESET PASSWORD -->
+<div id="popupReset">
+    <div class="popup-content">
+        <h3>Reset Password</h3>
+
+        <div class="password-row">
+            <label>Password Lama:</label>
+            <input type="password" id="oldPass">
+            <button type="button" class="btn-show" onclick="togglePassword('oldPass')">👁️</button>
+        </div>
+
+        <div class="password-row">
+            <label>Password Baru:</label>
+            <input type="password" id="newPass">
+            <button type="button" class="btn-show" onclick="togglePassword('newPass')">👁️</button>
+        </div>
+
+        <div class="password-row">
+            <label>Konfirmasi Password:</label>
+            <input type="password" id="confPass">
+            <button type="button" class="btn-show" onclick="togglePassword('confPass')">👁️</button>
+        </div>
+
+        <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn-submit" onclick="savePassword()">Simpan</button>
+            <button class="btn-cancel" onclick="closePopup()">Batal</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // --- CEGAH AKSES LANGSUNG ---
 const namaPegawai = sessionStorage.getItem("pegawai_nama");
@@ -131,111 +213,50 @@ if(!namaPegawai){
     window.location.href = "data_pok.html";
 }
 
-// --- KONFIG GAS ---
-const URL_GAS = "https://script.google.com/macros/s/AKfycbxDEtsDD9z_ANY7ILixej0NzNP3OuU2pzLXf_viAHWNjIQPTGjB0n6LztzrjrsxzQjcMw/exec";
+// --- KONFIG GAS RESET PASSWORD (BERBEDA) ---
+const URL_GAS_RESET = "https://script.google.com/macros/s/AKfycbxZ3287zMLWvvlxzUu0b-7JG3hs69p-uvV6BbqtI-pzHCQMAERQigEY6oLwiew9EGBvnw/exec";
 
-let stData = []; // simpan data asli untuk filter
+// --- POPUP ---
+function showPopup(){ document.getElementById("popupReset").style.display="flex"; }
+function closePopup(){ document.getElementById("popupReset").style.display="none"; }
 
-// --- FORMAT TANGGAL ---
-function formatDate(str){
-    if(!str) return "";
-    const d = new Date(str);
-    if(isNaN(d)) return str;
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    return `${yyyy}-${mm}-${dd}`;
+function togglePassword(id){
+    const input = document.getElementById(id);
+    input.type = input.type === "password" ? "text" : "password";
 }
 
-// --- RENDER TABEL ST ---
-function renderST(filter=""){
-    const tbody = document.querySelector("#tblST tbody");
-    tbody.innerHTML = "";
+// --- SIMPAN PASSWORD --- 
+function savePassword(){
+    const oldPass = document.getElementById("oldPass").value;
+    const newPass = document.getElementById("newPass").value;
+    const confPass = document.getElementById("confPass").value;
 
-    stData
-        .filter(r => r.join(" ").toLowerCase().includes(filter.toLowerCase()))
-        .sort((a,b)=>{
-            const da = new Date(a[4]);
-            const db = new Date(b[4]);
-            return db - da; // descending
-        })
-        .forEach((r,i)=>{
-            const tr = document.createElement("tr");
-
-            // Nomor urut
-            const tdNo = document.createElement("td");
-            tdNo.textContent = i+1;
-            tr.appendChild(tdNo);
-
-            r.forEach((c,idx)=>{
-                const td = document.createElement("td");
-                if(idx === 4){ // kolom 5 → tanggal
-                    td.textContent = formatDate(c);
-                } else if(idx === 5){ // kolom 6 → jumlah
-                    td.className="right";
-                    td.textContent = Number(c).toLocaleString('id-ID');
-                } else if(idx === 6){ // kolom 7 → status
-                    td.textContent = c ?? "";
-                } else {
-                    td.textContent = c ?? "";
-                }
-                tr.appendChild(td);
-            });
-
-            tbody.appendChild(tr);
-        });
-}
-
-// --- FETCH DATA ---
-fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
-.then(res => res.json())
-.then(res => {
-    if(res.error){
-        alert(res.error);
+    if(!oldPass || !newPass || !confPass){
+        alert("Semua kolom harus diisi");
+        return;
+    }
+    if(newPass !== confPass){
+        alert("Password baru dan konfirmasi tidak sama");
         return;
     }
 
-    // --- Isi Data Pegawai ---
-    if(res.pegawai && res.pegawai.length>0){
-        const p = res.pegawai[0];
-        document.getElementById("nama").textContent = p.nama;
-        document.getElementById("nip").textContent = p.nip;
-        document.getElementById("jabatan").textContent = p.jabatan;
-        document.getElementById("pangkat").textContent = p.pangkat;
-    }
-
-    // --- Isi Header ST dari row 3 ---
-    const theadTr = document.getElementById("theadST");
-    theadTr.innerHTML = "<th>No</th>"; // nomor urut
-    if(res.headerST && res.headerST.length>0){
-        const idxs = [1,2,3,4,6,12,15]; // B,C,D,E,G,M,P
-        idxs.forEach(i => {
-            const th = document.createElement("th");
-            th.textContent = res.headerST[i] ?? "";
-            theadTr.appendChild(th);
-        });
-    }
-
-    // --- Simpan dan render data ST ---
-    stData = res.st || [];
-    renderST();
-})
-.catch(err => {
-    console.error(err);
-    alert("Gagal mengambil data pegawai/ST.");
-});
-
-// --- EVENT CARI ---
-document.getElementById("txtCariST").addEventListener("input", e=>{
-    renderST(e.target.value);
-});
-
-// --- Fungsi Reset Password ---
-function resetPassword(){
-    if(confirm("Reset password pegawai ini?")){
-        alert("Password berhasil direset (simulasi).");
-        // Implementasi reset sebenarnya via backend
-    }
+    fetch(`${URL_GAS_RESET}?action=resetPassword&nama=${encodeURIComponent(namaPegawai)}&current=${encodeURIComponent(oldPass)}&new=${encodeURIComponent(newPass)}`)
+    .then(res => res.json())
+    .then(res => {
+        if(res.success){
+            alert("Password berhasil diubah");
+            closePopup();
+            document.getElementById("oldPass").value="";
+            document.getElementById("newPass").value="";
+            document.getElementById("confPass").value="";
+        } else {
+            alert(res.error || "Gagal mereset password");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Gagal menghubungi server reset password");
+    });
 }
 </script>
 
