@@ -117,21 +117,7 @@ td.right { text-align:right; }
 
     <div class="table-container">
         <table id="tblST">
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Tanggal</th>
-                    <th>Kegiatan</th>
-                    <th>Jumlah</th>
-                    <th>Kolom B</th>
-                    <th>Kolom C</th>
-                    <th>Kolom E</th>
-                    <th>Kolom F</th>
-                    <th>Kolom G</th>
-                    <th>Kolom M</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
+            <thead><tr id="theadST"></tr></thead>
             <tbody></tbody>
         </table>
     </div>
@@ -139,7 +125,7 @@ td.right { text-align:right; }
 
 <script>
 // --- KONFIG GAS ---
-const URL_GAS = "https://script.google.com/macros/s/AKfycbwvaL_uedFw33ZvkzpJlnND9nFKBRIxC1IrQWvmsA5FMvKyrLeVIfZqOJdOAPYKPVykZw/exec"; // ganti dengan URL GAS yang sudah dideploy
+const URL_GAS = "https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec"; // ganti dengan URL GAS mu
 
 // Ambil nama dari sessionStorage
 const namaPegawai = sessionStorage.getItem("pegawai_nama");
@@ -167,15 +153,33 @@ fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
         document.getElementById("foto").src = p.foto || "https://via.placeholder.com/150";
     }
 
+    // --- Isi Header ST dari row 3 ---
+    const theadTr = document.getElementById("theadST");
+    theadTr.innerHTML = "<th>No</th>"; // nomor
+    if(res.headerST && res.headerST.length>0){
+        res.headerST.forEach(h => {
+            const th = document.createElement("th");
+            th.textContent = h ?? "";
+            theadTr.appendChild(th);
+        });
+    }
+
     // --- Isi Data ST ---
     const tbody = document.querySelector("#tblST tbody");
     tbody.innerHTML = "";
     if(res.st && res.st.length>0){
         res.st.forEach((r, i)=>{
             const tr = document.createElement("tr");
+
+            // Nomor urut
+            const tdNo = document.createElement("td");
+            tdNo.textContent = i+1;
+            tr.appendChild(tdNo);
+
             r.forEach((c, idx)=>{
                 const td = document.createElement("td");
-                if(idx===6){ // kolom jumlah (P)
+                // Kolom P (jumlah) → index terakhir
+                if(idx === r.length - 1){
                     td.className="right";
                     td.textContent = Number(c).toLocaleString('id-ID');
                 } else {
@@ -183,10 +187,6 @@ fetch(URL_GAS + "?nama=" + encodeURIComponent(namaPegawai))
                 }
                 tr.appendChild(td);
             });
-            // tambahkan nomor
-            const tdNo = document.createElement("td");
-            tdNo.textContent = i+1;
-            tr.insertBefore(tdNo, tr.firstChild);
 
             tbody.appendChild(tr);
         });
