@@ -8,67 +8,88 @@
 body {
     margin:0;
     padding:0;
-    font-family: 'Inter', Arial, sans-serif;
+    font-family:'Inter', Arial, sans-serif;
     background:#eef2f7;
     display:flex;
     justify-content:center;
     align-items:center;
     height:100vh;
 }
+
 .container {
     background:white;
-    padding:30px 20px;
+    padding:30px 22px;
     border-radius:12px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.2);
+    box-shadow:0 6px 20px rgba(0,0,0,0.15);
     width:360px;
     display:flex;
     flex-direction:column;
-    gap:15px;
+    gap:14px;
 }
+
 h2 {
     text-align:center;
     color:#8e44ad;
-    margin-bottom:10px;
+    margin-bottom:5px;
 }
+
+/* ===== FIELD ===== */
 .field-wrapper {
     position:relative;
 }
+
 label {
     font-weight:600;
-    display:block;
     margin-bottom:5px;
+    display:block;
 }
+
 input[type=password], input[type=text] {
-    padding:8px 35px 8px 8px;
+    padding:8px 55px 8px 10px;
     border-radius:6px;
     border:1px solid #ccc;
     width:100%;
     box-sizing:border-box;
+    font-size:13px;
 }
+
+/* tombol lihat */
 .show-btn {
     position:absolute;
-    right:5px;
-    top:50%;
-    transform:translateY(-50%);
+    right:8px;
+    top:32px;
     background:none;
     border:none;
     cursor:pointer;
-    font-size:16px;
+    color:#3498db;
+    font-size:12px;
+    font-weight:600;
 }
+
+/* ===== BUTTON ===== */
 .button-group {
     display:flex;
     gap:10px;
-    margin-top:10px;
+    margin-top:12px;
 }
-button.btn-save {
-    background:#27ae60;
-    color:white;
+
+.btn-small {
+    padding:7px 12px;
+    font-size:12px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
     flex:1;
 }
-button.btn-back {
-    background:#c0392b;
+
+.btn-save {
+    background:#8e44ad;
     color:white;
-    flex:1;
+}
+
+.btn-back {
+    background:#7f8c8d;
+    color:white;
 }
 </style>
 </head>
@@ -80,29 +101,29 @@ button.btn-back {
     <div class="field-wrapper">
         <label>Password Lama</label>
         <input type="password" id="pwdOld">
-        <button type="button" class="show-btn" onclick="toggleShow('pwdOld')">👁️</button>
+        <button type="button" class="show-btn" onclick="toggleShow('pwdOld')">Lihat</button>
     </div>
 
     <div class="field-wrapper">
         <label>Password Baru</label>
         <input type="password" id="pwdNew">
-        <button type="button" class="show-btn" onclick="toggleShow('pwdNew')">👁️</button>
+        <button type="button" class="show-btn" onclick="toggleShow('pwdNew')">Lihat</button>
     </div>
 
     <div class="field-wrapper">
         <label>Konfirmasi Password Baru</label>
         <input type="password" id="pwdConfirm">
-        <button type="button" class="show-btn" onclick="toggleShow('pwdConfirm')">👁️</button>
+        <button type="button" class="show-btn" onclick="toggleShow('pwdConfirm')">Lihat</button>
     </div>
 
     <div class="button-group">
-        <button class="btn-save" onclick="savePassword()">Simpan</button>
-        <button class="btn-back" onclick="window.location.href='profil.html'">Kembali</button>
+        <button class="btn-small btn-save" onclick="savePassword()">Simpan</button>
+        <button class="btn-small btn-back" onclick="window.location.href='profil.html'">Kembali</button>
     </div>
 </div>
 
 <script>
-// ambil NIP atau username dari sessionStorage
+// ambil nama pegawai dari sessionStorage
 const namaPegawai = sessionStorage.getItem("pegawai_nama");
 if(!namaPegawai){
     alert("Halaman hanya bisa diakses setelah login.");
@@ -118,9 +139,9 @@ function toggleShow(id){
 const URL_GAS_RESET = "https://script.google.com/macros/s/AKfycbz_z1jVAqgNNUmGgOetLeRhi9WBpH159Vn94r4i2TQqgfaDUnlRShbjiW7iU6dfWkxlJA/exec";
 
 function savePassword(){
-    const oldPwd = document.getElementById("pwdOld").value;
-    const newPwd = document.getElementById("pwdNew").value;
-    const confirmPwd = document.getElementById("pwdConfirm").value;
+    const oldPwd = pwdOld.value;
+    const newPwd = pwdNew.value;
+    const confirmPwd = pwdConfirm.value;
 
     if(!oldPwd || !newPwd || !confirmPwd){
         alert("Lengkapi semua kolom!");
@@ -131,19 +152,18 @@ function savePassword(){
         return;
     }
 
-    fetch(`${URL_GAS_RESET}?nip=${encodeURIComponent(namaPegawai)}&oldPwd=${encodeURIComponent(oldPwd)}&newPwd=${encodeURIComponent(newPwd)}`)
-    .then(res=>res.json())
+    fetch(`${URL_GAS_RESET}?action=resetPassword&nama=${encodeURIComponent(namaPegawai)}&current=${encodeURIComponent(oldPwd)}&new=${encodeURIComponent(newPwd)}`)
+    .then(r=>r.json())
     .then(res=>{
         if(res.success){
             alert("Password berhasil diubah. Silakan login ulang.");
-            sessionStorage.clear(); // logout
-            window.location.href = "data_pok.html"; // halaman login
-        } else {
-            alert(res.error ?? "Gagal mereset password.");
+            sessionStorage.clear();
+            window.location.href="data_pok.html";
+        }else{
+            alert(res.message || "Gagal mereset password.");
         }
     })
-    .catch(err=>{
-        console.error(err);
+    .catch(()=>{
         alert("Gagal menghubungi server.");
     });
 }
