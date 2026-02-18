@@ -715,17 +715,12 @@ rekap.forEach(r => {
         <td>${formatRupiah(r.modal?.realisasi || 0)}</td>
     `;
     tbodyRekap.appendChild(tr);
-});
 
-const bulanSekarang = new Date().getMonth();
 
-if(rekap[bulanSekarang]){
-    document.getElementById("bulan52").textContent =
-        formatRupiah(rekap[bulanSekarang].barang?.realisasi || 0);
 
-    document.getElementById("bulan53").textContent =
-        formatRupiah(rekap[bulanSekarang].modal?.realisasi || 0);
-}
+   
+
+
 
 
 const bulanSekarang = new Date().getMonth(); // 0-11
@@ -747,12 +742,6 @@ function formatRupiah(angka) {
 
 
 
-    // ===== Ringkasan Belanja =====
-    document.getElementById("barangSummary").innerHTML =
-      `Realisasi ${formatRupiah(data.belanjaBarang.realisasi)} dari ${formatRupiah(data.belanjaBarang.total)}`;
-
-    document.getElementById("modalSummary").innerHTML =
-      `Realisasi ${formatRupiah(data.belanjaModal.realisasi)} dari ${formatRupiah(data.belanjaModal.total)}`;
 
   });
 
