@@ -686,17 +686,17 @@ if(data.rekapBulanan && data.rekapBulanan.length > 0){
 
     data.rekapBulanan.forEach(row => {
 
-        const total52 = row.jenis52_total || 0;
-        const real52 = row.jenis52_realisasi || 0;
+        const real52 = row.barang?.realisasi || 0;
+        const total52 = row.barang?.triwulan || 0;
 
-        const total53 = row.jenis53_total || 0;
-        const real53 = row.jenis53_realisasi || 0;
+        const real53 = row.modal?.realisasi || 0;
+        const total53 = row.modal?.triwulan || 0;
 
-        const persen52 = total52 > 0 
+        const persen52 = total52 > 0
             ? ((real52 / total52) * 100).toFixed(2)
             : "0.00";
 
-        const persen53 = total53 > 0 
+        const persen53 = total53 > 0
             ? ((real53 / total53) * 100).toFixed(2)
             : "0.00";
 
@@ -711,7 +711,6 @@ if(data.rekapBulanan && data.rekapBulanan.length > 0){
     });
 
 } else {
-
     tbodyRekap.innerHTML = `
         <tr>
             <td colspan="3" style="text-align:center;color:#94a3b8;">
