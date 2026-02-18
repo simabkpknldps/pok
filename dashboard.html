@@ -422,37 +422,6 @@ th{
         </table>
     </div>
 
-<div class="row mt-4">
-
-  <!-- CARD REKAP BULANAN -->
-  <div class="col-md-6">
-    <div class="card shadow-sm border-0">
-      <div class="card-header bg-primary text-white">
-        <strong>Rekap Per Bulan</strong>
-      </div>
-      <div class="card-body p-2">
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered text-center mb-0">
-            <thead class="table-light">
-              <tr>
-                <th rowspan="2">Bulan</th>
-                <th colspan="2">52</th>
-                <th colspan="2">53</th>
-              </tr>
-              <tr>
-                <th>Realisasi</th>
-                <th>Triwulan</th>
-                <th>Realisasi</th>
-                <th>Triwulan</th>
-              </tr>
-            </thead>
-            <tbody id="rekapBulananBody">
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- CARD KEDUA (BELANJA SUMMARY) -->
   <div class="col-md-6">
@@ -733,23 +702,31 @@ document.getElementById("modalRealisasi").textContent =
 document.getElementById("modalSisa").textContent =
     `${formatRupiah(modalSisa)} (${modalSisaPersen}%)`;
 
-    // ================= REKAP BULANAN =================
+// ================= REKAP BULANAN =================
 const rekap = data.rekapBulanan || [];
-
 const tbodyRekap = document.querySelector("#rekapBulananTable tbody");
 tbodyRekap.innerHTML = "";
-
-const formatAngka = (angka) => angka.toLocaleString("id-ID");
 
 rekap.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
         <td>${r.bulan}</td>
-        <td>${formatAngka(r.jenis52 || 0)}</td>
-        <td>${formatAngka(r.jenis53 || 0)}</td>
+        <td>${formatRupiah(r.barang?.realisasi || 0)}</td>
+        <td>${formatRupiah(r.modal?.realisasi || 0)}</td>
     `;
     tbodyRekap.appendChild(tr);
 });
+
+const bulanSekarang = new Date().getMonth();
+
+if(rekap[bulanSekarang]){
+    document.getElementById("bulan52").textContent =
+        formatRupiah(rekap[bulanSekarang].barang?.realisasi || 0);
+
+    document.getElementById("bulan53").textContent =
+        formatRupiah(rekap[bulanSekarang].modal?.realisasi || 0);
+}
+
 
 const bulanSekarang = new Date().getMonth(); // 0-11
 
@@ -768,25 +745,7 @@ function formatRupiah(angka) {
   return new Intl.NumberFormat('id-ID').format(angka);
 }
 
-fetch(url)
-  .then(res => res.json())
-  .then(data => {
 
-    // ===== Rekap Bulanan =====
-    const tbody = document.getElementById("rekapBulananBody");
-    tbody.innerHTML = "";
-
-    data.rekapBulanan.forEach(item => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${item.bulan}</td>
-          <td>${formatRupiah(item.barang.realisasi)}</td>
-          <td>${formatRupiah(item.barang.triwulan)}</td>
-          <td>${formatRupiah(item.modal.realisasi)}</td>
-          <td>${formatRupiah(item.modal.triwulan)}</td>
-        </tr>
-      `;
-    });
 
     // ===== Ringkasan Belanja =====
     document.getElementById("barangSummary").innerHTML =
