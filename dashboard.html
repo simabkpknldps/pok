@@ -1083,33 +1083,22 @@ function formatRupiah(angka){
 }
 
     
-function openModal() {
+function openModal(cardType) {
+    if(!window.dashboardData || !window.dashboardData.dashboardDetail){
+        alert("Data belanja belum tersedia");
+        return;
+    }
 
-  const data = window.dashboardData.dashboardDetail;
+    const data = window.dashboardData.dashboardDetail;
 
-  const header = data[0];
-  const rows = data.slice(1);
+    const thead = document.querySelector("#belanjaModal thead");
+    const tbody = document.getElementById("modalTableBody");
 
-  const thead = document.getElementById("modalTableHead");
-  const tbody = document.getElementById("modalTableBody");
+    thead.innerHTML = `<tr>${data[0].map(h => `<th>${h}</th>`).join("")}</tr>`;
 
-  thead.innerHTML = `
-    <tr>
-      ${header.map(h => `<th>${h}</th>`).join("")}
-    </tr>
-  `;
+    tbody.innerHTML = data.slice(1).map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("");
 
-  tbody.innerHTML = "";
-
-  rows.forEach(r => {
-    tbody.innerHTML += `
-      <tr>
-        ${r.map(col => `<td>${col}</td>`).join("")}
-      </tr>
-    `;
-  });
-
-  document.getElementById("belanjaModal").style.display = "flex";
+    document.getElementById("belanjaModal").style.display = "flex";
 }
 
 
