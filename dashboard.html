@@ -553,7 +553,7 @@ function logout(){
 }
 
 // URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycbyX7AxMSnEuCBAAcQki_51y-d2YXzwWxYGVzSxO3sJopsuEDCc42n52Nv6IBGHbwz3jnw/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbxI1Ejpm0j9xPMT9dX2x6Y23wk6oz7qw00LD179v4-3wFOV_6MshoOEZVZMXSct2248VA/exec";
 
 async function loadDashboard(){
     showLoading(); // tampilkan overlay
@@ -695,21 +695,7 @@ if(Array.isArray(data.rekapBulanan) && data.rekapBulanan.length > 0){
         const real53 = Number(row.modal?.realisasi || 0);
         const total53 = Number(row.modal?.triwulan || 0);
 
-        const persen52 = total52 > 0
-            ? ((real52 / total52) * 100).toFixed(2)
-            : "0.00";
-
-        const persen53 = total53 > 0
-            ? ((real53 / total53) * 100).toFixed(2)
-            : "0.00";
-
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${row.bulan || "-"}</td>
-            <td>${real52.toLocaleString("id-ID")} (${persen52}%)</td>
-            <td>${real53.toLocaleString("id-ID")} (${persen53}%)</td>
-        `;
+        
 
         tbodyRekap.appendChild(tr);
     });
