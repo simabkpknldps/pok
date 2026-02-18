@@ -336,6 +336,50 @@ th{
         grid-template-columns:1fr;
     }
 }
+
+    #monitoringMPTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+#monitoringMPTable th,
+#monitoringMPTable td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: right;
+    white-space: nowrap;
+}
+
+#monitoringMPTable th:first-child,
+#monitoringMPTable td:first-child {
+    text-align: left;
+}
+
+#monitoringMPTable thead th {
+    background: #f1f5f9;
+    font-weight: 600;
+}
+
+#monitoringMPTable tfoot td {
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+#monitoringMPTable tbody {
+    display: block;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+#monitoringMPTable thead,
+#monitoringMPTable tbody tr,
+#monitoringMPTable tfoot {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
 </style>
 </head>
 
@@ -682,20 +726,45 @@ if(mpTable){
         for(let i=1; i < rows.length-1; i++){
             const tr = document.createElement("tr");
             rows[i].forEach(col=>{
-                const td = document.createElement("td");
-                td.textContent = col;
-                tr.appendChild(td);
-            });
+    const td = document.createElement("td");
+
+    if(typeof col === "number"){
+
+        // jika angka kecil → kemungkinan persen
+        if(col > 0 && col < 1){
+            td.textContent = (col * 100).toFixed(2) + "%";
+        } else {
+            td.textContent = col.toLocaleString("id-ID");
+        }
+
+    } else {
+        td.textContent = col;
+    }
+
+    tr.appendChild(td);
+});
+
             tbody.appendChild(tr);
         }
 
         // ===== FOOTER (ROW TERAKHIR)
         const footerRow = document.createElement("tr");
         rows[rows.length-1].forEach(col=>{
-            const td = document.createElement("td");
-            td.innerHTML = `<strong>${col}</strong>`;
-            footerRow.appendChild(td);
-        });
+    const td = document.createElement("td");
+
+    if(typeof col === "number"){
+        if(col > 0 && col < 1){
+            td.innerHTML = `<strong>${(col*100).toFixed(2)}%</strong>`;
+        } else {
+            td.innerHTML = `<strong>${col.toLocaleString("id-ID")}</strong>`;
+        }
+    } else {
+        td.innerHTML = `<strong>${col}</strong>`;
+    }
+
+    footerRow.appendChild(td);
+});
+
         tfoot.appendChild(footerRow);
 
     } else {
