@@ -427,7 +427,7 @@ th{
             <strong id="barangSisa">0%</strong>
         </div>
         <div class="belanja-footnote">
-            <em>*data SP2D</em>
+            <em>*data berdasarkan SP2D</em>
         </div>
     </div>
 </div>
@@ -445,7 +445,7 @@ th{
             <strong id="modalSisa">0%</strong>
         </div>
         <div class="belanja-footnote">
-            <em>*data SP2D</em>
+            <em>*data berdasarkan SP2D</em>
         </div>
     </div>
 </div>
@@ -585,30 +585,31 @@ const barangTotal = data.belanjaBarang?.total || 0;
 const barangRealisasi = data.belanjaBarang?.realisasi || 0;
 
 let barangPersen = 0;
+
 if(barangTotal > 0){
-    barangPersen = Math.round((barangRealisasi / barangTotal) * 100);
+    barangPersen = ((barangRealisasi / barangTotal) * 100).toFixed(2);
 }
 
-const barangSisaPersen = 100 - barangPersen;
+const barangSisaPersen = (100 - parseFloat(barangPersen)).toFixed(2);
 
 document.getElementById("barangRealisasi").textContent = barangPersen + "%";
 document.getElementById("barangSisa").textContent = barangSisaPersen + "%";
+
 
 // ================= BELANJA MODAL =================
 const modalTotal = data.belanjaModal?.total || 0;
 const modalRealisasi = data.belanjaModal?.realisasi || 0;
 
 let modalPersen = 0;
+
 if(modalTotal > 0){
-    modalPersen = Math.round((modalRealisasi / modalTotal) * 100);
+    modalPersen = ((modalRealisasi / modalTotal) * 100).toFixed(2);
 }
 
-const modalSisaPersen = 100 - modalPersen;
+const modalSisaPersen = (100 - parseFloat(modalPersen)).toFixed(2);
 
 document.getElementById("modalRealisasi").textContent = modalPersen + "%";
 document.getElementById("modalSisa").textContent = modalSisaPersen + "%";
-
-
 
 
 }
