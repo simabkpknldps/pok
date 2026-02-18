@@ -382,10 +382,18 @@ th{
                 </table>
             </div>
 
-            <!-- PIE CHART TETAP -->
-            <div class="chart-box">
-                <h3>Jenis Kegiatan</h3>
-                <canvas id="pieChart"></canvas>
+            <!-- CARD 2 -->
+            <div class="card">
+                <h3>Belanja Barang</h3>
+                <small style="color:#64748b;">Berdasarkan SP2D</small>
+                <canvas id="barangChart" height="120"></canvas>
+            </div>
+        
+            <!-- CARD 3 -->
+            <div class="card">
+                <h3>Belanja Modal</h3>
+                <small style="color:#64748b;">Berdasarkan SP2D</small>
+                <canvas id="modalChart" height="120"></canvas>
             </div>
 
         </div>
@@ -398,6 +406,60 @@ th{
 </div>
 
 <script>
+
+let barangChart;
+let modalChart;
+
+// Update jumlah kegiatan hari ini
+document.getElementById("cardToday").textContent = data.todayRows?.length || 0;
+
+
+// =================== BELANJA BARANG ===================
+const barangTotal = data.belanjaBarang?.total || 0;
+const barangRealisasi = data.belanjaBarang?.realisasi || 0;
+const barangSisa = barangTotal - barangRealisasi;
+
+if(barangChart) barangChart.destroy();
+
+barangChart = new Chart(document.getElementById('barangChart'),{
+    type:'doughnut',
+    data:{
+        labels:['Realisasi','Sisa'],
+        datasets:[{
+            data:[barangRealisasi, barangSisa],
+            backgroundColor:['#22c55e','#e5e7eb']
+        }]
+    },
+    options:{
+        plugins:{legend:{display:false}},
+        cutout:'70%'
+    }
+});
+
+
+// =================== BELANJA MODAL ===================
+const modalTotal = data.belanjaModal?.total || 0;
+const modalRealisasi = data.belanjaModal?.realisasi || 0;
+const modalSisa = modalTotal - modalRealisasi;
+
+if(modalChart) modalChart.destroy();
+
+modalChart = new Chart(document.getElementById('modalChart'),{
+    type:'doughnut',
+    data:{
+        labels:['Realisasi','Sisa'],
+        datasets:[{
+            data:[modalRealisasi, modalSisa],
+            backgroundColor:['#3b82f6','#e5e7eb']
+        }]
+    },
+    options:{
+        plugins:{legend:{display:false}},
+        cutout:'70%'
+    }
+});
+
+    
 document.addEventListener("DOMContentLoaded", function(){
 
     const nama = sessionStorage.getItem("nama");
@@ -446,7 +508,7 @@ function logout(){
 }
 
 // URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycbwJ-8zAusus3B7hgrvlq4pPr8mLpefVn4AkhZzbD1yFTz0E0Gx8CMTteOOD4W3s5TGPSw/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycby2sBhYPGsicFeEwRApRKCWpXyCQph37bdn4rMnQci6covgIxS5lpILri3xCqgK-qnsxA/exec";
 
 async function loadDashboard(){
     showLoading(); // tampilkan overlay
