@@ -765,48 +765,41 @@ async function updateDashboard(){
         tbody.appendChild(tr);
     });
 
-// ================= BELANJA BARANG =================
 const barangTotal = data.belanjaBarang?.total || 0;
 const barangRealisasi = data.belanjaBarang?.realisasi || 0;
-const barangSisa = barangTotal - barangRealisasi;
 
-let barangPersen = 0;
-if(barangTotal > 0){
-    barangPersen = ((barangRealisasi / barangTotal) * 100).toFixed(2);
-}
+const persenBarang = barangTotal > 0 
+    ? (barangRealisasi / barangTotal) * 100 
+    : 0;
 
-const barangSisaPersen = (100 - parseFloat(barangPersen)).toFixed(2);
-
-// format angka ribuan
-const formatRupiah = (angka) => {
-    return angka.toLocaleString("id-ID");
-};
+document.getElementById("progressBarang").style.width = persenBarang + "%";
+document.getElementById("persenBarang").textContent = persenBarang.toFixed(2) + "%";
 
 document.getElementById("barangRealisasi").textContent =
-    `${formatRupiah(barangRealisasi)} (${barangPersen}%)`;
+    barangRealisasi.toLocaleString("id-ID");
 
-document.getElementById("barangSisa").textContent =
-    `${formatRupiah(barangSisa)} (${barangSisaPersen}%)`;
+document.getElementById("barangTotal").textContent =
+    barangTotal.toLocaleString("id-ID");
 
 
 
-// ================= BELANJA MODAL =================
+
 const modalTotal = data.belanjaModal?.total || 0;
 const modalRealisasi = data.belanjaModal?.realisasi || 0;
-const modalSisa = modalTotal - modalRealisasi;
 
-let modalPersen = 0;
-if(modalTotal > 0){
-    modalPersen = ((modalRealisasi / modalTotal) * 100).toFixed(2);
-}
+const persenModal = modalTotal > 0 
+    ? (modalRealisasi / modalTotal) * 100 
+    : 0;
 
-const modalSisaPersen = (100 - parseFloat(modalPersen)).toFixed(2);
+document.getElementById("progressModal").style.width = persenModal + "%";
+document.getElementById("persenModal").textContent = persenModal.toFixed(2) + "%";
 
 document.getElementById("modalRealisasi").textContent =
-    `${formatRupiah(modalRealisasi)} (${modalPersen}%)`;
+    modalRealisasi.toLocaleString("id-ID");
 
-document.getElementById("modalSisa").textContent =
-    `${formatRupiah(modalSisa)} (${modalSisaPersen}%)`;
+document.getElementById("modalTotal").textContent =
+    modalTotal.toLocaleString("id-ID");
+
 
 // ================= MONITORING MP =================
 const mpTable = document.getElementById("monitoringMPTable");
