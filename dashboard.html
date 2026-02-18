@@ -859,7 +859,7 @@ function logout(){
 }
 
 // URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycbw4ucNSFseU0ELchC88rjKlSuX4LjjEnL1x3MTs8kFihQGBFPLDIE1p5K-1BTn24IIqqg/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbzJHgj2Y9dlhJu0bSaW2zSvqWSWJzW5YeDOSPDLkd5dNyiudmOoO6jXRgLXmDQiJdNT/exec";
 
 async function loadDashboard(){
     showLoading(); // tampilkan overlay
@@ -1083,69 +1083,35 @@ function formatRupiah(angka){
 }
 
     
-function openModal(){
+function openModal() {
 
-    const modal = document.getElementById("belanjaModal");
-    const body = document.getElementById("modalTableBody");
-    const footer = document.getElementById("modalTableFooter");
-    const title = document.getElementById("modalTitle");
+  const data = window.dashboardData.dashboardDetail;
 
-    body.innerHTML = "";
-    footer.innerHTML = "";
+  const header = data[0];
+  const rows = data.slice(1);
 
-    title.innerText = "Detail Rekap Belanja";
+  const thead = document.getElementById("modalTableHead");
+  const tbody = document.getElementById("modalTableBody");
 
-    // ambil data dari card
-    const barangTotal = parseRupiah(document.getElementById("barangTotal").textContent);
-    const barangRealisasi = parseRupiah(document.getElementById("barangRealisasi").textContent);
-    const barangSisa = parseRupiah(document.getElementById("barangSisa").textContent);
-    const persenBarang = document.getElementById("persenBarang").textContent;
+  thead.innerHTML = `
+    <tr>
+      ${header.map(h => `<th>${h}</th>`).join("")}
+    </tr>
+  `;
 
-    const modalTotal = parseRupiah(document.getElementById("modalTotal").textContent);
-    const modalRealisasi = parseRupiah(document.getElementById("modalRealisasi").textContent);
-    const modalSisa = parseRupiah(document.getElementById("modalSisa").textContent);
-    const persenModal = document.getElementById("persenModal").textContent;
+  tbody.innerHTML = "";
 
-    // hitung total rekap
-    const totalPagu = barangTotal + modalTotal;
-    const totalRealisasi = barangRealisasi + modalRealisasi;
-    const totalSisa = barangSisa + modalSisa;
-    const totalPersen = ((totalRealisasi / totalPagu) * 100).toFixed(2) + "%";
-
-    // ROW 1 & 2
-    body.innerHTML = `
-        <tr>
-            <td>52</td>
-            <td>Belanja Barang</td>
-            <td>${formatRupiah(barangTotal)}</td>
-            <td>${formatRupiah(barangRealisasi)}</td>
-            <td>${formatRupiah(barangSisa)}</td>
-            <td>${persenBarang}</td>
-        </tr>
-
-        <tr>
-            <td>53</td>
-            <td>Belanja Modal</td>
-            <td>${formatRupiah(modalTotal)}</td>
-            <td>${formatRupiah(modalRealisasi)}</td>
-            <td>${formatRupiah(modalSisa)}</td>
-            <td>${persenModal}</td>
-        </tr>
+  rows.forEach(r => {
+    tbody.innerHTML += `
+      <tr>
+        ${r.map(col => `<td>${col}</td>`).join("")}
+      </tr>
     `;
+  });
 
-    // ROW 4 (FOOTER TOTAL)
-    footer.innerHTML = `
-        <tr style="font-weight:600; background:#f3f4f6;">
-            <td colspan="2">TOTAL</td>
-            <td>${formatRupiah(totalPagu)}</td>
-            <td>${formatRupiah(totalRealisasi)}</td>
-            <td>${formatRupiah(totalSisa)}</td>
-            <td>${totalPersen}</td>
-        </tr>
-    `;
-
-    modal.style.display = "flex";
+  document.getElementById("belanjaModal").style.display = "flex";
 }
+
 
 
 
