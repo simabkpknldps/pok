@@ -443,6 +443,54 @@ th{
     font-weight:600;
 }
 
+.belanja-card{
+    background:white;
+    padding:16px;
+    border-radius:16px;
+    border:1px solid #e5e7eb;
+}
+
+.belanja-card h4{
+    margin-bottom:12px;
+    font-size:14px;
+    font-weight:600;
+}
+
+.progress-container{
+    width:100%;
+    height:14px;
+    background:#e5e7eb;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.progress-bar{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#2563eb,#1d4ed8);
+    border-radius:10px;
+    transition:width 0.6s ease;
+}
+
+.progress-info{
+    margin-top:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.progress-info span{
+    font-size:18px;
+    font-weight:700;
+    color:#1d4ed8;
+}
+
+.progress-info small{
+    font-size:12px;
+    color:#64748b;
+    text-align:right;
+}
+
     
 </style>
 </head>
@@ -531,40 +579,40 @@ th{
     </div>
 
     <!-- CARD 2 : BELANJA BARANG -->
-<div class="chart-box">
-    <h3>Belanja Barang</h3>
-    <div class="belanja-box">
-        <div class="belanja-row">
-            <small>Realisasi</small>
-            <strong id="barangRealisasi">0%</strong>
-        </div>
-        <div class="belanja-row">
-            <small>Sisa</small>
-            <strong id="barangSisa">0%</strong>
-        </div>
-        <div class="belanja-footnote">
-            <em>*data berdasarkan SP2D</em>
-        </div>
+<div class="belanja-card">
+    <h4>Belanja Barang</h4>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBarang"></div>
+    </div>
+
+    <div class="progress-info">
+        <span id="persenBarang">0%</span>
+        <small>
+            Realisasi: <span id="barangRealisasi">0</span><br>
+            Pagu: <span id="barangTotal">0</span>
+        </small>
     </div>
 </div>
 
+
 <!-- CARD 3 : BELANJA MODAL -->
-<div class="chart-box">
-    <h3>Belanja Modal</h3>
-    <div class="belanja-box">
-        <div class="belanja-row">
-            <small>Realisasi</small>
-            <strong id="modalRealisasi">0%</strong>
-        </div>
-        <div class="belanja-row">
-            <small>Sisa</small>
-            <strong id="modalSisa">0%</strong>
-        </div>
-        <div class="belanja-footnote">
-            <em>*data berdasarkan SP2D</em>
-        </div>
+<div class="belanja-card">
+    <h4>Belanja Modal</h4>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressModal"></div>
+    </div>
+
+    <div class="progress-info">
+        <span id="persenModal">0%</span>
+        <small>
+            Realisasi: <span id="modalRealisasi">0</span><br>
+            Pagu: <span id="modalTotal">0</span>
+        </small>
     </div>
 </div>
+
 
             <!-- LAYER 3 -->
 <div class="dashboard-grid-full">
@@ -843,7 +891,36 @@ if(mpTable){
     }
 }
 
+// ===== UPDATE BELANJA BARANG =====
+const persenBarang = belanjaBarang.total > 0 
+    ? (belanjaBarang.realisasi / belanjaBarang.total) * 100 
+    : 0;
 
+document.getElementById("progressBarang").style.width = persenBarang + "%";
+document.getElementById("persenBarang").textContent = persenBarang.toFixed(2) + "%";
+
+document.getElementById("barangRealisasi").textContent =
+    belanjaBarang.realisasi.toLocaleString("id-ID");
+
+document.getElementById("barangTotal").textContent =
+    belanjaBarang.total.toLocaleString("id-ID");
+
+
+// ===== UPDATE BELANJA MODAL =====
+const persenModal = belanjaModal.total > 0 
+    ? (belanjaModal.realisasi / belanjaModal.total) * 100 
+    : 0;
+
+document.getElementById("progressModal").style.width = persenModal + "%";
+document.getElementById("persenModal").textContent = persenModal.toFixed(2) + "%";
+
+document.getElementById("modalRealisasi").textContent =
+    belanjaModal.realisasi.toLocaleString("id-ID");
+
+document.getElementById("modalTotal").textContent =
+    belanjaModal.total.toLocaleString("id-ID");
+
+    
 }
 
 // panggil pertama kali pakai overlay
