@@ -542,225 +542,100 @@ th{
 
 <script>
 
-    
-
-document.addEventListener("DOMContentLoaded", function(){
-
-    const nama = sessionStorage.getItem("nama");
-
-    if(!nama){
-        window.location.replace("index.html");
-    } else {
-        document.getElementById("namaUser").textContent = nama;
-    }
-
-   
-    });
-
-
-
-function goDashboard(){ window.location.href="dashboard.html"; }
-function goPOK(){ window.location.href="data_pok.html"; }
-function goKegiatan(){
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
-    window.location.href = "data_kegiatan.html";
+function showLoading(){
+    const overlay = document.getElementById("loadingOverlay");
+    if(overlay) overlay.style.display = "flex";
 }
 
-    
-function logout(){
-    sessionStorage.clear();
-    window.location.replace("index.html");
+function hideLoading(){
+    const overlay = document.getElementById("loadingOverlay");
+    if(overlay) overlay.style.display = "none";
 }
 
-// URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycbwxO63Ypnf8uFqoNuuieirtLCFiej9n8hEylA4tOHreyciAJbBsWgAM7Eo-29kNOYCH/exec";
-
-async function loadDashboard(){
-    showLoading(); // tampilkan overlay
-
-    try{
-        const kantor = sessionStorage.getItem("kantor"); // ambil kantor
-        if(!kantor) {
-            alert("Kantor tidak ditemukan. Silakan login ulang.");
-            window.location.replace("index.html");
-            return;
-        }
-
-        // kirim parameter kantor ke GAS
-        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
-        const data = await res.json();
-
-        if(data.status && data.status !== "success"){
-            alert("Gagal memuat data: " + (data.message || "Unknown error"));
-            return;
-        }
-
-        // Update card dashboard
-        document.querySelector("#cardTotal p").textContent = data.dashboard?.total || 0;
-        document.querySelector("#cardSelesai p").textContent = data.dashboard?.selesai || 0;
-        document.querySelector("#cardTerbayar p").textContent = data.dashboard?.terbayar || 0;
-        document.querySelector("#cardLPT p").textContent = data.dashboard?.lpt || 0;
-        document.querySelector("#cardProses p").textContent = data.dashboard?.proses || 0;
-
-        // Update tabel hari ini
-        const tbody = document.querySelector(".chart-box tbody");
-        tbody.innerHTML = "";
-        (data.todayRows || []).forEach(row=>{
-            const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
-            tbody.appendChild(tr);
-        });
-
-    }catch(err){
-        console.error(err);
-        alert("Gagal memuat data dashboard!");
-    } finally {
-        hideLoading(); // sembunyikan overlay
-    }
+function formatRupiah(angka){
+    return Number(angka).toLocaleString("id-ID");
 }
 
-
-function showLoading() {
-    document.getElementById("overlayLoading").style.display = "flex";
+function formatPersen(realisasi, total){
+    if(total === 0) return "0.00%";
+    return ((realisasi / total) * 100).toFixed(2) + "%";
 }
-
-function hideLoading() {
-    document.getElementById("overlayLoading").style.display = "none";
-}
-
-
-
-loadDashboard();
 
 async function updateDashboard(){
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor) return;
 
-    const res = await fetch(`${urlGAS}?kantor=${kantor}`);
-    const data = await res.json();
+    const response = await fetch("URL_WEB_APP_KAMU"); 
+    const data = await response.json();
 
-    // Update card dashboard
-    document.querySelector("#cardTotal p").textContent = data.dashboard?.total || 0;
-    document.querySelector("#cardSelesai p").textContent = data.dashboard?.selesai || 0;
-    document.querySelector("#cardTerbayar p").textContent = data.dashboard?.terbayar || 0;
-    document.querySelector("#cardLPT p").textContent = data.dashboard?.lpt || 0;
-    document.querySelector("#cardProses p").textContent = data.dashboard?.proses || 0;
+    // ===============================
+    // TOTAL BELANJA BARANG
+    // ===============================
 
-    // Update tabel hari ini
-    const tbody = document.querySelector(".chart-box tbody");
-    tbody.innerHTML = "";
-    (data.todayRows || []).forEach(row=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
-        tbody.appendChild(tr);
-    });
+    const barangTotal = Number(data.belanjaBarang.total || 0);
+    const barangRealisasi = Number(data.belanjaBarang.realisasi || 0);
+    const persenBarang = formatPersen(barangRealisasi, barangTotal);
 
-// ================= BELANJA BARANG =================
-const barangTotal = data.belanjaBarang?.total || 0;
-const barangRealisasi = data.belanjaBarang?.realisasi || 0;
-const barangSisa = barangTotal - barangRealisasi;
+    document.getElementById("barangTotal").textContent =
+        formatRupiah(barangTotal);
 
-let barangPersen = 0;
-if(barangTotal > 0){
-    barangPersen = ((barangRealisasi / barangTotal) * 100).toFixed(2);
+    document.getElementById("barangRealisasi").textContent =
+        formatRupiah(barangRealisasi);
+
+    document.getElementById("barangSummary").innerHTML =
+        `Realisasi ${formatRupiah(barangRealisasi)} (${persenBarang})`;
+
+    // ===============================
+    // TOTAL BELANJA MODAL
+    // ===============================
+
+    const modalTotal = Number(data.belanjaModal.total || 0);
+    const modalRealisasi = Number(data.belanjaModal.realisasi || 0);
+    const persenModal = formatPersen(modalRealisasi, modalTotal);
+
+    document.getElementById("modalTotal").textContent =
+        formatRupiah(modalTotal);
+
+    document.getElementById("modalRealisasi").textContent =
+        formatRupiah(modalRealisasi);
+
+    document.getElementById("modalSummary").innerHTML =
+        `Realisasi ${formatRupiah(modalRealisasi)} (${persenModal})`;
+
+    // ===============================
+    // REKAP BULAN BERJALAN
+    // ===============================
+
+    const bulanSekarang = new Date().getMonth(); // 0-11
+    const rekap = data.rekapBulanan || [];
+
+    if(rekap[bulanSekarang]){
+
+        const bulanData = rekap[bulanSekarang];
+
+        document.getElementById("bulanBarang").innerHTML =
+            `Realisasi ${formatRupiah(bulanData.barangRealisasi || 0)} 
+            (${formatPersen(bulanData.barangRealisasi || 0, bulanData.barangTotal || 0)})`;
+
+        document.getElementById("bulanModal").innerHTML =
+            `Realisasi ${formatRupiah(bulanData.modalRealisasi || 0)} 
+            (${formatPersen(bulanData.modalRealisasi || 0, bulanData.modalTotal || 0)})`;
+    }
 }
 
-const barangSisaPersen = (100 - parseFloat(barangPersen)).toFixed(2);
-
-// format angka ribuan
-const formatRupiah = (angka) => {
-    return angka.toLocaleString("id-ID");
-};
-
-document.getElementById("barangRealisasi").textContent =
-    `${formatRupiah(barangRealisasi)} (${barangPersen}%)`;
-
-document.getElementById("barangSisa").textContent =
-    `${formatRupiah(barangSisa)} (${barangSisaPersen}%)`;
-
-
-
-// ================= BELANJA MODAL =================
-const modalTotal = data.belanjaModal?.total || 0;
-const modalRealisasi = data.belanjaModal?.realisasi || 0;
-const modalSisa = modalTotal - modalRealisasi;
-
-let modalPersen = 0;
-if(modalTotal > 0){
-    modalPersen = ((modalRealisasi / modalTotal) * 100).toFixed(2);
-}
-
-const modalSisaPersen = (100 - parseFloat(modalPersen)).toFixed(2);
-
-document.getElementById("modalRealisasi").textContent =
-    `${formatRupiah(modalRealisasi)} (${modalPersen}%)`;
-
-document.getElementById("modalSisa").textContent =
-    `${formatRupiah(modalSisa)} (${modalSisaPersen}%)`;
-
-// ================= REKAP BULANAN =================
-const rekap = data.rekapBulanan || [];
-const tbodyRekap = document.querySelector("#rekapBulananTable tbody");
-tbodyRekap.innerHTML = "";
-
-rekap.forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-        <td>${r.bulan}</td>
-        <td>${formatRupiah(r.barang?.realisasi || 0)}</td>
-        <td>${formatRupiah(r.modal?.realisasi || 0)}</td>
-    `;
-    tbodyRekap.appendChild(tr);
-
-
-
-   
-
-
-
-
-const bulanSekarang = new Date().getMonth(); // 0-11
-
-if(rekap[bulanSekarang]){
-    document.getElementById("bulan52").textContent =
-        formatAngka(rekap[bulanSekarang].jenis52 || 0);
-
-    document.getElementById("bulan53").textContent =
-        formatAngka(rekap[bulanSekarang].jenis53 || 0);
-}
-
-
-}
-
-function formatRupiah(angka) {
-  return new Intl.NumberFormat('id-ID').format(angka);
-}
-
-
-
-
-  });
-
-    
-// panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
     showLoading();
-    try {
+    try{
         await updateDashboard();
+    } catch(error){
+        console.error("Error dashboard:", error);
     } finally {
         hideLoading();
     }
 
-    // auto-refresh tiap 1 menit tanpa overlay
-    setInterval(updateDashboard, 60000);
+    setInterval(updateDashboard, 60000); // refresh tiap 1 menit
 });
-   
 
 </script>
+
 
 
     
