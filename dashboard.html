@@ -491,7 +491,25 @@ th{
     text-align:right;
 }
 
-    
+/* Samakan tinggi card layer kedua */
+.layer-2 .chart-box{
+    min-height:220px;   /* samakan dengan kegiatan hari ini */
+}
+
+    .layer-2{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr;
+    gap:14px;
+    align-items:stretch;  /* PENTING supaya tinggi sama */
+}
+
+    .chart-box{
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+}
+
+
 </style>
 </head>
 
@@ -580,7 +598,7 @@ th{
 
     <!-- CARD 2 : BELANJA BARANG -->
 <div class="belanja-card">
-    <h4>Belanja Barang</h4>
+    <h3>Belanja Barang</h3>
 
     <div class="progress-container">
         <div class="progress-bar" id="progressBarang"></div>
@@ -590,15 +608,17 @@ th{
         <span id="persenBarang">0%</span>
         <small>
             Realisasi: <span id="barangRealisasi">0</span><br>
+            Sisa: <span id="barangSisa">0</span><br>
             Pagu: <span id="barangTotal">0</span>
         </small>
+<em>*data berdasarkan SP2D</em>
     </div>
 </div>
 
 
 <!-- CARD 3 : BELANJA MODAL -->
 <div class="belanja-card">
-    <h4>Belanja Modal</h4>
+    <h3>Belanja Modal</h3>
 
     <div class="progress-container">
         <div class="progress-bar" id="progressModal"></div>
@@ -608,8 +628,12 @@ th{
         <span id="persenModal">0%</span>
         <small>
             Realisasi: <span id="modalRealisasi">0</span><br>
+            Sisa: <span id="modalSisa">0</span><br>
             Pagu: <span id="modalTotal">0</span>
         </small>
+
+        <em>*data berdasarkan SP2D</em>
+   
     </div>
 </div>
 
@@ -884,6 +908,15 @@ if(mpTable){
     }
 }
 
+const barangSisa = barangTotal - barangRealisasi;
+
+document.getElementById("barangSisa").textContent =
+    barangSisa.toLocaleString("id-ID");
+
+    const modalSisa = modalTotal - modalRealisasi;
+
+document.getElementById("modalSisa").textContent =
+    modalSisa.toLocaleString("id-ID");
 
     
 }
