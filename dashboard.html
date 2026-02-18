@@ -245,12 +245,26 @@ body{
 
 .dashboard-grid-full{
     grid-column:1 / -1;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
+    display:block;   /* jadikan full */
 }
 
+.dashboard-grid-full .chart-box{
+    width:100%;
+    height:auto;              /* hilangkan batas tinggi */
+    overflow-x:auto;          /* scroll horizontal */
+}
 
+#monitoringMPTable{
+    min-width:1200px;   /* supaya tidak gepeng */
+}
+
+    #monitoringMPTable thead th{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+    
 .chart-box{
     background:white;
     padding:20px;
