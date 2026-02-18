@@ -1073,6 +1073,16 @@ document.getElementById("modalSisa").textContent =
     
 }
 
+    function parseRupiah(str){
+    if(!str) return 0;
+    return parseInt(str.toString().replace(/[^\d]/g,'')) || 0;
+}
+
+function formatRupiah(angka){
+    return angka.toLocaleString("id-ID");
+}
+
+    
 function openModal(){
 
     const modal = document.getElementById("belanjaModal");
