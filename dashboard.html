@@ -267,11 +267,13 @@ body{
     
 .chart-box{
     background:white;
-    padding:20px;
+    padding:16px;
     border-radius:16px;
     border:1px solid #e5e7eb;
-    height:350px;
+    height:auto;
+    min-height:260px;
 }
+
 
     .belanja-box{
     margin-top:20px;
@@ -410,6 +412,38 @@ th{
     text-align:center;
 }
 
+    /* Samakan ukuran tabel Kegiatan Hari Ini */
+.chart-box table{
+    font-size:13px;
+}
+
+.chart-box table th,
+.chart-box table td{
+    padding:8px 10px;
+}
+
+    /* Perkecil card belanja */
+.belanja-box{
+    gap:12px;
+}
+
+.belanja-row strong{
+    font-size:16px;   /* sebelumnya 20px */
+}
+
+.belanja-row small{
+    font-size:12px;
+}
+
+#barangRealisasi,
+#barangSisa,
+#modalRealisasi,
+#modalSisa{
+    font-size:15px;
+    font-weight:600;
+}
+
+    
 </style>
 </head>
 
