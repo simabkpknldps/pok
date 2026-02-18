@@ -239,7 +239,7 @@ body{
 
 .dashboard-grid{
     display:grid;
-    grid-template-columns:2fr 1fr;
+    grid-template-columns:2fr 1fr 1fr;
     gap:20px;
 }
 
@@ -360,35 +360,41 @@ th{
 
         <div class="dashboard-grid">
 
-            <!-- DIGANTI MENJADI TABEL -->
-            <div class="chart-box">
-                <h3 style="margin-bottom:15px;">Kegiatan Hari Ini</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Uraian / No ST</th>
-                            <th>Pelaksana Tugas</th>
-                            <th>Tujuan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                        
-                    </tbody>
-                </table>
-            </div>
+    <!-- CARD 1 : KEGIATAN HARI INI -->
+    <div class="chart-box">
+        <h3 style="margin-bottom:15px;">Kegiatan Hari Ini</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Uraian / No ST</th>
+                    <th>Pelaksana Tugas</th>
+                    <th>Tujuan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="3" style="text-align:center;color:#94a3b8;">
+                        Belum ada kegiatan hari ini
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-            <!-- PIE CHART TETAP -->
-            <div class="chart-box">
-                <h3>Jenis Kegiatan</h3>
-                <canvas id="pieChart"></canvas>
-            </div>
+    <!-- CARD 2 : BELANJA BARANG -->
+    <div class="chart-box">
+        <h3>Belanja Barang</h3>
+        <canvas id="barangChart"></canvas>
+    </div>
 
-        </div>
+    <!-- CARD 3 : BELANJA MODAL -->
+    <div class="chart-box">
+        <h3>Belanja Modal</h3>
+        <canvas id="modalChart"></canvas>
+    </div>
+
+</div>
+
     </div>
 </div>
 
@@ -398,6 +404,10 @@ th{
 </div>
 
 <script>
+
+    let barangChart;
+    let modalChart;
+
 document.addEventListener("DOMContentLoaded", function(){
 
     const nama = sessionStorage.getItem("nama");
@@ -527,6 +537,55 @@ async function updateDashboard(){
         tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
         tbody.appendChild(tr);
     });
+
+    // ================= BELANJA BARANG =================
+const barangTotal = data.belanjaBarang?.total || 0;
+const barangRealisasi = data.belanjaBarang?.realisasi || 0;
+const barangSisa = Math.max(barangTotal - barangRealisasi, 0);
+
+if(barangChart) barangChart.destroy();
+
+barangChart = new Chart(document.getElementById('barangChart'),{
+    type:'doughnut',
+    data:{
+        labels:['Realisasi','Sisa'],
+        datasets:[{
+            data:[barangRealisasi, barangSisa],
+            backgroundColor:['#22c55e','#e5e7eb']
+        }]
+    },
+    options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        cutout:'70%'
+    }
+});
+
+// ================= BELANJA MODAL =================
+const modalTotal = data.belanjaModal?.total || 0;
+const modalRealisasi = data.belanjaModal?.realisasi || 0;
+const modalSisa = Math.max(modalTotal - modalRealisasi, 0);
+
+if(modalChart) modalChart.destroy();
+
+modalChart = new Chart(document.getElementById('modalChart'),{
+    type:'doughnut',
+    data:{
+        labels:['Realisasi','Sisa'],
+        datasets:[{
+            data:[modalRealisasi, modalSisa],
+            backgroundColor:['#3b82f6','#e5e7eb']
+        }]
+    },
+    options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        cutout:'70%'
+    }
+});
+
 }
 
 // panggil pertama kali pakai overlay
