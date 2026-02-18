@@ -244,9 +244,7 @@ body{
     gap:20px;
     align-items:stretch;
 }
-.dashboard-grid > div{
-    outline:2px solid red;
-}
+
 
 .dashboard-grid{
     display:flex;
@@ -1085,51 +1083,60 @@ function openModal(){
     body.innerHTML = "";
     footer.innerHTML = "";
 
-    title.innerText = "Detail Belanja 52 & 53";
+    title.innerText = "Detail Rekap Belanja";
 
-    // ambil dari dashboard yang sudah dirender
-    const barangTotal = document.getElementById("barangTotal").textContent;
-    const barangRealisasi = document.getElementById("barangRealisasi").textContent;
-    const barangSisa = document.getElementById("barangSisa").textContent;
+    // ambil data dari card
+    const barangTotal = parseRupiah(document.getElementById("barangTotal").textContent);
+    const barangRealisasi = parseRupiah(document.getElementById("barangRealisasi").textContent);
+    const barangSisa = parseRupiah(document.getElementById("barangSisa").textContent);
     const persenBarang = document.getElementById("persenBarang").textContent;
 
-    const modalTotal = document.getElementById("modalTotal").textContent;
-    const modalRealisasi = document.getElementById("modalRealisasi").textContent;
-    const modalSisa = document.getElementById("modalSisa").textContent;
+    const modalTotal = parseRupiah(document.getElementById("modalTotal").textContent);
+    const modalRealisasi = parseRupiah(document.getElementById("modalRealisasi").textContent);
+    const modalSisa = parseRupiah(document.getElementById("modalSisa").textContent);
     const persenModal = document.getElementById("persenModal").textContent;
 
+    // hitung total rekap
+    const totalPagu = barangTotal + modalTotal;
+    const totalRealisasi = barangRealisasi + modalRealisasi;
+    const totalSisa = barangSisa + modalSisa;
+    const totalPersen = ((totalRealisasi / totalPagu) * 100).toFixed(2) + "%";
+
+    // ROW 1 & 2
     body.innerHTML = `
         <tr>
             <td>52</td>
             <td>Belanja Barang</td>
-            <td>${barangTotal}</td>
-            <td>-</td>
-            <td>${barangTotal}</td>
-            <td>-</td>
-            <td>${barangRealisasi}</td>
-            <td>-</td>
-            <td>${barangSisa}</td>
-            <td>-</td>
+            <td>${formatRupiah(barangTotal)}</td>
+            <td>${formatRupiah(barangRealisasi)}</td>
+            <td>${formatRupiah(barangSisa)}</td>
             <td>${persenBarang}</td>
         </tr>
 
         <tr>
             <td>53</td>
             <td>Belanja Modal</td>
-            <td>${modalTotal}</td>
-            <td>-</td>
-            <td>${modalTotal}</td>
-            <td>-</td>
-            <td>${modalRealisasi}</td>
-            <td>-</td>
-            <td>${modalSisa}</td>
-            <td>-</td>
+            <td>${formatRupiah(modalTotal)}</td>
+            <td>${formatRupiah(modalRealisasi)}</td>
+            <td>${formatRupiah(modalSisa)}</td>
             <td>${persenModal}</td>
+        </tr>
+    `;
+
+    // ROW 4 (FOOTER TOTAL)
+    footer.innerHTML = `
+        <tr style="font-weight:600; background:#f3f4f6;">
+            <td colspan="2">TOTAL</td>
+            <td>${formatRupiah(totalPagu)}</td>
+            <td>${formatRupiah(totalRealisasi)}</td>
+            <td>${formatRupiah(totalSisa)}</td>
+            <td>${totalPersen}</td>
         </tr>
     `;
 
     modal.style.display = "flex";
 }
+
 
 
 function closeModal(){
