@@ -764,6 +764,40 @@ if(rekap[bulanSekarang]){
 
 }
 
+function formatRupiah(angka) {
+  return new Intl.NumberFormat('id-ID').format(angka);
+}
+
+fetch(url)
+  .then(res => res.json())
+  .then(data => {
+
+    // ===== Rekap Bulanan =====
+    const tbody = document.getElementById("rekapBulananBody");
+    tbody.innerHTML = "";
+
+    data.rekapBulanan.forEach(item => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${item.bulan}</td>
+          <td>${formatRupiah(item.barang.realisasi)}</td>
+          <td>${formatRupiah(item.barang.triwulan)}</td>
+          <td>${formatRupiah(item.modal.realisasi)}</td>
+          <td>${formatRupiah(item.modal.triwulan)}</td>
+        </tr>
+      `;
+    });
+
+    // ===== Ringkasan Belanja =====
+    document.getElementById("barangSummary").innerHTML =
+      `Realisasi ${formatRupiah(data.belanjaBarang.realisasi)} dari ${formatRupiah(data.belanjaBarang.total)}`;
+
+    document.getElementById("modalSummary").innerHTML =
+      `Realisasi ${formatRupiah(data.belanjaModal.realisasi)} dari ${formatRupiah(data.belanjaModal.total)}`;
+
+  });
+
+    
 // panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
     showLoading();
