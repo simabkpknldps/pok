@@ -884,34 +884,6 @@ if(mpTable){
     }
 }
 
-// ===== UPDATE BELANJA BARANG =====
-const persenBarang = belanjaBarang.total > 0 
-    ? (belanjaBarang.realisasi / belanjaBarang.total) * 100 
-    : 0;
-
-document.getElementById("progressBarang").style.width = persenBarang + "%";
-document.getElementById("persenBarang").textContent = persenBarang.toFixed(2) + "%";
-
-document.getElementById("barangRealisasi").textContent =
-    belanjaBarang.realisasi.toLocaleString("id-ID");
-
-document.getElementById("barangTotal").textContent =
-    belanjaBarang.total.toLocaleString("id-ID");
-
-
-// ===== UPDATE BELANJA MODAL =====
-const persenModal = belanjaModal.total > 0 
-    ? (belanjaModal.realisasi / belanjaModal.total) * 100 
-    : 0;
-
-document.getElementById("progressModal").style.width = persenModal + "%";
-document.getElementById("persenModal").textContent = persenModal.toFixed(2) + "%";
-
-document.getElementById("modalRealisasi").textContent =
-    belanjaModal.realisasi.toLocaleString("id-ID");
-
-document.getElementById("modalTotal").textContent =
-    belanjaModal.total.toLocaleString("id-ID");
 
     
 }
