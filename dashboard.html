@@ -1083,26 +1083,48 @@ function formatRupiah(angka){
 }
 
     
-function openModal(cardType) {
-    if(!window.dashboardData || !window.dashboardData.dashboardDetail){
-        alert("Data belanja belum tersedia");
+async function openModal(cardType){
+    const kantor = sessionStorage.getItem("kantor");
+    if(!kantor){
+        alert("Session kantor belum ada. Silakan login ulang!");
         return;
     }
 
-    const data = window.dashboardData.dashboardDetail;
+    showLoading();
 
-    const thead = document.querySelector("#belanjaModal thead");
-    const tbody = document.getElementById("modalTableBody");
+    try {
+        // panggil GAS
+        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
+        const data = await res.json();
 
-    thead.innerHTML = `<tr>${data[0].map(h => `<th>${h}</th>`).join("")}</tr>`;
+        if(!data || data.status !== "success" || !data.dashboardDetail){
+            alert("Data belanja belum tersedia");
+            return;
+        }
 
-    tbody.innerHTML = data.slice(1).map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("");
+        const dashboardDetail = data.dashboardDetail;
 
-    document.getElementById("belanjaModal").style.display = "flex";
+        // isi modal
+        const thead = document.querySelector("#belanjaModal thead");
+        const tbody = document.getElementById("modalTableBody");
+
+        // optional: ganti judul modal sesuai card
+        document.getElementById("modalTitle").textContent =
+            cardType === "barang" ? "Detail Belanja Barang" : "Detail Belanja Modal";
+
+        thead.innerHTML = `<tr>${dashboardDetail[0].map(h => `<th>${h}</th>`).join("")}</tr>`;
+
+        tbody.innerHTML = dashboardDetail.slice(1).map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("");
+
+        document.getElementById("belanjaModal").style.display = "flex";
+
+    } catch(err){
+        console.error(err);
+        alert("Gagal memuat data belanja!");
+    } finally{
+        hideLoading();
+    }
 }
-
-
-
 
 
 function closeModal(){
