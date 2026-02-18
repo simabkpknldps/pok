@@ -558,6 +558,80 @@ th{
     padding:6px 8px;  /* lebih rapat */
 }
 
+.modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+}
+
+.modal-box{
+    width:90%;
+    max-width:1100px;
+    background:#fff;
+    border-radius:16px;
+    padding:20px;
+    animation:fadeIn 0.25s ease;
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.modal-header h3{
+    font-size:18px;
+    font-weight:600;
+}
+
+.close-btn{
+    font-size:22px;
+    cursor:pointer;
+}
+
+.modal-body{
+    overflow-x:auto;
+}
+
+.modal-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+}
+
+.modal-table th{
+    background:#f1f5f9;
+    padding:8px;
+    text-align:center;
+    font-weight:600;
+}
+
+.modal-table td{
+    padding:6px 8px;
+    text-align:right;
+    border-bottom:1px solid #eee;
+}
+
+.modal-table td:first-child,
+.modal-table td:nth-child(2){
+    text-align:left;
+}
+
+.modal-table tfoot td{
+    font-weight:700;
+    background:#f8fafc;
+}
+
+@keyframes fadeIn{
+    from{opacity:0; transform:scale(0.95);}
+    to{opacity:1; transform:scale(1);}
+}
+
     
 </style>
 </head>
@@ -668,6 +742,9 @@ th{
         <em>*data berdasarkan SP2D (klik untuk detil!)</em>
     </div>
 
+    <div class="belanja-card" onclick="openModal('barang')">
+
+    
 </div>
 
 
@@ -693,6 +770,10 @@ th{
     <div class="belanja-footnote">
         <em>*data berdasarkan SP2D (klik untuk detil!)</em>
     </div>
+    
+<div class="belanja-card" onclick="openModal('modal')">
+
+    
 </div>
 
 
@@ -729,6 +810,9 @@ th{
     © KPKNL Denpasar 2026
 </div>
 
+
+
+    
 <script>
 
     
@@ -980,6 +1064,99 @@ document.getElementById("modalSisa").textContent =
     
 }
 
+function openModal(type){
+
+    const modal = document.getElementById("belanjaModal");
+    const body = document.getElementById("modalTableBody");
+    const footer = document.getElementById("modalTableFooter");
+    const title = document.getElementById("modalTitle");
+
+    body.innerHTML = "";
+    footer.innerHTML = "";
+
+    let data;
+
+    if(type === "barang"){
+        title.innerText = "Detail Belanja Barang";
+
+        data = [
+            {
+                jenis:"52",
+                uraian:"Belanja Barang",
+                pagu:"3,081,907,000",
+                blokir:"151,021,000",
+                netto:"2,930,886,000",
+                bruto:"222,561,675",
+                sp2d:"153,144,175",
+                sisaBruto:"2,708,334,325",
+                sisaSp2d:"2,777,741,825",
+                persenBruto:"7.59%",
+                persenSp2d:"5.23%"
+            }
+        ];
+    }
+
+    if(type === "modal"){
+        title.innerText = "Detail Belanja Modal";
+
+        data = [
+            {
+                jenis:"53",
+                uraian:"Belanja Modal",
+                pagu:"94,800,000",
+                blokir:"0",
+                netto:"94,800,000",
+                bruto:"91,596,000",
+                sp2d:"0",
+                sisaBruto:"3,204,000",
+                sisaSp2d:"94,800,000",
+                persenBruto:"96.62%",
+                persenSp2d:"0.00%"
+            }
+        ];
+    }
+
+    // render body row
+    data.forEach(d=>{
+        body.innerHTML += `
+        <tr>
+            <td>${d.jenis}</td>
+            <td>${d.uraian}</td>
+            <td>${d.pagu}</td>
+            <td>${d.blokir}</td>
+            <td>${d.netto}</td>
+            <td>${d.bruto}</td>
+            <td>${d.sp2d}</td>
+            <td>${d.sisaBruto}</td>
+            <td>${d.sisaSp2d}</td>
+            <td>${d.persenBruto}</td>
+            <td>${d.persenSp2d}</td>
+        </tr>
+        `;
+    });
+
+    // footer row (row 4)
+    footer.innerHTML = `
+        <tr>
+            <td colspan="4">Total</td>
+            <td>3,025,686,000</td>
+            <td>314,147,675</td>
+            <td>153,144,175</td>
+            <td>2,711,538,325</td>
+            <td>2,872,541,825</td>
+            <td>104.21%</td>
+            <td>5.23%</td>
+        </tr>
+    `;
+
+    modal.style.display = "flex";
+}
+
+function closeModal(){
+    document.getElementById("belanjaModal").style.display = "none";
+}
+
+    
 // panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
     showLoading();
@@ -995,6 +1172,40 @@ document.addEventListener("DOMContentLoaded", async function(){
    
 
 </script>
+
+    <!-- POPUP MODAL -->
+<div id="belanjaModal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modalTitle">Detail Belanja</h3>
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+    </div>
+
+    <div class="modal-body">
+      <table class="modal-table">
+        <thead>
+          <tr>
+            <th>Jenis</th>
+            <th>Uraian</th>
+            <th>Pagu (a)</th>
+            <th>Blokir (b)</th>
+            <th>Pagu Netto</th>
+            <th>Realisasi Bruto</th>
+            <th>Realisasi SP2D</th>
+            <th>Sisa Bruto</th>
+            <th>Sisa SP2D</th>
+            <th>% Bruto</th>
+            <th>% SP2D</th>
+          </tr>
+        </thead>
+        <tbody id="modalTableBody">
+        </tbody>
+        <tfoot id="modalTableFooter">
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
 
 
     
