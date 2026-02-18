@@ -422,6 +422,61 @@ th{
         </table>
     </div>
 
+<div class="row mt-4">
+
+  <!-- CARD REKAP BULANAN -->
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-primary text-white">
+        <strong>Rekap Per Bulan</strong>
+      </div>
+      <div class="card-body p-2">
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered text-center mb-0">
+            <thead class="table-light">
+              <tr>
+                <th rowspan="2">Bulan</th>
+                <th colspan="2">52</th>
+                <th colspan="2">53</th>
+              </tr>
+              <tr>
+                <th>Realisasi</th>
+                <th>Triwulan</th>
+                <th>Realisasi</th>
+                <th>Triwulan</th>
+              </tr>
+            </thead>
+            <tbody id="rekapBulananBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD KEDUA (BELANJA SUMMARY) -->
+  <div class="col-md-6">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-success text-white">
+        <strong>Ringkasan Belanja</strong>
+      </div>
+      <div class="card-body">
+
+        <p><strong>Belanja Barang</strong></p>
+        <p id="barangSummary"></p>
+
+        <hr>
+
+        <p><strong>Belanja Modal</strong></p>
+        <p id="modalSummary"></p>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+            
     <!-- CARD 2 : BELANJA BARANG -->
 <div class="chart-box">
     <h3>Belanja Barang</h3>
