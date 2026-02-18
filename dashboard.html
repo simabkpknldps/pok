@@ -393,6 +393,15 @@ th{
     width: 100%;
     table-layout: fixed;
 }
+/* Kecilkan kolom pertama */
+#monitoringMPTable th:first-child,
+#monitoringMPTable td:first-child{
+    width:180px;        /* ubah sesuai kebutuhan */
+    max-width:180px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
 
 </style>
 </head>
@@ -521,7 +530,7 @@ th{
 
     <!-- CARD REKAP BULANAN -->
     <div class="chart-box">
-    <h3 style="margin-bottom:15px;">Monitoring MP</h3>
+    <h3 style="margin-bottom:15px;">Monitoring Maksimum Pencairan (MP) PNBP</h3>
 
     <table id="monitoringMPTable">
         <thead></thead>
@@ -530,7 +539,7 @@ th{
     </table>
 
     <div class="belanja-footnote">
-        <em>*Sumber: dashboard_2026</em>
+        <em>*data berdasarkan SP2D</em>
     </div>
 </div>
 
