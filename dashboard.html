@@ -583,33 +583,46 @@ async function updateDashboard(){
 // ================= BELANJA BARANG =================
 const barangTotal = data.belanjaBarang?.total || 0;
 const barangRealisasi = data.belanjaBarang?.realisasi || 0;
+const barangSisa = barangTotal - barangRealisasi;
 
 let barangPersen = 0;
-
 if(barangTotal > 0){
     barangPersen = ((barangRealisasi / barangTotal) * 100).toFixed(2);
 }
 
 const barangSisaPersen = (100 - parseFloat(barangPersen)).toFixed(2);
 
-document.getElementById("barangRealisasi").textContent = barangPersen + "%";
-document.getElementById("barangSisa").textContent = barangSisaPersen + "%";
+// format angka ribuan
+const formatRupiah = (angka) => {
+    return angka.toLocaleString("id-ID");
+};
+
+document.getElementById("barangRealisasi").textContent =
+    `${formatRupiah(barangRealisasi)} (${barangPersen}%)`;
+
+document.getElementById("barangSisa").textContent =
+    `${formatRupiah(barangSisa)} (${barangSisaPersen}%)`;
+
 
 
 // ================= BELANJA MODAL =================
 const modalTotal = data.belanjaModal?.total || 0;
 const modalRealisasi = data.belanjaModal?.realisasi || 0;
+const modalSisa = modalTotal - modalRealisasi;
 
 let modalPersen = 0;
-
 if(modalTotal > 0){
     modalPersen = ((modalRealisasi / modalTotal) * 100).toFixed(2);
 }
 
 const modalSisaPersen = (100 - parseFloat(modalPersen)).toFixed(2);
 
-document.getElementById("modalRealisasi").textContent = modalPersen + "%";
-document.getElementById("modalSisa").textContent = modalSisaPersen + "%";
+document.getElementById("modalRealisasi").textContent =
+    `${formatRupiah(modalRealisasi)} (${modalPersen}%)`;
+
+document.getElementById("modalSisa").textContent =
+    `${formatRupiah(modalSisa)} (${modalSisaPersen}%)`;
+
 
 
 }
