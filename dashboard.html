@@ -458,19 +458,19 @@ th{
 
 .progress-container{
     width:100%;
-    height:14px;
+    height:10px;          /* lebih tebal (sebelumnya 6-8px) */
     background:#e5e7eb;
-    border-radius:10px;
-    overflow:hidden;
+    border-radius:6px;
+    margin:10px 0 14px 0;
 }
 
 .progress-bar{
     height:100%;
-    width:0%;
-    background:linear-gradient(90deg,#2563eb,#1d4ed8);
-    border-radius:10px;
-    transition:width 0.6s ease;
+    background:#2563eb;
+    border-radius:6px;
+    transition:width 0.4s ease;
 }
+
 
 .progress-info{
     margin-top:10px;
@@ -518,13 +518,23 @@ th{
 
 .chart-box,
 .belanja-card{
-    height:100%;           /* BIKIN SAMA TINGGI */
-    display:flex;
-    flex-direction:column;
+    padding:16px 18px;     /* lebih kecil dari sebelumnya */
+    border-radius:14px;
+    min-height:200px;      /* batasi tinggi */
 }
+
 
 .progress-info{
     margin-top:auto;       /* dorong isi ke bawah agar rapi */
+}
+
+.chart-box table{
+    font-size:13px;   /* sedikit lebih kecil */
+}
+
+.chart-box th,
+.chart-box td{
+    padding:6px 8px;  /* lebih rapat */
 }
 
     
@@ -616,8 +626,10 @@ th{
 
     <!-- CARD 2 : BELANJA BARANG -->
 <div class="belanja-card">
+
     <h3>Belanja Barang</h3>
 
+    <!-- PROGRESS TURUN DI BAWAH HEADER -->
     <div class="progress-container">
         <div class="progress-bar" id="progressBarang"></div>
     </div>
@@ -634,13 +646,16 @@ th{
     <div class="belanja-footnote">
         <em>*data berdasarkan SP2D</em>
     </div>
+
 </div>
 
 
 <!-- CARD 3 : BELANJA MODAL -->
 <div class="belanja-card">
+    
     <h3>Belanja Modal</h3>
 
+    <!-- PROGRESS TURUN DI BAWAH HEADER -->
     <div class="progress-container">
         <div class="progress-bar" id="progressModal"></div>
     </div>
