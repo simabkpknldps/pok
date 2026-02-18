@@ -244,7 +244,25 @@ body{
     gap:20px;
     align-items:stretch;
 }
+.dashboard-grid > div{
+    outline:2px solid red;
+}
+
+.dashboard-grid{
+    display:flex;
+    gap:20px;
+}
+
+.chart-box{
+    flex:2;
+}
+
+.belanja-card{
+    flex:1;
+}
+
     
+
 .dashboard-grid-full{
     grid-column:1 / -1;
     display:block;   /* jadikan full */
@@ -720,11 +738,10 @@ th{
     </div>
 
     <!-- CARD 2 : BELANJA BARANG -->
-<div class="belanja-card">
+<div class="belanja-card" onclick="openModal()">
 
     <h3>Belanja Barang</h3>
 
-    <!-- PROGRESS TURUN DI BAWAH HEADER -->
     <div class="progress-container">
         <div class="progress-bar" id="progressBarang"></div>
     </div>
@@ -742,18 +759,14 @@ th{
         <em>*data berdasarkan SP2D (klik untuk detil!)</em>
     </div>
 
-    <div class="belanja-card" onclick="openModal('barang')">
-
-    
 </div>
 
 
 <!-- CARD 3 : BELANJA MODAL -->
-<div class="belanja-card">
-    
+<div class="belanja-card" onclick="openModal()">
+
     <h3>Belanja Modal</h3>
 
-    <!-- PROGRESS TURUN DI BAWAH HEADER -->
     <div class="progress-container">
         <div class="progress-bar" id="progressModal"></div>
     </div>
@@ -770,11 +783,9 @@ th{
     <div class="belanja-footnote">
         <em>*data berdasarkan SP2D (klik untuk detil!)</em>
     </div>
-    
-<div class="belanja-card" onclick="openModal('modal')">
 
-    
 </div>
+
 
 
 
@@ -1064,7 +1075,7 @@ document.getElementById("modalSisa").textContent =
     
 }
 
-function openModal(type){
+function openModal(){
 
     const modal = document.getElementById("belanjaModal");
     const body = document.getElementById("modalTableBody");
@@ -1074,83 +1085,52 @@ function openModal(type){
     body.innerHTML = "";
     footer.innerHTML = "";
 
-    let data;
+    title.innerText = "Detail Belanja 52 & 53";
 
-    if(type === "barang"){
-        title.innerText = "Detail Belanja Barang";
+    // ambil dari dashboard yang sudah dirender
+    const barangTotal = document.getElementById("barangTotal").textContent;
+    const barangRealisasi = document.getElementById("barangRealisasi").textContent;
+    const barangSisa = document.getElementById("barangSisa").textContent;
+    const persenBarang = document.getElementById("persenBarang").textContent;
 
-        data = [
-            {
-                jenis:"52",
-                uraian:"Belanja Barang",
-                pagu:"3,081,907,000",
-                blokir:"151,021,000",
-                netto:"2,930,886,000",
-                bruto:"222,561,675",
-                sp2d:"153,144,175",
-                sisaBruto:"2,708,334,325",
-                sisaSp2d:"2,777,741,825",
-                persenBruto:"7.59%",
-                persenSp2d:"5.23%"
-            }
-        ];
-    }
+    const modalTotal = document.getElementById("modalTotal").textContent;
+    const modalRealisasi = document.getElementById("modalRealisasi").textContent;
+    const modalSisa = document.getElementById("modalSisa").textContent;
+    const persenModal = document.getElementById("persenModal").textContent;
 
-    if(type === "modal"){
-        title.innerText = "Detail Belanja Modal";
-
-        data = [
-            {
-                jenis:"53",
-                uraian:"Belanja Modal",
-                pagu:"94,800,000",
-                blokir:"0",
-                netto:"94,800,000",
-                bruto:"91,596,000",
-                sp2d:"0",
-                sisaBruto:"3,204,000",
-                sisaSp2d:"94,800,000",
-                persenBruto:"96.62%",
-                persenSp2d:"0.00%"
-            }
-        ];
-    }
-
-    // render body row
-    data.forEach(d=>{
-        body.innerHTML += `
+    body.innerHTML = `
         <tr>
-            <td>${d.jenis}</td>
-            <td>${d.uraian}</td>
-            <td>${d.pagu}</td>
-            <td>${d.blokir}</td>
-            <td>${d.netto}</td>
-            <td>${d.bruto}</td>
-            <td>${d.sp2d}</td>
-            <td>${d.sisaBruto}</td>
-            <td>${d.sisaSp2d}</td>
-            <td>${d.persenBruto}</td>
-            <td>${d.persenSp2d}</td>
+            <td>52</td>
+            <td>Belanja Barang</td>
+            <td>${barangTotal}</td>
+            <td>-</td>
+            <td>${barangTotal}</td>
+            <td>-</td>
+            <td>${barangRealisasi}</td>
+            <td>-</td>
+            <td>${barangSisa}</td>
+            <td>-</td>
+            <td>${persenBarang}</td>
         </tr>
-        `;
-    });
 
-    // footer row (row 4)
-    footer.innerHTML = `
         <tr>
-            <td colspan="4">Total</td>
-            <td>3,025,686,000</td>
-            <td>314,147,675</td>
-            <td>153,144,175</td>
-            <td>2,711,538,325</td>
-            <td>2,872,541,825</td>
-            <td>104.21%</td>
-            <td>5.23%</td>
+            <td>53</td>
+            <td>Belanja Modal</td>
+            <td>${modalTotal}</td>
+            <td>-</td>
+            <td>${modalTotal}</td>
+            <td>-</td>
+            <td>${modalRealisasi}</td>
+            <td>-</td>
+            <td>${modalSisa}</td>
+            <td>-</td>
+            <td>${persenModal}</td>
         </tr>
     `;
 
     modal.style.display = "flex";
 }
+
 
 function closeModal(){
     document.getElementById("belanjaModal").style.display = "none";
