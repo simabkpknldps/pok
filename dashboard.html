@@ -382,18 +382,10 @@ th{
                 </table>
             </div>
 
-            <!-- CARD 2 -->
-            <div class="card">
-                <h3>Belanja Barang</h3>
-                <small style="color:#64748b;">Berdasarkan SP2D</small>
-                <canvas id="barangChart" height="120"></canvas>
-            </div>
-        
-            <!-- CARD 3 -->
-            <div class="card">
-                <h3>Belanja Modal</h3>
-                <small style="color:#64748b;">Berdasarkan SP2D</small>
-                <canvas id="modalChart" height="120"></canvas>
+            <!-- PIE CHART TETAP -->
+            <div class="chart-box">
+                <h3>Jenis Kegiatan</h3>
+                <canvas id="pieChart"></canvas>
             </div>
 
         </div>
@@ -406,38 +398,38 @@ th{
 </div>
 
 <script>
-
-let barangChart;
-let modalChart;
-
-// URL GAS
-const urlGAS="https://script.google.com/macros/s/AKfycby2sBhYPGsicFeEwRApRKCWpXyCQph37bdn4rMnQci6covgIxS5lpILri3xCqgK-qnsxA/exec";
-
-document.addEventListener("DOMContentLoaded", async function(){
+document.addEventListener("DOMContentLoaded", function(){
 
     const nama = sessionStorage.getItem("nama");
 
     if(!nama){
         window.location.replace("index.html");
-        return;
-    } 
-
-    document.getElementById("namaUser").textContent = nama;
-
-    showLoading();
-    try {
-        await updateDashboard();
-    } finally {
-        hideLoading();
+    } else {
+        document.getElementById("namaUser").textContent = nama;
     }
 
-    // auto refresh tiap 1 menit
-    setInterval(updateDashboard, 60000);
+    // Pie chart tetap sama
+    new Chart(document.getElementById('pieChart'),{
+        type:'doughnut',
+        data:{
+            labels:['Barang','Jasa','Perjalanan Dinas','Lainnya'],
+            datasets:[{
+                data:[35,25,20,20],
+                backgroundColor:['#bae6fd','#bbf7d0','#fed7aa','#fecaca']
+            }]
+        },
+        options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{legend:{position:'bottom'}},
+            cutout:'65%'
+        }
+    });
+
 });
 
 function goDashboard(){ window.location.href="dashboard.html"; }
 function goPOK(){ window.location.href="data_pok.html"; }
-
 function goKegiatan(){
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor){
@@ -447,18 +439,27 @@ function goKegiatan(){
     window.location.href = "data_kegiatan.html";
 }
 
+    
 function logout(){
     sessionStorage.clear();
     window.location.replace("index.html");
 }
 
-async function updateDashboard(){
+// URL GAS (pastikan deploy web app publik)
+const urlGAS="https://script.google.com/macros/s/AKfycbwJ-8zAusus3B7hgrvlq4pPr8mLpefVn4AkhZzbD1yFTz0E0Gx8CMTteOOD4W3s5TGPSw/exec";
 
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor) return;
+async function loadDashboard(){
+    showLoading(); // tampilkan overlay
 
     try{
+        const kantor = sessionStorage.getItem("kantor"); // ambil kantor
+        if(!kantor) {
+            alert("Kantor tidak ditemukan. Silakan login ulang.");
+            window.location.replace("index.html");
+            return;
+        }
 
+        // kirim parameter kantor ke GAS
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
@@ -467,97 +468,82 @@ async function updateDashboard(){
             return;
         }
 
-        // ===== UPDATE CARD STATUS =====
+        // Update card dashboard
         document.querySelector("#cardTotal p").textContent = data.dashboard?.total || 0;
         document.querySelector("#cardSelesai p").textContent = data.dashboard?.selesai || 0;
         document.querySelector("#cardTerbayar p").textContent = data.dashboard?.terbayar || 0;
         document.querySelector("#cardLPT p").textContent = data.dashboard?.lpt || 0;
         document.querySelector("#cardProses p").textContent = data.dashboard?.proses || 0;
 
-        // ===== UPDATE TABEL HARI INI =====
+        // Update tabel hari ini
         const tbody = document.querySelector(".chart-box tbody");
         tbody.innerHTML = "";
-
         (data.todayRows || []).forEach(row=>{
             const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${row.uraian || ""}</td>
-                <td>${row.pelaksana || ""}</td>
-                <td>${row.tujuan || ""}</td>
-            `;
+            tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
             tbody.appendChild(tr);
-        });
-
-        // ===== UPDATE JUMLAH KEGIATAN HARI INI (opsional jika ada cardToday) =====
-        const todayCard = document.getElementById("cardToday");
-        if(todayCard){
-            todayCard.textContent = data.todayRows?.length || 0;
-        }
-
-        // ================= BELANJA BARANG =================
-        const barangTotal = data.belanjaBarang?.total || 0;
-        const barangRealisasi = data.belanjaBarang?.realisasi || 0;
-        const barangSisa = Math.max(barangTotal - barangRealisasi, 0);
-
-        if(barangChart) barangChart.destroy();
-
-        barangChart = new Chart(document.getElementById('barangChart'),{
-            type:'doughnut',
-            data:{
-                labels:['Realisasi','Sisa'],
-                datasets:[{
-                    data:[barangRealisasi, barangSisa],
-                    backgroundColor:['#22c55e','#e5e7eb']
-                }]
-            },
-            options:{
-                responsive:true,
-                maintainAspectRatio:false,
-                plugins:{legend:{display:false}},
-                cutout:'70%'
-            }
-        });
-
-        // ================= BELANJA MODAL =================
-        const modalTotal = data.belanjaModal?.total || 0;
-        const modalRealisasi = data.belanjaModal?.realisasi || 0;
-        const modalSisa = Math.max(modalTotal - modalRealisasi, 0);
-
-        if(modalChart) modalChart.destroy();
-
-        modalChart = new Chart(document.getElementById('modalChart'),{
-            type:'doughnut',
-            data:{
-                labels:['Realisasi','Sisa'],
-                datasets:[{
-                    data:[modalRealisasi, modalSisa],
-                    backgroundColor:['#3b82f6','#e5e7eb']
-                }]
-            },
-            options:{
-                responsive:true,
-                maintainAspectRatio:false,
-                plugins:{legend:{display:false}},
-                cutout:'70%'
-            }
         });
 
     }catch(err){
         console.error(err);
         alert("Gagal memuat data dashboard!");
+    } finally {
+        hideLoading(); // sembunyikan overlay
     }
 }
 
-function showLoading(){
+
+function showLoading() {
     document.getElementById("overlayLoading").style.display = "flex";
 }
 
-function hideLoading(){
+function hideLoading() {
     document.getElementById("overlayLoading").style.display = "none";
 }
 
-</script>
 
+
+loadDashboard();
+
+async function updateDashboard(){
+    const kantor = sessionStorage.getItem("kantor");
+    if(!kantor) return;
+
+    const res = await fetch(`${urlGAS}?kantor=${kantor}`);
+    const data = await res.json();
+
+    // Update card dashboard
+    document.querySelector("#cardTotal p").textContent = data.dashboard?.total || 0;
+    document.querySelector("#cardSelesai p").textContent = data.dashboard?.selesai || 0;
+    document.querySelector("#cardTerbayar p").textContent = data.dashboard?.terbayar || 0;
+    document.querySelector("#cardLPT p").textContent = data.dashboard?.lpt || 0;
+    document.querySelector("#cardProses p").textContent = data.dashboard?.proses || 0;
+
+    // Update tabel hari ini
+    const tbody = document.querySelector(".chart-box tbody");
+    tbody.innerHTML = "";
+    (data.todayRows || []).forEach(row=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+// panggil pertama kali pakai overlay
+document.addEventListener("DOMContentLoaded", async function(){
+    showLoading();
+    try {
+        await updateDashboard();
+    } finally {
+        hideLoading();
+    }
+
+    // auto-refresh tiap 1 menit tanpa overlay
+    setInterval(updateDashboard, 60000);
+});
+   
+
+</script>
 
 
     
