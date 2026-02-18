@@ -463,45 +463,19 @@ th{
 
     <!-- CARD REKAP BULANAN -->
     <div class="chart-box">
-        <h3 style="margin-bottom:15px;">Rekap Per Bulan</h3>
-        <table id="rekapBulananTable">
-            <thead>
-                <tr>
-                    <th>Bulan</th>
-                    <th>Belanja Barang (52)</th>
-                    <th>belanja Modal (53)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td colspan="3" style="text-align:center;color:#94a3b8;">
-                        Memuat data...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <h3 style="margin-bottom:15px;">Monitoring MP</h3>
+
+    <table id="monitoringMPTable">
+        <thead></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+    </table>
+
+    <div class="belanja-footnote">
+        <em>*Sumber: dashboard_2026</em>
     </div>
+</div>
 
-    <!-- CARD RINGKASAN BULAN INI -->
-    <div class="chart-box">
-        <h3 style="margin-bottom:15px;">Monitoring MP</h3>
-
-        <div class="belanja-box">
-            <div class="belanja-row">
-                <small>Belanja Barang (52)</small>
-                <strong id="bulan52">0</strong>
-            </div>
-
-            <div class="belanja-row">
-                <small>Belanja Modal (53)</small>
-                <strong id="bulan53">0</strong>
-            </div>
-
-            <div class="belanja-footnote">
-                <em>*Sumber: dash_bulanan_2026</em>
-            </div>
-        </div>
-    </div>
 
 </div>
 
@@ -553,7 +527,7 @@ function logout(){
 }
 
 // URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycbxI1Ejpm0j9xPMT9dX2x6Y23wk6oz7qw00LD179v4-3wFOV_6MshoOEZVZMXSct2248VA/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbw4ucNSFseU0ELchC88rjKlSuX4LjjEnL1x3MTs8kFihQGBFPLDIE1p5K-1BTn24IIqqg/exec";
 
 async function loadDashboard(){
     showLoading(); // tampilkan overlay
@@ -678,39 +652,63 @@ document.getElementById("modalRealisasi").textContent =
 document.getElementById("modalSisa").textContent =
     `${formatRupiah(modalSisa)} (${modalSisaPersen}%)`;
 
-// ================= REKAP PER BULAN =================
-const rekapTable = document.getElementById("rekapBulananTable");
-if(!rekapTable) return;
+// ================= MONITORING MP =================
+const mpTable = document.getElementById("monitoringMPTable");
 
-const tbodyRekap = rekapTable.querySelector("tbody");
-tbodyRekap.innerHTML = "";
+if(mpTable){
 
-if(Array.isArray(data.rekapBulanan) && data.rekapBulanan.length > 0){
+    const thead = mpTable.querySelector("thead");
+    const tbody = mpTable.querySelector("tbody");
+    const tfoot = mpTable.querySelector("tfoot");
 
-    data.rekapBulanan.forEach(row => {
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+    tfoot.innerHTML = "";
 
-        const real52 = Number(row.barang?.realisasi || 0);
-        const total52 = Number(row.barang?.triwulan || 0);
+    if(Array.isArray(data.monitoringMP) && data.monitoringMP.length > 0){
 
-        const real53 = Number(row.modal?.realisasi || 0);
-        const total53 = Number(row.modal?.triwulan || 0);
+        const rows = data.monitoringMP;
 
-        
+        // ===== HEADER (ROW 8)
+        const headerRow = document.createElement("tr");
+        rows[0].forEach(col=>{
+            const th = document.createElement("th");
+            th.textContent = col;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
 
-        tbodyRekap.appendChild(tr);
-    });
+        // ===== DATA (ROW 9 s.d terakhir-1)
+        for(let i=1; i < rows.length-1; i++){
+            const tr = document.createElement("tr");
+            rows[i].forEach(col=>{
+                const td = document.createElement("td");
+                td.textContent = col;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        }
 
-} else {
+        // ===== FOOTER (ROW TERAKHIR)
+        const footerRow = document.createElement("tr");
+        rows[rows.length-1].forEach(col=>{
+            const td = document.createElement("td");
+            td.innerHTML = `<strong>${col}</strong>`;
+            footerRow.appendChild(td);
+        });
+        tfoot.appendChild(footerRow);
 
-    tbodyRekap.innerHTML = `
-        <tr>
-            <td colspan="3" style="text-align:center;color:#94a3b8;">
-                Data rekap belum tersedia
-            </td>
-        </tr>
-    `;
+    } else {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center;color:#94a3b8;">
+                    Data Monitoring MP belum tersedia
+                </td>
+            </tr>
+        `;
+    }
 }
-
 
 
 }
