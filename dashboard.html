@@ -466,12 +466,12 @@ th{
         <h3 style="margin-bottom:15px;">Rekap Per Bulan</h3>
         <table id="rekapBulananTable">
             <thead>
-                <tr>
-                    <th>Bulan</th>
-                    <th>52</th>
-                    <th>53</th>
-                </tr>
-            </thead>
+            <tr>
+                <th>Bulan</th>
+                <th>Barang (52)</th>
+                <th>Modal (53)</th>
+            </tr>
+        </thead>
             <tbody>
                 <tr>
                     <td colspan="3" style="text-align:center;color:#94a3b8;">
@@ -678,48 +678,46 @@ document.getElementById("modalRealisasi").textContent =
 document.getElementById("modalSisa").textContent =
     `${formatRupiah(modalSisa)} (${modalSisaPersen}%)`;
 
-// ================= REKAP PER BULAN =================
-const rekapTable = document.getElementById("rekapBulananTable");
-if(!rekapTable) return;
+const tbody = document.getElementById("rekapBulananTable")
+                     .getElementsByTagName("tbody")[0];
 
-const tbodyRekap = rekapTable.querySelector("tbody");
-tbodyRekap.innerHTML = "";
+tbody.innerHTML = "";
 
-if(Array.isArray(data.rekapBulanan) && data.rekapBulanan.length > 0){
+if(data.rekapBulanan && data.rekapBulanan.length > 0){
 
     data.rekapBulanan.forEach(row => {
 
-        const real52 = Number(row.barang?.realisasi || 0);
-        const total52 = Number(row.barang?.triwulan || 0);
+        const real52 = Number(row.realisasi52 || 0);
+        const pagu52 = Number(row.pagu52 || 0);
 
-        const real53 = Number(row.modal?.realisasi || 0);
-        const total53 = Number(row.modal?.triwulan || 0);
+        const real53 = Number(row.realisasi53 || 0);
+        const pagu53 = Number(row.pagu53 || 0);
 
-        const persen52 = total52 > 0
-            ? ((real52 / total52) * 100).toFixed(2)
+        const persen52 = pagu52 > 0
+            ? ((real52 / pagu52) * 100).toFixed(2)
             : "0.00";
 
-        const persen53 = total53 > 0
-            ? ((real53 / total53) * 100).toFixed(2)
+        const persen53 = pagu53 > 0
+            ? ((real53 / pagu53) * 100).toFixed(2)
             : "0.00";
 
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-            <td>${row.bulan || "-"}</td>
+            <td>${row.bulan}</td>
             <td>${real52.toLocaleString("id-ID")} (${persen52}%)</td>
             <td>${real53.toLocaleString("id-ID")} (${persen53}%)</td>
         `;
 
-        tbodyRekap.appendChild(tr);
+        tbody.appendChild(tr);
     });
 
-} else {
+}else{
 
-    tbodyRekap.innerHTML = `
+    tbody.innerHTML = `
         <tr>
-            <td colspan="3" style="text-align:center;color:#94a3b8;">
-                Data rekap belum tersedia
+            <td colspan="3" style="text-align:center">
+                Data tidak tersedia
             </td>
         </tr>
     `;
