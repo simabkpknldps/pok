@@ -509,7 +509,25 @@ th{
     justify-content:flex-start;
 }
 
+.dashboard-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr;
+    gap:20px;
+    align-items:stretch;   /* PENTING */
+}
 
+.chart-box,
+.belanja-card{
+    height:100%;           /* BIKIN SAMA TINGGI */
+    display:flex;
+    flex-direction:column;
+}
+
+.progress-info{
+    margin-top:auto;       /* dorong isi ke bawah agar rapi */
+}
+
+    
 </style>
 </head>
 
@@ -611,7 +629,10 @@ th{
             Sisa: <span id="barangSisa">0</span><br>
             Pagu: <span id="barangTotal">0</span>
         </small>
-<em>*data berdasarkan SP2D</em>
+    </div>
+
+    <div class="belanja-footnote">
+        <em>*data berdasarkan SP2D</em>
     </div>
 </div>
 
@@ -631,11 +652,13 @@ th{
             Sisa: <span id="modalSisa">0</span><br>
             Pagu: <span id="modalTotal">0</span>
         </small>
+    </div>
 
+    <div class="belanja-footnote">
         <em>*data berdasarkan SP2D</em>
-   
     </div>
 </div>
+
 
 
             <!-- LAYER 3 -->
