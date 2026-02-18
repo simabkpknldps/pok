@@ -243,6 +243,14 @@ body{
     gap:20px;
 }
 
+.dashboard-grid-full{
+    grid-column:1 / -1;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+
 .chart-box{
     background:white;
     padding:20px;
@@ -450,6 +458,53 @@ th{
     </div>
 </div>
 
+            <!-- LAYER 3 -->
+<div class="dashboard-grid-full">
+
+    <!-- CARD REKAP BULANAN -->
+    <div class="chart-box">
+        <h3 style="margin-bottom:15px;">Rekap Per Bulan</h3>
+        <table id="rekapBulananTable">
+            <thead>
+                <tr>
+                    <th>Bulan</th>
+                    <th>52</th>
+                    <th>53</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="3" style="text-align:center;color:#94a3b8;">
+                        Memuat data...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CARD RINGKASAN BULAN INI -->
+    <div class="chart-box">
+        <h3 style="margin-bottom:15px;">Realisasi Bulan Ini</h3>
+
+        <div class="belanja-box">
+            <div class="belanja-row">
+                <small>Belanja Barang (52)</small>
+                <strong id="bulan52">0</strong>
+            </div>
+
+            <div class="belanja-row">
+                <small>Belanja Modal (53)</small>
+                <strong id="bulan53">0</strong>
+            </div>
+
+            <div class="belanja-footnote">
+                <em>*Sumber: dash_bulanan_2026</em>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 
 </div>
 
@@ -498,7 +553,7 @@ function logout(){
 }
 
 // URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycbwdLqsUJ2awMDmKwzYHStT5r2g5HcsapOJgP7q0EhSnVD2Yp-0JscwiKic3wXWxIqTb7w/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbwxO63Ypnf8uFqoNuuieirtLCFiej9n8hEylA4tOHreyciAJbBsWgAM7Eo-29kNOYCH/exec";
 
 async function loadDashboard(){
     showLoading(); // tampilkan overlay
@@ -623,6 +678,33 @@ document.getElementById("modalRealisasi").textContent =
 document.getElementById("modalSisa").textContent =
     `${formatRupiah(modalSisa)} (${modalSisaPersen}%)`;
 
+    // ================= REKAP BULANAN =================
+const rekap = data.rekapBulanan || [];
+
+const tbodyRekap = document.querySelector("#rekapBulananTable tbody");
+tbodyRekap.innerHTML = "";
+
+const formatAngka = (angka) => angka.toLocaleString("id-ID");
+
+rekap.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+        <td>${r.bulan}</td>
+        <td>${formatAngka(r.jenis52 || 0)}</td>
+        <td>${formatAngka(r.jenis53 || 0)}</td>
+    `;
+    tbodyRekap.appendChild(tr);
+});
+
+const bulanSekarang = new Date().getMonth(); // 0-11
+
+if(rekap[bulanSekarang]){
+    document.getElementById("bulan52").textContent =
+        formatAngka(rekap[bulanSekarang].jenis52 || 0);
+
+    document.getElementById("bulan53").textContent =
+        formatAngka(rekap[bulanSekarang].jenis53 || 0);
+}
 
 
 }
