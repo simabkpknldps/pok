@@ -1094,7 +1094,6 @@ async function openModal(cardType){
     showLoading();
 
     try {
-        // fetch data dari GAS
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
@@ -1108,31 +1107,31 @@ async function openModal(cardType){
         // ambil row 1 sampai 4
         const modalData = dashboardDetail.slice(0,4);
 
-        // isi modal
         const thead = document.querySelector("#belanjaModal thead");
         const tbody = document.getElementById("modalTableBody");
+        const footer = document.getElementById("modalTableFooter");
 
         document.getElementById("modalTitle").textContent =
             cardType === "barang" ? "Detail Belanja Barang" : "Detail Belanja Modal";
 
         // header
-        thead.innerHTML = `<tr>${modalData[0].map((h,i) => `<th>${h}</th>`).join("")}</tr>`;
+        thead.innerHTML = `<tr>${modalData[0].map(h => `<th>${h}</th>`).join("")}</tr>`;
 
         // body (row 2 & 3)
-        tbody.innerHTML = modalData.slice(1,3).map(r => `<tr>${r.map((c,i) => {
-            let align = 'left';
+        tbody.innerHTML = modalData.slice(1,3).map(r => `<tr>${r.map((c,i)=>{
+            let align='left';
             if(i===0) align='center';
-            else if(i>=2 && i<=7) align='right';  // kolom 3-8 rupiah
-            else if(i>=8 && i<=9) align='center'; // kolom 9-10 persen
+            else if(i>=2 && i<=8) align='right';  // kolom 3-9 rupiah
+            else if(i>=9 && i<=10) align='center'; // kolom 10-11 persen
             let value = c;
 
             // format rupiah
-            if(i>=2 && i<=7 && typeof c==='number'){
+            if(i>=2 && i<=8 && typeof c==='number'){
                 value = c.toLocaleString("id-ID");
             }
 
             // format persen
-            if(i>=8 && i<=9 && typeof c==='number'){
+            if(i>=9 && i<=10 && typeof c==='number'){
                 value = (c*100).toFixed(2) + "%";
             }
 
@@ -1140,20 +1139,20 @@ async function openModal(cardType){
         }).join("")}</tr>`).join("");
 
         // footer row 4
-        const footer = document.querySelector("#modalTableFooter");
         footer.innerHTML = `<tr>${modalData[3].map((c,i)=>{
             let align='left';
             if(i===0) align='center';
-            else if(i>=2 && i<=7) align='right';
-            else if(i>=8 && i<=9) align='center';
+            else if(i>=2 && i<=8) align='right';
+            else if(i>=9 && i<=10) align='center';
             let value = c;
 
             // format rupiah
-            if(i>=2 && i<=7 && typeof c==='number'){
+            if(i>=2 && i<=8 && typeof c==='number'){
                 value = c.toLocaleString("id-ID");
             }
+
             // format persen
-            if(i>=8 && i<=9 && typeof c==='number'){
+            if(i>=9 && i<=10 && typeof c==='number'){
                 value = (c*100).toFixed(2) + "%";
             }
 
@@ -1162,12 +1161,18 @@ async function openModal(cardType){
 
         document.getElementById("belanjaModal").style.display = "flex";
 
-        // tambahkan tombol download PDF (jika belum ada)
+        // tombol download PDF
         if(!document.getElementById("downloadPdfBtn")){
             const btn = document.createElement("button");
             btn.id = "downloadPdfBtn";
-            btn.textContent = "Download PDF";
+            btn.innerHTML = '<i class="fa-solid fa-file-pdf" style="margin-right:6px;"></i>Download PDF';
             btn.style.marginBottom = "12px";
+            btn.style.padding = "8px 16px";
+            btn.style.background = "#2563eb";
+            btn.style.color = "#fff";
+            btn.style.border = "none";
+            btn.style.borderRadius = "6px";
+            btn.style.cursor = "pointer";
             btn.onclick = downloadPdf;
             document.querySelector(".modal-body").prepend(btn);
         }
@@ -1185,7 +1190,6 @@ async function downloadPdf(){
     const modalBox = document.querySelector(".modal-body table");
     const { jsPDF } = window.jspdf;
 
-    // gunakan html2canvas untuk tangkap tabel
     const canvas = await html2canvas(modalBox, {scale:2});
     const imgData = canvas.toDataURL("image/png");
 
@@ -1196,6 +1200,7 @@ async function downloadPdf(){
     pdf.addImage(imgData, 'PNG', 20, 20, pdfWidth-40, pdfHeight);
     pdf.save("belanja.pdf");
 }
+
 
 function closeModal(){
     document.getElementById("belanjaModal").style.display = "none";
