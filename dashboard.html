@@ -457,12 +457,10 @@ th{
 }
 
 .progress-container{
-    width:100%;
-    height:10px;          /* lebih tebal (sebelumnya 6-8px) */
-    background:#e5e7eb;
-    border-radius:6px;
-    margin:10px 0 14px 0;
+    height:16px;
+    margin:8px 0 14px 0;
 }
+
 
 .progress-bar{
     height:100%;
@@ -518,9 +516,26 @@ th{
 
 .chart-box,
 .belanja-card{
-    padding:16px 18px;     /* lebih kecil dari sebelumnya */
+    padding:16px 18px;
     border-radius:14px;
-    min-height:200px;      /* batasi tinggi */
+    min-height:200px;
+    display:flex;
+    flex-direction:column;
+}
+
+.chart-box h3,
+.belanja-card h3{
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:12px;
+}
+
+    .chart-box table{
+    flex:1;   /* isi penuh ruang */
+}
+
+.progress-info{
+    margin-top:auto;   /* dorong ke bawah */
 }
 
 
@@ -644,7 +659,7 @@ th{
     </div>
 
     <div class="belanja-footnote">
-        <em>*data berdasarkan SP2D</em>
+        <em>*data berdasarkan SP2D (klik untuk detil!)</em>
     </div>
 
 </div>
@@ -670,7 +685,7 @@ th{
     </div>
 
     <div class="belanja-footnote">
-        <em>*data berdasarkan SP2D</em>
+        <em>*data berdasarkan SP2D (klik untuk detil!)</em>
     </div>
 </div>
 
