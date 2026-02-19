@@ -667,6 +667,7 @@ function showPelaksanaPopup(tr){
                     <th style="padding:8px;">Nama</th>
                     <th style="padding:8px;">Tgl Mulai</th>
                     <th style="padding:8px;">Tgl Selesai</th>
+                    <th style="padding:8px; text-align:right;">Jumlah</th>
                     <th style="padding:8px; text-align:center;">Aksi</th>
                 </tr>
             </thead>
@@ -704,14 +705,23 @@ function showPelaksanaPopup(tr){
 
         row.innerHTML = `
             <td style="padding:6px;">${nama}</td>
+        
             <td style="padding:6px;">
                 <input type="datetime-local"
                     style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;">
             </td>
+        
             <td style="padding:6px;">
                 <input type="datetime-local"
                     style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;">
             </td>
+        
+            <td style="padding:6px;">
+                <input type="text" class="jumlah-input"
+                    style="width:100%; padding:4px; border:1px solid #cbd5e1;
+                    border-radius:6px; text-align:right;">
+            </td>
+        
             <td style="padding:6px; text-align:center;">
                 <button style="border:none; background:none; cursor:pointer; color:red;">
                     <i class="fa-solid fa-trash"></i>
@@ -719,8 +729,15 @@ function showPelaksanaPopup(tr){
             </td>
         `;
 
+
         row.querySelector("button").onclick = () => row.remove();
         tbody.appendChild(row);
+        const jumlahInput = row.querySelector(".jumlah-input");
+        
+        jumlahInput.addEventListener("input", function(){
+            let value = this.value.replace(/\D/g, "");
+            this.value = value ? Number(value).toLocaleString("id-ID") : "";
+        });
 
         namaInput.value = "";
         namaInput.focus();
@@ -735,9 +752,11 @@ function showPelaksanaPopup(tr){
         rows.forEach(r=>{
             const nama = r.cells[0].textContent;
             const mulai = r.cells[1].querySelector("input").value;
-            const selesai = r.cells[2].querySelector("input").value;
+            const jumlahText = r.cells[3].querySelector("input").value;
+            const jumlah = Number(jumlahText.replace(/\./g,"")) || 0;
+            
+            data.push({nama, mulai, selesai, jumlah});
 
-            data.push({nama, mulai, selesai});
         });
 
         console.log("Siap dikirim:", {
