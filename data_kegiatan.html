@@ -432,12 +432,12 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
 // contoh fungsi popup edit
 function showEditPopup(tr){
     const idKegiatan = tr.dataset.id;
-    const uraian = tr.cells[2].textContent;
-    const pelaksana = tr.cells[3].textContent;
-    const tujuan = tr.cells[4].textContent;
-    const tglST = tr.cells[5].textContent;
+    const uraian = tr.cells[1].textContent;
+    const pelaksana = tr.cells[2].textContent;
+    const tujuan = tr.cells[3].textContent;
+    const tglST = tr.cells[4].textContent;
     //const tglMulai = tr.cells[6].textContent;
-    const jumlah = tr.cells[7].textContent.replace(/\./g,"");
+    const jumlah = tr.cells[6].textContent.replace(/\./g,"");
 
     // overlay
     const overlay = document.createElement("div");
