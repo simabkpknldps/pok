@@ -330,7 +330,13 @@ document.addEventListener("DOMContentLoaded", async function(){
     }
 }
 
+// 🔁 Reload data tiap 30 detik
+    setInterval(() => {
+        loadData();
+    }, 30000); // 30000ms = 30 detik
 
+
+  
     // search
     document.getElementById("searchBox").addEventListener("input", function(){
         const val = this.value.toLowerCase();
