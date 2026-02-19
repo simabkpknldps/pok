@@ -215,6 +215,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                             <th class="wrap">Uraian / No ST</th>
                             <th class="wrap">Pelaksana Tugas</th>
                             <th class="wrap">Tujuan</th>
+                            <th>Tgl ST/ND</th>
                             <th>Tgl Mulai</th>
                             <th>Jumlah</th>
                             <th>User</th>
@@ -235,7 +236,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbwNnjDSok5Zn5adS13hXtS1EJ7q7H_JKlFQMBL4gpkKvNh_HzhUwJcC0wHStPy3r46s/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbyOdEQuRfETh0XxljuYsAD2VtyGYPzbkmimC8E4VHxqmOOA-ExYeAPKAIEdu6O1_0hW/exec";
 
 let pegawaiList = [];
 let lokasiList = [];
@@ -275,7 +276,14 @@ document.addEventListener("DOMContentLoaded", async function(){
         tbody.innerHTML = "";
         rows.forEach(r=>{
             const tglST = r.G ? new Date(r.G) : null;
-            const tglFormatted = tglST ? `${tglST.getFullYear()}-${String(tglST.getMonth()+1).padStart(2,'0')}-${String(tglST.getDate()).padStart(2,'0')}` : "";
+              const tglMulai = r.H ? new Date(r.H) : null;
+              
+              const formatDate = (d) => 
+                d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
+              
+              const tglSTFormatted = formatDate(tglST);
+              const tglMulaiFormatted = formatDate(tglMulai);
+
             const jumlahFormatted = Number(r.M||0).toLocaleString('id-ID');
     
             const tr = document.createElement("tr");
@@ -425,7 +433,8 @@ function showEditPopup(tr){
     const pelaksana = tr.cells[3].textContent;
     const tujuan = tr.cells[4].textContent;
     const tglST = tr.cells[5].textContent;
-    const jumlah = tr.cells[7].textContent.replace(/\./g, ""); // hapus titik ribuan
+    const tglMulai = tr.cells[6].textContent;
+    const jumlah = tr.cells[7].textContent.replace(/\./g,"");
 
     // overlay
     const overlay = document.createElement("div");
