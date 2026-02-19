@@ -235,7 +235,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbzGZjxliwJAlc1_B0u6jdfJsgQ1eVZFtG9VV9_kWTAbhVq51hR7TdkC0ofJzC6OIfq0/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbyL_xXdzEeVkVoYnuHR27ykSIrf3Ktg_fES1xVYtJlKgTpxXFjmD29-MDaXIwV2rtVc/exec";
 
 document.addEventListener("DOMContentLoaded", async function(){
     const nama = sessionStorage.getItem("nama");
@@ -243,10 +243,6 @@ document.addEventListener("DOMContentLoaded", async function(){
     else document.getElementById("namaUser").textContent = nama;
 
     let allRows = [];
-    let pegawaiList = [];
-    let lokasiList = [];
-    let firstLoad = true;
-
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor){
         alert("Session kantor tidak ditemukan. Silakan login ulang.");
@@ -316,29 +312,28 @@ document.addEventListener("DOMContentLoaded", async function(){
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
 async function loadData(showOverlay = true){
-    try {
+    try{
         if(showOverlay && firstLoad) showLoading(true);
 
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
+        if(showOverlay && firstLoad) showLoading(false);
+
         if(data.status !== "success") return;
 
         allRows = data.rows;
-        pegawaiList = data.pegawai;
-        lokasiList = data.lokasi;
-
         const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
-        const initialRows = allRows.filter((r, idx) => firstLoad ? (idx !== 1 && idx !== 2) : true);
+
+        // skip row 2 & 3 saat load pertama
+        const initialRows = allRows.filter((r, idx) => idx !== 1 && idx !== 2);
         const filtered = filterByStatus(initialRows, defaultRadio);
         renderTable(filtered);
 
-        firstLoad = false;
-        if(showOverlay) showLoading(false);
-
+        firstLoad = false; // overlay hanya sekali
     } catch(e){
+        if(showOverlay && firstLoad) showLoading(false);
         console.error(e);
-        if(showOverlay) showLoading(false);
     }
 }
 
@@ -401,8 +396,7 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     if(btn.classList.contains("btn-ubah")){
         if(statusKegiatan === "Rekam Data" || isAdmin){
             // tampilkan popup edit
-            // saat tombol ubah diklik
-          showEditPopup(tr, pegawaiList, lokasiList);
+            showEditPopup(tr);
         } else {
             alert("Anda tidak memiliki kewenangan!");
         }
@@ -415,45 +409,53 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
 });
 
 // contoh fungsi popup edit
-function showEditPopup(tr, pegawaiList=[], lokasiList=[]){
+function showEditPopup(tr){
     const idKegiatan = tr.cells[0].textContent;
     const uraian = tr.cells[2].textContent;
     const pelaksana = tr.cells[3].textContent;
     const tujuan = tr.cells[4].textContent;
     const tglMulai = tr.cells[5].textContent;
-    const jumlah = tr.cells[6].textContent.replace(/\./g,""); // angka murni
+    const jumlah = tr.cells[6].textContent.replace(/\./g, ""); // hapus titik ribuan
 
+    // overlay
     const overlay = document.createElement("div");
-    overlay.style = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999";
+    overlay.style.position = "fixed";
+    overlay.style.inset = 0;
+    overlay.style.background = "rgba(0,0,0,0.4)";
+    overlay.style.display = "flex";
+    overlay.style.justifyContent = "center";
+    overlay.style.alignItems = "center";
+    overlay.style.zIndex = 9999;
 
+    // popup card
     const popup = document.createElement("div");
-    popup.style = "background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:400px; max-width:90%; padding:25px 20px; display:flex; flex-direction:column; gap:12px";
-
-    // generate options pegawai
-    let pegOptions = pegawaiList.map(p=>`<option value="${p}" ${p===pelaksana?'selected':''}>${p}</option>`).join("");
-    // generate options lokasi
-    let locOptions = lokasiList.map(l=>`<option value="${l}">${l}</option>`).join("");
+    popup.style.background = "#fff";
+    popup.style.borderRadius = "12px";
+    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
+    popup.style.width = "400px";
+    popup.style.maxWidth = "90%";
+    popup.style.padding = "25px 20px";
+    popup.style.display = "flex";
+    popup.style.flexDirection = "column";
+    popup.style.gap = "12px";
 
     popup.innerHTML = `
-        <h3 style="text-align:center; color:#0369a1;">Ubah Kegiatan #${idKegiatan}</h3>
+        <h3 style="margin-bottom:10px; text-align:center; color:#0369a1;">Ubah Kegiatan #${idKegiatan}</h3>
 
         <label>Uraian</label>
         <input type="text" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
         <label>Pelaksana</label>
-        <select style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">${pegOptions}</select>
+        <input type="text" value="${pelaksana}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
         <label>Tujuan</label>
         <input type="text" value="${tujuan}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-        <label>Lokasi</label>
-        <select style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">${locOptions}</select>
 
         <label>Tgl Mulai</label>
         <input type="date" value="${tglMulai}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
         <label>Jumlah</label>
-        <input type="text" value="${Number(jumlah).toLocaleString('id-ID')}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; text-align:right;">
+        <input type="number" value="${jumlah}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
             <button id="popupCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer;">Batal</button>
@@ -464,31 +466,25 @@ function showEditPopup(tr, pegawaiList=[], lokasiList=[]){
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    const jumlahInput = popup.querySelector("input[type=text][value='"+Number(jumlah).toLocaleString('id-ID')+"']");
-    
-    // hapus titik ribuan saat edit
-    jumlahInput.addEventListener("input", e=>{
-        e.target.value = e.target.value.replace(/\./g,"").replace(/[^\d]/g,'');
-    });
+    // tombol batal
+    document.getElementById("popupCancel").onclick = () => overlay.remove();
 
-    document.getElementById("popupCancel").onclick = ()=> overlay.remove();
-
-    document.getElementById("popupUpdate").onclick = ()=>{
-        const inputs = popup.querySelectorAll("input, select");
+    // tombol update
+    document.getElementById("popupUpdate").onclick = () => {
+        const inputs = popup.querySelectorAll("input");
         const updatedData = {
             uraian: inputs[0].value,
             pelaksana: inputs[1].value,
             tujuan: inputs[2].value,
-            lokasi: inputs[3].value,
-            tglMulai: inputs[4].value,
-            jumlah: Number(inputs[5].value)
+            tglMulai: inputs[3].value,
+            jumlah: Number(inputs[4].value)
         };
+
         console.log("Update data ke GAS:", idKegiatan, updatedData);
         alert("Update berhasil! (implementasikan update ke GAS)");
         overlay.remove();
     };
 }
-
 
 
     loadData();
