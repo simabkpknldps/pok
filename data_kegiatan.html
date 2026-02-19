@@ -249,6 +249,8 @@ document.addEventListener("DOMContentLoaded", async function(){
         window.location.replace("index.html");
     }
 
+    const admin = sessionStorage.getItem("admin");
+  
     let skipFirstLoadRows = true; // skip row 2 & 3 hanya saat load pertama
 
     // fungsi filter berdasarkan status radio
