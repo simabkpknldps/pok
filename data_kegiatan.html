@@ -578,9 +578,14 @@ function getStatusColor(status){
 function showPelaksanaPopup(tr){
 
     const idKegiatan = tr.dataset.id;
+
+    // ambil data dari tabel
+    const mak = tr.cells[0].textContent;
     const uraian = tr.cells[1].textContent;
+    const tujuan = tr.cells[3].textContent;
     const tglST = tr.cells[4].textContent;
-  
+    const user = tr.cells[7].textContent;
+
     // ===== Overlay =====
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
@@ -591,29 +596,43 @@ function showPelaksanaPopup(tr){
     overlay.style.alignItems = "center";
     overlay.style.zIndex = 9999;
 
-    // ===== Popup Card =====
+    // ===== Popup =====
     const popup = document.createElement("div");
     popup.style.background = "#fff";
     popup.style.borderRadius = "12px";
     popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
-    popup.style.width = "700px";
+    popup.style.width = "750px";
     popup.style.maxWidth = "95%";
     popup.style.padding = "25px";
     popup.style.display = "flex";
     popup.style.flexDirection = "column";
-    popup.style.gap = "15px";
+    popup.style.gap = "12px";
+    popup.style.maxHeight = "90vh";
+    popup.style.overflowY = "auto";
 
     popup.innerHTML = `
         <h3 style="text-align:center; color:#0369a1;">
             Pelaksana Kegiatan #${idKegiatan}
         </h3>
 
+        <label>MAK</label>
+        <input type="text" id="pelMak" value="${mak}"
+            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" readonly>
+
         <label>Uraian</label>
-        <input type="text" id="uraian"
-            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+        <input type="text" id="pelUraian" value="${uraian}"
+            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" readonly>
+
+        <label>Tujuan</label>
+        <input type="text" id="pelTujuan" value="${tujuan}"
+            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" readonly>
+
+        <label>User</label>
+        <input type="text" id="pelUser" value="${user}"
+            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" readonly>
 
         <label>Tgl ST</label>
-        <input type="date" id="tglST"
+        <input type="date" id="pelTglST" value="${tglST}"
             style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
 
         <label>Pelaksana</label>
@@ -658,12 +677,11 @@ function showPelaksanaPopup(tr){
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    // ====== Logic Tambah Nama ======
+    // ===== Tambah Pelaksana =====
     document.getElementById("btnTambahPelaksana").onclick = function(){
 
         const namaInput = document.getElementById("pelNama");
         const nama = namaInput.value.trim();
-
         if(!nama) return;
 
         const tbody = document.getElementById("pelaksanaTableBody");
@@ -686,19 +704,15 @@ function showPelaksanaPopup(tr){
             </td>
         `;
 
-        // hapus row
         row.querySelector("button").onclick = () => row.remove();
-
         tbody.appendChild(row);
 
         namaInput.value = "";
         namaInput.focus();
     };
 
-    // cancel
     document.getElementById("pelCancel").onclick = () => overlay.remove();
 
-    // simpan (belum GAS)
     document.getElementById("pelSave").onclick = () => {
         const rows = document.querySelectorAll("#pelaksanaTableBody tr");
         const data = [];
@@ -711,10 +725,16 @@ function showPelaksanaPopup(tr){
             data.push({nama, mulai, selesai});
         });
 
-        console.log("Data siap dikirim:", data);
-        alert("Data sudah siap (belum dikirim ke sheet)");
+        console.log("Siap dikirim:", {
+            idKegiatan,
+            tglST: document.getElementById("pelTglST").value,
+            pelaksana: data
+        });
+
+        alert("Data siap dikirim (GAS belum dibuat)");
     };
 }
+
 
 
 function showLoading(show){
