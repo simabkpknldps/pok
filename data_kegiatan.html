@@ -725,30 +725,30 @@ function showPelaksanaPopup(tr){
         const row = document.createElement("tr");
 
         row.innerHTML = `
-            <td style="padding:6px;">${nama}</td>
-        
-            <td style="padding:6px;">
-                <input type="date">
-                    style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;">
-            </td>
-        
-            <td style="padding:6px;">
-                <input type="datetime-local"
-                    style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;">
-            </td>
-        
-            <td style="padding:6px;">
-                <input type="text" class="jumlah-input"
-                    style="width:100%; padding:4px; border:1px solid #cbd5e1;
-                    border-radius:6px; text-align:right;">
-            </td>
-        
-            <td style="padding:6px; text-align:center;">
-                <button style="border:none; background:none; cursor:pointer; color:red;">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </td>
-        `;
+    <td style="padding:6px;">${nama}</td>
+
+    <td style="padding:6px;">
+        <input type="date"
+            style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;">
+    </td>
+
+    <td style="padding:6px;">
+        <input type="date"
+            style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;">
+    </td>
+
+    <td style="padding:6px;">
+        <input type="text" class="jumlah-input"
+            style="width:100%; padding:4px; border:1px solid #cbd5e1;
+            border-radius:6px; text-align:right;">
+    </td>
+
+    <td style="padding:6px; text-align:center;">
+        <button style="border:none; background:none; cursor:pointer; color:red;">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </td>
+`;
 
 
         row.querySelector("button").onclick = () => row.remove();
