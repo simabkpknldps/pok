@@ -235,7 +235,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbyJL9etb-ewQpycWZEkPcu180-_eJMcIrO_e6uKpErEfUGSol5cQl23LZHGKyVTC8-U/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbzGZjxliwJAlc1_B0u6jdfJsgQ1eVZFtG9VV9_kWTAbhVq51hR7TdkC0ofJzC6OIfq0/exec";
 
 document.addEventListener("DOMContentLoaded", async function(){
     const nama = sessionStorage.getItem("nama");
@@ -324,7 +324,9 @@ async function loadData(showOverlay = true){
 
         allRows = data.rows;
         const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
-
+        const pegawaiList = data.pegawai;  // array nama pegawai
+        const lokasiList = data.lokasi;    // array lokasi
+      
         // skip row 2 & 3 saat load pertama
         const initialRows = allRows.filter((r, idx) => idx !== 1 && idx !== 2);
         const filtered = filterByStatus(initialRows, defaultRadio);
@@ -396,7 +398,8 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     if(btn.classList.contains("btn-ubah")){
         if(statusKegiatan === "Rekam Data" || isAdmin){
             // tampilkan popup edit
-            showEditPopup(tr);
+            // saat tombol ubah diklik
+        showEditPopup(tr, pegawaiList, lokasiList);
         } else {
             alert("Anda tidak memiliki kewenangan!");
         }
