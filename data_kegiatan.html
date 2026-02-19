@@ -235,7 +235,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbxox9vA-bS9WJ2sT0acn19o4G5RrcDoMVd_GjsqIzUxn25ZYbX-ny7BP_55TidBU_kZ/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbz0F9T9mrfCQJv8LNsonXoQt7zorsuNCOnMxobcT5iepIY6OQ8jLxkaxoK8EEaGnKof/exec";
 
 let pegawaiList = [];
 let lokasiList = [];
@@ -274,8 +274,8 @@ document.addEventListener("DOMContentLoaded", async function(){
         const tbody = document.getElementById("dataTableBody");
         tbody.innerHTML = "";
         rows.forEach(r=>{
-            const tglMulai = r.G ? new Date(r.G) : null;
-            const tglFormatted = tglMulai ? `${tglMulai.getFullYear()}-${String(tglMulai.getMonth()+1).padStart(2,'0')}-${String(tglMulai.getDate()).padStart(2,'0')}` : "";
+            const tglST = r.G ? new Date(r.G) : null;
+            const tglFormatted = tglST ? `${tglST.getFullYear()}-${String(tglST.getMonth()+1).padStart(2,'0')}-${String(tglST.getDate()).padStart(2,'0')}` : "";
             const jumlahFormatted = Number(r.M||0).toLocaleString('id-ID');
     
             const tr = document.createElement("tr");
@@ -424,8 +424,8 @@ function showEditPopup(tr){
     const uraian = tr.cells[2].textContent;
     const pelaksana = tr.cells[3].textContent;
     const tujuan = tr.cells[4].textContent;
-    const tglMulai = tr.cells[5].textContent;
-    const jumlah = tr.cells[6].textContent.replace(/\./g, ""); // hapus titik ribuan
+    const tglST = tr.cells[5].textContent;
+    const jumlah = tr.cells[7].textContent.replace(/\./g, ""); // hapus titik ribuan
 
     // overlay
     const overlay = document.createElement("div");
@@ -464,8 +464,8 @@ function showEditPopup(tr){
         style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
 
-        <label>Tgl Mulai</label>
-        <input type="date" value="${tglMulai}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+        <label>Tgl ST/ND</label>
+        <input type="date" value="${tglST}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
         <label>Jumlah</label>
         <input type="number" value="${jumlah}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
@@ -489,7 +489,7 @@ function showEditPopup(tr){
             uraian: inputs[0].value,
             pelaksana: inputs[1].value,
             tujuan: inputs[2].value,
-            tglMulai: inputs[3].value,
+            tglST: inputs[3].value,
             jumlah: Number(inputs[4].value)
         };
 
@@ -502,7 +502,7 @@ function showEditPopup(tr){
         uraian: updatedData.uraian,
         pelaksana: updatedData.pelaksana,
         tujuan: updatedData.tujuan,
-        tglMulai: updatedData.tglMulai,
+        tglST: updatedData.tglST,
         jumlah: updatedData.jumlah
     })
 })
