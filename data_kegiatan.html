@@ -243,6 +243,9 @@ document.addEventListener("DOMContentLoaded", async function(){
     else document.getElementById("namaUser").textContent = nama;
 
     let allRows = [];
+ let pegawaiList = [];
+let lokasiList = [];
+
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor){
         alert("Session kantor tidak ditemukan. Silakan login ulang.");
@@ -317,7 +320,12 @@ async function loadData(showOverlay = true){
 
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
+        if(data.status !== "success") return;
 
+        allRows = data.rows;
+        pegawaiList = data.pegawai; // ✅ isi global
+        lokasiList = data.lokasi;   // ✅ isi global
+      
         if(showOverlay && firstLoad) showLoading(false);
 
         if(data.status !== "success") return;
@@ -399,7 +407,7 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
         if(statusKegiatan === "Rekam Data" || isAdmin){
             // tampilkan popup edit
             // saat tombol ubah diklik
-        showEditPopup(tr, pegawaiList, lokasiList);
+          showEditPopup(tr, pegawaiList, lokasiList);
         } else {
             alert("Anda tidak memiliki kewenangan!");
         }
