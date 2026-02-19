@@ -512,7 +512,10 @@ function showEditPopup(tr){
 
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
+    document.getElementById("uraian").value = uraian;
+    document.getElementById("tglST").value = tglST;
 
+  
     // tombol batal
     document.getElementById("popupCancel").onclick = () => overlay.remove();
 
