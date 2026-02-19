@@ -210,7 +210,6 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                 <table>
                     <thead>
                         <tr>
-                            <th>ID Kegiatan</th>
                             <th class="wrap">MAK</th>
                             <th class="wrap">Uraian / No ST</th>
                             <th class="wrap">Pelaksana Tugas</th>
@@ -299,25 +298,26 @@ document.addEventListener("DOMContentLoaded", async function(){
             }
     
             tr.innerHTML = `
-  <td>${r.A}</td>
-  <td class="wrap">${r.B}</td>
-  <td class="wrap">${r.C}</td>
-  <td class="wrap">${r.D}</td>
-  <td class="wrap">${r.E}</td>
-  <td>${tglSTFormatted}</td>
-  <td>${tglMulaiFormatted}</td>
-  <td style="text-align:right;">${jumlahFormatted}</td>
-  <td>${r.N}</td>
-  <td class="${statusClass}">${r.P}</td>
-  <td class="actions">
-      <button class="btn-ubah" data-tooltip="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
-      <button class="btn-pelaksana" data-tooltip="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
-      <button class="btn-lpt" data-tooltip="LPT"><i class="fa-solid fa-file-lines"></i></button>
-      <button class="btn-bayar" data-tooltip="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
-      <button class="btn-sp2d" data-tooltip="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
-      <button class="btn-hapus" data-tooltip="Hapus"><i class="fa-solid fa-trash"></i></button>
-  </td>
-`;
+              const tr = document.createElement("tr");
+              tr.dataset.id = r.A; // simpan ID di attribute
+              <td class="wrap">${r.B}</td>
+              <td class="wrap">${r.C}</td>
+              <td class="wrap">${r.D}</td>
+              <td class="wrap">${r.E}</td>
+              <td>${tglSTFormatted}</td>
+              <td>${tglMulaiFormatted}</td>
+              <td style="text-align:right;">${jumlahFormatted}</td>
+              <td>${r.N}</td>
+              <td class="${statusClass}">${r.P}</td>
+              <td class="actions">
+                  <button class="btn-ubah" data-tooltip="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
+                  <button class="btn-pelaksana" data-tooltip="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
+                  <button class="btn-lpt" data-tooltip="LPT"><i class="fa-solid fa-file-lines"></i></button>
+                  <button class="btn-bayar" data-tooltip="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
+                  <button class="btn-sp2d" data-tooltip="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
+                  <button class="btn-hapus" data-tooltip="Hapus"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            `;
 
     
             tbody.appendChild(tr);
@@ -409,7 +409,7 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     const btn = e.target.closest("button");
     if(!btn) return;
     const tr = btn.closest("tr");
-    const idKegiatan = tr.cells[0].textContent;
+    const idKegiatan = tr.dataset.id;
     const statusKegiatan = tr.cells[9].textContent; // kolom Status
     const isAdmin = sessionStorage.getItem("admin") === "1";
 
