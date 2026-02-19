@@ -382,19 +382,72 @@ async function loadData(showOverlay = true){
     });
 
     // tombol aksi
-    document.getElementById("dataTableBody").addEventListener("click", function(e){
-        const btn = e.target.closest("button");
-        if(!btn) return;
-        const tr = btn.closest("tr");
-        const idKegiatan = tr.cells[0].textContent;
+    // tombol aksi
+document.getElementById("dataTableBody").addEventListener("click", function(e){
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const tr = btn.closest("tr");
+    const idKegiatan = tr.cells[0].textContent;
+    const statusKegiatan = tr.cells[8].textContent; // kolom Status
+    const isAdmin = sessionStorage.getItem("admin") === "yes";
 
-        if(btn.classList.contains("btn-ubah")) alert("Ubah ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-hapus")) alert("Hapus ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-pelaksana")) alert("Pelaksana ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-lpt")) alert("LPT ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-bayar")) alert("Bayar ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
-    });
+    if(btn.classList.contains("btn-ubah")){
+        if(statusKegiatan === "Rekam Data" || isAdmin){
+            // tampilkan popup edit
+            showEditPopup(tr);
+        } else {
+            alert("Anda tidak memiliki kewenangan!");
+        }
+    }
+    else if(btn.classList.contains("btn-hapus")) alert("Hapus ID: "+idKegiatan);
+    else if(btn.classList.contains("btn-pelaksana")) alert("Pelaksana ID: "+idKegiatan);
+    else if(btn.classList.contains("btn-lpt")) alert("LPT ID: "+idKegiatan);
+    else if(btn.classList.contains("btn-bayar")) alert("Bayar ID: "+idKegiatan);
+    else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
+});
+
+// contoh fungsi popup edit
+function showEditPopup(tr){
+    const idKegiatan = tr.cells[0].textContent;
+    const uraian = tr.cells[2].textContent;
+    const pelaksana = tr.cells[3].textContent;
+    const tujuan = tr.cells[4].textContent;
+    const tglMulai = tr.cells[5].textContent;
+    const jumlah = tr.cells[6].textContent;
+
+    // buat popup sederhana
+    const popup = document.createElement("div");
+    popup.style.position = "fixed";
+    popup.style.top = "50%";
+    popup.style.left = "50%";
+    popup.style.transform = "translate(-50%, -50%)";
+    popup.style.background = "#fff";
+    popup.style.border = "1px solid #cbd5e1";
+    popup.style.padding = "20px";
+    popup.style.borderRadius = "10px";
+    popup.style.boxShadow = "0 5px 20px rgba(0,0,0,0.2)";
+    popup.style.zIndex = 9999;
+    popup.innerHTML = `
+        <h3>Ubah Kegiatan: ${idKegiatan}</h3>
+        <label>Uraian</label><input type="text" value="${uraian}" style="width:100%; margin-bottom:10px;">
+        <label>Pelaksana</label><input type="text" value="${pelaksana}" style="width:100%; margin-bottom:10px;">
+        <label>Tujuan</label><input type="text" value="${tujuan}" style="width:100%; margin-bottom:10px;">
+        <label>Tgl Mulai</label><input type="date" value="${tglMulai}" style="width:100%; margin-bottom:10px;">
+        <label>Jumlah</label><input type="number" value="${jumlah}" style="width:100%; margin-bottom:10px;">
+        <div style="text-align:right;">
+            <button id="popupCancel">Batal</button>
+            <button id="popupUpdate">Update</button>
+        </div>
+    `;
+    document.body.appendChild(popup);
+
+    document.getElementById("popupCancel").onclick = ()=> popup.remove();
+    document.getElementById("popupUpdate").onclick = ()=>{
+        alert("Update berhasil! (implementasikan update ke GAS)");
+        popup.remove();
+    };
+}
+
 
     loadData();
 });
