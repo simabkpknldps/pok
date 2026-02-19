@@ -458,7 +458,9 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
         showPelaksanaPopup(tr);
     }
 
-    else if(btn.classList.contains("btn-lpt")) alert("LPT ID: "+idKegiatan);
+    else if(btn.classList.contains("btn-lpt")){
+        showLPTPopup(tr);
+    }
     else if(btn.classList.contains("btn-bayar")) alert("Bayar ID: "+idKegiatan);
     else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
@@ -824,7 +826,144 @@ function showPelaksanaPopup(tr){
 };
 }
 
+function showLPTPopup(tr){
 
+    const idKegiatan = tr.dataset.id;
+    const uraian = tr.cells[1].textContent;
+
+    // Ambil semua baris tabel utama
+    const allMainRows = document.querySelectorAll("#dataTableBody tr");
+
+    // Filter berdasarkan Uraian / No ST yang sama
+    const filteredRows = Array.from(allMainRows).filter(row =>
+        row.cells[1].textContent === uraian
+    );
+
+    // ===== Overlay =====
+    const overlay = document.createElement("div");
+    overlay.style.position = "fixed";
+    overlay.style.inset = 0;
+    overlay.style.background = "rgba(0,0,0,0.4)";
+    overlay.style.display = "flex";
+    overlay.style.justifyContent = "center";
+    overlay.style.alignItems = "center";
+    overlay.style.zIndex = 9999;
+
+    // ===== Popup =====
+    const popup = document.createElement("div");
+    popup.style.background = "#fff";
+    popup.style.borderRadius = "12px";
+    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
+    popup.style.width = "800px";
+    popup.style.maxWidth = "95%";
+    popup.style.padding = "25px";
+    popup.style.display = "flex";
+    popup.style.flexDirection = "column";
+    popup.style.gap = "12px";
+    popup.style.maxHeight = "90vh";
+    popup.style.overflowY = "auto";
+
+    popup.innerHTML = `
+        <h3 style="text-align:center; color:#0369a1;">
+            LPT Kegiatan
+        </h3>
+
+        <label>Tanggal LPT</label>
+        <input type="date" id="lptTanggal"
+            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+
+        <div style="
+            border:1px solid #e5e7eb;
+            border-radius:8px;
+            max-height:300px;
+            overflow-y:auto;
+        ">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead style="background:#f1f5f9; position:sticky; top:0;">
+                    <tr>
+                        <th style="padding:8px;">ID</th>
+                        <th style="padding:8px;">Uraian / No ST</th>
+                        <th style="padding:8px;">Pelaksana Tugas</th>
+                        <th style="padding:8px; text-align:center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="lptTableBody"></tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+            <button id="lptCancel"
+                style="padding:8px 14px; border:none; border-radius:6px;
+                background:#e5e7eb; cursor:pointer;">
+                Batal
+            </button>
+            <button id="lptSave"
+                style="padding:8px 14px; border:none; border-radius:6px;
+                background:#22c55e; color:white; cursor:pointer;">
+                Simpan
+            </button>
+        </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    const tbody = document.getElementById("lptTableBody");
+
+    // Isi tabel popup
+    filteredRows.forEach(row => {
+
+        const id = row.dataset.id;
+        const uraianVal = row.cells[1].textContent;
+        const pelaksana = row.cells[2].textContent;
+
+        const newRow = document.createElement("tr");
+
+        newRow.innerHTML = `
+            <td style="padding:6px; display:none;">${id}</td>
+            <td style="padding:6px;">${uraianVal}</td>
+            <td style="padding:6px;">${pelaksana}</td>
+            <td style="padding:6px; text-align:center;">
+                <button style="
+                    border:none;
+                    background:none;
+                    cursor:pointer;
+                    color:red;
+                ">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+
+        newRow.querySelector("button").onclick = () => newRow.remove();
+
+        tbody.appendChild(newRow);
+    });
+
+    document.getElementById("lptCancel").onclick = () => overlay.remove();
+
+    document.getElementById("lptSave").onclick = () => {
+
+        const tanggal = document.getElementById("lptTanggal").value;
+
+        const rows = document.querySelectorAll("#lptTableBody tr");
+        const dataLPT = [];
+
+        rows.forEach(r => {
+            const id = r.cells[0].textContent;
+            const uraian = r.cells[1].textContent;
+            const pelaksana = r.cells[2].textContent;
+
+            dataLPT.push({ id, uraian, pelaksana });
+        });
+
+        console.log("Tanggal LPT:", tanggal);
+        console.log("Data LPT:", dataLPT);
+
+        // nanti di sini kita GAS kan
+        overlay.remove();
+    };
+}
 
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
