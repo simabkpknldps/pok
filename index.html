@@ -196,6 +196,7 @@ async function login(){
             sessionStorage.setItem("nama", result.nama);
             sessionStorage.setItem("unit", result.unit);
             sessionStorage.setItem("kantor", kantor);
+            sessionStorage.setItem("admin", result.admin); // <-- simpan admin
             window.location.href = "dashboard.html";
         } else {
             showLoading(false);
@@ -210,4 +211,5 @@ async function login(){
 
 </body>
 </html>
+
 
