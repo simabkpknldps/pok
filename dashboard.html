@@ -830,7 +830,8 @@ th{
 document.addEventListener("DOMContentLoaded", function(){
 
     const nama = sessionStorage.getItem("nama");
-
+    const admin = sessionStorage.getItem("admin");
+    
     if(!nama){
         window.location.replace("index.html");
     } else {
@@ -915,10 +916,7 @@ function hideLoading() {
     document.getElementById("overlayLoading").style.display = "none";
 }
 
-const admin = sessionStorage.getItem("admin");
-const isAdmin = sessionStorage.getItem("admin") === "yes";
 
-console.log("Admin login:", admin);
 
 loadDashboard();
 
