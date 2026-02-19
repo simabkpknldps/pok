@@ -610,69 +610,84 @@ function showPelaksanaPopup(tr){
     popup.style.maxHeight = "90vh";
     popup.style.overflowY = "auto";
 
-    popup.innerHTML = `
-        <h3 style="text-align:center; color:#0369a1;">
-            Pelaksana Kegiatan #${idKegiatan}
-        </h3>
+    ppopup.innerHTML = `
+    <h3 style="text-align:center; color:#0369a1;">
+        Pelaksana Kegiatan #${idKegiatan}
+    </h3>
 
-        <label>MAK</label>
-        <input type="text" id="pelMak" value="${mak}"
-            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" readonly>
+    <label>MAK</label>
+    <input type="text" value="${mak}" readonly
+        style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
 
-        <label>Uraian</label>
-        <input type="text" id="pelUraian" value="${uraian}"
-            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" readonly>
+    <label>Uraian</label>
+    <input type="text" value="${uraian}" readonly
+        style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
 
-        <label>Tujuan</label>
-        <input type="text" id="pelTujuan" value="${tujuan}"
-            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" readonly>
+    <label>Tujuan</label>
+    <input type="text" value="${tujuan}" readonly
+        style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
 
-        <label>User</label>
-        <input type="text" id="pelUser" value="${user}"
-            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" readonly>
-
-        <label>Tgl ST</label>
-        <input type="date" id="pelTglST" value="${tglST}"
-            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-
-        <label>Pelaksana</label>
-        <div style="display:flex; gap:8px;">
-            <input type="text" list="listPegawai" id="pelNama"
-                style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-            <button id="btnTambahPelaksana"
-                style="padding:8px 14px; border:none; border-radius:6px;
-                background:#38bdf8; color:white; cursor:pointer;">
-                Submit
-            </button>
+    <!-- USER & TGL ST SEJAJAR -->
+    <div style="display:flex; gap:12px;">
+        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+            <label>User</label>
+            <input type="text" value="${user}" readonly
+                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
         </div>
 
-        <div style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;">
-            <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                <thead style="background:#f1f5f9;">
-                    <tr>
-                        <th style="padding:8px;">Nama</th>
-                        <th style="padding:8px;">Tgl Mulai</th>
-                        <th style="padding:8px;">Tgl Selesai</th>
-                        <th style="padding:8px; text-align:center;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="pelaksanaTableBody"></tbody>
-            </table>
+        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+            <label>Tgl ST/ND</label>
+            <input type="date" id="pelTglST" value="${tglST}"
+                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
         </div>
+    </div>
 
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-            <button id="pelCancel"
-                style="padding:8px 14px; border:none; border-radius:6px;
-                background:#e5e7eb; cursor:pointer;">
-                Batal
-            </button>
-            <button id="pelSave"
-                style="padding:8px 14px; border:none; border-radius:6px;
-                background:#22c55e; color:white; cursor:pointer;">
-                Simpan
-            </button>
-        </div>
-    `;
+    <label>Pelaksana</label>
+    <div style="display:flex; gap:8px;">
+        <input type="text" list="listPegawai" id="pelNama"
+            style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+        <button id="btnTambahPelaksana"
+            style="padding:8px 14px; border:none; border-radius:6px;
+            background:#38bdf8; color:white; cursor:pointer;">
+            Submit
+        </button>
+    </div>
+
+    <!-- TABEL DENGAN SCROLL -->
+    <div style="
+        border:1px solid #e5e7eb;
+        border-radius:8px;
+        max-height:220px;
+        overflow-y:auto;
+        margin-top:5px;
+    ">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead style="background:#f1f5f9; position:sticky; top:0;">
+                <tr>
+                    <th style="padding:8px;">Nama</th>
+                    <th style="padding:8px;">Tgl Mulai</th>
+                    <th style="padding:8px;">Tgl Selesai</th>
+                    <th style="padding:8px; text-align:center;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="pelaksanaTableBody"></tbody>
+        </table>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+        <button id="pelCancel"
+            style="padding:8px 14px; border:none; border-radius:6px;
+            background:#e5e7eb; cursor:pointer;">
+            Batal
+        </button>
+        <button id="pelSave"
+            style="padding:8px 14px; border:none; border-radius:6px;
+            background:#22c55e; color:white; cursor:pointer;">
+            Simpan
+        </button>
+    </div>
+`;
+
 
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
