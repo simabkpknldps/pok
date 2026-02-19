@@ -916,6 +916,8 @@ function hideLoading() {
 }
 
 const admin = sessionStorage.getItem("admin");
+const isAdmin = sessionStorage.getItem("admin") === "yes";
+
 console.log("Admin login:", admin);
 
 loadDashboard();
