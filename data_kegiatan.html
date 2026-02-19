@@ -575,7 +575,9 @@ function getStatusColor(status){
 function showPelaksanaPopup(tr){
 
     const idKegiatan = tr.dataset.id;
-
+    const uraian = tr.cells[1].textContent;
+    const tglST = tr.cells[4].textContent;
+  
     // ===== Overlay =====
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
@@ -604,11 +606,11 @@ function showPelaksanaPopup(tr){
         </h3>
 
         <label>Uraian</label>
-        <input type="text" id="pelUraian"
+        <input type="text" id="uraian"
             style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
 
         <label>Tgl ST</label>
-        <input type="date" id="pelTglST"
+        <input type="date" id="tglST"
             style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
 
         <label>Pelaksana</label>
