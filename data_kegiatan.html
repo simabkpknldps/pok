@@ -391,7 +391,7 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     const tr = btn.closest("tr");
     const idKegiatan = tr.cells[0].textContent;
     const statusKegiatan = tr.cells[8].textContent; // kolom Status
-    const isAdmin = sessionStorage.getItem("admin") === "yes";
+    const isAdmin = sessionStorage.getItem("admin") === "1";
 
     if(btn.classList.contains("btn-ubah")){
         if(statusKegiatan === "Rekam Data" || isAdmin){
