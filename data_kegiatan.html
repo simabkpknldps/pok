@@ -286,6 +286,8 @@ document.addEventListener("DOMContentLoaded", async function(){
             const jumlahFormatted = Number(r.M||0).toLocaleString('id-ID');
     
             const tr = document.createElement("tr");
+            tr.dataset.id = r.A; // simpan ID di attribute (DI SINI, bukan di innerHTML)
+
     
             // assign class status untuk coloring
             let statusClass = "";
@@ -298,8 +300,6 @@ document.addEventListener("DOMContentLoaded", async function(){
             }
     
             tr.innerHTML = `
-              const tr = document.createElement("tr");
-              tr.dataset.id = r.A; // simpan ID di attribute
               <td class="wrap">${r.B}</td>
               <td class="wrap">${r.C}</td>
               <td class="wrap">${r.D}</td>
@@ -318,6 +318,7 @@ document.addEventListener("DOMContentLoaded", async function(){
                   <button class="btn-hapus" data-tooltip="Hapus"><i class="fa-solid fa-trash"></i></button>
               </td>
             `;
+
 
     
             tbody.appendChild(tr);
@@ -430,7 +431,7 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
 
 // contoh fungsi popup edit
 function showEditPopup(tr){
-    const idKegiatan = tr.cells[0].textContent;
+    const idKegiatan = tr.dataset.id;
     const uraian = tr.cells[2].textContent;
     const pelaksana = tr.cells[3].textContent;
     const tujuan = tr.cells[4].textContent;
