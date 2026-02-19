@@ -335,6 +335,10 @@ async function loadData(showOverlay = true){
     }
 }
 
+ // load pertama (dengan overlay)
+    await loadData(true);
+
+  
 // 🔁 Reload data tiap 30 detik
     setInterval(() => {
         loadData();
