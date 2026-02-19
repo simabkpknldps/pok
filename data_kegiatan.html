@@ -254,8 +254,18 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbydUB5pk_LtB1bdlz7sPmNkD4GrM5J51pIUxmZICcmKg6AvRhZ_Yk9s0u53VF0kOIM1/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbxqFMQdTkr84L-FwO2gZwBvnaFxyL3dwSwrZWYrE7yYbagmP6DWkyUomMuFJVkyXwMr/exec";
 
+function showOverlay(text="Menyimpan data..."){
+    const ov = document.getElementById("globalOverlay");
+    ov.querySelector("div").innerText = "⏳ " + text;
+    ov.style.display = "flex";
+}
+
+function hideOverlay(){
+    document.getElementById("globalOverlay").style.display = "none";
+}
+  
 let pegawaiList = [];
 let lokasiList = [];
 
@@ -521,6 +531,9 @@ function showEditPopup(tr){
 
     // tombol update
     document.getElementById("popupUpdate").onclick = () => {
+    showOverlay("Menyimpan...");
+    btnSave.disabled = true;
+      
         const inputs = popup.querySelectorAll("input");
         const updatedData = {
             uraian: inputs[0].value,
@@ -545,6 +558,8 @@ function showEditPopup(tr){
 })
 .then(res => res.json())
 .then(result=>{
+  hideOverlay();
+  btnSave.disabled = false;
     if(result.status === "success"){
         alert("Update berhasil!");
         overlay.remove();
@@ -554,6 +569,8 @@ function showEditPopup(tr){
     }
 })
 .catch(err=>{
+  hideOverlay();
+  btnSave.disabled = false;
     alert("Error koneksi");
     console.error(err);
 });
@@ -747,20 +764,26 @@ function showPelaksanaPopup(tr){
 
     document.getElementById("pelSave").onclick = () => {
 
+    showOverlay("Menyimpan pelaksana...");
+    document.getElementById("pelSave").disabled = true;
+
     const rows = document.querySelectorAll("#pelaksanaTableBody tr");
     const dataPelaksana = [];
 
     rows.forEach(r=>{
         const nama = r.cells[0].textContent;
-        const mulai = r.cells[1].querySelector("input").value;
-        const selesai = r.cells[2].querySelector("input").value;
+
+        const mulaiRaw = r.cells[1].querySelector("input").value;
+        const selesaiRaw = r.cells[2].querySelector("input").value;
+
+        const mulai = mulaiRaw ? mulaiRaw.split("T")[0] : "";
+        const selesai = selesaiRaw ? selesaiRaw.split("T")[0] : "";
+
         const jumlahText = r.cells[3].querySelector("input").value;
         const jumlah = Number(jumlahText.replace(/\./g,"")) || 0;
 
         dataPelaksana.push({nama, mulai, selesai, jumlah});
     });
-
-    console.log("Data dikirim:", dataPelaksana);
 
     fetch(urlGAS,{
         method:"POST",
@@ -778,16 +801,19 @@ function showPelaksanaPopup(tr){
     })
     .then(res=>res.json())
     .then(result=>{
+        hideOverlay();
+        document.getElementById("pelSave").disabled = false;
+
         if(result.status==="success"){
-            alert("Berhasil disimpan!");
             overlay.remove();
             loadData(false);
-        } else {
+        }else{
             alert("Gagal: "+result.message);
         }
     })
     .catch(err=>{
-        console.error(err);
+        hideOverlay();
+        document.getElementById("pelSave").disabled = false;
         alert("Error koneksi");
     });
 
@@ -831,5 +857,28 @@ function populateDatalist(){
 </script>
 <datalist id="listPegawai"></datalist>
 <datalist id="listLokasi"></datalist>
+
+  <div id="globalOverlay" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    backdrop-filter:blur(3px);
+    z-index:9999;
+    align-items:center;
+    justify-content:center;
+">
+    <div style="
+        background:white;
+        padding:24px 32px;
+        border-radius:12px;
+        box-shadow:0 10px 30px rgba(0,0,0,0.2);
+        font-family:Inter;
+        font-weight:600;
+    ">
+        ⏳ Menyimpan data...
+    </div>
+</div>
+  
 </body>
 </html>
