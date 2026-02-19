@@ -235,7 +235,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbwIvGPJ6QhHx9v9pOjRBHXLYvFBfoWXm8BeEsQlPEksmDQeY4FcdsqS2RH5XvoA53xI/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbxox9vA-bS9WJ2sT0acn19o4G5RrcDoMVd_GjsqIzUxn25ZYbX-ny7BP_55TidBU_kZ/exec";
 
 let pegawaiList = [];
 let lokasiList = [];
@@ -494,8 +494,33 @@ function showEditPopup(tr){
         };
 
         console.log("Update data ke GAS:", idKegiatan, updatedData);
-        alert("Update berhasil! (implementasikan update ke GAS)");
+        fetch(urlGAS, {
+    method: "POST",
+    body: JSON.stringify({
+        kantor: sessionStorage.getItem("kantor"),
+        id: idKegiatan,
+        uraian: updatedData.uraian,
+        pelaksana: updatedData.pelaksana,
+        tujuan: updatedData.tujuan,
+        tglMulai: updatedData.tglMulai,
+        jumlah: updatedData.jumlah
+    })
+})
+.then(res => res.json())
+.then(result=>{
+    if(result.status === "success"){
+        alert("Update berhasil!");
         overlay.remove();
+        loadData(false); // reload tanpa overlay
+    } else {
+        alert("Gagal update: "+result.message);
+    }
+})
+.catch(err=>{
+    alert("Error koneksi");
+    console.error(err);
+});
+
     };
 }
 
