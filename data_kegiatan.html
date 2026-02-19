@@ -415,38 +415,74 @@ function showEditPopup(tr){
     const pelaksana = tr.cells[3].textContent;
     const tujuan = tr.cells[4].textContent;
     const tglMulai = tr.cells[5].textContent;
-    const jumlah = tr.cells[6].textContent;
+    const jumlah = tr.cells[6].textContent.replace(/\./g, ""); // hapus titik ribuan
 
-    // buat popup sederhana
+    // overlay
+    const overlay = document.createElement("div");
+    overlay.style.position = "fixed";
+    overlay.style.inset = 0;
+    overlay.style.background = "rgba(0,0,0,0.4)";
+    overlay.style.display = "flex";
+    overlay.style.justifyContent = "center";
+    overlay.style.alignItems = "center";
+    overlay.style.zIndex = 9999;
+
+    // popup card
     const popup = document.createElement("div");
-    popup.style.position = "fixed";
-    popup.style.top = "50%";
-    popup.style.left = "50%";
-    popup.style.transform = "translate(-50%, -50%)";
     popup.style.background = "#fff";
-    popup.style.border = "1px solid #cbd5e1";
-    popup.style.padding = "20px";
-    popup.style.borderRadius = "10px";
-    popup.style.boxShadow = "0 5px 20px rgba(0,0,0,0.2)";
-    popup.style.zIndex = 9999;
+    popup.style.borderRadius = "12px";
+    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
+    popup.style.width = "400px";
+    popup.style.maxWidth = "90%";
+    popup.style.padding = "25px 20px";
+    popup.style.display = "flex";
+    popup.style.flexDirection = "column";
+    popup.style.gap = "12px";
+
     popup.innerHTML = `
-        <h3>Ubah Kegiatan: ${idKegiatan}</h3>
-        <label>Uraian</label><input type="text" value="${uraian}" style="width:100%; margin-bottom:10px;">
-        <label>Pelaksana</label><input type="text" value="${pelaksana}" style="width:100%; margin-bottom:10px;">
-        <label>Tujuan</label><input type="text" value="${tujuan}" style="width:100%; margin-bottom:10px;">
-        <label>Tgl Mulai</label><input type="date" value="${tglMulai}" style="width:100%; margin-bottom:10px;">
-        <label>Jumlah</label><input type="number" value="${jumlah}" style="width:100%; margin-bottom:10px;">
-        <div style="text-align:right;">
-            <button id="popupCancel">Batal</button>
-            <button id="popupUpdate">Update</button>
+        <h3 style="margin-bottom:10px; text-align:center; color:#0369a1;">Ubah Kegiatan #${idKegiatan}</h3>
+
+        <label>Uraian</label>
+        <input type="text" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <label>Pelaksana</label>
+        <input type="text" value="${pelaksana}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <label>Tujuan</label>
+        <input type="text" value="${tujuan}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <label>Tgl Mulai</label>
+        <input type="date" value="${tglMulai}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <label>Jumlah</label>
+        <input type="number" value="${jumlah}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+            <button id="popupCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer;">Batal</button>
+            <button id="popupUpdate" style="padding:8px 14px; border:none; border-radius:6px; background:#38bdf8; color:white; cursor:pointer;">Update</button>
         </div>
     `;
-    document.body.appendChild(popup);
 
-    document.getElementById("popupCancel").onclick = ()=> popup.remove();
-    document.getElementById("popupUpdate").onclick = ()=>{
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    // tombol batal
+    document.getElementById("popupCancel").onclick = () => overlay.remove();
+
+    // tombol update
+    document.getElementById("popupUpdate").onclick = () => {
+        const inputs = popup.querySelectorAll("input");
+        const updatedData = {
+            uraian: inputs[0].value,
+            pelaksana: inputs[1].value,
+            tujuan: inputs[2].value,
+            tglMulai: inputs[3].value,
+            jumlah: Number(inputs[4].value)
+        };
+
+        console.log("Update data ke GAS:", idKegiatan, updatedData);
         alert("Update berhasil! (implementasikan update ke GAS)");
-        popup.remove();
+        overlay.remove();
     };
 }
 
