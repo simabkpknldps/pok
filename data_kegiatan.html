@@ -530,52 +530,54 @@ function showEditPopup(tr){
     document.getElementById("popupCancel").onclick = () => overlay.remove();
 
     // tombol update
-    document.getElementById("popupUpdate").onclick = () => {
-    showOverlay("Menyimpan...");
-    btnSave.disabled = true;
-      
-        const inputs = popup.querySelectorAll("input");
-        const updatedData = {
-            uraian: inputs[0].value,
-            pelaksana: inputs[1].value,
-            tujuan: inputs[2].value,
-            tglST: inputs[3].value,
-            jumlah: Number(inputs[4].value)
-        };
+    document.getElementById("popupUpdate").onclick = function(){
 
-        console.log("Update data ke GAS:", idKegiatan, updatedData);
-        fetch(urlGAS, {
-    method: "POST",
-    body: JSON.stringify({
-        kantor: sessionStorage.getItem("kantor"),
-        id: idKegiatan,
-        uraian: updatedData.uraian,
-        pelaksana: updatedData.pelaksana,
-        tujuan: updatedData.tujuan,
-        tglST: updatedData.tglST,
-        jumlah: updatedData.jumlah
-    })
-})
-.then(res => res.json())
-.then(result=>{
-  hideOverlay();
-  btnSave.disabled = false;
-    if(result.status === "success"){
-        alert("Update berhasil!");
-        overlay.remove();
-        loadData(false); // reload tanpa overlay
-    } else {
-        alert("Gagal update: "+result.message);
-    }
-})
-.catch(err=>{
-  hideOverlay();
-  btnSave.disabled = false;
-    alert("Error koneksi");
-    console.error(err);
-});
+    const btn = this; // 🔥 ambil tombolnya sendiri
+    btn.disabled = true;
 
+    showOverlay("Menyimpan perubahan...");
+
+    const inputs = popup.querySelectorAll("input");
+
+    const updatedData = {
+        uraian: inputs[0].value,
+        pelaksana: inputs[1].value,
+        tujuan: inputs[2].value,
+        tglST: inputs[3].value,
+        jumlah: Number(inputs[4].value)
     };
+
+    fetch(urlGAS, {
+        method: "POST",
+        body: JSON.stringify({
+            kantor: sessionStorage.getItem("kantor"),
+            id: idKegiatan,
+            uraian: updatedData.uraian,
+            pelaksana: updatedData.pelaksana,
+            tujuan: updatedData.tujuan,
+            tglST: updatedData.tglST,
+            jumlah: updatedData.jumlah
+        })
+    })
+    .then(res => res.json())
+    .then(result=>{
+        hideOverlay();
+        btn.disabled = false;
+
+        if(result.status === "success"){
+            overlay.remove();
+            loadData(false);
+        } else {
+            alert("Gagal update: "+result.message);
+        }
+    })
+    .catch(err=>{
+        hideOverlay();
+        btn.disabled = false;
+        alert("Error koneksi");
+        console.error(err);
+    });
+};
 }
 
 
@@ -858,13 +860,14 @@ function populateDatalist(){
 <datalist id="listPegawai"></datalist>
 <datalist id="listLokasi"></datalist>
 
-  <div id="globalOverlay" style="
+  
+<div id="globalOverlay" style="
     display:none;
     position:fixed;
     inset:0;
     background:rgba(0,0,0,0.4);
     backdrop-filter:blur(3px);
-    z-index:9999;
+    z-index:20000;   /* 🔥 NAIKKAN INI */
     align-items:center;
     justify-content:center;
 ">
@@ -879,6 +882,5 @@ function populateDatalist(){
         ⏳ Menyimpan data...
     </div>
 </div>
-  
 </body>
 </html>
