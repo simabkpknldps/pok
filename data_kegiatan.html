@@ -243,8 +243,9 @@ document.addEventListener("DOMContentLoaded", async function(){
     else document.getElementById("namaUser").textContent = nama;
 
     let allRows = [];
- let pegawaiList = [];
-let lokasiList = [];
+    let pegawaiList = [];
+    let lokasiList = [];
+    let firstLoad = true;
 
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor){
@@ -315,35 +316,29 @@ let lokasiList = [];
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
 async function loadData(showOverlay = true){
-    try{
+    try {
         if(showOverlay && firstLoad) showLoading(true);
 
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
-        if(data.status !== "success") return;
-
-        allRows = data.rows;
-        pegawaiList = data.pegawai; // ✅ isi global
-        lokasiList = data.lokasi;   // ✅ isi global
-      
-        if(showOverlay && firstLoad) showLoading(false);
 
         if(data.status !== "success") return;
 
         allRows = data.rows;
+        pegawaiList = data.pegawai;
+        lokasiList = data.lokasi;
+
         const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
-        const pegawaiList = data.pegawai;  // array nama pegawai
-        const lokasiList = data.lokasi;    // array lokasi
-      
-        // skip row 2 & 3 saat load pertama
-        const initialRows = allRows.filter((r, idx) => idx !== 1 && idx !== 2);
+        const initialRows = allRows.filter((r, idx) => firstLoad ? (idx !== 1 && idx !== 2) : true);
         const filtered = filterByStatus(initialRows, defaultRadio);
         renderTable(filtered);
 
-        firstLoad = false; // overlay hanya sekali
+        firstLoad = false;
+        if(showOverlay) showLoading(false);
+
     } catch(e){
-        if(showOverlay && firstLoad) showLoading(false);
         console.error(e);
+        if(showOverlay) showLoading(false);
     }
 }
 
