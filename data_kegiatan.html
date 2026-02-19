@@ -828,15 +828,13 @@ function showPelaksanaPopup(tr){
 
 function showLPTPopup(tr){
 
-    const idKegiatan = tr.dataset.id;
-    const uraian = tr.cells[1].textContent;
+    const uraianTarget = tr.cells[1].textContent;
 
-    // Ambil semua baris tabel utama
     const allMainRows = document.querySelectorAll("#dataTableBody tr");
 
-    // Filter berdasarkan Uraian / No ST yang sama
+    // filter berdasarkan Uraian / No ST
     const filteredRows = Array.from(allMainRows).filter(row =>
-        row.cells[1].textContent === uraian
+        row.cells[1].textContent === uraianTarget
     );
 
     // ===== Overlay =====
@@ -881,7 +879,7 @@ function showLPTPopup(tr){
             <table style="width:100%; border-collapse:collapse; font-size:13px;">
                 <thead style="background:#f1f5f9; position:sticky; top:0;">
                     <tr>
-                        <th style="padding:8px;">ID</th>
+                        <th style="padding:8px;">ID Kegiatan</th>
                         <th style="padding:8px;">Uraian / No ST</th>
                         <th style="padding:8px;">Pelaksana Tugas</th>
                         <th style="padding:8px; text-align:center;">Aksi</th>
@@ -910,18 +908,18 @@ function showLPTPopup(tr){
 
     const tbody = document.getElementById("lptTableBody");
 
-    // Isi tabel popup
+    // 🔥 Isi tabel dengan ID dari dataset
     filteredRows.forEach(row => {
 
-        const id = row.dataset.id;
-        const uraianVal = row.cells[1].textContent;
-        const pelaksana = row.cells[2].textContent;
+        const id = row.dataset.id;        // ✅ BENAR
+        const uraian = row.cells[1].textContent;   // ✅ indeks 1
+        const pelaksana = row.cells[2].textContent; // ✅ indeks 2
 
         const newRow = document.createElement("tr");
 
         newRow.innerHTML = `
-            <td style="padding:6px; display:none;">${id}</td>
-            <td style="padding:6px;">${uraianVal}</td>
+            <td style="padding:6px;">${id}</td>
+            <td style="padding:6px;">${uraian}</td>
             <td style="padding:6px;">${pelaksana}</td>
             <td style="padding:6px; text-align:center;">
                 <button style="
@@ -960,7 +958,6 @@ function showLPTPopup(tr){
         console.log("Tanggal LPT:", tanggal);
         console.log("Data LPT:", dataLPT);
 
-        // nanti di sini kita GAS kan
         overlay.remove();
     };
 }
