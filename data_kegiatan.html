@@ -275,8 +275,8 @@ document.addEventListener("DOMContentLoaded", async function(){
         const tbody = document.getElementById("dataTableBody");
         tbody.innerHTML = "";
         rows.forEach(r=>{
-            const tglST = r.G ? new Date(r.G) : null;
-              const tglMulai = r.H ? new Date(r.H) : null;
+            const tglST = r.F ? new Date(r.F) : null;
+              const tglMulai = r.G ? new Date(r.G) : null;
               
               const formatDate = (d) => 
                 d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
