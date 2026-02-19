@@ -329,6 +329,9 @@ async function loadData(showOverlay = true){
         allRows = data.rows;
         pegawaiList = data.pegawai || [];
         lokasiList = data.lokasi || [];
+        
+        // 🔥 TAMBAHKAN DI SINI
+        populateDatalist();
 
         const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
 
@@ -541,9 +544,7 @@ function populateDatalist(){
     });
 }
 
-populateDatalist();
-
-  
+ 
 
 
 </script>
