@@ -430,7 +430,7 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     if(!btn) return;
     const tr = btn.closest("tr");
     const idKegiatan = tr.dataset.id;
-    const statusKegiatan = tr.cells[9].textContent; // kolom Status
+    const statusKegiatan = tr.cells[8].textContent; // kolom Status
     const isAdmin = sessionStorage.getItem("admin") === "1";
 
     if(btn.classList.contains("btn-ubah")){
@@ -512,8 +512,8 @@ function showEditPopup(tr){
 
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
-    document.getElementById("uraian").value = uraian;
-    document.getElementById("tglST").value = tglST;
+    //document.getElementById("uraian").value = uraian;
+    //document.getElementById("tglST").value = tglST;
 
   
     // tombol batal
@@ -610,7 +610,7 @@ function showPelaksanaPopup(tr){
     popup.style.maxHeight = "90vh";
     popup.style.overflowY = "auto";
 
-    ppopup.innerHTML = `
+    popup.innerHTML = `
     <h3 style="text-align:center; color:#0369a1;">
         Pelaksana Kegiatan #${idKegiatan}
     </h3>
