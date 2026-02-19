@@ -3,423 +3,1264 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Daftar Kegiatan SiMAB</title>
+<title>Dashboard SiMAB</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+    
 <style>
-*{margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif;}
-body{display:grid; grid-template-columns:240px 1fr; background:#f8fafc; color:#334155;}
-.sidebar{height:100vh; background:#ffffff; border-right:1px solid #e5e7eb; display:flex; flex-direction:column; position:sticky; top:0;}
-.sidebar-brand{padding:20px; background:#e0f2fe; color:#0369a1; font-weight:600; font-size:18px; display:flex; align-items:center; gap:10px;}
-.sidebar ul{list-style:none; padding:20px 10px;}
-.sidebar ul li{padding:10px 14px; margin-bottom:6px; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:12px; font-size:14px; color:#475569; transition:0.2s;}
-.sidebar ul li:hover{background:#f1f5f9;}
-.sidebar ul li.active{background:#e0f2fe; color:#0369a1; font-weight:600;}
-.main{min-height:100vh; display:flex; flex-direction:column;}
-.topbar{height:60px; background:#ffffff; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; padding:0 30px; position:sticky; top:0; z-index:1000;}
-.topbar-left{font-weight:600;}
-.topbar-right{display:flex; align-items:center; gap:18px; font-size:14px;}
-.topbar-right i{font-size:16px; cursor:pointer; color:#475569; transition:0.2s;}
-.topbar-right i:hover{color:#0369a1;}
-.user-info{display:flex; align-items:center; gap:8px; font-weight:500;}
-.content{padding:30px; padding-bottom:50px;}
-.footer{position:fixed; bottom:0; left:240px; right:0; height:45px; background:#ffffff; border-top:1px solid #e5e7eb; display:flex; align-items:center; justify-content:center; font-size:13px; color:#64748b;}
-@media(max-width:1000px){body{grid-template-columns:1fr;} .footer{left:0;}}
 
-/* Overlay loading */
-.loading{
-  position: fixed;
-  inset:0;
-  background: rgba(255,255,255,0.7);
-  display: none;
-  justify-content:center;
-  align-items:center;
-  z-index: 9999;
+.popup-overlay{
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.3);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:99999;
 }
-.spinner{
-  width:45px;
-  height:45px;
-  border:5px solid #e5e7eb;
-  border-top:5px solid #38bdf8;
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-}
-@keyframes spin{
-  to { transform: rotate(360deg); }
+.popup-box{
+    background:#fff;
+    border-radius:8px;
+    padding:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.3);
 }
 
-/* Status colors */
-td.status-RekamData{ background:#fca5a5; }       /* pink */
-td.status-Terlaksana{ background:#d1d5db; }      /* abu */
-td.status-LPT{ background:#fde68a; }             /* yellow */
-td.status-Terbayar{ background:#4ade80; }        /* hijau */
-td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
-  
-/* --- Filter --- */
-.filter-bar{display:flex; align-items:center; gap:20px; margin-bottom:15px;}
-.filter-bar input[type="text"]{flex:1; padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;}
-.filter-bar .radio-group{display:flex; gap:12px;}
-.filter-bar .radio-group label{display:flex; align-items:center; gap:4px; font-size:14px; cursor:pointer;}
-
-/* --- Tabel --- */
-.table-wrapper {
-  width: 100%;
-  overflow-x: auto; /* scroll horizontal */
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: white;
+    
+    .cards {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:20px;
+    margin-bottom:30px;
 }
 
-.table-box {
-  min-width: 1200px; /* minimal lebar agar kolom panjang tidak terpotong */
-  overflow-y: auto;
-  max-height: calc(100vh - 250px);
+.card {
+    background:white; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.05);
+    display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;
+}
+.card h3{ font-size:20px; margin-bottom:10px; }
+.card p{ font-size:24px; font-weight:600; }
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Inter',sans-serif;
+}
+/* di bagian CSS */
+/* Scrollable tbody untuk tabel Kegiatan Hari Ini */
+.chart-box table tbody {
+    display: block;
+    max-height: 250px; /* tinggi scroll */
+    overflow-y: auto;
+    padding-bottom: 10px; /* jarak bawah agar tidak terlalu mepet */
 }
 
-.table-box table {
-  border-collapse: collapse;
-  width: 100%;
-  overflow-y: auto;
+/* agar header tabel tetap rapi */
+.chart-box table thead,
+.chart-box table tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
 }
 
-.table-box th, .table-box td {
-  padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
-  /* white-space: nowrap; */ /* hapus default nowrap */
-  word-wrap: break-word;   /* agar teks bisa wrap */
-  overflow-wrap: break-word;
+/* tambahan jarak bawah chart-box */
+.chart-box {
+    margin-bottom: 0;
 }
 
-  /* wrap hanya untuk kolom tertentu */
-.table-box td.wrap, .table-box th.wrap {
-  white-space: normal; /* memungkinkan wrap */
+
+    
+body{
+    display:grid;
+    grid-template-columns:240px 1fr;
+    background:#f8fafc;
+    color:#334155;
 }
 
-  
-.table-box th {
-  background: #f1f5f9;
-  font-weight: 600;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+/* SIDEBAR */
+.sidebar{
+    height:100vh;
+    background:#ffffff;
+    border-right:1px solid #e5e7eb;
+    display:flex;
+    flex-direction:column;
+    position:sticky;
+    top:0;
 }
 
-  .table-box td.status {
-  text-align: center;      /* horizontal center */
-  vertical-align: middle;   /* vertical center */
-  font-weight: 600;         /* opsional agar lebih jelas */
-  color: white;             /* biar kontras dengan background */
-  border-radius: 6px;       /* agar background lebih rapi */
+.sidebar-brand{
+    padding:20px;
+    background:#e0f2fe;
+    color:#0369a1;
+    font-weight:600;
+    font-size:18px;
+    display:flex;
+    align-items:center;
+    gap:10px;
 }
 
-/* freeze kolom aksi di kanan */
-.table-box td.actions {
-  position: sticky;
-  right: 0;
-  background: white;
-  display: flex;
-  justify-content: center;   /* horizontal center */
-  align-items: center;       /* vertical center */
-  gap: 5px;
-  z-index: 5;
-  height: 100%; /* agar flex vertical penuh */
+.sidebar ul{
+    list-style:none;
+    padding:20px 10px;
 }
 
-.table-box td.actions button {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;             /* agar icon juga center */
-  justify-content: center;
-  align-items: center;
-  padding: 5px;
-  width: 30px;               /* ukuran tombol seragam */
-  height: 30px;              /* tinggi tombol */
-  border-radius: 6px;        /* opsional */
-  transition: 0.2s;
+.sidebar ul li{
+    padding:10px 14px;
+    margin-bottom:6px;
+    border-radius:10px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-size:14px;
+    color:#475569;
+    transition:0.2s;
 }
 
-.table-box td.actions button:hover{
-  background: #f1f5f9; /* hover tombol */
+.sidebar ul li:hover{
+    background:#f1f5f9;
 }
 
-.table-box td.actions button:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #000;
-  color: #fff;
-  padding: 3px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-  font-size: 12px;
+.sidebar ul li.active{
+    background:#e0f2fe;
+    color:#0369a1;
+    font-weight:600;
 }
 
+.page-header{
+    margin-bottom:25px;
+}
+
+.page-header h2{
+    font-size:22px;
+    font-weight:700;
+    margin-bottom:4px;
+    color:#0f172a;
+}
+
+.page-header p{
+    font-size:14px;
+    color:#64748b;
+}
+
+    
+/* MAIN */
+.main{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+/* TOPBAR */
+.topbar{
+    height:60px;
+    background:#ffffff;
+    border-bottom:1px solid #e5e7eb;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 30px;
+    position:sticky;
+    top:0;
+    z-index:1000;
+}
+
+.topbar-left{
+    font-weight:600;
+}
+
+.topbar-right{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    font-size:14px;
+}
+
+.topbar-right i{
+    font-size:16px;
+    cursor:pointer;
+    color:#475569;
+    transition:0.2s;
+}
+
+.topbar-right i:hover{
+    color:#0369a1;
+}
+
+.user-info{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:500;
+}
+
+/* CONTENT */
+.content{
+    padding:30px;
+    padding-bottom:80px; /* agar tidak tertutup footer */
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+    margin-bottom:25px;
+}
+
+.card{
+    padding:20px;
+    border-radius:16px;
+    border:1px solid #e5e7eb;
+    transition:0.2s;
+    background:white;
+}
+
+.card:hover{
+    transform:translateY(-4px);
+}
+
+.cards .card:nth-child(1){background:#e0f2fe;color:#2F4F4F;}
+.cards .card:nth-child(2){background:#dcfce7;color:#2F4F4F;}
+.cards .card:nth-child(3){background:#ffedd5;color:#2F4F4F;}
+.cards .card:nth-child(4){background:#FFFACD;color:#2F4F4F;}
+.cards .card:nth-child(5){background:#fee2e2;color:#2F4F4F;}
+
+.card h3{
+    font-size:13px;
+    margin-bottom:8px;
+}
+
+.card span{
+    font-size:24px;
+    font-weight:700;
+}
+
+.dashboard-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr;
+    gap:20px;
+    align-items:stretch;
+}
+
+
+.dashboard-grid{
+    display:flex;
+    gap:20px;
+}
+
+.chart-box{
+    flex:2;
+}
+
+.belanja-card{
+    flex:1;
+}
+
+    
+
+.dashboard-grid-full{
+    grid-column:1 / -1;
+    display:block;   /* jadikan full */
+}
+
+.dashboard-grid-full .chart-box{
+    width:100%;
+    height:auto;              /* hilangkan batas tinggi */
+    overflow-x:auto;          /* scroll horizontal */
+}
+
+#monitoringMPTable{
+    min-width:1200px;   /* supaya tidak gepeng */
+}
+
+    #monitoringMPTable thead th{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+    
+.chart-box{
+    background:white;
+    padding:16px;
+    border-radius:16px;
+    border:1px solid #e5e7eb;
+    height:auto;
+    min-height:260px;
+}
+
+
+    .belanja-box{
+    margin-top:20px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+.belanja-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid #f1f5f9;
+    padding-bottom:8px;
+}
+
+.belanja-row small{
+    font-size:13px;
+    color:#64748b;
+}
+
+.belanja-row strong{
+    font-size:20px;
+    font-weight:700;
+    color:#0f172a;
+}
+
+.belanja-footnote{
+    margin-top:10px;
+    font-size:12px;
+    color:#94a3b8;
+}
+
+    
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+}
+
+th, td{
+    padding:10px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+}
+
+th{
+    background:#f1f5f9;
+    font-weight:600;
+}
+
+/* FOOTER FREEZE */
+.footer{
+    position:fixed;
+    bottom:0;
+    left:240px;
+    right:0;
+    height:45px;
+    background:#ffffff;
+    border-top:1px solid #e5e7eb;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    color:#64748b;
+}
+
+@media(max-width:1000px){
+    body{
+        grid-template-columns:1fr;
+    }
+    .footer{
+        left:0;
+    }
+    .dashboard-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+    #monitoringMPTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+#monitoringMPTable th,
+#monitoringMPTable td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: right;
+    white-space: nowrap;
+}
+
+#monitoringMPTable th:first-child,
+#monitoringMPTable td:first-child {
+    text-align: left;
+}
+
+#monitoringMPTable thead th {
+    background: #f1f5f9;
+    font-weight: 600;
+}
+
+#monitoringMPTable tfoot td {
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+#monitoringMPTable tbody {
+    display: block;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+#monitoringMPTable thead,
+#monitoringMPTable tbody tr,
+#monitoringMPTable tfoot {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+/* Kecilkan kolom pertama */
+#monitoringMPTable th:first-child,
+#monitoringMPTable td:first-child{
+    width:30px;        /* ubah sesuai kebutuhan */
+    max-width:30px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+/* Kolom No diperkecil */
+#monitoringMPTable th:nth-child(1),
+#monitoringMPTable td:nth-child(1){
+    width:50px;
+    max-width:50px;
+    text-align:center;
+}
+
+    /* Samakan ukuran tabel Kegiatan Hari Ini */
+.chart-box table{
+    font-size:13px;
+}
+
+.chart-box table th,
+.chart-box table td{
+    padding:8px 10px;
+}
+
+    /* Perkecil card belanja */
+.belanja-box{
+    gap:12px;
+}
+
+.belanja-row strong{
+    font-size:16px;   /* sebelumnya 20px */
+}
+
+.belanja-row small{
+    font-size:12px;
+}
+
+#barangRealisasi,
+#barangSisa,
+#modalRealisasi,
+#modalSisa{
+    font-size:15px;
+    font-weight:600;
+}
+
+.belanja-card{
+    background:white;
+    padding:16px;
+    border-radius:16px;
+    border:1px solid #e5e7eb;
+}
+
+.belanja-card h4{
+    margin-bottom:12px;
+    font-size:14px;
+    font-weight:600;
+}
+
+.progress-container{
+    width:100%;
+    height:14px;
+    background:#e5e7eb;   /* ← ini yang hilang */
+    border-radius:8px;
+    margin:8px 0 14px 0;
+    overflow:hidden;
+}
+
+.progress-bar{
+    height:100%;
+    background:#2563eb;
+    border-radius:8px;
+    transition:width 0.4s ease;
+}
+
+
+
+.progress-info{
+    margin-top:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.progress-info span{
+    font-size:18px;
+    font-weight:700;
+    color:#1d4ed8;
+}
+
+.progress-info small{
+    font-size:12px;
+    color:#64748b;
+    text-align:right;
+}
+
+/* Samakan tinggi card layer kedua */
+.layer-2 .chart-box{
+    min-height:220px;   /* samakan dengan kegiatan hari ini */
+}
+
+    .layer-2{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr;
+    gap:14px;
+    align-items:stretch;  /* PENTING supaya tinggi sama */
+}
+
+    .chart-box{
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+}
+
+.dashboard-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr;
+    gap:20px;
+    align-items:stretch;   /* PENTING */
+}
+
+.chart-box,
+.belanja-card{
+    display:flex;
+    flex-direction:column;
+    padding:16px 18px;
+    border-radius:14px;
+    min-height:230px;   /* samakan tinggi fix */
+}
+
+.chart-box h3,
+.belanja-card h3{
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:12px;
+}
+
+    .chart-box table{
+    flex:1;   /* isi penuh ruang */
+}
+
+.progress-info{
+    margin-top:auto;   /* dorong ke bawah */
+}
+
+
+.progress-info{
+    margin-top:auto;       /* dorong isi ke bawah agar rapi */
+}
+
+.chart-box table{
+    font-size:13px;   /* sedikit lebih kecil */
+}
+
+.chart-box th,
+.chart-box td{
+    padding:6px 8px;  /* lebih rapat */
+}
+
+.modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+}
+
+.modal-box{
+    width:90%;
+    max-width:1100px;
+    background:#fff;
+    border-radius:16px;
+    padding:20px;
+    animation:fadeIn 0.25s ease;
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.modal-header h3{
+    font-size:18px;
+    font-weight:600;
+}
+
+.close-btn{
+    font-size:22px;
+    cursor:pointer;
+}
+
+.modal-body{
+    overflow-x:auto;
+}
+
+.modal-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+}
+
+.modal-table th{
+    background:#f1f5f9;
+    padding:8px;
+    text-align:center;
+    font-weight:600;
+}
+
+.modal-table td{
+    padding:6px 8px;
+    text-align:right;
+    border-bottom:1px solid #eee;
+}
+
+.modal-table td:first-child,
+.modal-table td:nth-child(2){
+    text-align:left;
+}
+
+.modal-table tfoot td{
+    font-weight:700;
+    background:#f8fafc;
+}
+
+@keyframes fadeIn{
+    from{opacity:0; transform:scale(0.95);}
+    to{opacity:1; transform:scale(1);}
+}
+
+    
 </style>
 </head>
 
 <body>
 
-<div class="loading" id="loadingOverlay">
-  <div class="spinner"></div>
-</div>
-  
+    <div id="overlayLoading" class="popup-overlay" style="display:none;">
+        <div class="popup-box" style="width:300px; text-align:center; padding:20px;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:32px;"></i>
+            <div style="margin-top:10px; font-weight:600;">Memuat data...</div>
+        </div>
+    </div>
+
+    
 <div class="sidebar">
-    <div class="sidebar-brand"><i class="fa-solid fa-layer-group"></i> <span>SiMAB</span></div>
+    <div class="sidebar-brand">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>SiMAB</span>
+    </div>
     <ul>
-        <li onclick="goDashboard()"><i class="fa-solid fa-gauge"></i>Dashboard</li>
-        <li onclick="goPOK()"><i class="fa-solid fa-folder-open"></i>POK</li>
-        <li class="active" onclick="goKegiatan()"><i class="fa-solid fa-gauge"></i>Daftar Kegiatan</li>
+        <li class="active" onclick="goDashboard()">
+            <i class="fa-solid fa-gauge"></i>Dashboard
+        </li>
+        <li onclick="goPOK()">
+            <i class="fa-solid fa-folder-open"></i>POK
+        </li>
+        <li onclick="goKegiatan()"><i class="fa-solid fa-gauge"></i>Daftar Kegiatan</li>
         <li><i class="fa-solid fa-wallet"></i>Rencana Penarikan Dana</li>
         <li><i class="fa-solid fa-chart-column"></i>Statistik</li>
         <li><i class="fa-solid fa-circle-info"></i>Tentang</li>
-    </ul>
+</ul>
+
 </div>
 
 <div class="main">
+
     <div class="topbar">
-        <div class="topbar-left">Sistem Monitoring Anggaran Belanja</div>
+        <div class="topbar-left">
+            Sistem Monitoring Anggaran Belanja
+        </div>
+
         <div class="topbar-right">
             <i class="fa-regular fa-calendar"></i>
             <i class="fa-solid fa-gear"></i>
-            <div class="user-info"><i class="fa-regular fa-user"></i><span id="namaUser"></span></div>
+
+            <div class="user-info">
+                <i class="fa-regular fa-user"></i>
+                <span id="namaUser"></span>
+            </div>
+
             <i class="fa-solid fa-right-from-bracket" title="Logout" onclick="logout()"></i>
         </div>
     </div>
 
     <div class="content">
-        <div class="filter-bar">
-            <input type="text" id="searchBox" placeholder="Cari data...">
-            <div class="radio-group">
-                <label><input type="radio" name="statusFilter" value="Dalam Proses" checked> Dalam Proses</label>
-                <label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
-                <label><input type="radio" name="statusFilter" value="Terbayar"> Terbayar</label>
-                <label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
-                <label><input type="radio" name="statusFilter" value="Semua"> Semua</label>
-            </div>
+        <div class="cards">
+            <div class="card" id="cardTotal"><h3>Total Kegiatan</h3><p>0</p></div>
+            <div class="card" id="cardSelesai"><h3>Selesai</h3><p>0</p></div>
+            <div class="card" id="cardTerbayar"><h3>Terbayar</h3><p>0</p></div>
+            <div class="card" id="cardLPT"><h3>LPT</h3><p>0</p></div>
+            <div class="card" id="cardProses"><h3>Dalam Proses</h3><p>0</p></div>
         </div>
 
-        <div class="table-wrapper">
-            <div class="table-box">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID Kegiatan</th>
-                            <th class="wrap">MAK</th>
-                            <th class="wrap">Uraian / No ST</th>
-                            <th class="wrap">Pelaksana Tugas</th>
-                            <th class="wrap">Tujuan</th>
-                            <th>Tgl Mulai</th>
-                            <th>Jumlah</th>
-                            <th>User</th>
-                            <th>Status</th>
-                            <th class="actions">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dataTableBody">
-                        <!-- Data dari GAS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
+
+        <div class="dashboard-grid">
+
+    <!-- CARD 1 : KEGIATAN HARI INI -->
+    <div class="chart-box">
+        <h3 style="margin-bottom:15px;">Kegiatan Hari Ini</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Uraian / No ST</th>
+                    <th>Pelaksana Tugas</th>
+                    <th>Tujuan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="3" style="text-align:center;color:#94a3b8;">
+                        Belum ada kegiatan hari ini
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CARD 2 : BELANJA BARANG -->
+<div class="belanja-card" onclick="openModal('barang')">
+
+    <h3>Belanja Barang</h3>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBarang"></div>
+    </div>
+
+    <div class="progress-info">
+        <span id="persenBarang">0%</span>
+        <small>
+            Realisasi: <span id="barangRealisasi">0</span><br>
+            Sisa: <span id="barangSisa">0</span><br>
+            Pagu: <span id="barangTotal">0</span>
+        </small>
+    </div>
+
+    <div class="belanja-footnote">
+        <em>*data berdasarkan SP2D (klik untuk detil!)</em>
+    </div>
+
+</div>
+
+
+<!-- CARD 3 : BELANJA MODAL -->
+<div class="belanja-card" onclick="openModal('modal')">
+
+    <h3>Belanja Modal</h3>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressModal"></div>
+    </div>
+
+    <div class="progress-info">
+        <span id="persenModal">0%</span>
+        <small>
+            Realisasi: <span id="modalRealisasi">0</span><br>
+            Sisa: <span id="modalSisa">0</span><br>
+            Pagu: <span id="modalTotal">0</span>
+        </small>
+    </div>
+
+    <div class="belanja-footnote">
+        <em>*data berdasarkan SP2D (klik untuk detil!)</em>
+    </div>
+
+</div>
+
+
+
+
+            <!-- LAYER 3 -->
+<div class="dashboard-grid-full">
+
+    <!-- CARD REKAP BULANAN -->
+    <div class="chart-box">
+    <h3 style="margin-bottom:15px;">Monitoring Maksimum Pencairan (MP) PNBP</h3>
+
+    <table id="monitoringMPTable">
+        <thead></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+    </table>
+
+    <div class="belanja-footnote">
+        <em>*data berdasarkan SP2D</em>
+    </div>
+</div>
+
+
+</div>
+
+
+</div>
 
     </div>
 </div>
 
-<div class="footer">© KPKNL Denpasar 2026</div>
+<!-- FOOTER -->
+<div class="footer">
+    © KPKNL Denpasar 2026
+</div>
 
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbztCpqK2sUdQcTl_S-w4tgRbL_Bq9zd2oq0b3KmezCrqZmW6-GGDZpXr8T-Cf01DoXW/exec";
+    
 
-document.addEventListener("DOMContentLoaded", async function(){
+document.addEventListener("DOMContentLoaded", function(){
+
     const nama = sessionStorage.getItem("nama");
-    if(!nama) window.location.replace("index.html");
-    else document.getElementById("namaUser").textContent = nama;
 
-    let allRows = [];
+    if(!nama){
+        window.location.replace("index.html");
+    } else {
+        document.getElementById("namaUser").textContent = nama;
+    }
+
+   
+    });
+
+
+
+function goDashboard(){ window.location.href="dashboard.html"; }
+function goPOK(){ window.location.href="data_pok.html"; }
+function goKegiatan(){
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor){
-        alert("Session kantor tidak ditemukan. Silakan login ulang.");
-        window.location.replace("index.html");
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
     }
+    window.location.href = "data_kegiatan.html";
+}
 
-    let skipFirstLoadRows = true; // skip row 2 & 3 hanya saat load pertama
+    
+function logout(){
+    sessionStorage.clear();
+    window.location.replace("index.html");
+}
 
-    // fungsi filter berdasarkan status radio
-    function filterByStatus(rows, status){
-        switch(status){
-            case "Dalam Proses": return rows.filter(r => ["Rekam Data","Terlaksana"].includes(r.P));
-            case "LPT": return rows.filter(r => r.P==="LPT");
-            case "Terbayar": return rows.filter(r => r.P==="Terbayar");
-            case "Selesai": return rows.filter(r => r.P==="Selesai");
-            case "Semua": return rows.filter(r => ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"].includes(r.P));
-            default: return rows;
-        }
-    }
+// URL GAS (pastikan deploy web app publik)
+const urlGAS="https://script.google.com/macros/s/AKfycbzJHgj2Y9dlhJu0bSaW2zSvqWSWJzW5YeDOSPDLkd5dNyiudmOoO6jXRgLXmDQiJdNT/exec";
 
-    // render table
-    function renderTable(rows){
-        const tbody = document.getElementById("dataTableBody");
-        tbody.innerHTML = "";
-        rows.forEach(r=>{
-            const tglMulai = r.G ? new Date(r.G) : null;
-            const tglFormatted = tglMulai ? `${tglMulai.getFullYear()}-${String(tglMulai.getMonth()+1).padStart(2,'0')}-${String(tglMulai.getDate()).padStart(2,'0')}` : "";
-            const jumlahFormatted = Number(r.M||0).toLocaleString('id-ID');
-    
-            const tr = document.createElement("tr");
-    
-            // assign class status untuk coloring
-            let statusClass = "";
-            switch(r.P){
-                case "Rekam Data": statusClass="status-RekamData"; break;
-                case "Terlaksana": statusClass="status-Terlaksana"; break;
-                case "LPT": statusClass="status-LPT"; break;
-                case "Terbayar": statusClass="status-Terbayar"; break;
-                case "Selesai": statusClass="status-Selesai"; break;
-            }
-    
-            tr.innerHTML = `
-              <td>${r.A}</td>
-              <td class="wrap">${r.B}</td>
-              <td class="wrap">${r.C}</td>
-              <td class="wrap">${r.D}</td>
-              <td class="wrap">${r.E}</td>
-              <td>${tglFormatted}</td>
-              <td style="text-align:right;">${jumlahFormatted}</td>
-              <td>${r.N}</td>
-              <td class="${statusClass}">${r.P}</td>
-              <td class="actions">
-                  <button class="btn-ubah" data-tooltip="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
-                  <button class="btn-pelaksana" data-tooltip="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
-                  <button class="btn-lpt" data-tooltip="LPT"><i class="fa-solid fa-file-lines"></i></button>
-                  <button class="btn-bayar" data-tooltip="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
-                  <button class="btn-sp2d" data-tooltip="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
-                  <button class="btn-hapus" data-tooltip="Hapus"><i class="fa-solid fa-trash"></i></button>
-              </td>
-          `;
-    
-            tbody.appendChild(tr);
-        });
-    }
-let firstLoad = true; // untuk overlay hanya saat load pertama
+async function loadDashboard(){
+    showLoading(); // tampilkan overlay
 
-async function loadData(showOverlay = true){
     try{
-        if(showOverlay && firstLoad) showLoading(true);
+        const kantor = sessionStorage.getItem("kantor"); // ambil kantor
+        if(!kantor) {
+            alert("Kantor tidak ditemukan. Silakan login ulang.");
+            window.location.replace("index.html");
+            return;
+        }
 
+        // kirim parameter kantor ke GAS
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
-        if(showOverlay && firstLoad) showLoading(false);
+        if(data.status && data.status !== "success"){
+            alert("Gagal memuat data: " + (data.message || "Unknown error"));
+            return;
+        }
 
-        if(data.status !== "success") return;
+        // Update card dashboard
+        document.querySelector("#cardTotal p").textContent = data.dashboard?.total || 0;
+        document.querySelector("#cardSelesai p").textContent = data.dashboard?.selesai || 0;
+        document.querySelector("#cardTerbayar p").textContent = data.dashboard?.terbayar || 0;
+        document.querySelector("#cardLPT p").textContent = data.dashboard?.lpt || 0;
+        document.querySelector("#cardProses p").textContent = data.dashboard?.proses || 0;
 
-        allRows = data.rows;
-        const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
+        // Update tabel hari ini
+        const tbody = document.querySelector(".chart-box tbody");
+        tbody.innerHTML = "";
+        (data.todayRows || []).forEach(row=>{
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
+            tbody.appendChild(tr);
+        });
 
-        // skip row 2 & 3 saat load pertama
-        const initialRows = allRows.filter((r, idx) => idx !== 1 && idx !== 2);
-        const filtered = filterByStatus(initialRows, defaultRadio);
-        renderTable(filtered);
-
-        firstLoad = false; // overlay hanya sekali
-    } catch(e){
-        if(showOverlay && firstLoad) showLoading(false);
-        console.error(e);
+    }catch(err){
+        console.error(err);
+        alert("Gagal memuat data dashboard!");
+    } finally {
+        hideLoading(); // sembunyikan overlay
     }
 }
 
- // load pertama (dengan overlay)
-    await loadData(true);
 
-  
-// 🔁 Reload data tiap 30 detik
-    setInterval(() => {
-        loadData();
-    }, 30000); // 30000ms = 30 detik
+function showLoading() {
+    document.getElementById("overlayLoading").style.display = "flex";
+}
 
+function hideLoading() {
+    document.getElementById("overlayLoading").style.display = "none";
+}
 
-  
-    // search
-    document.getElementById("searchBox").addEventListener("input", function(){
-        const val = this.value.toLowerCase();
-        const radioVal = document.querySelector('input[name="statusFilter"]:checked').value;
-        let filtered = filterByStatus(allRows, radioVal);
-    
-        if(val){
-            filtered = filtered.filter(r =>
-                Object.keys(r)
-                      .filter(k => k !== "N") // skip kolom User
-                      .some(k => String(r[k]||"").toLowerCase().includes(val))
-            );
-        }
-    
-        renderTable(filtered);
+const admin = sessionStorage.getItem("admin");
+const isAdmin = sessionStorage.getItem("admin") === "yes";
+
+console.log("Admin login:", admin);
+
+loadDashboard();
+
+async function updateDashboard(){
+    const kantor = sessionStorage.getItem("kantor");
+    if(!kantor) return;
+
+    const res = await fetch(`${urlGAS}?kantor=${kantor}`);
+    const data = await res.json();
+
+    // Update card dashboard
+    document.querySelector("#cardTotal p").textContent = data.dashboard?.total || 0;
+    document.querySelector("#cardSelesai p").textContent = data.dashboard?.selesai || 0;
+    document.querySelector("#cardTerbayar p").textContent = data.dashboard?.terbayar || 0;
+    document.querySelector("#cardLPT p").textContent = data.dashboard?.lpt || 0;
+    document.querySelector("#cardProses p").textContent = data.dashboard?.proses || 0;
+
+    // Update tabel hari ini
+    const tbody = document.querySelector(".chart-box tbody");
+    tbody.innerHTML = "";
+    (data.todayRows || []).forEach(row=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
+        tbody.appendChild(tr);
     });
 
+const barangTotal = data.belanjaBarang?.total || 0;
+const barangRealisasi = data.belanjaBarang?.realisasi || 0;
 
-    // radio filter
-    document.querySelectorAll('input[name="statusFilter"]').forEach(rb=>{
-        rb.addEventListener("change", function(){
-            const val = this.value;
-            const searchVal = document.getElementById("searchBox").value.toLowerCase();
-            let filtered = filterByStatus(allRows, val);
+const persenBarang = barangTotal > 0 
+    ? (barangRealisasi / barangTotal) * 100 
+    : 0;
 
-            if(searchVal){
-                filtered = filtered.filter(r =>
-                    Object.keys(r).some(k => String(r[k]||"").toLowerCase().includes(searchVal))
-                );
-            }
+document.getElementById("progressBarang").style.width = persenBarang + "%";
+document.getElementById("persenBarang").textContent = persenBarang.toFixed(2) + "%";
 
-            renderTable(filtered);
+document.getElementById("barangRealisasi").textContent =
+    barangRealisasi.toLocaleString("id-ID");
+
+document.getElementById("barangTotal").textContent =
+    barangTotal.toLocaleString("id-ID");
+
+
+
+
+const modalTotal = data.belanjaModal?.total || 0;
+const modalRealisasi = data.belanjaModal?.realisasi || 0;
+
+const persenModal = modalTotal > 0 
+    ? (modalRealisasi / modalTotal) * 100 
+    : 0;
+
+document.getElementById("progressModal").style.width = persenModal + "%";
+document.getElementById("persenModal").textContent = persenModal.toFixed(2) + "%";
+
+document.getElementById("modalRealisasi").textContent =
+    modalRealisasi.toLocaleString("id-ID");
+
+document.getElementById("modalTotal").textContent =
+    modalTotal.toLocaleString("id-ID");
+
+
+// ================= MONITORING MP =================
+const mpTable = document.getElementById("monitoringMPTable");
+
+if(mpTable){
+
+    const thead = mpTable.querySelector("thead");
+    const tbody = mpTable.querySelector("tbody");
+    const tfoot = mpTable.querySelector("tfoot");
+
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+    tfoot.innerHTML = "";
+
+    if(Array.isArray(data.monitoringMP) && data.monitoringMP.length > 0){
+
+        const rows = data.monitoringMP;
+
+        // ===== HEADER (ROW 8)
+        const headerRow = document.createElement("tr");
+        rows[0].forEach(col=>{
+            const th = document.createElement("th");
+            th.textContent = col;
+            headerRow.appendChild(th);
         });
-    });
+        thead.appendChild(headerRow);
 
-    // tombol aksi
-    document.getElementById("dataTableBody").addEventListener("click", function(e){
-        const btn = e.target.closest("button");
-        if(!btn) return;
-        const tr = btn.closest("tr");
-        const idKegiatan = tr.cells[0].textContent;
+        // ===== DATA (ROW 9 s.d terakhir-1)
+        for(let i=1; i < rows.length-1; i++){
+            const tr = document.createElement("tr");
+            rows[i].forEach(col=>{
+    const td = document.createElement("td");
 
-        if(btn.classList.contains("btn-ubah")) alert("Ubah ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-hapus")) alert("Hapus ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-pelaksana")) alert("Pelaksana ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-lpt")) alert("LPT ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-bayar")) alert("Bayar ID: "+idKegiatan);
-        else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
-    });
+    if(typeof col === "number"){
 
-    loadData();
+        // jika angka kecil → kemungkinan persen
+        if(col > 0 && col < 1){
+            td.textContent = (col * 100).toFixed(2) + "%";
+        } else {
+            td.textContent = col.toLocaleString("id-ID");
+        }
+
+    } else {
+        td.textContent = col;
+    }
+
+    tr.appendChild(td);
 });
 
-function getStatusColor(status){
-    switch(status){
-        case "Rekam Data": return "#f87171"; // pink
-        case "Terlaksana": return "#9ca3af"; // abu
-        case "LPT": return "#facc15";        // kuning
-        case "Terbayar": return "#22c55e";   // hijau
-        case "Selesai": return "#3b82f6";    // biru
-        default: return "#6b7280";            // default abu gelap
+            tbody.appendChild(tr);
+        }
+
+        // ===== FOOTER (ROW TERAKHIR)
+        const footerRow = document.createElement("tr");
+        rows[rows.length-1].forEach(col=>{
+    const td = document.createElement("td");
+
+    if(typeof col === "number"){
+        if(col > 0 && col < 1){
+            td.innerHTML = `<strong>${(col*100).toFixed(2)}%</strong>`;
+        } else {
+            td.innerHTML = `<strong>${col.toLocaleString("id-ID")}</strong>`;
+        }
+    } else {
+        td.innerHTML = `<strong>${col}</strong>`;
+    }
+
+    footerRow.appendChild(td);
+});
+
+        tfoot.appendChild(footerRow);
+
+    } else {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center;color:#94a3b8;">
+                    Data Monitoring MP belum tersedia
+                </td>
+            </tr>
+        `;
     }
 }
 
-  
-function showLoading(show){
-    document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
+const barangSisa = barangTotal - barangRealisasi;
+
+document.getElementById("barangSisa").textContent =
+    barangSisa.toLocaleString("id-ID");
+
+    const modalSisa = modalTotal - modalRealisasi;
+
+document.getElementById("modalSisa").textContent =
+    modalSisa.toLocaleString("id-ID");
+
+    
 }
-  
-function goDashboard(){ window.location.href="dashboard.html"; }
-function goPOK(){ window.location.href="data_pok.html"; }
-function goKegiatan(){ window.location.href="data_kegiatan.html"; }
-function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
+
+    function parseRupiah(str){
+    if(!str) return 0;
+    return parseInt(str.toString().replace(/[^\d]/g,'')) || 0;
+}
+
+function formatRupiah(angka){
+    return angka.toLocaleString("id-ID");
+}
+
+    
+async function openModal(cardType){
+    const kantor = sessionStorage.getItem("kantor");
+    if(!kantor){
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+
+    showLoading();
+
+    try {
+        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
+        const data = await res.json();
+
+        if(!data || data.status !== "success" || !data.dashboardDetail){
+            alert("Data belanja belum tersedia");
+            return;
+        }
+
+        const dashboardDetail = data.dashboardDetail;
+
+        // ambil row 1 sampai 4
+        const modalData = dashboardDetail.slice(0,4);
+
+        const thead = document.querySelector("#belanjaModal thead");
+        const tbody = document.getElementById("modalTableBody");
+        const footer = document.getElementById("modalTableFooter");
+
+        document.getElementById("modalTitle").textContent =
+            cardType === "barang" ? "Detail Belanja Barang" : "Detail Belanja Modal";
+
+        // header
+        thead.innerHTML = `<tr>${modalData[0].map(h => `<th>${h}</th>`).join("")}</tr>`;
+
+        // body (row 2 & 3)
+        tbody.innerHTML = modalData.slice(1,3).map(r => `<tr>${r.map((c,i)=>{
+            let align='left';
+            if(i===0) align='center';
+            else if(i>=2 && i<=8) align='right';  // kolom 3-9 rupiah
+            else if(i>=9 && i<=10) align='center'; // kolom 10-11 persen
+            let value = c;
+
+            // format rupiah
+            if(i>=2 && i<=8 && typeof c==='number'){
+                value = c.toLocaleString("id-ID");
+            }
+
+            // format persen
+            if(i>=9 && i<=10 && typeof c==='number'){
+                value = (c*100).toFixed(2) + "%";
+            }
+
+            return `<td style="text-align:${align}">${value}</td>`;
+        }).join("")}</tr>`).join("");
+
+        // footer row 4
+        footer.innerHTML = `<tr>${modalData[3].map((c,i)=>{
+            let align='left';
+            if(i===0) align='center';
+            else if(i>=2 && i<=8) align='right';
+            else if(i>=9 && i<=10) align='center';
+            let value = c;
+
+            // format rupiah
+            if(i>=2 && i<=8 && typeof c==='number'){
+                value = c.toLocaleString("id-ID");
+            }
+
+            // format persen
+            if(i>=9 && i<=10 && typeof c==='number'){
+                value = (c*100).toFixed(2) + "%";
+            }
+
+            return `<td style="text-align:${align}"><strong>${value}</strong></td>`;
+        }).join("")}</tr>`;
+
+        document.getElementById("belanjaModal").style.display = "flex";
+
+        // tombol download PDF
+        if(!document.getElementById("downloadPdfBtn")){
+            const btn = document.createElement("button");
+            btn.id = "downloadPdfBtn";
+            btn.innerHTML = '<i class="fa-solid fa-file-pdf" style="margin-right:6px;"></i>PDF';
+            btn.style.marginBottom = "12px";
+            btn.style.padding = "8px 16px";
+            btn.style.background = "#2563eb";
+            btn.style.color = "#fff";
+            btn.style.border = "none";
+            btn.style.borderRadius = "6px";
+            btn.style.cursor = "pointer";
+            btn.onclick = downloadPdf;
+            document.querySelector(".modal-body").prepend(btn);
+        }
+
+    } catch(err){
+        console.error(err);
+        alert("Gagal memuat data belanja!");
+    } finally{
+        hideLoading();
+    }
+}
+
+// fungsi download PDF pakai html2canvas + jsPDF
+async function downloadPdf(){
+    const modalBox = document.querySelector(".modal-body table");
+    const { jsPDF } = window.jspdf;
+
+    const canvas = await html2canvas(modalBox, {scale:2});
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF("l", "pt", "a4"); // landscape
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', 20, 20, pdfWidth-40, pdfHeight);
+    pdf.save("belanja.pdf");
+}
+
+
+function closeModal(){
+    document.getElementById("belanjaModal").style.display = "none";
+}
+
+    
+// panggil pertama kali pakai overlay
+document.addEventListener("DOMContentLoaded", async function(){
+    showLoading();
+    try {
+        await updateDashboard();
+    } finally {
+        hideLoading();
+    }
+
+    // auto-refresh tiap 1 menit tanpa overlay
+    setInterval(updateDashboard, 60000);
+});
+   
+
 </script>
 
+    <!-- POPUP MODAL -->
+<div id="belanjaModal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modalTitle">Detail Belanja</h3>
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+    </div>
+
+    <div class="modal-body">
+      <table class="modal-table">
+        <thead>
+          <tr>
+            <th>Jenis</th>
+            <th>Uraian</th>
+            <th>Pagu (a)</th>
+            <th>Blokir (b)</th>
+            <th>Pagu Netto</th>
+            <th>Realisasi Bruto</th>
+            <th>Realisasi SP2D</th>
+            <th>Sisa Bruto</th>
+            <th>Sisa SP2D</th>
+            <th>% Bruto</th>
+            <th>% SP2D</th>
+          </tr>
+        </thead>
+        <tbody id="modalTableBody">
+        </tbody>
+        <tfoot id="modalTableFooter">
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+    
 </body>
 </html>
