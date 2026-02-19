@@ -746,42 +746,52 @@ function showPelaksanaPopup(tr){
     document.getElementById("pelCancel").onclick = () => overlay.remove();
 
     document.getElementById("pelSave").onclick = () => {
-        const rows = document.querySelectorAll("#pelaksanaTableBody tr");
-        const data = [];
 
-        rows.forEach(r=>{
-            const nama = r.cells[0].textContent;
-            const mulai = r.cells[1].querySelector("input").value;
-            const jumlahText = r.cells[3].querySelector("input").value;
-            const jumlah = Number(jumlahText.replace(/\./g,"")) || 0;
-            
-            data.push({nama, mulai, selesai, jumlah});
-            
-            fetch(urlGAS,{
-                method:"POST",
-                body: JSON.stringify({
-                    action: "savePelaksana",
-                    kantor: sessionStorage.getItem("kantor"),
-                    idLama: idKegiatan,
-                    mak: mak,
-                    uraian: popup.querySelectorAll("input")[1].value,
-                    tujuan: tujuan,
-                    tglST: document.getElementById("pelTglST").value,
-                    user: user,
-                    pelaksana: dataPelaksana
-                })
-            })
-          
-        });
+    const rows = document.querySelectorAll("#pelaksanaTableBody tr");
+    const dataPelaksana = [];
 
-        console.log("Siap dikirim:", {
-            idKegiatan,
+    rows.forEach(r=>{
+        const nama = r.cells[0].textContent;
+        const mulai = r.cells[1].querySelector("input").value;
+        const selesai = r.cells[2].querySelector("input").value;
+        const jumlahText = r.cells[3].querySelector("input").value;
+        const jumlah = Number(jumlahText.replace(/\./g,"")) || 0;
+
+        dataPelaksana.push({nama, mulai, selesai, jumlah});
+    });
+
+    console.log("Data dikirim:", dataPelaksana);
+
+    fetch(urlGAS,{
+        method:"POST",
+        body: JSON.stringify({
+            action: "savePelaksana",
+            kantor: sessionStorage.getItem("kantor"),
+            idLama: idKegiatan,
+            mak: mak,
+            uraian: popup.querySelectorAll("input")[1].value,
+            tujuan: tujuan,
             tglST: document.getElementById("pelTglST").value,
-            pelaksana: data
-        });
+            user: user,
+            pelaksana: dataPelaksana
+        })
+    })
+    .then(res=>res.json())
+    .then(result=>{
+        if(result.status==="success"){
+            alert("Berhasil disimpan!");
+            overlay.remove();
+            loadData(false);
+        } else {
+            alert("Gagal: "+result.message);
+        }
+    })
+    .catch(err=>{
+        console.error(err);
+        alert("Error koneksi");
+    });
 
-        alert("Data siap dikirim (GAS belum dibuat)");
-    };
+};
 }
 
 
