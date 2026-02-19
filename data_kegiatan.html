@@ -409,53 +409,45 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
 });
 
 // contoh fungsi popup edit
-function showEditPopup(tr){
+function showEditPopup(tr, pegawaiList=[], lokasiList=[]){
     const idKegiatan = tr.cells[0].textContent;
     const uraian = tr.cells[2].textContent;
     const pelaksana = tr.cells[3].textContent;
     const tujuan = tr.cells[4].textContent;
     const tglMulai = tr.cells[5].textContent;
-    const jumlah = tr.cells[6].textContent.replace(/\./g, ""); // hapus titik ribuan
+    const jumlah = tr.cells[6].textContent.replace(/\./g,""); // angka murni
 
-    // overlay
     const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = 0;
-    overlay.style.background = "rgba(0,0,0,0.4)";
-    overlay.style.display = "flex";
-    overlay.style.justifyContent = "center";
-    overlay.style.alignItems = "center";
-    overlay.style.zIndex = 9999;
+    overlay.style = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999";
 
-    // popup card
     const popup = document.createElement("div");
-    popup.style.background = "#fff";
-    popup.style.borderRadius = "12px";
-    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
-    popup.style.width = "400px";
-    popup.style.maxWidth = "90%";
-    popup.style.padding = "25px 20px";
-    popup.style.display = "flex";
-    popup.style.flexDirection = "column";
-    popup.style.gap = "12px";
+    popup.style = "background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:400px; max-width:90%; padding:25px 20px; display:flex; flex-direction:column; gap:12px";
+
+    // generate options pegawai
+    let pegOptions = pegawaiList.map(p=>`<option value="${p}" ${p===pelaksana?'selected':''}>${p}</option>`).join("");
+    // generate options lokasi
+    let locOptions = lokasiList.map(l=>`<option value="${l}">${l}</option>`).join("");
 
     popup.innerHTML = `
-        <h3 style="margin-bottom:10px; text-align:center; color:#0369a1;">Ubah Kegiatan #${idKegiatan}</h3>
+        <h3 style="text-align:center; color:#0369a1;">Ubah Kegiatan #${idKegiatan}</h3>
 
         <label>Uraian</label>
         <input type="text" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
         <label>Pelaksana</label>
-        <input type="text" value="${pelaksana}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+        <select style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">${pegOptions}</select>
 
         <label>Tujuan</label>
         <input type="text" value="${tujuan}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <label>Lokasi</label>
+        <select style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">${locOptions}</select>
 
         <label>Tgl Mulai</label>
         <input type="date" value="${tglMulai}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
         <label>Jumlah</label>
-        <input type="number" value="${jumlah}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+        <input type="text" value="${Number(jumlah).toLocaleString('id-ID')}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; text-align:right;">
 
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
             <button id="popupCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer;">Batal</button>
@@ -466,25 +458,31 @@ function showEditPopup(tr){
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    // tombol batal
-    document.getElementById("popupCancel").onclick = () => overlay.remove();
+    const jumlahInput = popup.querySelector("input[type=text][value='"+Number(jumlah).toLocaleString('id-ID')+"']");
+    
+    // hapus titik ribuan saat edit
+    jumlahInput.addEventListener("input", e=>{
+        e.target.value = e.target.value.replace(/\./g,"").replace(/[^\d]/g,'');
+    });
 
-    // tombol update
-    document.getElementById("popupUpdate").onclick = () => {
-        const inputs = popup.querySelectorAll("input");
+    document.getElementById("popupCancel").onclick = ()=> overlay.remove();
+
+    document.getElementById("popupUpdate").onclick = ()=>{
+        const inputs = popup.querySelectorAll("input, select");
         const updatedData = {
             uraian: inputs[0].value,
             pelaksana: inputs[1].value,
             tujuan: inputs[2].value,
-            tglMulai: inputs[3].value,
-            jumlah: Number(inputs[4].value)
+            lokasi: inputs[3].value,
+            tglMulai: inputs[4].value,
+            jumlah: Number(inputs[5].value)
         };
-
         console.log("Update data ke GAS:", idKegiatan, updatedData);
         alert("Update berhasil! (implementasikan update ke GAS)");
         overlay.remove();
     };
 }
+
 
 
     loadData();
