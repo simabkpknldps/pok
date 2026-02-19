@@ -254,7 +254,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycby_8FTCV40R5dqdBin_nbUzqENcQsQkbreKdpjjgpQ3_F-zsn0bvR3ze9PXhbQDzLJs/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbydUB5pk_LtB1bdlz7sPmNkD4GrM5J51pIUxmZICcmKg6AvRhZ_Yk9s0u53VF0kOIM1/exec";
 
 let pegawaiList = [];
 let lokasiList = [];
@@ -756,7 +756,22 @@ function showPelaksanaPopup(tr){
             const jumlah = Number(jumlahText.replace(/\./g,"")) || 0;
             
             data.push({nama, mulai, selesai, jumlah});
-
+            
+            fetch(urlGAS,{
+                method:"POST",
+                body: JSON.stringify({
+                    action: "savePelaksana",
+                    kantor: sessionStorage.getItem("kantor"),
+                    idLama: idKegiatan,
+                    mak: mak,
+                    uraian: popup.querySelectorAll("input")[1].value,
+                    tujuan: tujuan,
+                    tglST: document.getElementById("pelTglST").value,
+                    user: user,
+                    pelaksana: dataPelaksana
+                })
+            })
+          
         });
 
         console.log("Siap dikirim:", {
