@@ -915,7 +915,8 @@ function hideLoading() {
     document.getElementById("overlayLoading").style.display = "none";
 }
 
-
+const admin = sessionStorage.getItem("admin");
+console.log("Admin login:", admin);
 
 loadDashboard();
 
