@@ -462,8 +462,13 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
         showLPTPopup(tr);
     }
     else if(btn.classList.contains("btn-bayar")){
-        showBayarPopup(tr);
+    const isAdmin = sessionStorage.getItem("admin") === "1"; // ambil dari session
+    if(isAdmin){
+        showBayarPopup(tr); // tampilkan popup
+    } else {
+        alert("Anda tidak memiliki kewenangan!");
     }
+}
     else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
