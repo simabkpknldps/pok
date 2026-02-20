@@ -1124,6 +1124,7 @@ allRows.forEach(r => {
 
         fetch(urlGAS,{
             method:"POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 action: "updateBayarMultiple",
                 kantor: sessionStorage.getItem("kantor"),
