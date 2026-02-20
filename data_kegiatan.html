@@ -911,32 +911,33 @@ function showLPTPopup(tr){
     // 🔥 Isi tabel dengan ID dari dataset
     filteredRows.forEach(row => {
 
-        const id = row.dataset.id;        // ✅ BENAR
-        const uraian = row.cells[1].textContent;   // ✅ indeks 1
-        const pelaksana = row.cells[2].textContent; // ✅ indeks 2
+    const id = row.dataset.id;        // id dari row utama
+    const uraian = row.cells[1].textContent;
+    const pelaksana = row.cells[2].textContent;
 
-        const newRow = document.createElement("tr");
+    const newRow = document.createElement("tr");
+    newRow.dataset.id = id; // 🔥 PENTING, set dataset.id
 
-        newRow.innerHTML = `
-            <td style="padding:6px;">${id}</td>
-            <td style="padding:6px;">${uraian}</td>
-            <td style="padding:6px;">${pelaksana}</td>
-            <td style="padding:6px; text-align:center;">
-                <button style="
-                    border:none;
-                    background:none;
-                    cursor:pointer;
-                    color:red;
-                ">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </td>
-        `;
+    newRow.innerHTML = `
+        <td style="padding:6px;">${id}</td>
+        <td style="padding:6px;">${uraian}</td>
+        <td style="padding:6px;">${pelaksana}</td>
+        <td style="padding:6px; text-align:center;">
+            <button style="
+                border:none;
+                background:none;
+                cursor:pointer;
+                color:red;
+            ">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </td>
+    `;
 
-        newRow.querySelector("button").onclick = () => newRow.remove();
+    newRow.querySelector("button").onclick = () => newRow.remove();
 
-        tbody.appendChild(newRow);
-    });
+    tbody.appendChild(newRow);
+});
 
     document.getElementById("lptCancel").onclick = () => overlay.remove();
 
