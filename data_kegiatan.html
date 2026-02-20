@@ -254,7 +254,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbyprphYwqjCykadfVWUrS2TPw0lrhpWEhGqpQLEC3GgPZ2qc-PsC-mzE8lTEZBY4P2K/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbxjA1UQwRdQlcbf6Ly5cXVGCTW-ckgov9-duAk8IHsJiAFaxHlrsf01HlJuZhJU3SW2/exec";
 
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
@@ -962,6 +962,40 @@ function showLPTPopup(tr){
     };
 }
 
+function saveLPTPopup(idKegiatan){
+    const rows = document.querySelectorAll("#lptTableBody tr"); // tbody LPT popup
+    const dataToSend = [];
+
+    rows.forEach(tr=>{
+        const id = tr.dataset.id; // id kegiatan di tr
+        const lptInput = tr.querySelector("input[type='date']");
+        const lptDate = lptInput ? lptInput.value : "";
+        dataToSend.push({id, lptDate});
+    });
+
+    fetch(urlGAS, {
+        method: "POST",
+        body: JSON.stringify({
+            action: "updateLPT",
+            kantor: sessionStorage.getItem("kantor"),
+            rows: dataToSend
+        })
+    })
+    .then(res=>res.json())
+    .then(result=>{
+        if(result.status === "success"){
+            alert("Update LPT berhasil!");
+            loadData(false); // reload tabel utama
+        } else {
+            alert("Gagal update LPT: "+result.message);
+        }
+    })
+    .catch(err=>{
+        console.error(err);
+        alert("Error koneksi");
+    });
+}
+  
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
 }
