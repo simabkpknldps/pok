@@ -253,59 +253,6 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
 <div class="footer">© KPKNL Denpasar 2026</div>
 
-<!-- POPUP SP2D -->
-<div id="sp2dOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;">
-  <div style="
-      background:#fff; 
-      border-radius:12px; 
-      box-shadow:0 8px 20px rgba(0,0,0,0.2); 
-      width:800px; 
-      max-width:95%; 
-      padding:25px 20px; 
-      display:flex; 
-      flex-direction:column; 
-      gap:12px;
-      max-height:90vh;
-      overflow:auto;
-  ">
-      <h3 style="text-align:center; color:#0369a1;">SP2D Kegiatan</h3>
-
-      <!-- Nomor SPM -->
-      <label>Nomor SPM</label>
-      <input type="text" id="spmInput" placeholder="0000" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;" maxlength="4">
-
-      <!-- Tanggal SP2D -->
-      <label>Tanggal SP2D</label>
-      <input type="date" id="tglSP2DInput" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-      <!-- Search box -->
-      <input type="text" id="sp2dSearch" placeholder="Cari di tabel..." style="padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-top:5px;">
-
-      <!-- Tabel SP2D -->
-      <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:300px; overflow:auto; margin-top:5px;">
-        <table id="sp2dTable" style="width:100%; border-collapse:collapse; font-size:13px;">
-          <thead style="background:#f1f5f9; position:sticky; top:0;">
-            <tr>
-              <th style="padding:6px;">ID Kegiatan</th>
-              <th style="padding:6px;">Uraian / No. ST</th>
-              <th style="padding:6px;">Nama</th>
-              <th style="padding:6px;">Tujuan</th>
-              <th style="padding:6px; text-align:right;">Jumlah</th>
-              <th style="padding:6px; text-align:center;">Aksi</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <!-- Tombol Batal & Simpan -->
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
-        <button id="sp2dCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
-        <button id="sp2dSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
-      </div>
-  </div>
-</div>
-  
 <script>
 const urlGAS="https://script.google.com/macros/s/AKfycbxfJo89J56489U0ljWEMjZHXbUqDcUVBMfy5e9GnkTI8gNhP6TCqaRqoVRejd0ezF29/exec";
 
@@ -1240,44 +1187,48 @@ function populateDatalist(){
     });
 }
 
-// Fungsi tampilkan popup SP2D
-  function showSP2DPopup() {
+ // Fungsi tampilkan popup SP2D
+  function showSP2DPopup(rowData) {
       const overlay = document.getElementById("sp2dOverlay");
       overlay.style.display = "flex";
 
       const tbody = document.querySelector("#sp2dTable tbody");
       tbody.innerHTML = ""; // reset tabel
 
-      // Ambil data dari tabel utama
-      document.querySelectorAll("#dataTableBody tr").forEach(tr => {
-          const id = tr.dataset.id;
-          const uraian = tr.cells[1].textContent;
-          const nama = tr.cells[2].textContent;
-          const tujuan = tr.cells[3].textContent;
-          const jumlah = tr.cells[6].textContent;
-
-          const row = document.createElement("tr");
-          row.innerHTML = `
-              <td>${id}</td>
-              <td>${uraian}</td>
-              <td>${nama}</td>
-              <td>${tujuan}</td>
-              <td style="text-align:right;">${jumlah}</td>
-              <td style="text-align:center;">
-                  <button style="border:none; background:none; cursor:pointer; color:red;">
-                      <i class="fa-solid fa-trash"></i>
-                  </button>
-              </td>
-          `;
-          // tombol hapus baris
-          row.querySelector("button").onclick = () => row.remove();
-
-          tbody.appendChild(row);
-      });
+      const row = document.createElement("tr");
+      row.innerHTML = `
+          <td>${rowData.id}</td>
+          <td>${rowData.uraian}</td>
+          <td>${rowData.nama}</td>
+          <td>${rowData.tujuan}</td>
+          <td style="text-align:right;">0</td>
+          <td style="text-align:center;">
+              <button style="border:none; background:none; cursor:pointer; color:red;">
+                  <i class="fa-solid fa-trash"></i>
+              </button>
+          </td>
+      `;
+      row.querySelector("button").onclick = () => row.remove();
+      tbody.appendChild(row);
 
       // fokus ke input SPM
       document.getElementById("spmInput").focus();
   }
+
+  // Event delegation untuk tombol SP2D
+  document.getElementById("dataTableBody").addEventListener("click", function(e){
+      const btn = e.target.closest(".btn-sp2d");
+      if(!btn) return;
+
+      const tr = btn.closest("tr");
+      const rowData = {
+          id: tr.dataset.id,
+          uraian: tr.cells[1].textContent,
+          nama: tr.cells[2].textContent,
+          tujuan: tr.cells[3].textContent
+      };
+      showSP2DPopup(rowData);
+  });
 
   // Tombol Batal
   document.getElementById("sp2dCancel").onclick = () => {
@@ -1286,7 +1237,7 @@ function populateDatalist(){
 
   // Tombol Simpan (sementara cuma alert)
   document.getElementById("sp2dSave").onclick = () => {
-      const spm = document.getElementById("spmInput").value.padStart(4,'0'); // format 0000
+      const spm = document.getElementById("spmInput").value.padStart(4,'0');
       const tgl = document.getElementById("tglSP2DInput").value;
       const rows = [];
       document.querySelectorAll("#sp2dTable tbody tr").forEach(tr=>{
@@ -1298,7 +1249,6 @@ function populateDatalist(){
               jumlah: tr.cells[4].textContent
           });
       });
-
       console.log("SP2D Data", {spm, tgl, rows});
       alert("SP2D akan dikirim ke GAS nanti (cek console).");
   };
@@ -1315,11 +1265,6 @@ function populateDatalist(){
   // format input SPM saat lose focus
   document.getElementById("spmInput").addEventListener("blur", function(){
       if(this.value) this.value = this.value.padStart(4,'0');
-  });
-
-  // contoh pemanggilan popup SP2D (ganti sesuai tombol SP2D di tabel)
-  document.querySelectorAll(".btn-sp2d").forEach(btn=>{
-      btn.addEventListener("click", showSP2DPopup);
   });
 
 
