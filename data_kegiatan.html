@@ -911,55 +911,56 @@ function showLPTPopup(tr){
     // 🔥 Isi tabel dengan ID dari dataset
     filteredRows.forEach(row => {
 
-    const id = row.dataset.id;        // id dari row utama
-    const uraian = row.cells[1].textContent;
-    const pelaksana = row.cells[2].textContent;
+        const id = row.dataset.id;        // ✅ BENAR
+        const uraian = row.cells[1].textContent;   // ✅ indeks 1
+        const pelaksana = row.cells[2].textContent; // ✅ indeks 2
 
-    const newRow = document.createElement("tr");
-    newRow.dataset.id = id; // 🔥 PENTING, set dataset.id
+        const newRow = document.createElement("tr");
 
-    newRow.innerHTML = `
-        <td style="padding:6px;">${id}</td>
-        <td style="padding:6px;">${uraian}</td>
-        <td style="padding:6px;">${pelaksana}</td>
-        <td style="padding:6px; text-align:center;">
-            <button style="
-                border:none;
-                background:none;
-                cursor:pointer;
-                color:red;
-            ">
-                <i class="fa-solid fa-trash"></i>
-            </button>
-        </td>
-    `;
+        newRow.innerHTML = `
+            <td style="padding:6px;">${id}</td>
+            <td style="padding:6px;">${uraian}</td>
+            <td style="padding:6px;">${pelaksana}</td>
+            <td style="padding:6px; text-align:center;">
+                <button style="
+                    border:none;
+                    background:none;
+                    cursor:pointer;
+                    color:red;
+                ">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
 
-    newRow.querySelector("button").onclick = () => newRow.remove();
+        newRow.querySelector("button").onclick = () => newRow.remove();
 
-    tbody.appendChild(newRow);
-});
+        tbody.appendChild(newRow);
+    });
 
     document.getElementById("lptCancel").onclick = () => overlay.remove();
 
     document.getElementById("lptSave").onclick = () => {
-    const tanggal = document.getElementById("lptTanggal").value;
 
-    const rows = document.querySelectorAll("#lptTableBody tr");
-    const dataLPT = [];
+        const tanggal = document.getElementById("lptTanggal").value;
 
-    rows.forEach(r => {
-        const id = r.cells[0].textContent;
-        const uraian = r.cells[1].textContent;
-        const pelaksana = r.cells[2].textContent;
+        const rows = document.querySelectorAll("#lptTableBody tr");
+        const dataLPT = [];
 
-        dataLPT.push({ id, uraian, pelaksana });
-    });
+        rows.forEach(r => {
+            const id = r.cells[0].textContent;
+            const uraian = r.cells[1].textContent;
+            const pelaksana = r.cells[2].textContent;
 
-    console.log("Tanggal LPT:", tanggal);
-    console.log("Data LPT:", dataLPT);
+            dataLPT.push({ id, uraian, pelaksana });
+        });
 
-    overlay.remove();
-};
+        console.log("Tanggal LPT:", tanggal);
+        console.log("Data LPT:", dataLPT);
+
+        overlay.remove();
+    };
+}
 
 function saveLPTPopup(idKegiatan){
     const rows = document.querySelectorAll("#lptTableBody tr"); // tbody LPT popup
