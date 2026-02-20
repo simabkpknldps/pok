@@ -663,6 +663,34 @@ th{
 #top5Table tr:hover{
     background:#f8fafc;
 }
+
+.belanja-detail{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:8px;
+}
+
+.persen{
+    font-size:20px;
+    font-weight:600;
+    color:#2563eb;
+}
+
+.progress-bar{
+    width:100%;
+    height:8px;
+    background:#e5e7eb;
+    border-radius:6px;
+    overflow:hidden;
+}
+
+.progress-fill{
+    height:100%;
+    width:0%;
+    background:#2563eb;
+    transition:width .4s ease;
+}
     
 </style>
 </head>
@@ -750,26 +778,35 @@ th{
         </table>
     </div>
 
-    <!-- CARD 2 : BELANJA BARANG -->
-<div class="belanja-card" onclick="openModal('barang')">
+    <!-- CARD BELANJA -->
+<div class="belanja-card">
 
     <h3>Belanja Barang</h3>
-
-    <div class="progress-container">
-        <div class="progress-bar" id="progressBarang"></div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="barangProgress"></div>
+    </div>
+    <div class="belanja-detail">
+        <div class="persen" id="barangPersen">0%</div>
+        <div class="angka">
+            Realisasi: <b id="barangRealisasi">0</b><br>
+            Sisa: <b id="barangSisa">0</b><br>
+            Pagu: <b id="barangPagu">0</b>
+        </div>
     </div>
 
-    <div class="progress-info">
-        <span id="persenBarang">0%</span>
-        <small>
-            Realisasi: <span id="barangRealisasi">0</span><br>
-            Sisa: <span id="barangSisa">0</span><br>
-            Pagu: <span id="barangTotal">0</span>
-        </small>
-    </div>
+    <hr style="margin:16px 0; border:none; border-top:1px solid #e5e7eb;">
 
-    <div class="belanja-footnote">
-        <em>*data berdasarkan SP2D (klik untuk detil!)</em>
+    <h3>Belanja Modal</h3>
+    <div class="progress-bar">
+        <div class="progress-fill" id="modalProgress"></div>
+    </div>
+    <div class="belanja-detail">
+        <div class="persen" id="modalPersen">0%</div>
+        <div class="angka">
+            Realisasi: <b id="modalRealisasi">0</b><br>
+            Sisa: <b id="modalSisa">0</b><br>
+            Pagu: <b id="modalPagu">0</b>
+        </div>
     </div>
 
 </div>
@@ -985,15 +1022,19 @@ const persenModal = modalTotal > 0
     ? (modalRealisasi / modalTotal) * 100 
     : 0;
 
-document.getElementById("progressModal").style.width = persenModal + "%";
-document.getElementById("persenModal").textContent = persenModal.toFixed(2) + "%";
+// BELANJA BARANG
+document.getElementById("barangPersen").innerText = data.barang.persen + "%";
+document.getElementById("barangRealisasi").innerText = formatRupiah(data.barang.realisasi);
+document.getElementById("barangSisa").innerText = formatRupiah(data.barang.sisa);
+document.getElementById("barangPagu").innerText = formatRupiah(data.barang.pagu);
+document.getElementById("barangProgress").style.width = data.barang.persen + "%";
 
-document.getElementById("modalRealisasi").textContent =
-    modalRealisasi.toLocaleString("id-ID");
-
-document.getElementById("modalTotal").textContent =
-    modalTotal.toLocaleString("id-ID");
-
+// BELANJA MODAL
+document.getElementById("modalPersen").innerText = data.modal.persen + "%";
+document.getElementById("modalRealisasi").innerText = formatRupiah(data.modal.realisasi);
+document.getElementById("modalSisa").innerText = formatRupiah(data.modal.sisa);
+document.getElementById("modalPagu").innerText = formatRupiah(data.modal.pagu);
+document.getElementById("modalProgress").style.width = data.modal.persen + "%";
 
 // ================= MONITORING MP =================
 const mpTable = document.getElementById("monitoringMPTable");
