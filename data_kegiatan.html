@@ -1237,33 +1237,6 @@ function showSP2DPopup(tr){
         tbody.appendChild(newRow);
     });
 
-    <div id="totalJumlahSP2D" style="margin-top:8px; font-weight:600; text-align:right;">
-      Total Jumlah: 0
-    </div>
-
-        // contoh isi tabel
-        allRows.forEach(r => {
-            if(r.C === uraian){ // cocokkan Uraian
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${r.A}</td>
-                    <td>${r.D}</td>
-                    <td>${Number(r.M||0).toLocaleString('id-ID')}</td>
-                    <td style="text-align:center;">
-                        <button style="border:none;background:none;color:red;"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                `;
-                tr.querySelector("button").onclick = () => {
-                    tr.remove();
-                    updateTotalSP2D(); // 🔥 update saat hapus
-                };
-                tbody.appendChild(tr);
-            }
-        });
-        
-        // 🔥 update total pertama kali
-        updateTotalSP2D();
-  
     // tombol batal
     document.getElementById("sp2dCancel").onclick = () => overlay.remove();
 
@@ -1319,17 +1292,6 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
         showSP2DPopup(tr);
     }
 });
-
-function updateTotalSP2D() {
-    const tbody = document.querySelector("#tblPelaksana tbody");
-    let total = 0;
-    tbody.querySelectorAll("tr").forEach(tr => {
-        const jumlahText = tr.cells[2].textContent.replace(/\./g,'') || '0'; // kolom jumlah = index 2
-        total += Number(jumlahText);
-    });
-    document.getElementById("totalJumlahSP2D").textContent = 
-        "Total Jumlah: " + total.toLocaleString('id-ID');
-}
   
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
@@ -1389,9 +1351,5 @@ function populateDatalist(){
         ⏳ Menyimpan data...
     </div>
 </div>
-
-  
-  
-
 </body>
 </html>
