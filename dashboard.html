@@ -1158,7 +1158,14 @@ if(Array.isArray(data.topPerjadin)){
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-            <td style="text-align:center;">${index+1}</td>
+            <td style="text-align:center; font-size:16px;">
+                  ${
+                    index === 0 ? "🥇" :
+                    index === 1 ? "🥈" :
+                    index === 2 ? "🥉" :
+                    "🎖"
+                  }
+                </td>
             <td>${row.nama}</td>
             <td style="text-align:right;">
                     ${(Number(row.jumlah) || 0).toLocaleString("id-ID")}
