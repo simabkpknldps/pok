@@ -463,8 +463,8 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     }
     else if(btn.classList.contains("btn-bayar")){
         showBayarPopup(tr);
-    }
-    //else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
+    else if(btn.classList.contains("btn-sp2d")){
+    showSP2DPopup(tr); // buat fungsi popup SP2D sendiri
 });
 
 // contoh fungsi popup edit
