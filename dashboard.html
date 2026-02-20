@@ -1111,16 +1111,8 @@ if(mpTable){
     }
 }
 
-<div class="belanja-card" onclick="openModal('barang')">
-<div class="belanja-card" onclick="openModal('modal')">
-    
-document.getElementById("barangSisa").textContent =
-    barangSisa.toLocaleString("id-ID");
 
-    
 
-document.getElementById("modalSisa").textContent =
-    modalSisa.toLocaleString("id-ID");
 
 // ================= TOP 5 PERJADIN =================
 if(Array.isArray(data.topPerjadin)){
@@ -1301,6 +1293,9 @@ document.addEventListener("DOMContentLoaded", async function(){
 
 </script>
 
+<div class="belanja-card" onclick="openModal('barang')">
+<div class="belanja-card" onclick="openModal('modal')">
+    
     <!-- POPUP MODAL -->
 <div id="belanjaModal" class="modal-overlay">
   <div class="modal-box">
