@@ -692,27 +692,27 @@ th{
     transition:width .4s ease;
 }
 
-/* === PERKECIL & BIRUKAN NOMINAL BELANJA === */
+/* === UKURAN FONT CARD BELANJA === */
 
-belanja-detail .angka{
+.belanja-detail .angka{
+    font-size:12px;          /* label: Realisasi / Sisa / Pagu */
     display:flex;
     justify-content:space-between;
     align-items:center;
-    font-size:10px;
     line-height:1.8;
     color:#64748b;
 }
 
 .belanja-detail .angka b{
-    font-size:10px;
+    font-size:14px;          /* nominal */
     font-weight:600;
     color:#2563eb;
     text-align:right;
-    min-width:120px;   /* supaya rata kanan konsisten */
+    min-width:120px;
 }
 
 .persen{
-    font-size:20px;      /* sedikit lebih kecil dari sebelumnya */
+    font-size:20px;          /* persen lebih besar */
     font-weight:700;
     color:#2563eb;
 }
@@ -943,7 +943,7 @@ function logout(){
 }
 
 // URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycbwxsBUoA9oC9rjcakrxQaE5cKVnA7hoDkzZQlsAauZMlEwijRjyk6ApRk3RCF-DxUc7cA/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbznAbltMbyR5k4EdRQMUet0XQEcOwjTouH3j8He_cmZ3lAdOF9vTElUCDLXFEbnwAC1wA/exec";
 
 async function loadDashboard(){
     showLoading(); // tampilkan overlay
