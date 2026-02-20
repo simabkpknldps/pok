@@ -692,23 +692,23 @@ th{
     transition:width .4s ease;
 }
 
-/* === UKURAN FONT CARD BELANJA === */
+/* === FORMAT DETAIL BELANJA RAPI KANAN-KIRI === */
 
 .belanja-detail .angka{
-    font-size:12px;          /* label: Realisasi / Sisa / Pagu */
     display:flex;
     justify-content:space-between;
     align-items:center;
+    font-size:12px;
     line-height:1.8;
     color:#64748b;
 }
 
 .belanja-detail .angka b{
-    font-size:14px;          /* nominal */
+    font-size:14px;
     font-weight:600;
     color:#2563eb;
     text-align:right;
-    min-width:120px;
+    min-width:120px;   /* supaya rata kanan konsisten */
 }
 
 .persen{
