@@ -254,7 +254,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbwIcqOGqBt2RdASGI5ON7y-qahOedmfVZwmoBVYsfj5H6oFeyerP-PaCcU1X-bU1PD5/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbwO-Q2IdiPMlLSR6E-UyC_-O8sZ_1RbGq9-OFnLVwm_U7oVGeVbNt4bUcnElDAbcMRX/exec";
 
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
@@ -1027,54 +1027,78 @@ function saveLPTPopup(idKegiatan){
     });
 }
 
-function showBayarPopup(tr){
+function showBayarPopup(tr) {
     const idKegiatan = tr.dataset.id;
-    const uraian = tr.cells[1].textContent; // ambil dari kolom ke-2 tabel
+    const uraian = tr.cells[1].textContent; // kolom ke-2 tabel utama
 
     // ===== Overlay =====
     const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = 0;
-    overlay.style.background = "rgba(0,0,0,0.4)";
-    overlay.style.display = "flex";
-    overlay.style.justifyContent = "center";
-    overlay.style.alignItems = "center";
-    overlay.style.zIndex = 9999;
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
 
     // ===== Popup =====
     const popup = document.createElement("div");
-    popup.style.background = "#fff";
-    popup.style.borderRadius = "12px";
-    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
-    popup.style.width = "400px";
-    popup.style.maxWidth = "90%";
-    popup.style.padding = "25px 20px";
-    popup.style.display = "flex";
-    popup.style.flexDirection = "column";
-    popup.style.gap = "12px";
+    popup.style.cssText = "background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:600px; max-width:95%; padding:25px 20px; display:flex; flex-direction:column; gap:12px; max-height:80vh; overflow:auto;";
 
     popup.innerHTML = `
         <h3 style="text-align:center; color:#0369a1;">Bayar Kegiatan #${idKegiatan}</h3>
 
         <label>Uraian / No ST</label>
-        <input type="text" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+        <input type="text" id="uraianInput" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
         <label>Tanggal Bayar</label>
-        <input type="date" id="tglBayarInput" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+        <input type="datetime-local" id="tglBayarInput" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <label>Daftar Pelaksana Tugas</label>
+        <table id="tblPelaksana" style="width:100%; border-collapse:collapse; border:1px solid #cbd5e1;">
+            <thead style="background:#f1f5f9;">
+                <tr>
+                    <th style="padding:6px; border-bottom:1px solid #cbd5e1;">ID Kegiatan</th>
+                    <th style="padding:6px; border-bottom:1px solid #cbd5e1;">Pelaksana Tugas</th>
+                    <th style="padding:6px; border-bottom:1px solid #cbd5e1;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
 
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
             <button id="bayarCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer;">Batal</button>
             <button id="bayarSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
         </div>
     `;
-
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
+    // ===== Cancel =====
     document.getElementById("bayarCancel").onclick = () => overlay.remove();
 
+    // ===== Isi tabel filter berdasarkan Uraian / No ST =====
+    const tbody = popup.querySelector("#tblPelaksana tbody");
+    const rows = document.querySelectorAll("#tblMain tbody tr"); // asumsi tabel utama id="tblMain"
+    tbody.innerHTML = "";
+    rows.forEach(r=>{
+        const rowUraian = r.cells[1].textContent;
+        if(rowUraian.includes(uraian)){
+            const idHidden = r.querySelector("td[data-id]").dataset.id; // kolom hidden
+            const pelaksana = r.cells[2].textContent;
+
+            const trRow = document.createElement("tr");
+            trRow.innerHTML = `
+                <td style="padding:6px; border-bottom:1px solid #cbd5e1;">${idHidden}</td>
+                <td style="padding:6px; border-bottom:1px solid #cbd5e1;">${pelaksana}</td>
+                <td style="padding:6px; border-bottom:1px solid #cbd5e1; text-align:center;">
+                    <button class="btnHapus" style="background:none; border:none; color:red; cursor:pointer;">&#10006;</button>
+                </td>
+            `;
+            tbody.appendChild(trRow);
+
+            // Hapus baris di popup
+            trRow.querySelector(".btnHapus").onclick = ()=>trRow.remove();
+        }
+    });
+
+    // ===== Save =====
     document.getElementById("bayarSave").onclick = function(){
-        const newUraian = popup.querySelector("input[type=text]").value;
+        const newUraian = document.getElementById("uraianInput").value;
         const tglBayar = document.getElementById("tglBayarInput").value;
 
         if(!tglBayar){
@@ -1082,17 +1106,25 @@ function showBayarPopup(tr){
             return;
         }
 
+        const tblData = [];
+        tbody.querySelectorAll("tr").forEach(tr=>{
+            tblData.push({
+                id: tr.cells[0].textContent,
+                pelaksana: tr.cells[1].textContent
+            });
+        });
+
         showOverlay("Menyimpan data...");
         this.disabled = true;
 
         fetch(urlGAS,{
             method:"POST",
             body: JSON.stringify({
-                action: "updateBayar",
+                action: "updateBayarMultiple",
                 kantor: sessionStorage.getItem("kantor"),
-                id: idKegiatan,
                 uraian: newUraian,
-                tglBayar: tglBayar
+                tglBayar: tglBayar,
+                data: tblData
             })
         })
         .then(res=>res.json())
