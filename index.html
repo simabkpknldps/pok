@@ -161,7 +161,7 @@ button:disabled{ background:#a5f3fc; cursor:not-allowed; }
 </div>
 
 <script>
-const apiURL = "https://script.google.com/macros/s/AKfycbwS9gLcT5T5pDYwWy_5yoneQYv-QthDf1kCoqf9Crl-_mjHSJzrHB5eGyRfdXWSovzA/exec";
+const apiURL = "https://script.google.com/macros/s/AKfycbzHwZzGe8whA-iiQB6XOSUWlCsKwlyk9J5kdqdCAinIJbUbbDs_6dy6YivP5Ot4nE93/exec";
 
 function showLoading(show){
     document.getElementById("loading").style.display = show ? "flex" : "none";
@@ -189,16 +189,28 @@ async function login(){
     showLoading(true);
 
     try{
-        const res = await fetch(`${apiURL}?nip=${nip}&password=${password}&kantor=${kantor}`);
+        const res = await fetch(apiURL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                nip,
+                password,
+                kantor
+            })
+        });
         const result = await res.json();
 
         if(result.status === "success"){
+            sessionStorage.setItem("token", result.token);
             sessionStorage.setItem("nama", result.nama);
             sessionStorage.setItem("unit", result.unit);
             sessionStorage.setItem("kantor", kantor);
-            sessionStorage.setItem("admin", result.admin); // <-- simpan admin
+            sessionStorage.setItem("admin", result.admin);
+        
             window.location.href = "dashboard.html";
-        } else {
+        }else {
             showLoading(false);
             errorMsg.textContent = result.message;
         }
@@ -211,6 +223,7 @@ async function login(){
 
 </body>
 </html>
+
 
 
 
