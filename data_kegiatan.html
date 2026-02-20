@@ -1065,6 +1065,7 @@ function showBayarPopup(tr) {
             <button id="bayarSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
         </div>
     `;
+
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
@@ -1072,80 +1073,81 @@ function showBayarPopup(tr) {
     document.getElementById("bayarCancel").onclick = () => overlay.remove();
 
     // ===== Isi tabel filter berdasarkan Uraian / No ST =====
-    // ===== Isi tabel filter berdasarkan Uraian / No ST =====
-const tbody = popup.querySelector("#tblPelaksana tbody");
-tbody.innerHTML = "";
+    const tbody = popup.querySelector("#tblPelaksana tbody");
+    tbody.innerHTML = "";
 
-// ambil semua row dari tabel utama
-const allRows = document.querySelectorAll("#dataTableBody tr");
+    // ambil semua row dari tabel utama
+    const allRows = document.querySelectorAll("#dataTableBody tr");
 
-allRows.forEach(r => {
-    const rowUraian = r.cells[1].textContent;
-    if(rowUraian.includes(uraian)){
-        const idKegiatan = r.dataset.id;          // ID Kegiatan dari dataset tr
-        const pelaksana = r.cells[2].textContent; // kolom Pelaksana Tugas (indeks 2)
+    allRows.forEach(r => {
+        const rowUraian = r.cells[1].textContent;
+        if(rowUraian === uraian){ // cocokkan uraian
+            const id = r.dataset.id;
+            const pelaksana = r.cells[2].textContent;
 
-        const newRow = document.createElement("tr");
-        newRow.innerHTML = `
-            <td style="padding:6px;">${idKegiatan}</td>
-            <td style="padding:6px;">${pelaksana}</td>
-            <td style="padding:6px; text-align:center;">
-                <button style="border:none; background:none; cursor:pointer; color:red;">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </td>
-        `;
-        newRow.querySelector("button").onclick = () => newRow.remove();
+            const newRow = document.createElement("tr");
+            newRow.dataset.id = id; // simpan ID kegiatan di dataset
 
-        tbody.appendChild(newRow);
-    }
-});
+            newRow.innerHTML = `
+                <td style="padding:6px;">${id}</td>
+                <td style="padding:6px;">${pelaksana}</td>
+                <td style="padding:6px; text-align:center;">
+                    <button style="border:none; background:none; cursor:pointer; color:red;">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            `;
 
-    // ===== Save =====
-    document.getElementById("bayarSave").onclick = function(){
-        const newUraian = document.getElementById("uraianInput").value;
+            // tombol hapus row
+            newRow.querySelector("button").onclick = () => newRow.remove();
+
+            tbody.appendChild(newRow);
+        }
+    });
+
+    // ===== Simpan =====
+    document.getElementById("bayarSave").onclick = () => {
+        const uraianValue = document.getElementById("uraianInput").value.trim();
         const tglBayar = document.getElementById("tglBayarInput").value;
 
         if(!tglBayar){
-            alert("Tanggal Bayar wajib diisi!");
+            alert("Tanggal Bayar harus diisi!");
             return;
         }
 
+        const rows = document.querySelectorAll("#tblPelaksana tbody tr");
         const tblData = [];
-        tbody.querySelectorAll("tr").forEach(tr=>{
-            tblData.push({
-                id: tr.cells[0].textContent,
-                pelaksana: tr.cells[1].textContent
-            });
+
+        rows.forEach(r => {
+            const id = r.dataset.id;
+            const pelaksana = r.cells[1].textContent;
+            tblData.push({ id, pelaksana });
         });
 
-        showOverlay("Menyimpan data...");
-        this.disabled = true;
+        showOverlay("Menyimpan pembayaran...");
 
-        fetch(urlGAS,{
-            method:"POST",
+        fetch(urlGAS, {
+            method: "POST",
             body: JSON.stringify({
                 action: "updateBayarMultiple",
                 kantor: sessionStorage.getItem("kantor"),
-                uraian: newUraian,
+                uraian: uraianValue,
                 tglBayar: tglBayar,
                 data: tblData
             })
         })
-        .then(res=>res.json())
-        .then(result=>{
+        .then(res => res.json())
+        .then(result => {
             hideOverlay();
-            this.disabled = false;
             if(result.status === "success"){
                 overlay.remove();
                 loadData(false);
             } else {
-                alert("Gagal update: "+result.message);
+                alert("Gagal: " + result.message);
             }
         })
-        .catch(err=>{
+        .catch(err => {
             hideOverlay();
-            this.disabled = false;
             console.error(err);
             alert("Error koneksi");
         });
