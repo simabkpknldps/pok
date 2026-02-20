@@ -916,6 +916,12 @@ th{
 
 document.addEventListener("DOMContentLoaded", function(){
 
+    const token = sessionStorage.getItem("token");
+
+    if(!token){
+        window.location.replace("index.html");
+        return;
+    }
     const nama = sessionStorage.getItem("nama");
     const admin = sessionStorage.getItem("admin");
     
@@ -968,7 +974,9 @@ async function loadDashboard(){
         }
 
         // kirim parameter kantor ke GAS
-        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
+        const token = sessionStorage.getItem("token");
+
+        const res = await fetch(`${urlGAS}?kantor=${kantor}&token=${token}`);
         const data = await res.json();
 
         if(data.status && data.status !== "success"){
@@ -1017,7 +1025,9 @@ async function updateDashboard(){
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor) return;
 
-    const res = await fetch(`${urlGAS}?kantor=${kantor}`);
+    const token = sessionStorage.getItem("token");
+
+    const res = await fetch(`${urlGAS}?kantor=${kantor}&token=${token}`);
     const data = await res.json();
 
     // Update card dashboard
@@ -1213,7 +1223,9 @@ async function openModal(cardType){
     showLoading();
 
     try {
-        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
+        const token = sessionStorage.getItem("token");
+
+        const res = await fetch(`${urlGAS}?kantor=${kantor}&token=${token}`);
         const data = await res.json();
 
         if(!data || data.status !== "success" || !data.dashboardDetail){
