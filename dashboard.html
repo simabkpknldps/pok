@@ -996,45 +996,37 @@ async function updateDashboard(){
         tbody.appendChild(tr);
     });
 
-const barangTotal = data.belanjaBarang?.total || 0;
-const barangRealisasi = data.belanjaBarang?.realisasi || 0;
-
-const persenBarang = barangTotal > 0 
-    ? (barangRealisasi / barangTotal) * 100 
-    : 0;
-
-document.getElementById("progressBarang").style.width = persenBarang + "%";
-document.getElementById("persenBarang").textContent = persenBarang.toFixed(2) + "%";
-
-document.getElementById("barangRealisasi").textContent =
-    barangRealisasi.toLocaleString("id-ID");
-
-document.getElementById("barangTotal").textContent =
-    barangTotal.toLocaleString("id-ID");
 
 
+// ================= BELANJA BARANG =================
+if(data.belanjaBarang){
 
+    const total = data.belanjaBarang.total || 0;
+    const realisasi = data.belanjaBarang.realisasi || 0;
+    const sisa = total - realisasi;
+    const persen = total > 0 ? (realisasi / total) * 100 : 0;
 
-const modalTotal = data.belanjaModal?.total || 0;
-const modalRealisasi = data.belanjaModal?.realisasi || 0;
+    document.getElementById("barangPersen").innerText = persen.toFixed(2) + "%";
+    document.getElementById("barangRealisasi").innerText = realisasi.toLocaleString("id-ID");
+    document.getElementById("barangSisa").innerText = sisa.toLocaleString("id-ID");
+    document.getElementById("barangPagu").innerText = total.toLocaleString("id-ID");
+    document.getElementById("barangProgress").style.width = persen + "%";
+}
 
-const persenModal = modalTotal > 0 
-    ? (modalRealisasi / modalTotal) * 100 
-    : 0;
+// ================= BELANJA MODAL =================
+if(data.belanjaModal){
 
-// BELANJA BARANG
-document.getElementById("barangPersen").innerText = data.barang.persen + "%";
-document.getElementById("barangRealisasi").innerText = formatRupiah(data.barang.realisasi);
-document.getElementById("barangSisa").innerText = formatRupiah(data.barang.sisa);
-document.getElementById("barangPagu").innerText = formatRupiah(data.barang.pagu);
-document.getElementById("barangProgress").style.width = data.barang.persen + "%";
+    const total = data.belanjaModal.total || 0;
+    const realisasi = data.belanjaModal.realisasi || 0;
+    const sisa = total - realisasi;
+    const persen = total > 0 ? (realisasi / total) * 100 : 0;
 
-// BELANJA MODAL
-document.getElementById("modalPersen").innerText = data.modal.persen + "%";
-document.getElementById("modalRealisasi").innerText = formatRupiah(data.modal.realisasi);
-document.getElementById("modalSisa").innerText = formatRupiah(data.modal.sisa);
-document.getElementById("modalPagu").innerText = formatRupiah(data.modal.pagu);
-document.getElementById("modalProgress").style.width = data.modal.persen + "%";
+    document.getElementById("modalPersen").innerText = persen.toFixed(2) + "%";
+    document.getElementById("modalRealisasi").innerText = realisasi.toLocaleString("id-ID");
+    document.getElementById("modalSisa").innerText = sisa.toLocaleString("id-ID");
+    document.getElementById("modalPagu").innerText = total.toLocaleString("id-ID");
+    document.getElementById("modalProgress").style.width = persen + "%";
+}
 
 // ================= MONITORING MP =================
 const mpTable = document.getElementById("monitoringMPTable");
@@ -1119,12 +1111,13 @@ if(mpTable){
     }
 }
 
-const barangSisa = barangTotal - barangRealisasi;
-
+<div class="belanja-card" onclick="openModal('barang')">
+<div class="belanja-card" onclick="openModal('modal')">
+    
 document.getElementById("barangSisa").textContent =
     barangSisa.toLocaleString("id-ID");
 
-    const modalSisa = modalTotal - modalRealisasi;
+    
 
 document.getElementById("modalSisa").textContent =
     modalSisa.toLocaleString("id-ID");
