@@ -664,17 +664,22 @@ th{
     background:#f8fafc;
 }
 
-.belanja-detail{
+/* ===== BELANJA VERSI STABIL ===== */
+
+.belanja-card{
+    background:white;
+    padding:16px;
+    border-radius:14px;
+    border:1px solid #e5e7eb;
     display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-top:8px;
+    flex-direction:column;
+    gap:10px;
 }
 
-.persen{
-    font-size:20px;
+.belanja-card h3{
+    font-size:14px;
     font-weight:600;
-    color:#2563eb;
+    margin-bottom:4px;
 }
 
 .progress-bar{
@@ -687,245 +692,34 @@ th{
 
 .progress-fill{
     height:100%;
-    width:0%;
     background:#2563eb;
+    width:0%;
     transition:width .4s ease;
 }
 
-/* === FORMAT DETAIL BELANJA RAPI KANAN-KIRI === */
-
-.belanja-detail .angka{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-size:12px;
-    line-height:1.8;
-    color:#64748b;
-}
-
-.belanja-detail .angka b{
-    font-size:14px;
-    font-weight:600;
-    color:#2563eb;
-    text-align:right;
-    min-width:120px;   /* supaya rata kanan konsisten */
-}
-
 .persen{
-    font-size:20px;          /* persen lebih besar */
+    font-size:18px;
     font-weight:700;
     color:#2563eb;
+    margin-top:4px;
 }
 
 .belanja-detail{
     margin-top:6px;
 }
 
-/* ===== PERBAIKAN LAYOUT BELANJA ===== */
-
-.belanja-detail{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    margin-top:10px;
-}
-
 .belanja-detail .angka{
-    display:flex;
-    flex-direction:column;   /* atas bawah */
-    gap:6px;
-    font-size:12px;          /* label */
-    color:#64748b;
-}
-
-.belanja-detail .angka div{
-    display:flex;
-    justify-content:space-between;
-    min-width:170px;
-}
-
-.belanja-detail .angka b{
-    font-size:14px;          /* nominal */
-    font-weight:600;
-    color:#2563eb;
-    text-align:right;
-}
-
-.persen{
-    font-size:20px;
-    font-weight:700;
-    color:#2563eb;
-    min-width:60px;
-}
-
-/* === CARD BELANJA SIMPLE === */
-
-.belanja-detail{
-    margin-top:12px;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-}
-
-.row-belanja{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-size:13px;
-    color:#475569;
-}
-
-.row-belanja span{
     font-size:12px;
     color:#64748b;
-}
-
-.row-belanja b{
-    font-size:14px;
-    font-weight:600;
-    color:#1e293b;
-}
-
-/* ===== FIX FINAL LAYOUT BELANJA ===== */
-
-.belanja-detail{
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    margin-top:10px;
-    gap:16px;
-}
-
-.persen{
-    font-size:20px;
-    font-weight:700;
-    color:#2563eb;
-    min-width:60px;
-    text-align:left;
-}
-
-.belanja-detail .angka{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    font-size:12px;          /* label */
-    color:#64748b;
-    text-align:right;        /* SEMUA KE KANAN */
-}
-
-.belanja-detail .angka b{
-    font-size:14px;          /* nominal */
-    font-weight:600;
-    color:#1e293b;
-}
-
-/* ===== BELANJA COMPACT MODE ===== */
-
-.belanja-card{
-    padding:14px 16px;
-}
-
-.belanja-card h3{
-    font-size:14px;
     margin-bottom:6px;
 }
 
-.progress-bar{
-    height:6px;              /* lebih tipis */
-    margin:4px 0 8px 0;      /* lebih rapat */
-}
-
-.persen{
-    font-size:18px;          /* sedikit kecil */
-    margin-bottom:4px;
-}
-
-.belanja-detail{
-    margin-top:4px;
-    gap:10px;
-}
-
-.belanja-detail .angka{
-    gap:4px;
-    font-size:11px;          /* label lebih kecil */
-}
-
 .belanja-detail .angka b{
-    font-size:13px;          /* nominal lebih compact */
-}
-
-/* kecilkan jarak antar barang & modal */
-.belanja-card hr{
-    margin:10px 0;
-}
-
-/* ============================= */
-/* BELANJA CARD - CLEAN VERSION  */
-/* ============================= */
-
-.belanja-card{
-    padding:14px 16px;
-}
-
-.belanja-card h3{
+    display:block;
     font-size:14px;
     font-weight:600;
-    margin-bottom:6px;
-}
-
-/* progress wrapper */
-.progress-wrapper{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:8px;
-}
-
-.progress-bar{
-    flex:1;
-    height:6px;
-    background:#e2e8f0;
-    border-radius:6px;
-    overflow:hidden;
-}
-
-.progress-fill{
-    height:100%;
-    background:#2563eb;
-}
-
-.persen{
-    font-size:14px;
-    font-weight:600;
-    color:#2563eb;
-    min-width:50px;
-    text-align:right;
-}
-
-/* detail angka */
-.belanja-detail{
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-}
-
-.belanja-detail .row{
-    display:flex;
-    justify-content:space-between;
-    font-size:12px;
-}
-
-.belanja-detail .row span:last-child{
-    font-weight:600;
-    font-size:13px;
-}
-
-/* divider */
-.belanja-card hr{
-    margin:10px 0;
-    border:none;
-    border-top:1px solid #e5e7eb;
+    color:#1e293b;
+    margin-top:2px;
 }
     
 </style>
@@ -1018,12 +812,10 @@ th{
 <div class="belanja-card" onclick="openModal('barang')" style="cursor:pointer;">
 
     <h3>Belanja Barang</h3>
-    <div class="progress-wrapper">
-        <div class="progress-bar">
+    
+    <div class="progress-bar">
             <div class="progress-fill" id="barangProgress"></div>
         </div>
-    </div>
-    
     <div class="belanja-detail">
         <div class="persen" id="barangPersen">0%</div>
         <div class="angka">
