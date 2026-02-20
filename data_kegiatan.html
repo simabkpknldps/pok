@@ -916,18 +916,14 @@ function showLPTPopup(tr){
         const pelaksana = row.cells[2].textContent; // ✅ indeks 2
 
         const newRow = document.createElement("tr");
-
+        newRow.dataset.id = id; // 🔥 penting
+      
         newRow.innerHTML = `
             <td style="padding:6px;">${id}</td>
             <td style="padding:6px;">${uraian}</td>
             <td style="padding:6px;">${pelaksana}</td>
             <td style="padding:6px; text-align:center;">
-                <button style="
-                    border:none;
-                    background:none;
-                    cursor:pointer;
-                    color:red;
-                ">
+                <button style="border:none;background:none;cursor:pointer;color:red;">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </td>
