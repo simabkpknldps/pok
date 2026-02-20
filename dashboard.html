@@ -648,6 +648,21 @@ th{
     to{opacity:1; transform:scale(1);}
 }
 
+#top5Table th,
+#top5Table td{
+    padding:6px 8px;
+    border-bottom:1px solid #e5e7eb;
+}
+
+#top5Table th{
+    background:#f1f5f9;
+    font-weight:600;
+    text-align:left;
+}
+
+#top5Table tr:hover{
+    background:#f8fafc;
+}
     
 </style>
 </head>
@@ -760,27 +775,27 @@ th{
 </div>
 
 
-<!-- CARD 3 : BELANJA MODAL -->
-<div class="belanja-card" onclick="openModal('modal')">
+<!-- CARD 3 : TOP 5 PERJADIN -->
+<div class="belanja-card">
 
-    <h3>Belanja Modal</h3>
+    <h3>Top 5 Perjadin</h3>
 
-    <div class="progress-container">
-        <div class="progress-bar" id="progressModal"></div>
-    </div>
-
-    <div class="progress-info">
-        <span id="persenModal">0%</span>
-        <small>
-            Realisasi: <span id="modalRealisasi">0</span><br>
-            Sisa: <span id="modalSisa">0</span><br>
-            Pagu: <span id="modalTotal">0</span>
-        </small>
-    </div>
-
-    <div class="belanja-footnote">
-        <em>*data berdasarkan SP2D (klik untuk detil!)</em>
-    </div>
+    <table id="top5Table" style="width:100%; font-size:13px;">
+        <thead>
+            <tr>
+                <th style="width:40px;">No</th>
+                <th>Pelaksana</th>
+                <th style="text-align:right;">Total</th>
+            </tr>
+        </thead>
+        <tbody id="top5Body">
+            <tr>
+                <td colspan="3" style="text-align:center;color:#94a3b8;">
+                    Memuat data...
+                </td>
+            </tr>
+        </tbody>
+    </table>
 
 </div>
 
@@ -1073,6 +1088,33 @@ document.getElementById("barangSisa").textContent =
 document.getElementById("modalSisa").textContent =
     modalSisa.toLocaleString("id-ID");
 
+// ================= TOP 5 PERJADIN =================
+if(Array.isArray(data.topPerjadin)){
+    const tbodyTop5 = document.getElementById("top5Body");
+    tbodyTop5.innerHTML = "";
+
+    data.topPerjadin.slice(0,5).forEach((row, index)=>{
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td style="text-align:center;">${index+1}</td>
+            <td>${row.nama}</td>
+            <td style="text-align:right;">${Number(row.total).toLocaleString("id-ID")}</td>
+        `;
+
+        tbodyTop5.appendChild(tr);
+    });
+
+    if(data.topPerjadin.length === 0){
+        tbodyTop5.innerHTML = `
+            <tr>
+                <td colspan="3" style="text-align:center;color:#94a3b8;">
+                    Tidak ada data
+                </td>
+            </tr>
+        `;
+    }
+}
     
 }
 
