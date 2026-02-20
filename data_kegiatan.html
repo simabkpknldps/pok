@@ -254,7 +254,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbxjA1UQwRdQlcbf6Ly5cXVGCTW-ckgov9-duAk8IHsJiAFaxHlrsf01HlJuZhJU3SW2/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbwIcqOGqBt2RdASGI5ON7y-qahOedmfVZwmoBVYsfj5H6oFeyerP-PaCcU1X-bU1PD5/exec";
 
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
@@ -461,7 +461,9 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     else if(btn.classList.contains("btn-lpt")){
         showLPTPopup(tr);
     }
-    else if(btn.classList.contains("btn-bayar")) alert("Bayar ID: "+idKegiatan);
+    else if(btn.classList.contains("btn-bayar")){
+        showBayarPopup(tr);
+    }
     else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
@@ -1023,6 +1025,94 @@ function saveLPTPopup(idKegiatan){
         console.error(err);
         alert("Error koneksi");
     });
+}
+
+function showBayarPopup(tr){
+    const idKegiatan = tr.dataset.id;
+    const uraian = tr.cells[1].textContent; // ambil dari kolom ke-2 tabel
+
+    // ===== Overlay =====
+    const overlay = document.createElement("div");
+    overlay.style.position = "fixed";
+    overlay.style.inset = 0;
+    overlay.style.background = "rgba(0,0,0,0.4)";
+    overlay.style.display = "flex";
+    overlay.style.justifyContent = "center";
+    overlay.style.alignItems = "center";
+    overlay.style.zIndex = 9999;
+
+    // ===== Popup =====
+    const popup = document.createElement("div");
+    popup.style.background = "#fff";
+    popup.style.borderRadius = "12px";
+    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
+    popup.style.width = "400px";
+    popup.style.maxWidth = "90%";
+    popup.style.padding = "25px 20px";
+    popup.style.display = "flex";
+    popup.style.flexDirection = "column";
+    popup.style.gap = "12px";
+
+    popup.innerHTML = `
+        <h3 style="text-align:center; color:#0369a1;">Bayar Kegiatan #${idKegiatan}</h3>
+
+        <label>Uraian / No ST</label>
+        <input type="text" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <label>Tanggal Bayar</label>
+        <input type="date" id="tglBayarInput" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+            <button id="bayarCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer;">Batal</button>
+            <button id="bayarSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
+        </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    document.getElementById("bayarCancel").onclick = () => overlay.remove();
+
+    document.getElementById("bayarSave").onclick = function(){
+        const newUraian = popup.querySelector("input[type=text]").value;
+        const tglBayar = document.getElementById("tglBayarInput").value;
+
+        if(!tglBayar){
+            alert("Tanggal Bayar wajib diisi!");
+            return;
+        }
+
+        showOverlay("Menyimpan data...");
+        this.disabled = true;
+
+        fetch(urlGAS,{
+            method:"POST",
+            body: JSON.stringify({
+                action: "updateBayar",
+                kantor: sessionStorage.getItem("kantor"),
+                id: idKegiatan,
+                uraian: newUraian,
+                tglBayar: tglBayar
+            })
+        })
+        .then(res=>res.json())
+        .then(result=>{
+            hideOverlay();
+            this.disabled = false;
+            if(result.status === "success"){
+                overlay.remove();
+                loadData(false);
+            } else {
+                alert("Gagal update: "+result.message);
+            }
+        })
+        .catch(err=>{
+            hideOverlay();
+            this.disabled = false;
+            console.error(err);
+            alert("Error koneksi");
+        });
+    };
 }
   
 function showLoading(show){
