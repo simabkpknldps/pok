@@ -462,8 +462,19 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
         showLPTPopup(tr);
     }
     else if(btn.classList.contains("btn-bayar")){
+    if(isAdmin){
         showBayarPopup(tr);
+    } else {
+        alert("Anda tidak memiliki kewenangan!");
     }
+}
+else if(btn.classList.contains("btn-sp2d")){
+    if(isAdmin){
+        showSP2DPopup(tr);
+    } else {
+        alert("Anda tidak memiliki kewenangan!");
+    }
+}
     //else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
