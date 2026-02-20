@@ -1072,29 +1072,34 @@ function showBayarPopup(tr) {
     document.getElementById("bayarCancel").onclick = () => overlay.remove();
 
     // ===== Isi tabel filter berdasarkan Uraian / No ST =====
-    const tbody = popup.querySelector("#tblPelaksana tbody");
-    const rows = document.querySelectorAll("#tblMain tbody tr"); // asumsi tabel utama id="tblMain"
-    tbody.innerHTML = "";
-    rows.forEach(r=>{
-        const rowUraian = r.cells[1].textContent;
-        if(rowUraian.includes(uraian)){
-            const idHidden = r.querySelector("td[data-id]").dataset.id; // kolom hidden
-            const pelaksana = r.cells[2].textContent;
+    // ===== Isi tabel filter berdasarkan Uraian / No ST =====
+const tbody = popup.querySelector("#tblPelaksana tbody");
+tbody.innerHTML = "";
 
-            const trRow = document.createElement("tr");
-            trRow.innerHTML = `
-                <td style="padding:6px; border-bottom:1px solid #cbd5e1;">${idHidden}</td>
-                <td style="padding:6px; border-bottom:1px solid #cbd5e1;">${pelaksana}</td>
-                <td style="padding:6px; border-bottom:1px solid #cbd5e1; text-align:center;">
-                    <button class="btnHapus" style="background:none; border:none; color:red; cursor:pointer;">&#10006;</button>
-                </td>
-            `;
-            tbody.appendChild(trRow);
+// ambil semua row dari tabel utama
+const allRows = document.querySelectorAll("#dataTableBody tr");
 
-            // Hapus baris di popup
-            trRow.querySelector(".btnHapus").onclick = ()=>trRow.remove();
-        }
-    });
+allRows.forEach(r => {
+    const rowUraian = r.cells[1].textContent;
+    if(rowUraian.includes(uraian)){
+        const idKegiatan = r.dataset.id;          // ID Kegiatan dari dataset tr
+        const pelaksana = r.cells[2].textContent; // kolom Pelaksana Tugas (indeks 2)
+
+        const newRow = document.createElement("tr");
+        newRow.innerHTML = `
+            <td style="padding:6px;">${idKegiatan}</td>
+            <td style="padding:6px;">${pelaksana}</td>
+            <td style="padding:6px; text-align:center;">
+                <button style="border:none; background:none; cursor:pointer; color:red;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+        newRow.querySelector("button").onclick = () => newRow.remove();
+
+        tbody.appendChild(newRow);
+    }
+});
 
     // ===== Save =====
     document.getElementById("bayarSave").onclick = function(){
