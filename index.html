@@ -161,7 +161,7 @@ button:disabled{ background:#a5f3fc; cursor:not-allowed; }
 </div>
 
 <script>
-const apiURL = "https://script.google.com/macros/s/AKfycbzHwZzGe8whA-iiQB6XOSUWlCsKwlyk9J5kdqdCAinIJbUbbDs_6dy6YivP5Ot4nE93/exec";
+const apiURL = "https://script.google.com/macros/s/AKfycbx2OPJeROJP0QvCaxlVbCoJscznHy2zandMhnJAazLZNlEVgvwR1S22MrOykOg8cqOr/exec";
 
 function showLoading(show){
     document.getElementById("loading").style.display = show ? "flex" : "none";
@@ -192,7 +192,7 @@ async function login(){
         const res = await fetch(apiURL, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "text/plain;charset=utf-8"
             },
             body: JSON.stringify({
                 action: "login",
@@ -224,6 +224,7 @@ async function login(){
 
 </body>
 </html>
+
 
 
 
