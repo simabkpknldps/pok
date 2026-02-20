@@ -254,7 +254,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycby13M89rMcGLU4_t6RY-lHzlBR92VLuQzOvKRqntAJvqxROSWk0F3eJ-MW3aNPl9LRQ/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbxfJo89J56489U0ljWEMjZHXbUqDcUVBMfy5e9GnkTI8gNhP6TCqaRqoVRejd0ezF29/exec";
 
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
@@ -1124,7 +1124,6 @@ allRows.forEach(r => {
 
         fetch(urlGAS,{
             method:"POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 action: "updateBayarMultiple",
                 kantor: sessionStorage.getItem("kantor"),
