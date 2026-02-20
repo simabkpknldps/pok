@@ -484,7 +484,7 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
         showBayarPopup(tr);
     }
     else if(btn.classList.contains("btn-sp2d")) {
-    showSP2DPopup(tr); // panggil popup SP2D
+        showSP2DPopup(tr); // panggil popup SP2D
 }
 
 });
@@ -1209,85 +1209,77 @@ function populateDatalist(){
     });
 }
 
- // Fungsi tampilkan popup SP2D
-  function showSP2DPopup(rowData) {
-      const overlay = document.getElementById("sp2dOverlay");
-      overlay.style.display = "flex";
+ /// --- Fungsi showSP2DPopup ---
+function showSP2DPopup(tr){
+    const idKegiatan = tr.dataset.id;
+    const uraian = tr.cells[1].textContent;
 
-      const tbody = document.querySelector("#sp2dTable tbody");
-      tbody.innerHTML = ""; // reset tabel
+    // overlay
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
 
-      const row = document.createElement("tr");
-      row.innerHTML = `
-          <td>${rowData.id}</td>
-          <td>${rowData.uraian}</td>
-          <td>${rowData.nama}</td>
-          <td>${rowData.tujuan}</td>
-          <td style="text-align:right;">0</td>
-          <td style="text-align:center;">
-              <button style="border:none; background:none; cursor:pointer; color:red;">
-                  <i class="fa-solid fa-trash"></i>
-              </button>
-          </td>
-      `;
-      row.querySelector("button").onclick = () => row.remove();
-      tbody.appendChild(row);
+    // popup
+    const popup = document.createElement("div");
+    popup.style.cssText = "background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:600px; max-width:95%; padding:25px 20px; display:flex; flex-direction:column; gap:12px; max-height:80vh; overflow:auto;";
 
-      // fokus ke input SPM
-      document.getElementById("spmInput").focus();
-  }
+    popup.innerHTML = `
+        <h3 style="text-align:center; color:#0369a1;">SP2D Kegiatan #${idKegiatan}</h3>
 
-  // Event delegation untuk tombol SP2D
-  document.getElementById("dataTableBody").addEventListener("click", function(e){
-      const btn = e.target.closest(".btn-sp2d");
-      if(!btn) return;
+        <label>Uraian / No ST</label>
+        <input type="text" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;" readonly>
 
-      const tr = btn.closest("tr");
-      const rowData = {
-          id: tr.dataset.id,
-          uraian: tr.cells[1].textContent,
-          nama: tr.cells[2].textContent,
-          tujuan: tr.cells[3].textContent
-      };
-      showSP2DPopup(rowData);
-  });
+        <label>Tanggal SP2D</label>
+        <input type="date" id="tglSP2D" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
-  // Tombol Batal
-  document.getElementById("sp2dCancel").onclick = () => {
-      document.getElementById("sp2dOverlay").style.display = "none";
-  };
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+            <button id="sp2dCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
+            <button id="sp2dSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
+        </div>
+    `;
 
-  // Tombol Simpan (sementara cuma alert)
-  document.getElementById("sp2dSave").onclick = () => {
-      const spm = document.getElementById("spmInput").value.padStart(4,'0');
-      const tgl = document.getElementById("tglSP2DInput").value;
-      const rows = [];
-      document.querySelectorAll("#sp2dTable tbody tr").forEach(tr=>{
-          rows.push({
-              id: tr.cells[0].textContent,
-              uraian: tr.cells[1].textContent,
-              nama: tr.cells[2].textContent,
-              tujuan: tr.cells[3].textContent,
-              jumlah: tr.cells[4].textContent
-          });
-      });
-      console.log("SP2D Data", {spm, tgl, rows});
-      alert("SP2D akan dikirim ke GAS nanti (cek console).");
-  };
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
 
-  // Search dalam tabel
-  document.getElementById("sp2dSearch").addEventListener("input", function(){
-      const val = this.value.toLowerCase();
-      document.querySelectorAll("#sp2dTable tbody tr").forEach(tr=>{
-          const text = tr.textContent.toLowerCase();
-          tr.style.display = text.includes(val) ? "" : "none";
-      });
-  });
+    document.getElementById("sp2dCancel").onclick = () => overlay.remove();
 
-  // format input SPM saat lose focus
-  document.getElementById("spmInput").addEventListener("blur", function(){
-      if(this.value) this.value = this.value.padStart(4,'0');
-  });
+    document.getElementById("sp2dSave").onclick = () => {
+        const tglSP2D = document.getElementById("tglSP2D").value;
+        if(!tglSP2D){
+            alert("Tanggal SP2D harus diisi!");
+            return;
+        }
+
+        showOverlay("Menyimpan SP2D...");
+        document.getElementById("sp2dSave").disabled = true;
+
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "updateSP2D",
+                kantor: sessionStorage.getItem("kantor"),
+                id: idKegiatan,
+                tglSP2D
+            })
+        })
+        .then(res=>res.json())
+        .then(result=>{
+            hideOverlay();
+            document.getElementById("sp2dSave").disabled = false;
+            if(result.status==="success"){
+                overlay.remove();
+                loadData(false);
+            } else {
+                alert("Gagal simpan SP2D: "+result.message);
+            }
+        })
+        .catch(err=>{
+            hideOverlay();
+            document.getElementById("sp2dSave").disabled = false;
+            console.error(err);
+            alert("Error koneksi");
+        });
+    };
+}
 
 
 </script>
