@@ -195,9 +195,10 @@ async function login(){
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                nip,
-                password,
-                kantor
+                action: "login",
+                nip: nip,
+                password: password,
+                kantor: kantor
             })
         });
         const result = await res.json();
@@ -223,6 +224,7 @@ async function login(){
 
 </body>
 </html>
+
 
 
 
