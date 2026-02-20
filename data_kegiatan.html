@@ -468,7 +468,13 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
         alert("Anda tidak memiliki kewenangan!");
     }
 }
-
+else if(btn.classList.contains("btn-sp2d")){
+    if(isAdmin){
+        showSP2DPopup(tr);
+    } else {
+        alert("Anda tidak memiliki kewenangan!");
+    }
+}
     //else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
@@ -1315,15 +1321,7 @@ function showSP2DPopup(tr){
 };
 }
 
-// contoh panggil saat klik tombol SP2D
-document.getElementById("dataTableBody").addEventListener("click", function(e){
-    const btn = e.target.closest("button");
-    if(!btn) return;
-    if(btn.classList.contains("btn-sp2d")){
-        const tr = btn.closest("tr");
-        showSP2DPopup(tr);
-    }
-});
+
   
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
