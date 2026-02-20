@@ -785,6 +785,40 @@ th{
     font-weight:600;
     color:#1e293b;
 }
+
+/* ===== FIX FINAL LAYOUT BELANJA ===== */
+
+.belanja-detail{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-top:10px;
+    gap:16px;
+}
+
+.persen{
+    font-size:20px;
+    font-weight:700;
+    color:#2563eb;
+    min-width:60px;
+    text-align:left;
+}
+
+.belanja-detail .angka{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    font-size:12px;          /* label */
+    color:#64748b;
+    text-align:right;        /* SEMUA KE KANAN */
+}
+
+.belanja-detail .angka b{
+    font-size:14px;          /* nominal */
+    font-weight:600;
+    color:#1e293b;
+}
     
 </style>
 </head>
@@ -1370,24 +1404,7 @@ function closeModal(){
     document.getElementById("belanjaModal").style.display = "none";
 }
 
-const list = document.getElementById("topPerjadinList");
-list.innerHTML = "";
 
-(res.topPerjadin || []).forEach((item, index) => {
-
-  const medal =
-    index === 0 ? "🥇" :
-    index === 1 ? "🥈" :
-    index === 2 ? "🥉" :
-    "🏅";
-
-  list.innerHTML += `
-    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-        <div>${medal} ${item.nama}</div>
-        <div><b>${item.jumlah}</b></div>
-    </div>
-  `;
-});
     
 // panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
