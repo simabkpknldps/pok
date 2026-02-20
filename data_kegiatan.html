@@ -1117,12 +1117,18 @@ function showBayarPopup(tr) {
 
         const rows = document.querySelectorAll("#tblPelaksana tbody tr");
         const tblData = [];
-
+        
         rows.forEach(r => {
             const id = r.dataset.id;
             const pelaksana = r.cells[1].textContent;
-            tblData.push({ id, pelaksana });
+            tblData.push({ 
+                id, 
+                pelaksana, 
+                uraian: uraianValue,  // tambahkan uraian di tiap row
+                tglBayar: tglBayar    // tambahkan tglBayar di tiap row
+            });
         });
+
 
         showOverlay("Menyimpan pembayaran...");
 
@@ -1131,8 +1137,6 @@ function showBayarPopup(tr) {
             body: JSON.stringify({
                 action: "updateBayarMultiple",
                 kantor: sessionStorage.getItem("kantor"),
-                uraian: uraianValue,
-                tglBayar: tglBayar,
                 data: tblData
             })
         })
