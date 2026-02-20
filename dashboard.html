@@ -1160,7 +1160,9 @@ if(Array.isArray(data.topPerjadin)){
         tr.innerHTML = `
             <td style="text-align:center;">${index+1}</td>
             <td>${row.nama}</td>
-            <td style="text-align:right;">${Number(row.total).toLocaleString("id-ID")}</td>
+            <td style="text-align:right;">
+                    ${(Number(row.jumlah) || 0).toLocaleString("id-ID")}
+                </td>
         `;
 
         tbodyTop5.appendChild(tr);
