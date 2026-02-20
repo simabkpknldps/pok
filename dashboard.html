@@ -698,13 +698,13 @@ belanja-detail .angka{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    font-size:12px;
+    font-size:10px;
     line-height:1.8;
     color:#64748b;
 }
 
 .belanja-detail .angka b{
-    font-size:14px;
+    font-size:12px;
     font-weight:600;
     color:#2563eb;
     text-align:right;
@@ -715,6 +715,10 @@ belanja-detail .angka{
     font-size:18px;      /* sedikit lebih kecil dari sebelumnya */
     font-weight:700;
     color:#2563eb;
+}
+
+.belanja-detail{
+    margin-top:6px;
 }
     
 </style>
@@ -804,7 +808,7 @@ belanja-detail .angka{
     </div>
 
     <!-- CARD BELANJA -->
-<div class="belanja-card">
+<div class="belanja-card" onclick="openModal('barang')" style="cursor:pointer;">
 
     <h3>Belanja Barang</h3>
     <div class="progress-bar">
@@ -1318,8 +1322,6 @@ document.addEventListener("DOMContentLoaded", async function(){
 
 </script>
 
-<div class="belanja-card" onclick="openModal('barang')">
-<div class="belanja-card" onclick="openModal('modal')">
     
     <!-- POPUP MODAL -->
 <div id="belanjaModal" class="modal-overlay">
