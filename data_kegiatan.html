@@ -179,25 +179,6 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   padding: 8px 10px;
 }
 
-  /* overlay popup */
-  #sp2dOverlay {
-      display: none;
-      position: fixed;
-      top:0; left:0; right:0; bottom:0;
-      background: rgba(0,0,0,0.5);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-  }
-  #sp2dPopup {
-      background: white;
-      padding: 20px;
-      border-radius: 6px;
-      max-width: 700px;
-      width: 90%;
-  }
-  #sp2dTable th, #sp2dTable td { padding:6px; border:1px solid #ccc; }
-  #sp2dTable { border-collapse: collapse; width: 100%; margin-top: 10px; }
   
 </style>
 </head>
@@ -483,10 +464,7 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     else if(btn.classList.contains("btn-bayar")){
         showBayarPopup(tr);
     }
-    else if(btn.classList.contains("btn-sp2d")) {
-        showSP2DPopup(tr); // panggil popup SP2D
-}
-
+    else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
 // contoh fungsi popup edit
@@ -1209,86 +1187,7 @@ function populateDatalist(){
     });
 }
 
- /// --- Fungsi showSP2DPopup ---
-// Fungsi tampilkan popup SP2D
-  function showSP2DPopup(rowData) {
-      const overlay = document.getElementById("sp2dOverlay");
-      overlay.style.display = "flex";
-
-      const tbody = document.querySelector("#sp2dTable tbody");
-      tbody.innerHTML = ""; // reset tabel
-
-      const row = document.createElement("tr");
-      row.innerHTML = `
-          <td>${rowData.id}</td>
-          <td>${rowData.uraian}</td>
-          <td>${rowData.nama}</td>
-          <td>${rowData.tujuan}</td>
-          <td style="text-align:right;">0</td>
-          <td style="text-align:center;">
-              <button style="border:none; background:none; cursor:pointer; color:red;">
-                  <i class="fa-solid fa-trash"></i>
-              </button>
-          </td>
-      `;
-      row.querySelector("button").onclick = () => row.remove();
-      tbody.appendChild(row);
-
-      // fokus ke input SPM
-      document.getElementById("spmInput").focus();
-  }
-
-  // Event delegation untuk tombol SP2D
-  document.getElementById("dataTableBody").addEventListener("click", function(e){
-      const btn = e.target.closest(".btn-sp2d");
-      if(!btn) return;
-
-      const tr = btn.closest("tr");
-      const rowData = {
-          id: tr.dataset.id,
-          uraian: tr.cells[1].textContent,
-          nama: tr.cells[2].textContent,
-          tujuan: tr.cells[3].textContent
-      };
-      showSP2DPopup(rowData);
-  });
-
-  // Tombol Batal
-  document.getElementById("sp2dCancel").onclick = () => {
-      document.getElementById("sp2dOverlay").style.display = "none";
-  };
-
-  // Tombol Simpan (sementara cuma alert)
-  document.getElementById("sp2dSave").onclick = () => {
-      const spm = document.getElementById("spmInput").value.padStart(4,'0');
-      const tgl = document.getElementById("tglSP2DInput").value;
-      const rows = [];
-      document.querySelectorAll("#sp2dTable tbody tr").forEach(tr=>{
-          rows.push({
-              id: tr.cells[0].textContent,
-              uraian: tr.cells[1].textContent,
-              nama: tr.cells[2].textContent,
-              tujuan: tr.cells[3].textContent,
-              jumlah: tr.cells[4].textContent
-          });
-      });
-      console.log("SP2D Data", {spm, tgl, rows});
-      alert("SP2D akan dikirim ke GAS nanti (cek console).");
-  };
-
-  // Search dalam tabel
-  document.getElementById("sp2dSearch").addEventListener("input", function(){
-      const val = this.value.toLowerCase();
-      document.querySelectorAll("#sp2dTable tbody tr").forEach(tr=>{
-          const text = tr.textContent.toLowerCase();
-          tr.style.display = text.includes(val) ? "" : "none";
-      });
-  });
-
-  // format input SPM saat lose focus
-  document.getElementById("spmInput").addEventListener("blur", function(){
-      if(this.value) this.value = this.value.padStart(4,'0');
-  });
+ 
 
 
 </script>
@@ -1317,35 +1216,5 @@ function populateDatalist(){
         ⏳ Menyimpan data...
     </div>
 </div>
-
-<table border="1" id="dataTable">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Uraian</th>
-      <th>Nama</th>
-      <th>Tujuan</th>
-      <th>Aksi</th>
-    </tr>
-  </thead>
-  <tbody id="dataTableBody">
-    <tr data-id="001">
-      <td>001</td>
-      <td>Belanja Alat Tulis</td>
-      <td>Budi</td>
-      <td>Kantor A</td>
-      <td><button class="btn-sp2d">SP2D</button></td>
-    </tr>
-    <tr data-id="002">
-      <td>002</td>
-      <td>Belanja ATK</td>
-      <td>Siti</td>
-      <td>Kantor B</td>
-      <td><button class="btn-sp2d">SP2D</button></td>
-    </tr>
-  </tbody>
-</table>
-
-  
 </body>
 </html>
