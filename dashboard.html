@@ -985,12 +985,27 @@ async function loadDashboard(){
 
         // Update tabel hari ini
         const tbody = document.querySelector(".chart-box tbody");
-        tbody.innerHTML = "";
-        (data.todayRows || []).forEach(row=>{
-            const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
-            tbody.appendChild(tr);
-        });
+tbody.innerHTML = "";
+
+const todayRows = data.todayRows || [];
+
+if(todayRows.length === 0){
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 3;
+    td.textContent = "Tidak ada kegiatan hari ini";
+    td.style.textAlign = "center";
+    td.style.color = "#94a3b8";
+    td.style.fontStyle = "italic";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+} else {
+    todayRows.forEach(row=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
+        tbody.appendChild(tr);
+    });
+}
 
     }catch(err){
         console.error(err);
@@ -1029,12 +1044,27 @@ async function updateDashboard(){
 
     // Update tabel hari ini
     const tbody = document.querySelector(".chart-box tbody");
-    tbody.innerHTML = "";
-    (data.todayRows || []).forEach(row=>{
+tbody.innerHTML = "";
+
+const todayRows = data.todayRows || [];
+
+if(todayRows.length === 0){
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 3;
+    td.textContent = "Tidak ada kegiatan hari ini";
+    td.style.textAlign = "center";
+    td.style.color = "#94a3b8";
+    td.style.fontStyle = "italic";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+} else {
+    todayRows.forEach(row=>{
         const tr = document.createElement("tr");
         tr.innerHTML = `<td>${row.uraian || ""}</td><td>${row.pelaksana || ""}</td><td>${row.tujuan || ""}</td>`;
         tbody.appendChild(tr);
     });
+}
 
 
 
