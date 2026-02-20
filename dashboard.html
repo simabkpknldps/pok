@@ -917,27 +917,15 @@ th{
 document.addEventListener("DOMContentLoaded", function(){
 
     const token = sessionStorage.getItem("token");
+    const nama = sessionStorage.getItem("nama");
 
-    if(!token){
+    if(!token || !nama){
         window.location.replace("index.html");
         return;
     }
-    const nama = sessionStorage.getItem("nama");
-    const admin = sessionStorage.getItem("admin");
-    
-    if(!nama){
-        window.location.replace("index.html");
-    } else {
-        document.getElementById("namaUser").textContent = nama;
-    }
 
-    const token = sessionStorage.getItem("token");
-
-    if(!token){
-        window.location.href = "login.html";
-    }
-   
-    });
+    document.getElementById("namaUser").textContent = nama;
+});
 
 
 
