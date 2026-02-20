@@ -757,6 +757,34 @@ th{
     color:#2563eb;
     min-width:60px;
 }
+
+/* === CARD BELANJA SIMPLE === */
+
+.belanja-detail{
+    margin-top:12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.row-belanja{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:13px;
+    color:#475569;
+}
+
+.row-belanja span{
+    font-size:12px;
+    color:#64748b;
+}
+
+.row-belanja b{
+    font-size:14px;
+    font-weight:600;
+    color:#1e293b;
+}
     
 </style>
 </head>
@@ -980,7 +1008,7 @@ function logout(){
 }
 
 // URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycbznAbltMbyR5k4EdRQMUet0XQEcOwjTouH3j8He_cmZ3lAdOF9vTElUCDLXFEbnwAC1wA/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbxSIIIAJAARPFonS3okEndgDL9_aV_8fLK0CLquc2zXO8Og0firk0EiLdP_wz19fHBjuA/exec";
 
 async function loadDashboard(){
     showLoading(); // tampilkan overlay
@@ -1342,6 +1370,24 @@ function closeModal(){
     document.getElementById("belanjaModal").style.display = "none";
 }
 
+const list = document.getElementById("topPerjadinList");
+list.innerHTML = "";
+
+(res.topPerjadin || []).forEach((item, index) => {
+
+  const medal =
+    index === 0 ? "🥇" :
+    index === 1 ? "🥈" :
+    index === 2 ? "🥉" :
+    "🏅";
+
+  list.innerHTML += `
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <div>${medal} ${item.nama}</div>
+        <div><b>${item.jumlah}</b></div>
+    </div>
+  `;
+});
     
 // panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
