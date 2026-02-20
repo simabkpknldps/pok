@@ -859,6 +859,74 @@ th{
 .belanja-card hr{
     margin:10px 0;
 }
+
+/* ============================= */
+/* BELANJA CARD - CLEAN VERSION  */
+/* ============================= */
+
+.belanja-card{
+    padding:14px 16px;
+}
+
+.belanja-card h3{
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:6px;
+}
+
+/* progress wrapper */
+.progress-wrapper{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:8px;
+}
+
+.progress-bar{
+    flex:1;
+    height:6px;
+    background:#e2e8f0;
+    border-radius:6px;
+    overflow:hidden;
+}
+
+.progress-fill{
+    height:100%;
+    background:#2563eb;
+}
+
+.persen{
+    font-size:14px;
+    font-weight:600;
+    color:#2563eb;
+    min-width:50px;
+    text-align:right;
+}
+
+/* detail angka */
+.belanja-detail{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.belanja-detail .row{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+}
+
+.belanja-detail .row span:last-child{
+    font-weight:600;
+    font-size:13px;
+}
+
+/* divider */
+.belanja-card hr{
+    margin:10px 0;
+    border:none;
+    border-top:1px solid #e5e7eb;
+}
     
 </style>
 </head>
@@ -950,9 +1018,12 @@ th{
 <div class="belanja-card" onclick="openModal('barang')" style="cursor:pointer;">
 
     <h3>Belanja Barang</h3>
-    <div class="progress-bar">
-        <div class="progress-fill" id="barangProgress"></div>
+    <div class="progress-wrapper">
+        <div class="progress-bar">
+            <div class="progress-fill" id="barangProgress"></div>
+        </div>
     </div>
+    
     <div class="belanja-detail">
         <div class="persen" id="barangPersen">0%</div>
         <div class="angka">
