@@ -598,8 +598,8 @@ function showEditPopup(tr){
     .catch(err=>{
         hideOverlay();
         btn.disabled = false;
-        alert("Error koneksi");
-        console.error(err);
+        //alert("Error koneksi");
+        //console.error(err);
     });
 };
 }
@@ -840,7 +840,7 @@ function showPelaksanaPopup(tr){
     .catch(err=>{
         hideOverlay();
         document.getElementById("pelSave").disabled = false;
-        alert("Error koneksi");
+        //alert("Error koneksi");
     });
 
 };
@@ -1005,8 +1005,8 @@ function showLPTPopup(tr){
     .catch(err => {
         hideOverlay();
         document.getElementById("lptSave").disabled = false;
-        console.error(err);
-        alert("Error koneksi");
+        //console.error(err);
+        //alert("Error koneksi");
     });
 };
 }
@@ -1041,7 +1041,7 @@ function saveLPTPopup(idKegiatan){
     })
     .catch(err=>{
         console.error(err);
-        alert("Error koneksi");
+        //alert("Error koneksi");
     });
 }
 
