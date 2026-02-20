@@ -720,6 +720,43 @@ th{
 .belanja-detail{
     margin-top:6px;
 }
+
+/* ===== PERBAIKAN LAYOUT BELANJA ===== */
+
+.belanja-detail{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-top:10px;
+}
+
+.belanja-detail .angka{
+    display:flex;
+    flex-direction:column;   /* atas bawah */
+    gap:6px;
+    font-size:12px;          /* label */
+    color:#64748b;
+}
+
+.belanja-detail .angka div{
+    display:flex;
+    justify-content:space-between;
+    min-width:170px;
+}
+
+.belanja-detail .angka b{
+    font-size:14px;          /* nominal */
+    font-weight:600;
+    color:#2563eb;
+    text-align:right;
+}
+
+.persen{
+    font-size:20px;
+    font-weight:700;
+    color:#2563eb;
+    min-width:60px;
+}
     
 </style>
 </head>
