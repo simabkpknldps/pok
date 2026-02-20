@@ -942,25 +942,55 @@ function showLPTPopup(tr){
 
     document.getElementById("lptSave").onclick = () => {
 
-        const tanggal = document.getElementById("lptTanggal").value;
+    const tanggal = document.getElementById("lptTanggal").value;
 
-        const rows = document.querySelectorAll("#lptTableBody tr");
-        const dataLPT = [];
+    const rows = document.querySelectorAll("#lptTableBody tr");
+    const dataLPT = [];
 
-        rows.forEach(r => {
-            const id = r.cells[0].textContent;
-            const uraian = r.cells[1].textContent;
-            const pelaksana = r.cells[2].textContent;
-
-            dataLPT.push({ id, uraian, pelaksana });
+    rows.forEach(r => {
+        const id = r.cells[0].textContent;
+        dataLPT.push({
+            id: id,
+            lptDate: tanggal  // pakai tanggal dari input popup
         });
+    });
 
-        console.log("Tanggal LPT:", tanggal);
-        console.log("Data LPT:", dataLPT);
+    if(!tanggal){
+        alert("Tanggal LPT harus diisi!");
+        return;
+    }
 
-        overlay.remove();
-    };
-}
+    showOverlay("Menyimpan LPT...");
+    document.getElementById("lptSave").disabled = true;
+
+    fetch(urlGAS, {
+        method: "POST",
+        body: JSON.stringify({
+            action: "updateLPT",
+            kantor: sessionStorage.getItem("kantor"),
+            rows: dataLPT
+        })
+    })
+    .then(res => res.json())
+    .then(result => {
+        hideOverlay();
+        document.getElementById("lptSave").disabled = false;
+
+        if(result.status === "success"){
+            alert("Update LPT berhasil!");
+            overlay.remove();
+            loadData(false); // reload tabel utama
+        } else {
+            alert("Gagal update LPT: " + result.message);
+        }
+    })
+    .catch(err => {
+        hideOverlay();
+        document.getElementById("lptSave").disabled = false;
+        console.error(err);
+        alert("Error koneksi");
+    });
+};
 
 function updateLPTDates(data) {
   const sheetMap = {
