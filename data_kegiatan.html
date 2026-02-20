@@ -254,7 +254,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbyprphYwqjCykadfVWUrS2TPw0lrhpWEhGqpQLEC3GgPZ2qc-PsC-mzE8lTEZBY4P2K/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbx0RaX1aX6lX_S3sbZ1v03R3aorgZuI8vBa0iV91r1X-w4UUMrnfaY8fdNt2Tjfri_e/exec";
 
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
@@ -941,26 +941,41 @@ function showLPTPopup(tr){
     document.getElementById("lptCancel").onclick = () => overlay.remove();
 
     document.getElementById("lptSave").onclick = () => {
+    const rows = popup.querySelectorAll("tbody tr");
+    const dataToSend = [];
 
-        const tanggal = document.getElementById("lptTanggal").value;
+    rows.forEach(r => {
+        const id = r.dataset.id; // pastikan tiap tr di popup punya dataset.id
+        const lptDateInput = r.querySelector("input[type=date]");
+        const lptDate = lptDateInput.value ? lptDateInput.value : "";
+        dataToSend.push({id, lptDate});
+    });
 
-        const rows = document.querySelectorAll("#lptTableBody tr");
-        const dataLPT = [];
-
-        rows.forEach(r => {
-            const id = r.cells[0].textContent;
-            const uraian = r.cells[1].textContent;
-            const pelaksana = r.cells[2].textContent;
-
-            dataLPT.push({ id, uraian, pelaksana });
-        });
-
-        console.log("Tanggal LPT:", tanggal);
-        console.log("Data LPT:", dataLPT);
-
-        overlay.remove();
-    };
-}
+    showOverlay("Menyimpan LPT...");
+    fetch(urlGAS, {
+        method: "POST",
+        body: JSON.stringify({
+            action: "updateLPT",
+            kantor: sessionStorage.getItem("kantor"),
+            rows: dataToSend
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
+        hideOverlay();
+        if(res.status === "success"){
+            overlay.remove();
+            loadData(false); // reload table
+        } else {
+            alert("Gagal update LPT: "+res.message);
+        }
+    })
+    .catch(err => {
+        hideOverlay();
+        alert("Error koneksi");
+        console.error(err);
+    });
+};
 
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
