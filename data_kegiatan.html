@@ -463,8 +463,8 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     }
     else if(btn.classList.contains("btn-bayar")){
         showBayarPopup(tr);
-    else if(btn.classList.contains("btn-sp2d")){
-    showSP2DPopup(tr); // buat fungsi popup SP2D sendiri
+    }
+    //else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
 // contoh fungsi popup edit
@@ -1158,48 +1158,41 @@ function showBayarPopup(tr) {
     };
 }
 
-function showSP2DPopup(tr) {
-    const idKegiatan = tr.dataset.id;
-    const uraian = tr.cells[1].textContent; // kolom ke-2 tabel utama
+function showSP2DPopup(tr){
+    const allRows = document.querySelectorAll("#dataTableBody tr");
 
     // ===== Overlay =====
     const overlay = document.createElement("div");
-    overlay.style.cssText = `
-        position: fixed; inset: 0;
-        background: rgba(0,0,0,0.4);
-        display: flex; justify-content: center; align-items: center;
-        z-index: 9999;
-    `;
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
 
     // ===== Popup =====
     const popup = document.createElement("div");
     popup.style.cssText = `
-        background: #fff; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-        width: 600px; max-width: 95%; padding: 25px 20px;
-        display: flex; flex-direction: column; gap: 12px; max-height: 80vh; overflow:auto;
+        background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2);
+        width:800px; max-width:95%; padding:25px; display:flex; flex-direction:column;
+        gap:12px; max-height:90vh; overflow:auto;
     `;
 
     popup.innerHTML = `
-        <h3 style="text-align:center; color:#0369a1;">SP2D Kegiatan #${idKegiatan}</h3>
+        <h3 style="text-align:center; color:#0369a1;">SP2D Kegiatan</h3>
 
-        <!-- Nomor SPM dan Tgl SP2D sejajar -->
-        <div style="display:flex; gap:12px;">
-            <div style="flex:1; display:flex; flex-direction:column;">
-                <label>Nomor SPM</label>
-                <input type="text" id="spmNo" style="padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-            </div>
-            <div style="flex:1; display:flex; flex-direction:column;">
-                <label>Tgl SP2D</label>
-                <input type="date" id="sp2dTgl" style="padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-            </div>
-        </div>
+        <label>Nomor SPM</label>
+        <input type="text" id="spmNomor" placeholder="0000" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;" maxlength="4">
 
-        <label>Daftar Pelaksana / Jumlah</label>
-        <div style="max-height:220px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px;">
-            <table id="tblSP2D" style="width:100%; border-collapse:collapse; font-size:13px;">
+        <label>Tanggal SP2D</label>
+        <input type="date" id="tglSP2D" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+
+        <label>Cari di tabel</label>
+        <input type="text" id="sp2dSearch" placeholder="Cari..." style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:8px;">
+
+        <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:300px; overflow-y:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
                 <thead style="background:#f1f5f9; position:sticky; top:0;">
                     <tr>
-                        <th style="padding:6px;">Pelaksana Tugas</th>
+                        <th style="padding:6px;">ID Kegiatan</th>
+                        <th style="padding:6px;">Uraian / No ST</th>
+                        <th style="padding:6px;">Nama</th>
+                        <th style="padding:6px;">Tujuan</th>
                         <th style="padding:6px; text-align:right;">Jumlah</th>
                         <th style="padding:6px; text-align:center;">Aksi</th>
                     </tr>
@@ -1208,121 +1201,97 @@ function showSP2DPopup(tr) {
             </table>
         </div>
 
-        <!-- Total jumlah -->
-        <div style="display:flex; justify-content:flex-end; font-weight:600; margin-top:5px;">
-            Total: <span id="sp2dTotal" style="margin-left:8px;">0</span>
-        </div>
-
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
-            <button id="sp2dCancel"
-                style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
-            <button id="sp2dSave"
-                style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
+            <button id="sp2dCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
+            <button id="sp2dSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
         </div>
     `;
 
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    const tbody = popup.querySelector("#sp2dTableBody");
-    const totalEl = popup.querySelector("#sp2dTotal");
+    const tbody = document.getElementById("sp2dTableBody");
 
-    // ambil semua row dari tabel utama untuk uraian sama
-    const allRows = document.querySelectorAll("#dataTableBody tr");
-    allRows.forEach(r => {
-        if(r.cells[1].textContent === uraian){
-            const pelaksana = r.cells[2].textContent;
-            const jumlahText = r.cells[6].textContent.replace(/\./g,"");
-            const jumlah = Number(jumlahText) || 0;
+    // populate tabel dari tabel utama
+    allRows.forEach(row => {
+        const id = row.dataset.id; // kolom hidden
+        const uraian = row.cells[1].textContent;
+        const nama = row.cells[2].textContent;
+        const tujuan = row.cells[3].textContent;
+        const jumlah = row.cells[6].textContent;
 
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td style="padding:6px;">${pelaksana}</td>
-                <td style="padding:6px; text-align:right;">
-                    <input type="text" class="jumlah-input" value="${jumlah.toLocaleString('id-ID')}" 
-                        style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:6px; text-align:right;">
-                </td>
-                <td style="padding:6px; text-align:center;">
-                    <button style="border:none; background:none; cursor:pointer; color:red;">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            // hapus row
-            row.querySelector("button").onclick = () => {
-                row.remove();
-                updateTotal();
-            };
-
-            // update total saat input berubah
-            row.querySelector(".jumlah-input").addEventListener("input", function(){
-                let value = this.value.replace(/\D/g, "");
-                this.value = value ? Number(value).toLocaleString("id-ID") : "";
-                updateTotal();
-            });
-
-            tbody.appendChild(row);
-        }
+        const newRow = document.createElement("tr");
+        newRow.innerHTML = `
+            <td style="padding:6px;">${id}</td>
+            <td style="padding:6px;">${uraian}</td>
+            <td style="padding:6px;">${nama}</td>
+            <td style="padding:6px;">${tujuan}</td>
+            <td style="padding:6px; text-align:right;">${jumlah}</td>
+            <td style="padding:6px; text-align:center;">
+                <button style="border:none; background:none; cursor:pointer; color:red;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+        newRow.querySelector("button").onclick = () => newRow.remove();
+        tbody.appendChild(newRow);
     });
-
-    // fungsi update total
-    function updateTotal(){
-        let total = 0;
-        tbody.querySelectorAll(".jumlah-input").forEach(inp=>{
-            const val = Number(inp.value.replace(/\./g,"")) || 0;
-            total += val;
-        });
-        totalEl.textContent = total.toLocaleString("id-ID");
-    }
-
-    updateTotal(); // hitung awal
 
     // tombol batal
     document.getElementById("sp2dCancel").onclick = () => overlay.remove();
 
+    // search tabel
+    document.getElementById("sp2dSearch").addEventListener("input", function(){
+        const val = this.value.toLowerCase();
+        tbody.querySelectorAll("tr").forEach(tr=>{
+            const match = Array.from(tr.cells).some(td => td.textContent.toLowerCase().includes(val));
+            tr.style.display = match ? "" : "none";
+        });
+    });
+
+    // format nomor SPM 4 digit saat blur
+    document.getElementById("spmNomor").addEventListener("blur", function(){
+        const val = parseInt(this.value) || 0;
+        this.value = String(val).padStart(4,"0");
+    });
+
     // tombol simpan
     document.getElementById("sp2dSave").onclick = () => {
-        const spmNo = document.getElementById("spmNo").value.trim();
-        const sp2dTgl = document.getElementById("sp2dTgl").value;
-        if(!spmNo || !sp2dTgl){
-            alert("Nomor SPM dan Tgl SP2D wajib diisi!");
+        const spmNomor = document.getElementById("spmNomor").value;
+        const tglSP2D = document.getElementById("tglSP2D").value;
+
+        if(!spmNomor || !tglSP2D){
+            alert("Nomor SPM dan Tanggal SP2D wajib diisi!");
             return;
         }
 
         const rowsData = [];
         tbody.querySelectorAll("tr").forEach(r=>{
-            const pelaksana = r.cells[0].textContent;
-            const jumlah = Number(r.cells[1].querySelector("input").value.replace(/\./g,"")) || 0;
-            rowsData.push({pelaksana, jumlah});
+            rowsData.push({
+                id: r.cells[0].textContent,
+                uraian: r.cells[1].textContent,
+                nama: r.cells[2].textContent,
+                tujuan: r.cells[3].textContent,
+                jumlah: r.cells[4].textContent
+            });
         });
 
-        showOverlay("Menyimpan SP2D...");
-        fetch(urlGAS, {
-            method: "POST",
-            body: JSON.stringify({
-                action: "saveSP2D",
-                kantor: sessionStorage.getItem("kantor"),
-                idKegiatan,
-                spmNo,
-                sp2dTgl,
-                rows: rowsData
-            })
-        })
-        .then(res=>res.json())
-        .then(result=>{
-            hideOverlay();
-            if(result.status==="success"){
-                overlay.remove();
-                loadData(false);
-            } else alert("Gagal: "+result.message);
-        })
-        .catch(err=>{
-            hideOverlay();
-            console.error(err);
-            alert("Error koneksi");
-        });
+        console.log({spmNomor, tglSP2D, rowsData});
+        // nanti disambungkan ke GAS
+
+        overlay.remove();
     };
 }
+
+// contoh panggil saat klik tombol SP2D
+document.getElementById("dataTableBody").addEventListener("click", function(e){
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    if(btn.classList.contains("btn-sp2d")){
+        const tr = btn.closest("tr");
+        showSP2DPopup(tr);
+    }
+});
   
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
