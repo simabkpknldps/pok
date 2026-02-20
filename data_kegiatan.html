@@ -179,6 +179,25 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   padding: 8px 10px;
 }
 
+  /* overlay popup */
+  #sp2dOverlay {
+      display: none;
+      position: fixed;
+      top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+  }
+  #sp2dPopup {
+      background: white;
+      padding: 20px;
+      border-radius: 6px;
+      max-width: 700px;
+      width: 90%;
+  }
+  #sp2dTable th, #sp2dTable td { padding:6px; border:1px solid #ccc; }
+  #sp2dTable { border-collapse: collapse; width: 100%; margin-top: 10px; }
   
 </style>
 </head>
@@ -1294,5 +1313,35 @@ function populateDatalist(){
         ⏳ Menyimpan data...
     </div>
 </div>
+
+<table border="1" id="dataTable">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Uraian</th>
+      <th>Nama</th>
+      <th>Tujuan</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody id="dataTableBody">
+    <tr data-id="001">
+      <td>001</td>
+      <td>Belanja Alat Tulis</td>
+      <td>Budi</td>
+      <td>Kantor A</td>
+      <td><button class="btn-sp2d">SP2D</button></td>
+    </tr>
+    <tr data-id="002">
+      <td>002</td>
+      <td>Belanja ATK</td>
+      <td>Siti</td>
+      <td>Kantor B</td>
+      <td><button class="btn-sp2d">SP2D</button></td>
+    </tr>
+  </tbody>
+</table>
+
+  
 </body>
 </html>
