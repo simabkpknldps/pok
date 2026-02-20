@@ -916,16 +916,22 @@ th{
 
 document.addEventListener("DOMContentLoaded", function(){
 
-    const token = sessionStorage.getItem("token");
     const nama = sessionStorage.getItem("nama");
-
-    if(!token || !nama){
+    const admin = sessionStorage.getItem("admin");
+    
+    if(!nama){
         window.location.replace("index.html");
-        return;
+    } else {
+        document.getElementById("namaUser").textContent = nama;
     }
 
-    document.getElementById("namaUser").textContent = nama;
-});
+    const token = sessionStorage.getItem("token");
+
+    if(!token){
+        window.location.href = "login.html";
+    }
+   
+    });
 
 
 
@@ -948,7 +954,7 @@ function logout(){
 }
 
 // URL GAS (pastikan deploy web app publik)
-const urlGAS="https://script.google.com/macros/s/AKfycby9-ia9pYcrY7bAjYm8t1VEpAG3bj1P2whjIR3R_n0_X1ZbXx7eMMOfUhWWCP9QqYlatQ/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbws0xHjfkakvYRfZGqqFcLHCIKCQQ326LwkzwGpFD1bRNHD4vWkc13w27Ae9YTsRhO2Ww/exec";
 
 async function loadDashboard(){
     showLoading(); // tampilkan overlay
@@ -962,9 +968,7 @@ async function loadDashboard(){
         }
 
         // kirim parameter kantor ke GAS
-        const token = sessionStorage.getItem("token");
-
-        const res = await fetch(`${urlGAS}?kantor=${kantor}&token=${token}`);
+        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
         if(data.status && data.status !== "success"){
@@ -1013,9 +1017,7 @@ async function updateDashboard(){
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor) return;
 
-    const token = sessionStorage.getItem("token");
-
-    const res = await fetch(`${urlGAS}?kantor=${kantor}&token=${token}`);
+    const res = await fetch(`${urlGAS}?kantor=${kantor}`);
     const data = await res.json();
 
     // Update card dashboard
@@ -1211,9 +1213,7 @@ async function openModal(cardType){
     showLoading();
 
     try {
-        const token = sessionStorage.getItem("token");
-
-        const res = await fetch(`${urlGAS}?kantor=${kantor}&token=${token}`);
+        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
         if(!data || data.status !== "success" || !data.dashboardDetail){
