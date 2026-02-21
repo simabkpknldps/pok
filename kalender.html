@@ -1255,7 +1255,7 @@ function hideLoading() {
     
 // panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
-document.getElementById("namaUser").textContent = nama;
+
     showLoading();
 
     await loadCalendarData();
@@ -1265,7 +1265,9 @@ document.getElementById("namaUser").textContent = nama;
     hideLoading();
 
 });
-   
+
+document.getElementById("namaUser").textContent = nama;
+    
 // ===== AUTO REFRESH SETIAP 1 MENIT =====
 setInterval(async function(){
 
