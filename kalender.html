@@ -1255,7 +1255,7 @@ function hideLoading() {
     
 // panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
-
+document.getElementById("namaUser").textContent = nama;
     showLoading();
 
     await loadCalendarData();
