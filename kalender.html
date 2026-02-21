@@ -1266,7 +1266,15 @@ document.addEventListener("DOMContentLoaded", async function(){
 
 });
    
+// ===== AUTO REFRESH SETIAP 1 MENIT =====
+setInterval(async function(){
 
+    console.log("Auto refresh kalender...");
+
+    await loadCalendarData();
+    renderCalendar();
+
+}, 60000); // 60000 ms = 1 menit
 </script>
 
     
