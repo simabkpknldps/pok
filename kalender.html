@@ -815,6 +815,50 @@ th{
 .calendar-table td {
     height: auto; /* atau 80px kalau ingin tetap fix */
 }
+
+.chart-box {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size:14px;
+    text-align:center;
+    display: table; /* pastikan table default, jangan flex */
+}
+
+.calendar-table thead {
+    display: table-header-group;
+}
+
+.calendar-table tbody {
+    display: table-row-group;
+}
+
+.calendar-table tr {
+    display: table-row;
+}
+
+.calendar-table td {
+    border: 1px solid #e5e7eb;
+    position: relative;
+    padding: 8px;
+    height: 100px; /* lebih tinggi */
+    vertical-align: top;
+}
+
+.calendar-table td .day-number {
+    font-size: 16px; /* lebih besar */
+}
+
+.calendar-event {
+    font-size: 13px; /* sedikit lebih besar */
+    padding: 3px 6px;
+}
     
 </style>
 </head>
