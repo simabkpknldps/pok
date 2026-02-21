@@ -992,6 +992,10 @@ th{
             </tbody>
         </table>
     </div>
+
+        <div style="text-align:center; margin-bottom:10px;">
+    <span id="calendarMonth"></span>
+</div>
 </div>
 
 <!-- FOOTER -->
@@ -1069,7 +1073,20 @@ function renderCalendar(){
     }
 }
 
+initMonthYearDropdowns();
+renderCalendar();  // <-- panggil ini supaya kalender muncul
 
+function getEventsForDay(day, month, year){
+    // Contoh dummy: buat event random tiap tanggal 5 dan 15
+    const events = [];
+    if(day === 5){
+        events.push({title:"Meeting", color:"blue"});
+    }
+    if(day === 15){
+        events.push({title:"Deadline", color:"red"});
+    }
+    return events;
+}
 
 function goDashboard(){ window.location.href="dashboard.html"; }
 function goPOK(){ window.location.href="data_pok.html"; }
