@@ -825,9 +825,10 @@ th{
 
         <!-- Tambahkan link di bawah tabel -->
             <div class="calendar-link">
-                <a href="kalender.html" style="text-decoration:none; font-weight:600; color:#2563eb;">
-                    Lihat Kalender &rarr;
-                </a>
+                <button onclick="goKalender()" 
+                    style="background:none; border:none; font-weight:600; color:#2563eb; cursor:pointer;">
+                    Lihat Kalender →
+                </button>
             </div>
         
     </div>
@@ -983,6 +984,18 @@ function goKegiatan(){
     window.location.href = "data_kegiatan.html";
 }
 
+function goKalender() {
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+
+    if (!kantor) {
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+
+    // Tidak perlu kirim apa-apa, sessionStorage tetap terbaca di halaman berikutnya
+    window.location.href = "kalender.html";
+}
     
 function logout(){
     sessionStorage.clear();
