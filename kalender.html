@@ -1009,9 +1009,7 @@ th{
         </table>
     </div>
 
-        <div style="text-align:center; margin-bottom:10px;">
-    <span id="calendarMonth"></span>
-</div>
+        
 </div>
 
 <!-- FOOTER -->
@@ -1061,8 +1059,6 @@ function renderCalendar(){
     const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-
-    document.getElementById("calendarMonth").textContent = `${monthNames[month]} ${year}`;
 
     const firstDay = new Date(year, month, 1).getDay(); // 0=minggu
     const lastDate = new Date(year, month+1, 0).getDate();
@@ -1130,7 +1126,7 @@ function getEventsForDay(day, month, year){
     if(!calendarData[key]) return [];
 
     const items = calendarData[key];
-    const maxShow = 3;
+    const maxShow = 2;
     const events = [];
 
     items.slice(0, maxShow).forEach(item=>{
@@ -1142,14 +1138,14 @@ function getEventsForDay(day, month, year){
 
         events.push({
             title: title,
-            color: "blue"
+            color: "green"
         });
     });
 
     if(items.length > maxShow){
         events.push({
             title: "+" + (items.length - maxShow),
-            color: "purple"
+            color: "yellow"
         });
     }
 
