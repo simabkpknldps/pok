@@ -729,6 +729,55 @@ th{
 .topbar-right .fa-calendar {
     display: none;
 }
+
+.calendar-table{
+    width:100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size:14px;
+    text-align:center;
+}
+
+.calendar-table th{
+    background:#f1f5f9;
+    padding:10px 0;
+    font-weight:600;
+}
+
+.calendar-table td{
+    height:80px;
+    vertical-align:top;
+    border:1px solid #e5e7eb;
+    padding:4px;
+    position:relative;
+}
+
+.calendar-table td .day-number{
+    position:absolute;
+    top:4px;
+    left:4px;
+    font-weight:600;
+    font-size:13px;
+}
+
+.calendar-event{
+    display:block;
+    margin-top:20px;
+    padding:2px 4px;
+    border-radius:6px;
+    font-size:12px;
+    color:#fff;
+    text-align:left;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.event-blue{ background:#3b82f6; }
+.event-green{ background:#22c55e; }
+.event-orange{ background:#f97316; }
+.event-red{ background:#ef4444; }
+.event-purple{ background:#a78bfa; }
     
 </style>
 </head>
@@ -784,124 +833,41 @@ th{
     </div>
 
     <div class="content">
-        <div class="cards">
-            <div class="card" id="cardTotal"><h3>Total Kegiatan</h3><p>0</p></div>
-            <div class="card" id="cardSelesai"><h3>Selesai</h3><p>0</p></div>
-            <div class="card" id="cardTerbayar"><h3>Terbayar</h3><p>0</p></div>
-            <div class="card" id="cardLPT"><h3>LPT</h3><p>0</p></div>
-            <div class="card" id="cardProses"><h3>Dalam Proses</h3><p>0</p></div>
-        </div>
+    <div class="page-header">
+        <h2>Dashboard SiMAB</h2>
+        <p>Kalender kegiatan bulan ini</p>
+    </div>
 
+    <div class="cards">
+        <div class="card" id="cardTotal"><h3>Total Kegiatan</h3><p>0</p></div>
+        <div class="card" id="cardSelesai"><h3>Selesai</h3><p>0</p></div>
+        <div class="card" id="cardTerbayar"><h3>Terbayar</h3><p>0</p></div>
+        <div class="card" id="cardLPT"><h3>LPT</h3><p>0</p></div>
+        <div class="card" id="cardProses"><h3>Dalam Proses</h3><p>0</p></div>
+    </div>
 
-        <div class="dashboard-grid">
-
-    <!-- CARD 1 : KEGIATAN HARI INI -->
     <div class="chart-box">
-        <h3 style="margin-bottom:15px;">Kegiatan Hari Ini</h3>
-        <table>
+        <div class="calendar-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <button onclick="prevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
+            <h3 id="calendarMonth">Februari 2026</h3>
+            <button onclick="nextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <table class="calendar-table">
             <thead>
                 <tr>
-                    <th>Uraian / No ST</th>
-                    <th>Pelaksana Tugas</th>
-                    <th>Tujuan</th>
+                    <th>Minggu</th>
+                    <th>Senin</th>
+                    <th>Selasa</th>
+                    <th>Rabu</th>
+                    <th>Kamis</th>
+                    <th>Jumat</th>
+                    <th>Sabtu</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td colspan="3" style="text-align:center;color:#94a3b8;">
-                        Belum ada kegiatan hari ini
-                    </td>
-                </tr>
+            <tbody id="calendarBody">
+                <!-- kalender akan di-generate JS -->
             </tbody>
         </table>
-    </div>
-
-    <!-- CARD BELANJA -->
-<div class="belanja-card" onclick="openModal('barang')" style="cursor:pointer;">
-
-    <h3>Belanja Barang</h3>
-    
-    <div class="progress-bar">
-            <div class="progress-fill" id="barangProgress"></div>
-        </div>
-    <div class="belanja-detail">
-        <div class="persen" id="barangPersen">0%</div>
-        <div class="angka">
-            Realisasi: <b id="barangRealisasi">0</b><br>
-            Sisa: <b id="barangSisa">0</b><br>
-            Pagu: <b id="barangPagu">0</b>
-        </div>
-    </div>
-
-    <hr style="margin:16px 0; border:none; border-top:1px solid #e5e7eb;">
-
-    <h3>Belanja Modal</h3>
-    <div class="progress-bar">
-        <div class="progress-fill" id="modalProgress"></div>
-    </div>
-    <div class="belanja-detail">
-        <div class="persen" id="modalPersen">0%</div>
-        <div class="angka">
-            Realisasi: <b id="modalRealisasi">0</b><br>
-            Sisa: <b id="modalSisa">0</b><br>
-            Pagu: <b id="modalPagu">0</b>
-        </div>
-    </div>
-
-</div>
-
-
-<!-- CARD 3 : TOP 5 PERJADIN -->
-<div class="belanja-card">
-
-    <h3>Top 5 Perjadin</h3>
-
-    <table id="top5Table" style="width:100%; font-size:13px;">
-        <thead>
-            <tr>
-                <th style="width:40px;">No</th>
-                <th>Pelaksana</th>
-                <th style="text-align:right;">Total</th>
-            </tr>
-        </thead>
-        <tbody id="top5Body">
-            <tr>
-                <td colspan="3" style="text-align:center;color:#94a3b8;">
-                    Memuat data...
-                </td>
-            </tr>
-        </tbody>
-    </table>
-
-</div>
-
-
-
-
-            <!-- LAYER 3 -->
-<div class="dashboard-grid-full">
-
-    <!-- CARD REKAP BULANAN -->
-    <div class="chart-box">
-    <h3 style="margin-bottom:15px;">Monitoring Maksimum Pencairan (MP) PNBP</h3>
-
-    <table id="monitoringMPTable">
-        <thead></thead>
-        <tbody></tbody>
-        <tfoot></tfoot>
-    </table>
-
-    <div class="belanja-footnote">
-        <em>*data berdasarkan SP2D</em>
-    </div>
-</div>
-
-
-</div>
-
-
-</div>
-
     </div>
 </div>
 
@@ -916,8 +882,73 @@ th{
 
     
 <script>
-    
 
+let currentDate = new Date();
+
+function renderCalendar(){
+    const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    document.getElementById("calendarMonth").textContent = `${monthNames[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1).getDay(); // 0=minggu
+    const lastDate = new Date(year, month+1, 0).getDate();
+
+    const tbody = document.getElementById("calendarBody");
+    tbody.innerHTML = "";
+
+    let day = 1 - firstDay; // mulai dari sel kosong
+    for(let week=0; week<6; week++){
+        const tr = document.createElement("tr");
+        for(let d=0; d<7; d++){
+            const td = document.createElement("td");
+            if(day>0 && day<=lastDate){
+                td.innerHTML = `<span class="day-number">${day}</span>`;
+                // tambahkan contoh event
+                const events = getEventsForDay(day, month+1, year);
+                events.forEach(ev=>{
+                    const span = document.createElement("span");
+                    span.className = `calendar-event event-${ev.color}`;
+                    span.textContent = ev.title;
+                    td.appendChild(span);
+                });
+            }
+            tr.appendChild(td);
+            day++;
+        }
+        tbody.appendChild(tr);
+    }
+}
+
+function prevMonth(){
+    currentDate.setMonth(currentDate.getMonth()-1);
+    renderCalendar();
+}
+
+function nextMonth(){
+    currentDate.setMonth(currentDate.getMonth()+1);
+    renderCalendar();
+}
+
+// Contoh data event
+function getEventsForDay(day, month, year){
+    const events = [
+        {date:"2026-05-01", title:"Kegiatan A", color:"blue"},
+        {date:"2026-05-02", title:"Kegiatan B", color:"green"},
+        {date:"2026-05-03", title:"Kegiatan C", color:"orange"},
+        {date:"2026-05-11", title:"Kegiatan D", color:"red"},
+        {date:"2026-05-14", title:"Kegiatan E", color:"purple"}
+    ];
+    return events.filter(ev=>{
+        const d = new Date(ev.date);
+        return d.getDate()===day && (d.getMonth()+1)===month && d.getFullYear()===year;
+    });
+}
+
+// inisialisasi
+renderCalendar();
+    
 document.addEventListener("DOMContentLoaded", function(){
 
     const nama = sessionStorage.getItem("nama");
@@ -932,7 +963,7 @@ document.addEventListener("DOMContentLoaded", function(){
     const token = sessionStorage.getItem("token");
 
     if(!token){
-        window.location.href = "login.html";
+        window.location.href = "index.html";
     }
    
     });
