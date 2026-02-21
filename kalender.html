@@ -786,12 +786,12 @@ th{
 }
 
 .calendar-table tbody {
-    flex: 1 1 auto;      /* isi sisa tinggi chart-box */
-    display: grid;       /* grid untuk 6 baris minggu */
-    grid-template-rows: repeat(6, 1fr); /* 6 minggu, tinggi sama */
+    display: table-row-group; /* default */
+    flex: unset;              /* hilangkan flex/grid */
+    grid-template-rows: unset;
 }
 .calendar-table tr {
-    display: contents;   /* agar grid berlaku */
+    display: table-row;       /* default */
 }
 
 .calendar-table td {
@@ -800,6 +800,20 @@ th{
     padding: 4px;
     overflow: hidden;
     height: 100%;        /* supaya td ikut tinggi row */
+}
+
+.chart-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-table {
+    flex: 1;
+    width: 100%;
+}
+
+.calendar-table td {
+    height: auto; /* atau 80px kalau ingin tetap fix */
 }
     
 </style>
@@ -861,6 +875,7 @@ th{
 
     <div class="chart-box">
         <div class="calendar-header" style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+            <span id="calendarMonth" style="font-weight:600;"></span>
             <label>
                 Bulan:
                 <select id="monthSelect" onchange="changeMonthYear()"></select>
