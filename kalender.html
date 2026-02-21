@@ -900,6 +900,18 @@ th{
     border-color:#3b82f6;
     box-shadow:0 0 0 2px rgba(59,130,246,0.3);
 }
+
+.calendar-table {
+    display: table; /* pastikan table default */
+    flex: unset;    /* hapus flex/grid */
+}
+.calendar-table tbody {
+    display: table-row-group;
+    flex: unset;
+}
+.calendar-table tr {
+    display: table-row;
+}
     
 </style>
 </head>
@@ -1075,6 +1087,8 @@ function renderCalendar(){
 
 initMonthYearDropdowns();
 renderCalendar();  // <-- panggil ini supaya kalender muncul
+monthSelect.addEventListener("change", changeMonthYear);
+yearSelect.addEventListener("change", changeMonthYear);
 
 function getEventsForDay(day, month, year){
     // Contoh dummy: buat event random tiap tanggal 5 dan 15
@@ -1139,6 +1153,20 @@ function changeMonthYear() {
 
 // panggil saat load
 initMonthYearDropdowns();
+
+function prevMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar();
+    document.getElementById("monthSelect").value = currentDate.getMonth();
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+}
+
+function nextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+    document.getElementById("monthSelect").value = currentDate.getMonth();
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+}
     
 function logout(){
     sessionStorage.clear();
