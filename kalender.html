@@ -1032,18 +1032,12 @@ let currentDate = new Date();
 
     async function loadCalendarData() {
 
-    const token = sessionStorage.getItem("token");
     const kantor = sessionStorage.getItem("kantor");
-
-    if(!token || !kantor){
-        throw new Error("Session tidak ditemukan");
-    }
 
     const response = await fetch("https://script.google.com/macros/s/AKfycbzMGyM-RPQ-eFWELBssGha__VKTXADumGTRlRP8p57iD8d55eTR8dPHOqBehUzNq2XgYg/exec", {
         method: "POST",
         body: JSON.stringify({
             action: "getCalendar",
-            token: token,
             kantor: kantor
         })
     });
