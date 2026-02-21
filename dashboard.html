@@ -955,8 +955,24 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
 
-function goDashboard(){ window.location.href="dashboard.html"; }
-function goPOK(){ window.location.href="data_pok.html"; }
+function goDashboard(){
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+    if(!kantor){
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+    window.location.href="dashboard.html";
+}
+function goPOK(){ 
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+    if(!kantor){
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+    window.location.href="data_pok.html";
+}
 function goKegiatan(){
     const kantor = sessionStorage.getItem("kantor");
     const admin = sessionStorage.getItem("admin");
