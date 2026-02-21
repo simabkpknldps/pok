@@ -49,26 +49,11 @@
     box-sizing:border-box;
     font-family:'Inter',sans-serif;
 }
-/* di bagian CSS */
-/* Scrollable tbody untuk tabel Kegiatan Hari Ini */
-.chart-box table tbody {
-    display: block;
-    max-height: 250px; /* tinggi scroll */
-    overflow-y: auto;
-    padding-bottom: 10px; /* jarak bawah agar tidak terlalu mepet */
-}
-
-/* agar header tabel tetap rapi */
-.chart-box table thead,
-.chart-box table tbody tr {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-}
-
-/* tambahan jarak bawah chart-box */
 .chart-box {
-    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;             /* isi penuh ruang parent */
+    min-height: 0;       /* agar flex-basis tidak menahan */
 }
 
 
@@ -791,17 +776,22 @@ th{
     table-layout: fixed;
     font-size: 14px;
     text-align: center;
-    flex: 1; /* agar tbody ikut fleksibel */
+    flex: 1;             /* tabel ikut fleksibel */
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-table thead {
+    flex: 0 0 auto;      /* header tidak ikut stretch */
 }
 
 .calendar-table tbody {
-    display: grid; /* grid agar bisa fleksibel */
+    flex: 1 1 auto;      /* isi sisa tinggi chart-box */
+    display: grid;       /* grid untuk 6 baris minggu */
     grid-template-rows: repeat(6, 1fr); /* 6 minggu, tinggi sama */
-    flex: 1;
 }
-
 .calendar-table tr {
-    display: contents; /* agar tbody grid berlaku */
+    display: contents;   /* agar grid berlaku */
 }
 
 .calendar-table td {
@@ -809,27 +799,7 @@ th{
     position: relative;
     padding: 4px;
     overflow: hidden;
-}
-
-.calendar-table td .day-number {
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    font-weight: 600;
-    font-size: 13px;
-}
-
-.calendar-event {
-    display: block;
-    margin-top: 20px;
-    padding: 2px 4px;
-    border-radius: 6px;
-    font-size: 12px;
-    color: #fff;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    height: 100%;        /* supaya td ikut tinggi row */
 }
     
 </style>
