@@ -865,8 +865,12 @@ th{
 }
 
 .calendar-table td.today {
-    border: 2px solid #3b82f6;
-    border-radius: 6px;
+    background:#3b82f6;
+    color:white;
+}
+.calendar-table td.today .calendar-event{
+    background:white;
+    color:#2563eb;
 }
 
 .btn-nav {
@@ -1021,9 +1025,34 @@ th{
 
     
 <script>
+    
+let calendarData = {};
 
 let currentDate = new Date();
 
+    async function loadCalendarData() {
+
+    const token = sessionStorage.getItem("token");
+    const kantor = sessionStorage.getItem("kantor");
+
+    const response = await fetch("https://script.google.com/macros/s/AKfycbzMGyM-RPQ-eFWELBssGha__VKTXADumGTRlRP8p57iD8d55eTR8dPHOqBehUzNq2XgYg/exec", {
+        method: "POST",
+        body: JSON.stringify({
+            action: "getCalendar",
+            token: token,
+            kantor: kantor
+        })
+    });
+
+    const result = await response.json();
+
+    if(result.status === "success"){
+        calendarData = result.data;
+    } else {
+        alert("Gagal ambil data kalender");
+    }
+}
+    
 function renderCalendar(){
     const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
     const year = currentDate.getFullYear();
@@ -1091,14 +1120,35 @@ monthSelect.addEventListener("change", changeMonthYear);
 yearSelect.addEventListener("change", changeMonthYear);
 
 function getEventsForDay(day, month, year){
-    // Contoh dummy: buat event random tiap tanggal 5 dan 15
+
+    const key = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+
+    if(!calendarData[key]) return [];
+
+    const items = calendarData[key];
+    const maxShow = 3;
     const events = [];
-    if(day === 5){
-        events.push({title:"Meeting", color:"blue"});
+
+    items.slice(0, maxShow).forEach(item=>{
+        let title = item.c;
+
+        if(title.length > 25){
+            title = title.substring(0,25) + "...";
+        }
+
+        events.push({
+            title: title,
+            color: "blue"
+        });
+    });
+
+    if(items.length > maxShow){
+        events.push({
+            title: "+" + (items.length - maxShow),
+            color: "purple"
+        });
     }
-    if(day === 15){
-        events.push({title:"Deadline", color:"red"});
-    }
+
     return events;
 }
 
@@ -1203,15 +1253,15 @@ function hideLoading() {
     
 // panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
-    showLoading();
-    try {
-        await updateDashboard();
-    } finally {
-        hideLoading();
-    }
 
-    // auto-refresh tiap 1 menit tanpa overlay
-    setInterval(updateDashboard, 60000);
+    showLoading();
+
+    await loadCalendarData();
+
+    renderCalendar();
+
+    hideLoading();
+
 });
    
 
