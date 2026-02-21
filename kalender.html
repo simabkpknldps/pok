@@ -1256,17 +1256,30 @@ function hideLoading() {
 // panggil pertama kali pakai overlay
 document.addEventListener("DOMContentLoaded", async function(){
 
+    const nama = sessionStorage.getItem("nama");
+    const kantor = sessionStorage.getItem("kantor");
+
+    if(!kantor){
+        alert("Session habis. Silakan login ulang!");
+        window.location.replace("index.html");
+        return;
+    }
+
+    // tampilkan nama di topbar
+    if(nama){
+        document.getElementById("namaUser").textContent = nama;
+    }
+
     showLoading();
 
     await loadCalendarData();
-
     renderCalendar();
 
     hideLoading();
 
 });
 
-document.getElementById("namaUser").textContent = nama;
+//document.getElementById("namaUser").textContent = nama;
     
 // ===== AUTO REFRESH SETIAP 1 MENIT =====
 setInterval(async function(){
