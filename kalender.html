@@ -916,6 +916,8 @@ th{
 .calendar-table tr {
     display: table-row;
 }
+
+.event-red{ background:#f87171; }
     
 </style>
 </head>
@@ -1145,7 +1147,7 @@ function getEventsForDay(day, month, year){
     if(items.length > maxShow){
         events.push({
             title: "+" + (items.length - maxShow),
-            color: "yellow"
+            color: "red"
         });
     }
 
