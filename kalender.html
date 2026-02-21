@@ -1031,25 +1031,30 @@ let calendarData = {};
 let currentDate = new Date();
 
     async function loadCalendarData() {
+    try {
+        const kantor = sessionStorage.getItem("kantor");
 
-    
-    const kantor = sessionStorage.getItem("kantor");
+        const response = await fetch("https://script.google.com/macros/s/AKfycbzqRhk8gTSKMFwj03SWJlYwonAXX7wx0j3rqgY3W_KlxfeXEjuezpwEJn7y_sCTgTCS3Q/exec", {
+            method: "POST",
+            body: JSON.stringify({
+                action: "getCalendar",
+                kantor: kantor
+            })
+        });
 
-    const response = await fetch("https://script.google.com/macros/s/AKfycbzFcyVmGlb6uUf32Kpy-lyG-E4w2YcWDcd2Fq-fdoHXkWeRuYwvd72BlwGOU0Ab-MM6Pw/exec", {
-        method: "POST",
-        body: JSON.stringify({
-            action: "getCalendar",
-            kantor: kantor
-        })
-    });
+        const result = await response.json();
 
-    const result = await response.json();
+        if(result.status === "success"){
+            calendarData = result.data;
+        } else {
+            alert(result.message);
+        }
 
-    if(result.status === "success"){
-        calendarData = result.data;
-    } else {
-        alert("Gagal ambil data kalender");
+    } catch(error) {
+        alert("Gagal koneksi ke server");
+        console.error(error);
     }
+}
 }
     
 function renderCalendar(){
