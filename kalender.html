@@ -1032,28 +1032,17 @@ let currentDate = new Date();
 
     async function loadCalendarData() {
 
+    const token = sessionStorage.getItem("token");
     const kantor = sessionStorage.getItem("kantor");
 
     const response = await fetch("https://script.google.com/macros/s/AKfycbzMGyM-RPQ-eFWELBssGha__VKTXADumGTRlRP8p57iD8d55eTR8dPHOqBehUzNq2XgYg/exec", {
         method: "POST",
         body: JSON.stringify({
             action: "getCalendar",
+            token: token,
             kantor: kantor
         })
     });
-
-    if(!response.ok){
-        throw new Error("Response tidak OK");
-    }
-
-    const result = await response.json();
-
-    if(result.status === "success"){
-        calendarData = result.data;
-    } else {
-        throw new Error("Gagal ambil data kalender");
-    }
-}
 
     const result = await response.json();
 
@@ -1263,23 +1252,17 @@ function hideLoading() {
 
     
 // panggil pertama kali pakai overlay
-    document.addEventListener("DOMContentLoaded", async function(){
-    
-        try{
-            showLoading();
-    
-            await loadCalendarData();
-    
-            renderCalendar();
-    
-        } catch(err){
-            console.error("Error load kalender:", err);
-            alert("Terjadi kesalahan saat memuat kalender");
-        } finally{
-            hideLoading(); // PASTI dijalankan walau error
-        }
-    
-    });
+document.addEventListener("DOMContentLoaded", async function(){
+
+    showLoading();
+
+    await loadCalendarData();
+
+    renderCalendar();
+
+    hideLoading();
+
+});
    
 
 </script>
