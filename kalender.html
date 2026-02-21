@@ -890,10 +890,15 @@ th{
 
 
     <div class="chart-box">
-        <div class="calendar-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <button onclick="prevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
-            <h3 id="calendarMonth">Februari 2026</h3>
-            <button onclick="nextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="calendar-header" style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+            <label>
+                Bulan:
+                <select id="monthSelect" onchange="changeMonthYear()"></select>
+            </label>
+            <label>
+                Tahun:
+                <select id="yearSelect" onchange="changeMonthYear()"></select>
+            </label>
         </div>
         <table class="calendar-table">
             <thead>
@@ -1025,6 +1030,45 @@ function goKegiatan(){
     window.location.href = "data_kegiatan.html";
 }
 
+// Populate dropdown bulan & tahun
+function initMonthYearDropdowns() {
+    const monthSelect = document.getElementById("monthSelect");
+    const yearSelect = document.getElementById("yearSelect");
+    const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+    // bulan
+    monthNames.forEach((name, index)=>{
+        const opt = document.createElement("option");
+        opt.value = index;
+        opt.textContent = name;
+        monthSelect.appendChild(opt);
+    });
+
+    // tahun ±5 tahun dari sekarang
+    const currentYear = new Date().getFullYear();
+    for(let y = currentYear - 5; y <= currentYear + 5; y++){
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        yearSelect.appendChild(opt);
+    }
+
+    // set default sesuai currentDate
+    monthSelect.value = currentDate.getMonth();
+    yearSelect.value = currentDate.getFullYear();
+}
+
+// ketika dropdown berubah
+function changeMonthYear() {
+    const monthSelect = document.getElementById("monthSelect");
+    const yearSelect = document.getElementById("yearSelect");
+    currentDate.setMonth(parseInt(monthSelect.value));
+    currentDate.setFullYear(parseInt(yearSelect.value));
+    renderCalendar();
+}
+
+// panggil saat load
+initMonthYearDropdowns();
     
 function logout(){
     sessionStorage.clear();
