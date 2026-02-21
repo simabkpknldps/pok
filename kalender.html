@@ -868,6 +868,38 @@ th{
     border: 2px solid #3b82f6;
     border-radius: 6px;
 }
+
+.btn-nav {
+    padding:6px 12px;
+    border:none;
+    background:#3b82f6;
+    color:white;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:16px;
+    transition:0.2s;
+}
+.btn-nav:hover { background:#2563eb; }
+
+.month-year-selects {
+    display:flex;
+    gap:10px;
+    align-items:center;
+}
+
+.select-flat {
+    padding:6px 10px;
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    background:#f8fafc;
+    font-size:14px;
+    cursor:pointer;
+}
+.select-flat:focus {
+    outline:none;
+    border-color:#3b82f6;
+    box-shadow:0 0 0 2px rgba(59,130,246,0.3);
+}
     
 </style>
 </head>
@@ -927,18 +959,21 @@ th{
 
 
     <div class="chart-box">
-        <div class="calendar-header" style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
-            <button onclick="prevMonth()" style="padding:5px 10px; border:none; background:#3b82f6; color:white; border-radius:6px; cursor:pointer;">&lt;</button>
-            <span id="calendarMonth" style="font-weight:600; flex:1; text-align:center;"></span>
-            <button onclick="nextMonth()" style="padding:5px 10px; border:none; background:#3b82f6; color:white; border-radius:6px; cursor:pointer;">&gt;</button>
-            <label>
-                Bulan:
-                <select id="monthSelect" onchange="changeMonthYear()"></select>
-            </label>
-            <label>
-                Tahun:
-                <select id="yearSelect" onchange="changeMonthYear()"></select>
-            </label>
+        <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px;">
+            <button onclick="prevMonth()" class="btn-nav">&lt;</button>
+        
+            <div class="month-year-selects">
+                <label>
+                    Bulan:
+                    <select id="monthSelect" class="select-flat"></select>
+                </label>
+                <label>
+                    Tahun:
+                    <select id="yearSelect" class="select-flat"></select>
+                </label>
+            </div>
+        
+            <button onclick="nextMonth()" class="btn-nav">&gt;</button>
         </div>
         <table class="calendar-table">
             <thead>
