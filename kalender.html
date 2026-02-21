@@ -859,6 +859,15 @@ th{
     font-size: 13px; /* sedikit lebih besar */
     padding: 3px 6px;
 }
+
+.calendar-table td.other-month {
+    color: #9ca3af; /* abu-abu untuk tanggal bulan lain */
+}
+
+.calendar-table td.today {
+    border: 2px solid #3b82f6;
+    border-radius: 6px;
+}
     
 </style>
 </head>
@@ -919,7 +928,9 @@ th{
 
     <div class="chart-box">
         <div class="calendar-header" style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
-            <span id="calendarMonth" style="font-weight:600;"></span>
+            <button onclick="prevMonth()" style="padding:5px 10px; border:none; background:#3b82f6; color:white; border-radius:6px; cursor:pointer;">&lt;</button>
+            <span id="calendarMonth" style="font-weight:600; flex:1; text-align:center;"></span>
+            <button onclick="nextMonth()" style="padding:5px 10px; border:none; background:#3b82f6; color:white; border-radius:6px; cursor:pointer;">&gt;</button>
             <label>
                 Bulan:
                 <select id="monthSelect" onchange="changeMonthYear()"></select>
@@ -971,79 +982,57 @@ function renderCalendar(){
 
     const firstDay = new Date(year, month, 1).getDay(); // 0=minggu
     const lastDate = new Date(year, month+1, 0).getDate();
+    const prevLastDate = new Date(year, month, 0).getDate();
 
     const tbody = document.getElementById("calendarBody");
     tbody.innerHTML = "";
 
-    let day = 1 - firstDay; // mulai dari sel kosong
+    let day = 1;
     for(let week=0; week<6; week++){
         const tr = document.createElement("tr");
         for(let d=0; d<7; d++){
             const td = document.createElement("td");
-            if(day>0 && day<=lastDate){
-                td.innerHTML = `<span class="day-number">${day}</span>`;
+            let dayNum = 0;
+            let isOtherMonth = false;
+
+            if(week===0 && d<firstDay){
+                dayNum = prevLastDate - firstDay + d + 1;
+                isOtherMonth = true;
+            } else if(day > lastDate){
+                dayNum = day - lastDate;
+                isOtherMonth = true;
+                day++;
+            } else {
+                dayNum = day;
+                day++;
+            }
+
+            td.innerHTML = `<span class="day-number">${dayNum}</span>`;
+
+            if(isOtherMonth){
+                td.classList.add("other-month");
+            } else {
                 // tambahkan contoh event
-                const events = getEventsForDay(day, month+1, year);
+                const events = getEventsForDay(dayNum, month+1, year);
                 events.forEach(ev=>{
                     const span = document.createElement("span");
                     span.className = `calendar-event event-${ev.color}`;
                     span.textContent = ev.title;
                     td.appendChild(span);
                 });
+
+                // highlight hari ini
+                const today = new Date();
+                if(dayNum === today.getDate() && month === today.getMonth() && year === today.getFullYear()){
+                    td.classList.add("today");
+                }
             }
+
             tr.appendChild(td);
-            day++;
         }
         tbody.appendChild(tr);
     }
 }
-
-function prevMonth(){
-    currentDate.setMonth(currentDate.getMonth()-1);
-    renderCalendar();
-}
-
-function nextMonth(){
-    currentDate.setMonth(currentDate.getMonth()+1);
-    renderCalendar();
-}
-
-// Contoh data event
-function getEventsForDay(day, month, year){
-    const events = [
-        {date:"2026-05-01", title:"Kegiatan A", color:"blue"},
-        {date:"2026-05-02", title:"Kegiatan B", color:"green"},
-        {date:"2026-05-03", title:"Kegiatan C", color:"orange"},
-        {date:"2026-05-11", title:"Kegiatan D", color:"red"},
-        {date:"2026-05-14", title:"Kegiatan E", color:"purple"}
-    ];
-    return events.filter(ev=>{
-        const d = new Date(ev.date);
-        return d.getDate()===day && (d.getMonth()+1)===month && d.getFullYear()===year;
-    });
-}
-
-// inisialisasi
-renderCalendar();
-    
-document.addEventListener("DOMContentLoaded", function(){
-
-    const nama = sessionStorage.getItem("nama");
-    const admin = sessionStorage.getItem("admin");
-    
-    if(!nama){
-        window.location.replace("index.html");
-    } else {
-        document.getElementById("namaUser").textContent = nama;
-    }
-
-    const token = sessionStorage.getItem("token");
-
-    if(!token){
-        window.location.href = "index.html";
-    }
-   
-    });
 
 
 
