@@ -600,27 +600,25 @@ let firstLoad = true; // untuk overlay hanya saat load pertama
 
 
   
-async function loadData(showOverlay = false){
-    try{
+async function loadData() {
+    const kantor = "denpasar"; // contoh
+    const nama = "budi";        // login user, harus sesuai GAS filter
 
-        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
-        const data = await res.json();
+    const res = await fetch(`https://script.google.com/macros/s/ID_EXEC/exec?kantor=${kantor}&nama=${nama}`);
+    const data = await res.json();
 
-        if(data.status !== "success") return;
-
-        allRows = data.rows;
-        pegawaiList = data.pegawai || [];
-        lokasiList = data.lokasi || [];
-
-        populateDatalist();
-
-        const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
-        const filtered = filterByStatus(allRows, defaultRadio);
-
-        renderTable(filtered);
-
-    } catch(e){
-        console.error(e);
+    if(data.status === "success") {
+        allRows = data.detail.map(d => ({
+            B: d.uraian,
+            C: d.tujuan,
+            G: d.tglMulai,
+            H: d.tglSelesai,
+            M: d.jumlah,
+            P: d.status
+        }));
+        showDetailAll(); // tampilkan semua data saat load
+    } else {
+        console.error(data.message);
     }
 }
 
