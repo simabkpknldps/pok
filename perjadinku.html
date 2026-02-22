@@ -1734,43 +1734,47 @@ function goPerjadinku(){
     window.location.href = "perjadinku.html";
 }
 
-function showDetail(status) {
-    if (!allRows.length) return;
-
-    // filter rows berdasarkan status
-    const filtered = allRows.filter(r => r.status === status); // 🔥 pastikan r.status sesuai dengan key JSON-mu
-
+// render detail berdasarkan status tertentu
+function showDetail(status){
     const tbody = document.getElementById("detailBody");
-    tbody.innerHTML = "";
+    tbody.innerHTML = ""; // clear dulu
 
-    if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
-        document.getElementById("detailTotal").textContent = "";
+    const filtered = allRows.filter(r => r.P === status);
+
+    if(filtered.length === 0){
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data untuk status "${status}"</td></tr>`;
+        document.getElementById("detailTotal").textContent = `Total: 0`;
         return;
     }
 
-    let total = 0;
+    let totalJumlah = 0;
+
     filtered.forEach(r => {
-        total += Number(r.jumlah || 0);
-        const tglMulai = r.tglMulai ? new Date(r.tglMulai) : null;
-        const tglSelesai = r.tglSelesai ? new Date(r.tglSelesai) : null;
+        const tglMulai = r.G ? new Date(r.G) : null;
+        const tglSelesai = r.H ? new Date(r.H) : null;
 
         const formatDate = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
 
+        const jumlah = Number(r.M || 0);
+        totalJumlah += jumlah;
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td class="wrap">${r.uraian}</td>
-            <td class="wrap">${r.tujuan}</td>
+            <td class="wrap">${r.B}</td>
+            <td class="wrap">${r.C}</td>
             <td>${formatDate(tglMulai)}</td>
             <td>${formatDate(tglSelesai)}</td>
-            <td style="text-align:right;">${Number(r.jumlah).toLocaleString("id-ID")}</td>
-            <td class="status">${r.status}</td>
+            <td style="text-align:right;">${jumlah.toLocaleString('id-ID')}</td>
+            <td class="status ${"status-" + r.P.replace(/\s/g,"")}">${r.P}</td>
         `;
         tbody.appendChild(tr);
     });
 
-    document.getElementById("detailTotal").textContent = `Total: ${total.toLocaleString("id-ID")}`;
+    document.getElementById("detailTotal").textContent = `Total: ${totalJumlah.toLocaleString('id-ID')}`;
 }
+
+// Contoh link frek di tabel status
+// <span class="link-frek" onclick="showDetail('Rekam Data')">5</span>
   
 function renderSummary(summary){
     const tbody = document.getElementById("statusSummary");
