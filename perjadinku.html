@@ -364,8 +364,8 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                     <tbody id="statusSummary">
                         <tr>
                             <td>Rekam Data</td>
-                            <td><span class="link-frek" onclick="showDetail('Rekam Data')">2</span></td>
-                            <td>768.000</td>
+                            <td><span class="link-frek" onclick="showDetail('Rekam Data')">0</span></td>
+                            <td>0</td>
                         </tr>
                         <tr>
                             <td>Terlaksana</td>
@@ -374,23 +374,23 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                         </tr>
                         <tr>
                             <td>LPT</td>
-                            <td><span class="link-frek" onclick="showDetail('LPT')">5</span></td>
-                            <td>1.920.000</td>
+                            <td><span class="link-frek" onclick="showDetail('LPT')">0</span></td>
+                            <td>0</td>
                         </tr>
                         <tr>
                             <td>Terbayar</td>
-                            <td><span class="link-frek" onclick="showDetail('Terbayar')">1</span></td>
-                            <td>384.000</td>
+                            <td><span class="link-frek" onclick="showDetail('Terbayar')">0</span></td>
+                            <td>0</td>
                         </tr>
                         <tr>
                             <td>Selesai</td>
-                            <td><span class="link-frek" onclick="showDetail('Selesai')">10</span></td>
-                            <td>3.840.000</td>
+                            <td><span class="link-frek" onclick="showDetail('Selesai')">0</span></td>
+                            <td>0</td>
                         </tr>
                         <tr>
                             <td><strong>Total</strong></td>
                             <td></td>
-                            <td><strong>6.912.000</strong></td>
+                            <td><strong>0</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -459,8 +459,8 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                       </tr>
                   </thead>
                   <tbody>
-                      <tr><td>Luar Kota</td><td>12</td></tr>
-                      <tr><td>Dalam Kota</td><td>6</td></tr>
+                      <tr><td>Luar Kota</td><td>0</td></tr>
+                      <tr><td>Dalam Kota</td><td>0</td></tr>
                   </tbody>
               </table>
           </div>
@@ -720,6 +720,18 @@ else if(btn.classList.contains("btn-sp2d")){
     //else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
+function renderJenis(jenisData){
+    const tbody = document.querySelector("#jenisPerjadinBody"); // buat tbody id
+    tbody.innerHTML = "";
+
+    jenisData.forEach(j => {
+        tbody.innerHTML += `<tr>
+            <td>${j.jenis}</td>
+            <td>${j.frek}</td>
+        </tr>`;
+    });
+}
+  
 // contoh fungsi popup edit
 function showEditPopup(tr){
     const idKegiatan = tr.dataset.id;
@@ -1737,32 +1749,36 @@ function showDetail(status){
         "Total : " + total.toLocaleString("id-ID");
 }
 
-function renderSummary(summary){
-
+function renderSummary(summaryData){
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
 
-    let totalJumlah = 0;
+    // urutan yang diinginkan
+    const order = ["Rekam Data", "Terlaksana", "LPT", "Terbayar", "Selesai"];
 
-    Object.keys(summary).forEach(status=>{
-        const frek = summary[status].frek;
-        const jumlah = summary[status].jumlah;
-        totalJumlah += jumlah;
+    order.forEach(status => {
+        const data = summaryData.find(s => s.status === status);
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${status}</td>
-            <td>
-                <span class="link-frek" onclick="showDetail('${status}')">
-                    ${frek}
-                </span>
-            </td>
-            <td style="text-align:right">
-                ${jumlah.toLocaleString('id-ID')}
-            </td>
-        `;
-        tbody.appendChild(tr);
+        if(data){
+            tbody.innerHTML += `
+            <tr>
+                <td>${data.status}</td>
+                <td><span class="link-frek" onclick="showDetail('${data.status}')">${data.frek}</span></td>
+                <td>${Number(data.jumlah||0).toLocaleString('id-ID')}</td>
+            </tr>
+            `;
+        }
     });
+
+    // total
+    const total = summaryData.reduce((sum,d)=> sum + Number(d.jumlah||0),0);
+    tbody.innerHTML += `
+    <tr>
+        <td><strong>Total</strong></td>
+        <td></td>
+        <td><strong>${total.toLocaleString('id-ID')}</strong></td>
+    </tr>`;
+}
 
     // total row
     const trTotal = document.createElement("tr");
