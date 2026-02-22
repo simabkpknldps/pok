@@ -553,6 +553,17 @@ function renderDetailTable(rows) {
     totalElem.textContent = `Total: ${total.toLocaleString("id-ID")}`;
 }
 
+function formatDate(d){
+    if(!d) return "";
+    // asumsikan format "dd/MM/yyyy" atau "dd-MM-yyyy"
+    const parts = d.includes("/") ? d.split("/") : d.split("-");
+    if(parts.length !== 3) return d; // fallback
+    const day = parts[0].padStart(2,"0");
+    const month = parts[1].padStart(2,"0");
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+}
+  
 // render ringkasan status Card 1
 // --- render ringkasan status Card 1 ---
 function renderStatusSummary(rows){
