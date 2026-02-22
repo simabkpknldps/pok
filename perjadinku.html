@@ -555,12 +555,11 @@ function renderDetailTable(rows) {
 
 function formatDate(d){
     if(!d) return "";
-    // asumsikan format "dd/MM/yyyy" atau "dd-MM-yyyy"
-    const parts = d.includes("/") ? d.split("/") : d.split("-");
-    if(parts.length !== 3) return d; // fallback
-    const day = parts[0].padStart(2,"0");
-    const month = parts[1].padStart(2,"0");
-    const year = parts[2];
+    const date = new Date(d);          // buat objek Date dari ISO string
+    if(isNaN(date)) return "";         // fallback kalau invalid
+    const year = date.getFullYear();
+    const month = String(date.getMonth()+1).padStart(2,'0'); // bulan +1 karena index 0
+    const day = String(date.getDate()).padStart(2,'0');
     return `${year}-${month}-${day}`;
 }
   
