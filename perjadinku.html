@@ -1746,14 +1746,17 @@ function renderSummary(summary) {
     let total = 0;
 
     urutanStatus.forEach(status => {
-        const item = summary.find(s => s.status === status) || {frek:0, jumlah:0};
-        total += Number(item.jumlah || 0);
+        // cari item sesuai status
+        const item = summary.find(s => s.P === status) || {F:0, M:0}; // sesuaikan key dengan data GAS
+        const frek = item.F || 0;        // frekensi
+        const jumlah = Number(item.M || 0); // jumlah
+        total += jumlah;
 
         tbody.innerHTML += `
             <tr>
                 <td>${status}</td>
-                <td><span class="link-frek" onclick="showDetail('${status}')">${item.frek || 0}</span></td>
-                <td>${item.jumlah || 0}</td>
+                <td><span class="link-frek" onclick="showDetail('${status}')">${frek}</span></td>
+                <td>${jumlah}</td>
             </tr>
         `;
     });
