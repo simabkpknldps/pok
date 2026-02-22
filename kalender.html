@@ -989,7 +989,7 @@ th{
         <li onclick="goKegiatan()"><i class="fa-solid fa-gauge"></i>Daftar Kegiatan</li>
         <li onclick="goPerjadinku()"><i class="fa-solid fa-wallet"></i>Perjadinku</li>
         <li><i class="fa-solid fa-chart-column"></i>Statistik</li>
-        <li><i class="fa-solid fa-circle-info"></i>Tentang</li>
+        <li class="active" onclick="goKalender()"><i class="fa-regular fa-calendar"></i>Kalender</li>
 </ul>
 
 </div>
@@ -1237,6 +1237,19 @@ function goPerjadinku(){
         return;
     }
     window.location.href = "perjadinku.html";
+}
+
+    function goKalender() {
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+
+    if (!kantor) {
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+
+    // Tidak perlu kirim apa-apa, sessionStorage tetap terbaca di halaman berikutnya
+    window.location.href = "kalender.html";
 }
     
 // Populate dropdown bulan & tahun
