@@ -319,6 +319,12 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 .status-table tr:last-child td {
     border-bottom: none;
 }
+
+td.status-RekamData{ background:#fca5a5; color:white; }       /* pink */
+td.status-Terlaksana{ background:#d1d5db; color:black; }      /* abu2 */
+td.status-LPT{ background:#fde68a; color:black; }             /* kuning */
+td.status-Terbayar{ background:#4ade80; color:white; }        /* hijau */
+td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
   
 </style>
 </head>
@@ -605,9 +611,10 @@ function renderStatusSummary(rows){
 function showDetail(status){
     if(!allRows.length) return;
 
-    const filtered = allRows.filter(r => r.Status === status); // huruf S kapital
+    const filtered = status === "Total" ? allRows : allRows.filter(r => r.Status === status);
+
     const tbody = document.getElementById("detailBody");
-    tbody.style.display = "table-row-group"; // tampilkan tbody
+    tbody.style.display = "table-row-group";
     tbody.innerHTML = "";
 
     if(filtered.length === 0){
@@ -618,16 +625,16 @@ function showDetail(status){
 
     let total = 0;
 
+    const formatDate = d => {
+        if(!d) return "";
+        const date = new Date(d);
+        if(isNaN(date)) return "";
+        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    };
+
     filtered.forEach(r => {
         const jumlahNum = Number(r.Jumlah.toString().replace(/\./g,""));
         total += jumlahNum;
-
-        const formatDate = d => {
-            if(!d) return "";
-            const date = new Date(d);
-            if(isNaN(date)) return "";
-            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-        }
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -645,17 +652,18 @@ function showDetail(status){
     document.getElementById("detailTotal").textContent = `Total: ${total.toLocaleString("id-ID")}`;
 }
 
-// helper status warna
+// helper untuk status warna
 function getStatusClass(status){
     switch(status){
         case "Rekam Data": return "status-RekamData";   // pink
-        case "Terlaksana": return "status-Terlaksana";  // abu
+        case "Terlaksana": return "status-Terlaksana";  // abu2
         case "LPT": return "status-LPT";                // kuning
         case "Terbayar": return "status-Terbayar";      // hijau
         case "Selesai": return "status-Selesai";        // biru
         default: return "";
     }
 }
+  
 // load data pertama kali
 document.addEventListener("DOMContentLoaded", ()=>{
     const nama = sessionStorage.getItem("nama"); 
