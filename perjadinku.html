@@ -1796,74 +1796,14 @@ function renderLokasi(lokasi){
     });
 }
 
-function showDetail(statusClicked){
-    const tbody = document.getElementById("detailBody");
-    tbody.innerHTML = ""; // reset dulu
 
-    // filter allRows berdasarkan status
-    const rows = allRows.filter(r => r.P === statusClicked);
-
-    let totalJumlah = 0;
-
-    if(rows.length === 0){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="6" style="text-align:center; padding:20px;">Tidak ada data untuk status ini</td>`;
-        tbody.appendChild(tr);
-    } else {
-        rows.forEach(r=>{
-            const tglMulai = r.G ? new Date(r.G) : null;
-            const tglSelesai = r.H ? new Date(r.H) : null;
-
-            const formatDate = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
-
-            const jumlah = Number(r.M||0);
-            totalJumlah += jumlah;
-
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${r.B}</td>
-                <td>${r.C}</td>
-                <td>${formatDate(tglMulai)}</td>
-                <td>${formatDate(tglSelesai)}</td>
-                <td style="text-align:right">${jumlah.toLocaleString('id-ID')}</td>
-                <td>${r.P}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    // update total
-    document.getElementById("detailTotal").textContent = `Total: ${totalJumlah.toLocaleString('id-ID')}`;
-}
   
 function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
 
-function populateDatalist(){
-    const pegawaiDL = document.getElementById("listPegawai");
-    const lokasiDL = document.getElementById("listLokasi");
-
-    pegawaiDL.innerHTML = "";
-    lokasiDL.innerHTML = "";
-
-    pegawaiList.forEach(nama=>{
-        const opt = document.createElement("option");
-        opt.value = nama;
-        pegawaiDL.appendChild(opt);
-    });
-
-    lokasiList.forEach(lok=>{
-        const opt = document.createElement("option");
-        opt.value = lok;
-        lokasiDL.appendChild(opt);
-    });
-}
-
- 
 
 
 </script>
-<datalist id="listPegawai"></datalist>
-<datalist id="listLokasi"></datalist>
+
 
   
 <div id="globalOverlay" style="
