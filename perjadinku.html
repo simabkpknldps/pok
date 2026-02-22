@@ -362,8 +362,22 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
     
     <!-- CARD 1 -->
     <div class="card">
-        <div class="card-title">Ringkasan Status Perjadin</div>
 
+       <div class="card-title">Ringkasan Status Perjadin</div>
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+            <input type="text" id="searchDetail" placeholder="Cari...">
+            <div class="radio-group">
+                <label><input type="radio" name="statusFilter" value="Rekam Data"> Rekam Data</label>
+                <label><input type="radio" name="statusFilter" value="Terlaksana"> Terlaksana</label>
+                <label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
+                <label><input type="radio" name="statusFilter" value="Terbayar"> Terbayar</label>
+                <label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
+                <label><input type="radio" name="statusFilter" value="Semua" checked> Semua</label>
+            </div>
+        </div>
+      
         <div class="status-flex">
 
             <!-- TABEL STATUS -->
@@ -566,6 +580,30 @@ function renderDetailTable(rows) {
     if(totalElem) totalElem.textContent = `Total: ${total.toLocaleString("id-ID")}`;
 }
 
+// filter detail berdasarkan search + radio button
+function filterDetailTable(){
+    const keyword = document.getElementById("searchDetail").value.toLowerCase();
+    const status = document.querySelector('input[name="statusFilter"]:checked').value;
+
+    const filtered = allRows.filter(r => {
+        const matchesKeyword = r.MAK.toLowerCase().includes(keyword) ||
+                               r.Uraian.toLowerCase().includes(keyword) ||
+                               r.Tujuan.toLowerCase().includes(keyword);
+        const matchesStatus = (status === "Semua") ? true : r.Status === status;
+        return matchesKeyword && matchesStatus;
+    });
+
+    renderDetailTable(filtered);
+}
+
+// event listener searchbox
+document.getElementById("searchDetail").addEventListener("input", filterDetailTable);
+
+// event listener radio buttons
+document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
+    radio.addEventListener("change", filterDetailTable);
+});
+  
 // --- helper untuk warna status ---
 function getStatusClass(status){
     switch(status){
