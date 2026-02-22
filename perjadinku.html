@@ -441,11 +441,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                           <th>Frek</th>
                       </tr>
                   </thead>
-                  <tbody>
-                      <tr><td>1</td><td>Jakarta</td><td>5</td></tr>
-                      <tr><td>2</td><td>Surabaya</td><td>3</td></tr>
-                      <tr><td>3</td><td>Denpasar</td><td>2</td></tr>
-                  </tbody>
+                  <tbody id="lokasiBody"></tbody>
               </table>
               </div>
               
@@ -460,18 +456,18 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                           <th>Frek</th>
                       </tr>
                   </thead>
-                  <tbody>
-                      <tr><td>Luar Kota</td><td>12</td></tr>
-                      <tr><td>Dalam Kota</td><td>6</td></tr>
-                  </tbody>
+                  
+                      <tbody id="jenisBody"></tbody>
+                 
               </table>
           </div>
 
       <!-- CARD 4 -->
         <div class="card">
             <h3>Grafik Perjadin</h3>
-            <div style="height:220px; display:flex; align-items:center; justify-content:center; color:#94a3b8;">
-                Grafik akan tampil di sini
+            <div class="card">
+                <div class="card-title">Grafik Perjadin</div>
+                <canvas id="grafikPerjadin"></canvas>
             </div>
         </div>
   
@@ -1736,6 +1732,96 @@ function showDetail(status){
 
     document.getElementById("detailTotal").innerText =
         "Total : " + total.toLocaleString("id-ID");
+}
+
+function renderSummary(summary){
+
+    const tbody = document.getElementById("statusSummary");
+    tbody.innerHTML = "";
+
+    let totalJumlah = 0;
+
+    Object.keys(summary).forEach(status=>{
+        const frek = summary[status].frek;
+        const jumlah = summary[status].jumlah;
+        totalJumlah += jumlah;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${status}</td>
+            <td>
+                <span class="link-frek" onclick="showDetail('${status}')">
+                    ${frek}
+                </span>
+            </td>
+            <td style="text-align:right">
+                ${jumlah.toLocaleString('id-ID')}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // total row
+    const trTotal = document.createElement("tr");
+    trTotal.innerHTML = `
+        <td><strong>Total</strong></td>
+        <td></td>
+        <td style="text-align:right">
+            <strong>${totalJumlah.toLocaleString('id-ID')}</strong>
+        </td>
+    `;
+    tbody.appendChild(trTotal);
+}
+
+function renderLokasi(lokasi){
+
+    const tbody = document.getElementById("lokasiBody");
+    tbody.innerHTML = "";
+
+    lokasi.forEach((row,i)=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${i+1}</td>
+            <td>${row.lokasi}</td>
+            <td>${row.frek}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderJenis(jenis){
+
+    const tbody = document.getElementById("jenisBody");
+    tbody.innerHTML = "";
+
+    Object.keys(jenis).forEach(k=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${k}</td>
+            <td>${jenis[k]}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderGrafik(grafik){
+
+    const ctx = document.getElementById("grafikPerjadin");
+
+    const labels = grafik.map(g => "Bln " + g.bulan);
+    const data = grafik.map(g => g.frek);
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Frekuensi',
+                data: data,
+                tension: 0.3
+            }]
+        }
+    });
 }
   
 function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
