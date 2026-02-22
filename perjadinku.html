@@ -487,7 +487,7 @@ let globalDetailData = [];
 let chartPerjadin = null;
 const kantor = sessionStorage.getItem("kantor");
 
-fetch(`${urlGAS}?kantor=${kantor}`)
+fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`)
 .then(res=>res.json())
 .then(data=>{
    if(data.status!=="success") return;
@@ -657,7 +657,7 @@ function hideOverlay(){
 let pegawaiList = [];
 let lokasiList = [];
 
-  
+
 document.addEventListener("DOMContentLoaded", async function(){
     const nama = sessionStorage.getItem("nama");
     if(!nama) window.location.replace("index.html");
@@ -668,7 +668,15 @@ document.addEventListener("DOMContentLoaded", async function(){
     if(!kantor){
         alert("Session kantor tidak ditemukan. Silakan login ulang.");
         window.location.replace("index.html");
+        return;
     }
+
+    // ===== LOAD STATISTIK =====
+    loadStatistik(kantor);
+
+    // ===== LOAD TABEL =====
+    await loadData(true);
+
 
     const admin = sessionStorage.getItem("admin");
   
@@ -686,6 +694,33 @@ document.addEventListener("DOMContentLoaded", async function(){
         }
     }
 
+function loadStatistik(kantor){
+
+    fetch(`${urlGAS}?kantor=${kantor}`)
+    .then(res=>res.json())
+    .then(data=>{
+
+        console.log("STATISTIK:", data); // 🔥 debug penting
+
+        if(data.status!=="success"){
+            console.log("Status bukan success");
+            return;
+        }
+
+        globalDetailData = data.detail || [];
+
+        if(data.summary) renderSummary(data.summary);
+        if(data.lokasi) renderLokasi(data.lokasi);
+        if(data.jenis) renderJenis(data.jenis);
+        if(data.grafik) renderGrafik(data.grafik);
+
+    })
+    .catch(err=>{
+        console.error("Error statistik:", err);
+    });
+
+}
+  
     // render table
     function renderTable(rows){
         const tbody = document.getElementById("dataTableBody");
