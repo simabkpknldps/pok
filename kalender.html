@@ -1325,6 +1325,36 @@ function closeDatePopup(){
     document.getElementById("datePopup").style.display = "none";
 }
 
+function getStatusBadge(status){
+
+    if(!status) return "-";
+
+    const s = status.toLowerCase().trim();
+
+    let className = "";
+
+    if(s === "rekam data"){
+        className = "status-rekam";
+    }
+    else if(s === "terlaksana"){
+        className = "status-terlaksana";
+    }
+    else if(s === "lpt"){
+        className = "status-lpt";
+    }
+    else if(s === "terbayar"){
+        className = "status-terbayar";
+    }
+    else if(s === "selesai"){
+        className = "status-selesai";
+    }
+    else{
+        className = "status-terlaksana"; // default abu
+    }
+
+    return `<span class="status-badge ${className}">${status}</span>`;
+}
+    
 function showLoading() {
     document.getElementById("overlayLoading").style.display = "flex";
 }
