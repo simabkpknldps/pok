@@ -511,14 +511,14 @@ function hideOverlay(){
   
 let pegawaiList = [];
 let lokasiList = [];
-
+ let allRows = [];
   
 document.addEventListener("DOMContentLoaded", async function(){
     const nama = sessionStorage.getItem("nama");
     if(!nama) window.location.replace("index.html");
     else document.getElementById("namaUser").textContent = nama;
 
-    let allRows = [];
+   
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor){
         alert("Session kantor tidak ditemukan. Silakan login ulang.");
@@ -1692,6 +1692,7 @@ function goPerjadinku(){
 }
 
 function showDetail(status){
+    if(!allRows.length) return;
 
     const filtered = allRows.filter(r => r.P === status);
 
@@ -1699,54 +1700,42 @@ function showDetail(status){
     tbody.innerHTML = "";
 
     if(filtered.length === 0){
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align:center; padding:20px;">
-                    Tidak ada data
-                </td>
-            </tr>
-        `;
-        document.getElementById("detailTotal").innerText = "";
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
+        document.getElementById("detailTotal").textContent = "";
         return;
     }
 
     let total = 0;
-
-    filtered.forEach(r => {
-
-        const mulai = r.G ? new Date(r.G).toISOString().split("T")[0] : "";
-        const selesai = r.H ? new Date(r.H).toISOString().split("T")[0] : "";
-        const jumlah = Number(r.M || 0);
-        total += jumlah;
-
+    filtered.forEach(r=>{
+        total += Number(r.M||0);
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
-            <td>${r.C}</td>
+            <td>${r.B}</td>
             <td>${r.E}</td>
-            <td>${mulai}</td>
-            <td>${selesai}</td>
-            <td style="text-align:right;">${jumlah.toLocaleString("id-ID")}</td>
+            <td>${r.G}</td>
+            <td>${r.H}</td>
+            <td style="text-align:right;">${Number(r.M||0).toLocaleString("id-ID")}</td>
             <td>${r.P}</td>
         `;
-
         tbody.appendChild(tr);
     });
 
-    document.getElementById("detailTotal").innerText =
-        "Total : " + total.toLocaleString("id-ID");
+    document.getElementById("detailTotal").textContent = "Total: " + total.toLocaleString("id-ID");
 }
-
+  
 function renderSummary(summary){
-
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
 
     let totalJumlah = 0;
 
-    Object.keys(summary).forEach(status=>{
-        const frek = summary[status].frek;
-        const jumlah = summary[status].jumlah;
+    // urutan yang diinginkan
+    const urutanStatus = ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"];
+
+    urutanStatus.forEach(status => {
+        const item = summary[status] || {frek:0, jumlah:0};
+        const frek = item.frek;
+        const jumlah = item.jumlah;
         totalJumlah += jumlah;
 
         const tr = document.createElement("tr");
@@ -1775,7 +1764,6 @@ function renderSummary(summary){
     `;
     tbody.appendChild(trTotal);
 }
-
 function renderLokasi(lokasi){
 
     const tbody = document.getElementById("lokasiBody");
@@ -1790,6 +1778,46 @@ function renderLokasi(lokasi){
         `;
         tbody.appendChild(tr);
     });
+}
+
+function showDetail(statusClicked){
+    const tbody = document.getElementById("detailBody");
+    tbody.innerHTML = ""; // reset dulu
+
+    // filter allRows berdasarkan status
+    const rows = allRows.filter(r => r.P === statusClicked);
+
+    let totalJumlah = 0;
+
+    if(rows.length === 0){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="6" style="text-align:center; padding:20px;">Tidak ada data untuk status ini</td>`;
+        tbody.appendChild(tr);
+    } else {
+        rows.forEach(r=>{
+            const tglMulai = r.G ? new Date(r.G) : null;
+            const tglSelesai = r.H ? new Date(r.H) : null;
+
+            const formatDate = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
+
+            const jumlah = Number(r.M||0);
+            totalJumlah += jumlah;
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${r.B}</td>
+                <td>${r.C}</td>
+                <td>${formatDate(tglMulai)}</td>
+                <td>${formatDate(tglSelesai)}</td>
+                <td style="text-align:right">${jumlah.toLocaleString('id-ID')}</td>
+                <td>${r.P}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // update total
+    document.getElementById("detailTotal").textContent = `Total: ${totalJumlah.toLocaleString('id-ID')}`;
 }
   
 function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
