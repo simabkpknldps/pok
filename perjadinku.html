@@ -485,6 +485,11 @@ const urlGAS="https://script.google.com/macros/s/AKfycbxNMdl8x8jk2CeG6XS8rKOaOES
 
 let globalDetailData = [];
 let chartPerjadin = null;
+let allRows = [];
+let pegawaiList = [];
+let lokasiList = [];
+
+// ================= INIT =================
 document.addEventListener("DOMContentLoaded", async function(){
 
     const nama = sessionStorage.getItem("nama");
@@ -500,7 +505,6 @@ document.addEventListener("DOMContentLoaded", async function(){
     await loadStatistik(kantor, nama);
     await loadData(kantor);
 
-    // auto refresh tiap 1 menit
     setInterval(async ()=>{
         await loadStatistik(kantor, nama);
         await loadData(kantor);
@@ -508,14 +512,11 @@ document.addEventListener("DOMContentLoaded", async function(){
 
 });
 
-let allRows = [];
-
+// ================= LOAD STATISTIK =================
 async function loadStatistik(kantor, nama){
     try{
         const res = await fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`);
         const data = await res.json();
-
-        console.log("STAT:", data);
 
         if(data.status !== "success") return;
 
@@ -530,13 +531,12 @@ async function loadStatistik(kantor, nama){
         console.error("Error statistik:", e);
     }
 }
-  
+
+// ================= LOAD DATA =================
 async function loadData(kantor){
     try{
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
-
-        console.log("DATA:", data);
 
         if(data.status !== "success") return;
 
@@ -544,13 +544,12 @@ async function loadData(kantor){
         pegawaiList = data.pegawai || [];
         lokasiList = data.lokasi || [];
 
-        renderTable(allRows);
-
     }catch(e){
         console.error("Error loadData:", e);
     }
 }
-  
+
+// ================= RENDER SUMMARY =================
 function renderSummary(summary){
 
     const tbody = document.getElementById("statusSummary");
@@ -564,69 +563,41 @@ function renderSummary(summary){
 
         totalJumlah += jumlah;
 
-        tbody.innerHTML += `
-            <tr>
-                <td>${status}</td>
-                <td>
-                    <span class="link-frek" onclick="showDetail('${status}')">
-                        ${frek}
-                    </span>
-                </td>
-                <td style="text-align:right;">
-                    ${Number(jumlah).toLocaleString("id-ID")}
-                </td>
-            </tr>
-        `;
-    });
-
-    tbody.innerHTML += `
-        <tr>
-            <td><strong>Total</strong></td>
-            <td></td>
-            <td style="text-align:right;">
-                <strong>${Number(totalJumlah).toLocaleString("id-ID")}</strong>
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${status}</td>
+            <td>
+                <span class="link-frek" onclick="showDetail('${status}')">
+                    ${frek}
+                </span>
             </td>
-        </tr>
+            <td style="text-align:right">
+                ${Number(jumlah).toLocaleString("id-ID")}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    const trTotal = document.createElement("tr");
+    trTotal.innerHTML = `
+        <td><strong>Total</strong></td>
+        <td></td>
+        <td style="text-align:right">
+            <strong>${Number(totalJumlah).toLocaleString("id-ID")}</strong>
+        </td>
     `;
+    tbody.appendChild(trTotal);
 }
 
-function renderLokasi(lokasi){
-
-    const tbody = document.getElementById("lokasiBody");
-    tbody.innerHTML = "";
-
-    lokasi.forEach((row,i)=>{
-        tbody.innerHTML += `
-            <tr>
-                <td>${i+1}</td>
-                <td>${row.lokasi}</td>
-                <td>${row.frek}</td>
-            </tr>
-        `;
-    });
-}
-
-function renderJenis(jenis){
-
-    const tbody = document.getElementById("jenisBody");
-    tbody.innerHTML = "";
-
-    Object.keys(jenis).forEach(j=>{
-        tbody.innerHTML += `
-            <tr>
-                <td>${j}</td>
-                <td>${jenis[j]}</td>
-            </tr>
-        `;
-    });
-}
-
-  function showDetail(status){
+// ================= DETAIL =================
+function showDetail(status){
 
     const detailBody = document.getElementById("detailBody");
     const detailTotal = document.getElementById("detailTotal");
 
     const filtered = globalDetailData.filter(d=>d.status === status);
+
+    detailBody.innerHTML = "";
 
     if(filtered.length === 0){
         detailBody.innerHTML = `
@@ -641,27 +612,26 @@ function renderJenis(jenis){
     }
 
     let total = 0;
-    detailBody.innerHTML = "";
 
     filtered.forEach(d=>{
-        total += d.jumlah;
+        total += Number(d.jumlah || 0);
 
-        detailBody.innerHTML += `
-            <tr>
-                <td>${d.uraian}</td>
-                <td>${d.tujuan}</td>
-                <td>${formatDate(d.tglMulai)}</td>
-                <td>${formatDate(d.tglSelesai)}</td>
-                <td style="text-align:right;">
-                    ${Number(d.jumlah).toLocaleString("id-ID")}
-                </td>
-                <td>${d.status}</td>
-            </tr>
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${d.uraian}</td>
+            <td>${d.tujuan}</td>
+            <td>${formatDate(d.tglMulai)}</td>
+            <td>${formatDate(d.tglSelesai)}</td>
+            <td style="text-align:right;">
+                ${Number(d.jumlah).toLocaleString("id-ID")}
+            </td>
+            <td>${d.status}</td>
         `;
+        detailBody.appendChild(tr);
     });
 
     detailTotal.innerHTML =
-        "Total : " + Number(total).toLocaleString("id-ID");
+        "Total : " + total.toLocaleString("id-ID");
 }
 
 function formatDate(d){
@@ -670,7 +640,41 @@ function formatDate(d){
     if(isNaN(dt)) return "";
     return dt.toISOString().split("T")[0];
 }
-  
+
+// ================= LOKASI =================
+function renderLokasi(lokasi){
+
+    const tbody = document.getElementById("lokasiBody");
+    tbody.innerHTML = "";
+
+    lokasi.forEach((row,i)=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${i+1}</td>
+            <td>${row.lokasi}</td>
+            <td>${row.frek}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ================= JENIS =================
+function renderJenis(jenis){
+
+    const tbody = document.getElementById("jenisBody");
+    tbody.innerHTML = "";
+
+    Object.keys(jenis).forEach(k=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${k}</td>
+            <td>${jenis[k]}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ================= GRAFIK =================
 function renderGrafik(grafik){
 
     const ctx = document.getElementById("grafikPerjadin");
@@ -694,229 +698,18 @@ function renderGrafik(grafik){
         }
     });
 }
-  
-function showOverlay(text="Menyimpan data..."){
-    const ov = document.getElementById("globalOverlay");
-    ov.querySelector("div").innerText = "⏳ " + text;
-    ov.style.display = "flex";
+
+// ================= NAVIGATION =================
+function goDashboard(){ window.location.href="dashboard.html"; }
+function goPOK(){ window.location.href="data_pok.html"; }
+function goKegiatan(){ window.location.href="data_kegiatan.html"; }
+function goPerjadinku(){ window.location.href="perjadinku.html"; }
+
+function logout(){
+    sessionStorage.clear();
+    window.location.replace("index.html");
 }
-
-function hideOverlay(){
-    document.getElementById("globalOverlay").style.display = "none";
-}
-  
-let pegawaiList = [];
-let lokasiList = [];
-    
-  
-    
-  
-function showLoading(show){
-    document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
-}
-  
-function goDashboard(){
-    const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
-    window.location.href="dashboard.html";
-}
-function goPOK(){ 
-    const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
-    window.location.href="data_pok.html";
-}
-function goKegiatan(){
-    const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
-    window.location.href = "data_kegiatan.html";
-}
-
-function goPerjadinku(){
-    const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
-    window.location.href = "perjadinku.html";
-}
-
-function showDetail(status){
-
-    const filtered = allRows.filter(r => r.P === status);
-
-    const tbody = document.getElementById("detailBody");
-    tbody.innerHTML = "";
-
-    if(filtered.length === 0){
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align:center; padding:20px;">
-                    Tidak ada data
-                </td>
-            </tr>
-        `;
-        document.getElementById("detailTotal").innerText = "";
-        return;
-    }
-
-    let total = 0;
-
-    filtered.forEach(r => {
-
-        const mulai = r.G ? new Date(r.G).toISOString().split("T")[0] : "";
-        const selesai = r.H ? new Date(r.H).toISOString().split("T")[0] : "";
-        const jumlah = Number(r.M || 0);
-        total += jumlah;
-
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${r.C}</td>
-            <td>${r.E}</td>
-            <td>${mulai}</td>
-            <td>${selesai}</td>
-            <td style="text-align:right;">${jumlah.toLocaleString("id-ID")}</td>
-            <td>${r.P}</td>
-        `;
-
-        tbody.appendChild(tr);
-    });
-
-    document.getElementById("detailTotal").innerText =
-        "Total : " + total.toLocaleString("id-ID");
-}
-
-function renderSummary(summary){
-
-    const tbody = document.getElementById("statusSummary");
-    tbody.innerHTML = "";
-
-    let totalJumlah = 0;
-
-    Object.keys(summary).forEach(status=>{
-        const frek = summary[status].frek;
-        const jumlah = summary[status].jumlah;
-        totalJumlah += jumlah;
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${status}</td>
-            <td>
-                <span class="link-frek" onclick="showDetail('${status}')">
-                    ${frek}
-                </span>
-            </td>
-            <td style="text-align:right">
-                ${jumlah.toLocaleString('id-ID')}
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    // total row
-    const trTotal = document.createElement("tr");
-    trTotal.innerHTML = `
-        <td><strong>Total</strong></td>
-        <td></td>
-        <td style="text-align:right">
-            <strong>${totalJumlah.toLocaleString('id-ID')}</strong>
-        </td>
-    `;
-    tbody.appendChild(trTotal);
-}
-
-function renderLokasi(lokasi){
-
-    const tbody = document.getElementById("lokasiBody");
-    tbody.innerHTML = "";
-
-    lokasi.forEach((row,i)=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${i+1}</td>
-            <td>${row.lokasi}</td>
-            <td>${row.frek}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function renderJenis(jenis){
-
-    const tbody = document.getElementById("jenisBody");
-    tbody.innerHTML = "";
-
-    Object.keys(jenis).forEach(k=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${k}</td>
-            <td>${jenis[k]}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function renderGrafik(grafik){
-
-    const ctx = document.getElementById("grafikPerjadin");
-
-    const labels = grafik.map(g => "Bln " + g.bulan);
-    const data = grafik.map(g => g.frek);
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Frekuensi',
-                data: data,
-                tension: 0.3
-            }]
-        }
-    });
-}
-  
-function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
-
-function populateDatalist(){
-    const pegawaiDL = document.getElementById("listPegawai");
-    const lokasiDL = document.getElementById("listLokasi");
-
-    pegawaiDL.innerHTML = "";
-    lokasiDL.innerHTML = "";
-
-    pegawaiList.forEach(nama=>{
-        const opt = document.createElement("option");
-        opt.value = nama;
-        pegawaiDL.appendChild(opt);
-    });
-
-    lokasiList.forEach(lok=>{
-        const opt = document.createElement("option");
-        opt.value = lok;
-        lokasiDL.appendChild(opt);
-    });
-}
-
- 
-
-
 </script>
-<datalist id="listPegawai"></datalist>
-<datalist id="listLokasi"></datalist>
 
   
 <div id="globalOverlay" style="
