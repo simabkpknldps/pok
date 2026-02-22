@@ -399,25 +399,20 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
             <!-- DETAIL TABLE -->
             <div class="detail-table">
             <div style="overflow:auto; max-height:300px;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Uraian</th>
-                            <th>Tujuan</th>
-                            <th>Tgl Mulai</th>
-                            <th>Tgl Selesai</th>
-                            <th>Jumlah</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="detailBody">
-                        <tr>
-                            <td colspan="6" style="text-align:center; padding:20px;">
-                                Klik frekensi untuk melihat detail
-                            </td>
-                        </tr>
-                    </tbody>
+                <table id="detail-table">
+                  <thead>
+                    <tr>
+                      <th>Uraian</th>
+                      <th>Tujuan</th>
+                      <th>Tgl Mulai</th>
+                      <th>Tgl Selesai</th>
+                      <th>Jumlah</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="detailBody"></tbody>
                 </table>
+<div id="detailTotal"></div>
             </div>
               
                 
@@ -1736,30 +1731,38 @@ function goPerjadinku(){
 function showDetail(status){
     const tbody = document.getElementById("detailBody");
     tbody.innerHTML = "";
+
     const filtered = allRows.filter(r => r.P === status);
 
     if(filtered.length === 0){
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data untuk status "${status}"</td></tr>`;
-        document.getElementById("detailTotal").textContent = `Total: 0`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
+        document.getElementById("detailTotal").textContent = "";
         return;
     }
 
-    let totalJumlah = 0;
-    filtered.forEach(r => {
-        totalJumlah += Number(r.M || 0);
+    let total = 0;
+
+    filtered.forEach(r=>{
+        const tglMulai = r.E ? new Date(r.E) : null;
+        const tglSelesai = r.F ? new Date(r.F) : null;
+
+        const formatDate = (d)=> d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
+
+        total += Number(r.M||0);
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${r.B}</td>
             <td>${r.C}</td>
-            <td>${r.G}</td>
-            <td>${r.H}</td>
-            <td style="text-align:right;">${Number(r.M).toLocaleString('id-ID')}</td>
+            <td>${formatDate(tglMulai)}</td>
+            <td>${formatDate(tglSelesai)}</td>
+            <td style="text-align:right;">${Number(r.M).toLocaleString("id-ID")}</td>
             <td>${r.P}</td>
         `;
         tbody.appendChild(tr);
     });
 
-    document.getElementById("detailTotal").textContent = `Total: ${totalJumlah.toLocaleString('id-ID')}`;
+    document.getElementById("detailTotal").textContent = `Total: ${total.toLocaleString("id-ID")}`;
 }
 
 // Contoh link frek di tabel status
@@ -1810,36 +1813,20 @@ function renderSummary(summary){
 function showDetailAll(){
     const tbody = document.getElementById("detailBody");
     tbody.innerHTML = "";
-    let totalJumlah = 0;
 
-    allRows.forEach(r => {
-        totalJumlah += Number(r.M || 0);
+    allRows.forEach(r=>{
+        const tglMulai = r.E ? new Date(r.E) : null;
+        const tglSelesai = r.F ? new Date(r.F) : null;
+        const formatDate = (d)=> d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${r.B}</td>
             <td>${r.C}</td>
-            <td>${r.G}</td>
-            <td>${r.H}</td>
-            <td style="text-align:right;">${Number(r.M).toLocaleString('id-ID')}</td>
+            <td>${formatDate(tglMulai)}</td>
+            <td>${formatDate(tglSelesai)}</td>
+            <td style="text-align:right;">${Number(r.M).toLocaleString("id-ID")}</td>
             <td>${r.P}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    document.getElementById("detailTotal").textContent = `Total: ${totalJumlah.toLocaleString('id-ID')}`;
-}
-  
-function renderLokasi(lokasi){
-
-    const tbody = document.getElementById("lokasiBody");
-    tbody.innerHTML = "";
-
-    lokasi.forEach((row,i)=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${i+1}</td>
-            <td>${row.lokasi}</td>
-            <td>${row.frek}</td>
         `;
         tbody.appendChild(tr);
     });
