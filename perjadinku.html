@@ -655,30 +655,6 @@ function renderAllSummary(){
     updateCard2ByLocation();
 }
 
-// contoh loadData() setelah data berhasil diambil
-async function loadData() {
-    const kantor = sessionStorage.getItem("kantor");
-    const nama = sessionStorage.getItem("nama");
-    if(!kantor || !nama) return;
-
-    const res = await fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`);
-    const data = await res.json();
-
-    if(data.status==="success"){
-        allRows = data.detail.map(d=>({
-            B:d.B,
-            C:d.C,
-            E:d.E,
-            G:d.G,
-            H:d.H,
-            M:d.M,
-            P:d.P
-        }));
-        renderAllSummary();
-    } else console.error(data.message);
-}
-
-document.addEventListener("DOMContentLoaded", loadData);
 
 function updateCard2ByLocation(){
     const tbody = document.getElementById("lokasiBody");
