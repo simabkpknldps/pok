@@ -555,10 +555,10 @@ function renderDetailTable(rows) {
 
 function formatDate(d){
     if(!d) return "";
-    const date = new Date(d);          // buat objek Date dari ISO string
-    if(isNaN(date)) return "";         // fallback kalau invalid
+    const date = new Date(d);
+    if(isNaN(date)) return "";
     const year = date.getFullYear();
-    const month = String(date.getMonth()+1).padStart(2,'0'); // bulan +1 karena index 0
+    const month = String(date.getMonth()+1).padStart(2,'0');
     const day = String(date.getDate()).padStart(2,'0');
     return `${year}-${month}-${day}`;
 }
@@ -626,6 +626,7 @@ function showDetail(status){
     const filtered = status === "Total" ? allRows : allRows.filter(r => r.Status === status);
 
     const tbody = document.getElementById("detailBody");
+    tbody.style.display = "table-row-group";
     tbody.innerHTML = "";
 
     if(filtered.length === 0){
@@ -635,17 +636,6 @@ function showDetail(status){
 
     let total = 0;
 
-    // format tanggal aman
-    const formatDate = d => {
-        if(!d) return "";
-        const parts = d.includes("/") ? d.split("/") : d.split("-");
-        if(parts.length !== 3) return d;
-        const day = parts[0].padStart(2,"0");
-        const month = parts[1].padStart(2,"0");
-        const year = parts[2];
-        return `${year}-${month}-${day}`;
-    };
-
     filtered.forEach(r => {
         total += r.Jumlah;
 
@@ -654,16 +644,19 @@ function showDetail(status){
             <td class="wrap">${r.MAK}</td>
             <td class="wrap">${r.Uraian}</td>
             <td class="wrap">${r.Tujuan}</td>
-            <td>${formatDate(r.TglMulai)}</td>
-            <td>${formatDate(r.TglSelesai)}</td>
+            <td>${formatDate(r.TglMulai)}</td>       <!-- format yyyy-MM-dd -->
+            <td>${formatDate(r.TglSelesai)}</td>     <!-- format yyyy-MM-dd -->
             <td style="text-align:right">${r.Jumlah.toLocaleString("id-ID")}</td>
-            <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>
+            <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>  <!-- warna status -->
         `;
         tbody.appendChild(tr);
     });
 
-    document.getElementById("detailTotal").textContent = `Total: ${total.toLocaleString("id-ID")}`;
+    // update total di bawah tabel (jika ada element)
+    const totalElem = document.getElementById("detailTotal");
+    if(totalElem) totalElem.textContent = `Total: ${total.toLocaleString("id-ID")}`;
 }
+
 // helper warna status
 function getStatusClass(status){
     switch(status){
