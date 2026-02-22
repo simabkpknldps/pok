@@ -1100,6 +1100,11 @@ function renderCalendar(){
                     const span = document.createElement("span");
                     span.className = `calendar-event event-${ev.color}`;
                     span.textContent = ev.title;
+                    if(!isOtherMonth){
+                        td.addEventListener("dblclick", function(){
+                            openDatePopup(dayNum, month+1, year);
+                        });
+                    }
                     td.appendChild(span);
                 });
 
@@ -1241,7 +1246,50 @@ function logout(){
     window.location.replace("index.html");
 }
 
+function openDatePopup(day, month, year){
 
+    const key = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const items = calendarData[key] || [];
+
+    document.getElementById("popupDateTitle").textContent =
+        `Detail Kegiatan - ${day}-${month}-${year}`;
+
+    const tbody = document.getElementById("popupTableBody");
+    tbody.innerHTML = "";
+
+    if(items.length === 0){
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" style="padding:15px; text-align:center; color:#64748b;">
+                    Tidak ada data
+                </td>
+            </tr>
+        `;
+    } else {
+        items.forEach(item=>{
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td style="padding:8px;">${item.c || ""}</td>
+                <td style="padding:8px;">${item.d || ""}</td>
+                <td style="padding:8px;">${item.e || ""}</td>
+                <td style="padding:8px;">
+                    <span style="padding:3px 8px; border-radius:6px; background:#dcfce7; color:#166534; font-size:12px;">
+                        ${item.p || "-"}
+                    </span>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    document.getElementById("datePopup").style.display = "flex";
+}
+
+function closeDatePopup(){
+    document.getElementById("datePopup").style.display = "none";
+}
 
 function showLoading() {
     document.getElementById("overlayLoading").style.display = "flex";
@@ -1280,6 +1328,33 @@ document.addEventListener("DOMContentLoaded", async function(){
 });
 
 //document.getElementById("namaUser").textContent = nama;
+
+<!-- POPUP DETAIL TANGGAL -->
+<div id="datePopup" class="popup-overlay" style="display:none;">
+    <div class="popup-box" style="width:90%; max-width:900px;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 id="popupDateTitle">Detail Kegiatan</h3>
+            <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeDatePopup()"></i>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:8px; text-align:left;">Uraian / No ST</th>
+                        <th style="padding:8px; text-align:left;">Pelaksana Tugas</th>
+                        <th style="padding:8px; text-align:left;">Tujuan</th>
+                        <th style="padding:8px; text-align:left;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="popupTableBody">
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
     
 // ===== AUTO REFRESH SETIAP 1 MENIT =====
 setInterval(async function(){
