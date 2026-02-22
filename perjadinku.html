@@ -1737,43 +1737,35 @@ function showDetail(status){
         "Total : " + total.toLocaleString("id-ID");
 }
 
-function renderSummary(summary){
-
+function renderSummary(summary) {
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
 
-    let totalJumlah = 0;
+    // urutan tetap
+    const urutanStatus = ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"];
+    let total = 0;
 
-    Object.keys(summary).forEach(status=>{
-        const frek = summary[status].frek;
-        const jumlah = summary[status].jumlah;
-        totalJumlah += jumlah;
+    urutanStatus.forEach(status => {
+        const item = summary.find(s => s.status === status) || {frek:0, jumlah:0};
+        total += Number(item.jumlah || 0);
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${status}</td>
-            <td>
-                <span class="link-frek" onclick="showDetail('${status}')">
-                    ${frek}
-                </span>
-            </td>
-            <td style="text-align:right">
-                ${jumlah.toLocaleString('id-ID')}
-            </td>
+        tbody.innerHTML += `
+            <tr>
+                <td>${status}</td>
+                <td><span class="link-frek" onclick="showDetail('${status}')">${item.frek || 0}</span></td>
+                <td>${item.jumlah || 0}</td>
+            </tr>
         `;
-        tbody.appendChild(tr);
     });
 
-    // total row
-    const trTotal = document.createElement("tr");
-    trTotal.innerHTML = `
-        <td><strong>Total</strong></td>
-        <td></td>
-        <td style="text-align:right">
-            <strong>${totalJumlah.toLocaleString('id-ID')}</strong>
-        </td>
+    // row total
+    tbody.innerHTML += `
+        <tr>
+            <td><strong>Total</strong></td>
+            <td></td>
+            <td><strong>${total}</strong></td>
+        </tr>
     `;
-    tbody.appendChild(trTotal);
 }
 
 function renderLokasi(lokasi){
