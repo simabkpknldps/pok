@@ -485,8 +485,21 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbxoOaSfH1Yx6JJkLqC-du6qC1AI1PsyEPzF3RMfIS7BrWHt2ibQqYprid_ynpQTG0us/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbz3g58jx4Z9Nbhyddac6Ehxa3wQad7vcILRd7cMx4owk43q8XF174VkQVGuH0aRb7cx7g/exec";
 
+const kantor = sessionStorage.getItem("kantor");
+
+fetch(`${urlGAS}?kantor=${kantor}`)
+.then(res=>res.json())
+.then(data=>{
+   if(data.status!=="success") return;
+
+   renderSummary(data.summary);
+   renderLokasi(data.lokasi);
+   renderJenis(data.jenis);
+   renderGrafik(data.grafik);
+});
+  
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
     ov.querySelector("div").innerText = "⏳ " + text;
