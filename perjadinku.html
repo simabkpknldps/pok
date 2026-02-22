@@ -325,6 +325,31 @@ td.status-Terlaksana{ background:#d1d5db; color:black; }      /* abu2 */
 td.status-LPT{ background:#fde68a; color:black; }             /* kuning */
 td.status-Terbayar{ background:#4ade80; color:white; }        /* hijau */
 td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
+
+.detail-table {
+    flex:1;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    overflow:auto;
+    max-height:270px; /* tinggi untuk ±5 row */
+}
+
+.detail-table table {
+    width:100%;
+    border-collapse:collapse;
+}
+
+/* CARD 1 header flex */
+.card-header input[type="text"]{
+    min-width:200px;
+    max-width:250px;
+    flex:1; /* supaya responsive */
+}
+
+.card-header .radio-group label{
+    font-size:13px;
+    white-space:nowrap;
+}
   
 </style>
 </head>
@@ -363,12 +388,14 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
     <!-- CARD 1 -->
     <div class="card">
 
-       <div class="card-title">Ringkasan Status Perjadin</div>
-
-        <!-- FILTER BAR -->
-        <div class="filter-bar">
-            <input type="text" id="searchDetail" placeholder="Cari...">
-            <div class="radio-group">
+       <!-- HEADER CARD FLEX -->
+          <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap; margin-bottom:15px;">
+        
+            <div class="card-title" style="font-weight:600; color:#0369a1;">Ringkasan Status Perjadin</div>
+        
+            <input type="text" id="searchDetail" placeholder="Cari..." style="padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px; min-width:200px; flex:1; max-width:250px;">
+        
+            <div class="radio-group" style="display:flex; gap:12px; flex-wrap:wrap;">
                 <label><input type="radio" name="statusFilter" value="Rekam Data"> Rekam Data</label>
                 <label><input type="radio" name="statusFilter" value="Terlaksana"> Terlaksana</label>
                 <label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
@@ -376,7 +403,8 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
                 <label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
                 <label><input type="radio" name="statusFilter" value="Semua" checked> Semua</label>
             </div>
-        </div>
+        
+          </div>
       
         <div class="status-flex">
 
