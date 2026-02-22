@@ -720,23 +720,6 @@ else if(btn.classList.contains("btn-sp2d")){
     //else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
-function renderJenis(jenisData){
-    const tbody = document.getElementById("jenisPerjadinBody");
-    tbody.innerHTML = "";
-
-    if(!jenisData || !jenisData.length){
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center;">Tidak ada data</td></tr>`;
-        return;
-    }
-
-    jenisData.forEach(j => {
-        tbody.innerHTML += `<tr>
-            <td>${j.jenis}</td>
-            <td>${j.frek}</td>
-        </tr>`;
-    });
-}
-  
 // contoh fungsi popup edit
 function showEditPopup(tr){
     const idKegiatan = tr.dataset.id;
@@ -1754,35 +1737,32 @@ function showDetail(status){
         "Total : " + total.toLocaleString("id-ID");
 }
 
-function renderSummary(summaryData){
+function renderSummary(summary){
+
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
 
-    // urutan yang diinginkan
-    const order = ["Rekam Data", "Terlaksana", "LPT", "Terbayar", "Selesai"];
+    let totalJumlah = 0;
 
-    order.forEach(status => {
-        const data = summaryData.find(s => s.status === status);
-        if(data){
-            tbody.innerHTML += `
-            <tr>
-                <td>${data.status}</td>
-                <td><span class="link-frek" onclick="showDetail('${data.status}')">${data.frek}</span></td>
-                <td style="text-align:right;">${Number(data.jumlah||0).toLocaleString('id-ID')}</td>
-            </tr>
-            `;
-        }
+    Object.keys(summary).forEach(status=>{
+        const frek = summary[status].frek;
+        const jumlah = summary[status].jumlah;
+        totalJumlah += jumlah;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${status}</td>
+            <td>
+                <span class="link-frek" onclick="showDetail('${status}')">
+                    ${frek}
+                </span>
+            </td>
+            <td style="text-align:right">
+                ${jumlah.toLocaleString('id-ID')}
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
-
-    // total
-    const total = summaryData.reduce((sum,d)=> sum + Number(d.jumlah||0),0);
-    tbody.innerHTML += `
-    <tr>
-        <td><strong>Total</strong></td>
-        <td></td>
-        <td style="text-align:right;"><strong>${total.toLocaleString('id-ID')}</strong></td>
-    </tr>`;
-}
 
     // total row
     const trTotal = document.createElement("tr");
