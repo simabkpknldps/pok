@@ -770,18 +770,18 @@ document.addEventListener("DOMContentLoaded", ()=>{
 });
 
   function updateLokasiFavorit() {
+
     const detailRows = document.querySelectorAll("#detailBody tr");
-    const lokasiMap = {}; // key: lokasi, value: jumlah
+    const lokasiMap = {}; // key: lokasi, value: frekuensi
 
     detailRows.forEach(tr => {
         const tdTujuan = tr.children[2]?.textContent.trim(); // kolom 3 = Tujuan
-        const tdJumlah = parseInt(tr.children[5]?.textContent.replace(/\./g,'')) || 0; // kolom 6 = Jumlah
         if(!tdTujuan) return;
 
         if(lokasiMap[tdTujuan]){
-            lokasiMap[tdTujuan] += tdJumlah;
+            lokasiMap[tdTujuan] += 1;  // tambah 1 (frekuensi)
         } else {
-            lokasiMap[tdTujuan] = tdJumlah;
+            lokasiMap[tdTujuan] = 1;
         }
     });
 
@@ -790,16 +790,22 @@ document.addEventListener("DOMContentLoaded", ()=>{
     tbody.innerHTML = "";
 
     let i = 1;
-    for(const lokasi of Object.keys(lokasiMap)){
+
+    // optional: urutkan dari frekuensi terbesar
+    const sortedLokasi = Object.entries(lokasiMap)
+        .sort((a,b) => b[1] - a[1]);
+
+    sortedLokasi.forEach(([lokasi, frek]) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${i}</td>
             <td>${lokasi}</td>
-            <td style="text-align:right">${lokasiMap[lokasi].toLocaleString('id-ID')}</td>
+            <td style="text-align:right">${frek}</td>
         `;
         tbody.appendChild(tr);
         i++;
-    }
+    });
+
 }
 
   function updateJenisPerjadin() {
