@@ -655,6 +655,7 @@ function getStatusClass(status){
 }
 // load data pertama kali
 document.addEventListener("DOMContentLoaded", ()=>{
+    const nama = sessionStorage.getItem("nama"); 
     loadData();
 });
   
