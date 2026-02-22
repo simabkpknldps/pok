@@ -542,7 +542,7 @@ function renderDetailTable(rows) {
             <td>${r.TglMulai}</td>
             <td>${r.TglSelesai}</td>
             <td style="text-align:right;">${r.Jumlah}</td>
-            <td class="status">${r.Status}</td>
+            <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -627,7 +627,6 @@ function showDetail(status){
     const filtered = status === "Total" ? allRows : allRows.filter(r => r.Status === status);
 
     const tbody = document.getElementById("detailBody");
-    tbody.style.display = "table-row-group";
     tbody.innerHTML = "";
 
     if(filtered.length === 0){
@@ -637,11 +636,15 @@ function showDetail(status){
 
     let total = 0;
 
+    // format tanggal aman
     const formatDate = d => {
         if(!d) return "";
-        const date = new Date(d);
-        if(isNaN(date)) return "";
-        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+        const parts = d.includes("/") ? d.split("/") : d.split("-");
+        if(parts.length !== 3) return d;
+        const day = parts[0].padStart(2,"0");
+        const month = parts[1].padStart(2,"0");
+        const year = parts[2];
+        return `${year}-${month}-${day}`;
     };
 
     filtered.forEach(r => {
@@ -662,7 +665,6 @@ function showDetail(status){
 
     document.getElementById("detailTotal").textContent = `Total: ${total.toLocaleString("id-ID")}`;
 }
-
 // helper warna status
 function getStatusClass(status){
     switch(status){
