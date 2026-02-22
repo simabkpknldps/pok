@@ -1458,6 +1458,19 @@ function goPerjadinku(){
     }
     window.location.href = "perjadinku.html";
 }
+
+function goKalender() {
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+
+    if (!kantor) {
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+
+    // Tidak perlu kirim apa-apa, sessionStorage tetap terbaca di halaman berikutnya
+    window.location.href = "kalender.html";
+}
   
 function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
 
