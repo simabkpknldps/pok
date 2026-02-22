@@ -1034,20 +1034,22 @@ let currentDate = new Date();
     try {
         const kantor = sessionStorage.getItem("kantor");
 
-        const response = await fetch(
-            "https://script.google.com/macros/s/AKfycbzqRhk8gTSKMFwj03SWJlYwonAXX7wx0j3rqgY3W_KlxfeXEjuezpwEJn7y_sCTgTCS3Q/exec" 
-            + kantor
-        );
+        const url =
+            "https://script.google.com/macros/s/AKfycbzqRhk8gTSKMFwj03SWJlYwonAXX7wx0j3rqgY3W_KlxfeXEjuezpwEJn7y_sCTgTCS3Q/exec"
+            + "?action=getCalendar"
+            + "&kantor=" + encodeURIComponent(kantor);
+
+        const response = await fetch(url);
 
         const result = await response.json();
 
-        if(result.status === "success"){
+        if (result.status === "success") {
             calendarData = result.data;
         } else {
             alert(result.message);
         }
 
-    } catch(error) {
+    } catch (error) {
         alert("Gagal koneksi ke server");
         console.error(error);
     }
