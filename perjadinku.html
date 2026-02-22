@@ -510,22 +510,24 @@ async function loadData() {
         if(data.status !== "success") return;
 
         allRows = data.detail.map(d => ({
-            MAK: d.B.slice(-9).substr(0,6), // ambil MAK
+            MAK: d.B.slice(-9).substr(0,6),
             Uraian: d.C,
             Tujuan: d.E,
-            TglMulai: d.G,
-            TglSelesai: d.H,
-            Jumlah: Number(d.M).toLocaleString("id-ID"),
-            Status: d.P
+            TglMulai: d.G,      // simpan asli
+            TglSelesai: d.H,    // simpan asli
+            Jumlah: Number(d.M),// simpan sebagai number
+            Status: d.P         // konsisten kapital
         }));
 
         renderDetailTable(allRows);
         renderStatusSummary(allRows);
+
     } catch(err) {
         console.error(err);
     }
 }
 
+  
 // render tabel detail Card 1
 function renderDetailTable(rows) {
     const tbody = document.getElementById("detailBody");
@@ -619,7 +621,6 @@ function showDetail(status){
 
     if(filtered.length === 0){
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
-        document.getElementById("detailTotal").textContent = "";
         return;
     }
 
@@ -633,8 +634,7 @@ function showDetail(status){
     };
 
     filtered.forEach(r => {
-        const jumlahNum = Number(r.Jumlah.toString().replace(/\./g,""));
-        total += jumlahNum;
+        total += r.Jumlah;
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -643,7 +643,7 @@ function showDetail(status){
             <td class="wrap">${r.Tujuan}</td>
             <td>${formatDate(r.TglMulai)}</td>
             <td>${formatDate(r.TglSelesai)}</td>
-            <td style="text-align:right">${jumlahNum.toLocaleString("id-ID")}</td>
+            <td style="text-align:right">${r.Jumlah.toLocaleString("id-ID")}</td>
             <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>
         `;
         tbody.appendChild(tr);
@@ -652,17 +652,18 @@ function showDetail(status){
     document.getElementById("detailTotal").textContent = `Total: ${total.toLocaleString("id-ID")}`;
 }
 
-// helper untuk status warna
+// helper warna status
 function getStatusClass(status){
     switch(status){
-        case "Rekam Data": return "status-RekamData";   // pink
-        case "Terlaksana": return "status-Terlaksana";  // abu2
-        case "LPT": return "status-LPT";                // kuning
-        case "Terbayar": return "status-Terbayar";      // hijau
-        case "Selesai": return "status-Selesai";        // biru
+        case "Rekam Data": return "status-RekamData";
+        case "Terlaksana": return "status-Terlaksana";
+        case "LPT": return "status-LPT";
+        case "Terbayar": return "status-Terbayar";
+        case "Selesai": return "status-Selesai";
         default: return "";
     }
 }
+
   
 // load data pertama kali
 document.addEventListener("DOMContentLoaded", ()=>{
