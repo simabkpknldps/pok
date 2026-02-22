@@ -342,9 +342,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
     </div>
 
     <div class="content">
-        
-        <div class="stat-container">
-
+    
     <!-- CARD 1 -->
     <div class="card">
         <div class="card-title">Ringkasan Status Perjadin</div>
@@ -362,119 +360,84 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                         </tr>
                     </thead>
                     <tbody id="statusSummary">
-                        <tr>
-                            <td>Rekam Data</td>
-                            <td><span class="link-frek" onclick="showDetail('Rekam Data')">0</span></td>
-                            <td>0</td>
-                        </tr>
-                        <tr>
-                            <td>Terlaksana</td>
-                            <td><span class="link-frek" onclick="showDetail('Terlaksana')">0</span></td>
-                            <td>0</td>
-                        </tr>
-                        <tr>
-                            <td>LPT</td>
-                            <td><span class="link-frek" onclick="showDetail('LPT')">0</span></td>
-                            <td>0</td>
-                        </tr>
-                        <tr>
-                            <td>Terbayar</td>
-                            <td><span class="link-frek" onclick="showDetail('Terbayar')">0</span></td>
-                            <td>0</td>
-                        </tr>
-                        <tr>
-                            <td>Selesai</td>
-                            <td><span class="link-frek" onclick="showDetail('Selesai')">0</span></td>
-                            <td>0</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Total</strong></td>
-                            <td><span class="link-frek" onclick="showDetail('Total')">0</span></td>
-                            <td><strong>0</strong></td>
-                        </tr>
+                        <!-- JS akan render di sini -->
                     </tbody>
                 </table>
             </div>
 
             <!-- DETAIL TABLE -->
             <div class="detail-table">
-            <div style="overflow:auto; max-height:300px;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>MAK</th>
-                            <th>Uraian</th>
-                            <th>Tujuan</th>
-                            <th>Tgl Mulai</th>
-                            <th>Tgl Selesai</th>
-                            <th>Jumlah</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="detailBody" style="display:none;">
-                      <tr>
-                          <td colspan="7" style="text-align:center; padding:20px;">
-                              Memuat data...
-                          </td>
-                      </tr>
-                  </tbody>
-                </table>
+                <div style="overflow:auto; max-height:300px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>MAK</th>
+                                <th>Uraian</th>
+                                <th>Tujuan</th>
+                                <th>Tgl Mulai</th>
+                                <th>Tgl Selesai</th>
+                                <th>Jumlah</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailBody">
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding:20px;">
+                                    Memuat data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
         </div>
     </div>
 
-    <!-- CARD 2 & 3 -->
+    <!-- ===== CARD 2, 3, 4 (Bottom Cards) ===== -->
     <div class="bottom-cards">
 
-          <div class="card">
-              <div class="card-title">Lokasi Favorit</div>
+        <div class="card">
+            <div class="card-title">Lokasi Favorit</div>
             <div style="overflow:auto; max-height:300px;">
-              <table>
-                  <thead>
-                      <tr>
-                          <th>No</th>
-                          <th>Lokasi</th>
-                          <th>Frek</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      <tbody id="lokasiBody"></tbody>
-                  </tbody>
-              </table>
-              </div>
-              
-          </div>
-  
-          <div class="card">
-              <div class="card-title">Jenis Perjadin</div>
-              <table>
-                  <thead>
-                      <tr>
-                          <th>Jenis</th>
-                          <th>Frek</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      <tr><td>Luar Kota</td><td>0</td></tr>
-                      <tr><td>Dalam Kota</td><td>0</td></tr>
-                  </tbody>
-              </table>
-          </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Lokasi</th>
+                            <th>Frek</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lokasiBody"></tbody>
+                </table>
+            </div>
+        </div>
 
-      <!-- CARD 4 -->
+        <div class="card">
+            <div class="card-title">Jenis Perjadin</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Jenis</th>
+                        <th>Frek</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Luar Kota</td><td>0</td></tr>
+                    <tr><td>Dalam Kota</td><td>0</td></tr>
+                </tbody>
+            </table>
+        </div>
+
         <div class="card">
             <h3>Grafik Perjadin</h3>
             <div style="height:220px; display:flex; align-items:center; justify-content:center; color:#94a3b8;">
                 Grafik akan tampil di sini
             </div>
         </div>
-  
-      </div>
-
-</div>
 
     </div>
+
 </div>
 
 <div class="footer">© KPKNL Denpasar 2026</div>
