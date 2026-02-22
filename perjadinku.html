@@ -483,11 +483,12 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbzbH_76HdP7KqPbcAuWk6Dep18icl3W3xf4pAx0q_x9U49COnvXX5eV53QtENrJiYfwFg/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbyeawjwdhnDVBVZEZy0uhsdrSq5hU9vmJenFHUc2eUoNldQTQEgkIUe8kK8EFN9SL67aw/exec";
 
 const kantor = sessionStorage.getItem("kantor");
 
-fetch(`${urlGAS}?kantor=${kantor}`)
+const nama = sessionStorage.getItem("nama");
+fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`)
 .then(res=>res.json())
 .then(data=>{
    if(data.status!=="success") return;
