@@ -1691,31 +1691,47 @@ function goPerjadinku(){
     window.location.href = "perjadinku.html";
 }
 
-function showDetail(status){
-    if(!allRows.length) return;
+function showDetail(status) {
+    if (!allRows || !allRows.length) return;
 
-    const filtered = allRows.filter(r => r.P === status);
+    // Filter data sesuai status, aman dari spasi/huruf besar-kecil
+    const filtered = allRows.filter(r => 
+        (r.P || "").toString().trim().toLowerCase() === status.toString().trim().toLowerCase()
+    );
 
     const tbody = document.getElementById("detailBody");
     tbody.innerHTML = "";
 
-    if(filtered.length === 0){
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
-        document.getElementById("detailTotal").textContent = "";
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center; padding:20px;">
+                    Tidak ada data untuk status ini
+                </td>
+            </tr>`;
+        document.getElementById("detailTotal").textContent = "Total: 0";
         return;
     }
 
     let total = 0;
-    filtered.forEach(r=>{
-        total += Number(r.M||0);
+    filtered.forEach(r => {
+        // Pastikan semua kolom aman, default ke "-"
+        const uraian = r.B || "-";
+        const tujuan = r.E || "-";
+        const tglMulai = r.G || "-";
+        const tglSelesai = r.H || "-";
+        const jumlah = Number(r.M || 0);
+
+        total += jumlah;
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td>${r.B}</td>
-            <td>${r.E}</td>
-            <td>${r.G}</td>
-            <td>${r.H}</td>
-            <td style="text-align:right;">${Number(r.M||0).toLocaleString("id-ID")}</td>
-            <td>${r.P}</td>
+            <td>${uraian}</td>
+            <td>${tujuan}</td>
+            <td>${tglMulai}</td>
+            <td>${tglSelesai}</td>
+            <td style="text-align:right;">${jumlah.toLocaleString("id-ID")}</td>
+            <td>${r.P || "-"}</td>
         `;
         tbody.appendChild(tr);
     });
