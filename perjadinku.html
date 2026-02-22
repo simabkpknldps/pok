@@ -518,6 +518,7 @@ async function loadData() {
 
         renderDetailTable(allRows);
         renderStatusSummary(allRows);
+        updateLokasiFavorit(); // 🔥 update Card 2 otomatis
 
     } catch(err) {
         console.error(err);
@@ -642,6 +643,40 @@ document.addEventListener("DOMContentLoaded", ()=>{
         console.warn("Session nama atau kantor belum ada");
     }
 });
+
+  function updateLokasiFavorit() {
+    const detailRows = document.querySelectorAll("#detailBody tr");
+    const lokasiMap = {}; // key: lokasi, value: jumlah
+
+    detailRows.forEach(tr => {
+        const tdTujuan = tr.children[2]?.textContent.trim(); // kolom 3 = Tujuan
+        const tdJumlah = parseInt(tr.children[5]?.textContent.replace(/\./g,'')) || 0; // kolom 6 = Jumlah
+        if(!tdTujuan) return;
+
+        if(lokasiMap[tdTujuan]){
+            lokasiMap[tdTujuan] += tdJumlah;
+        } else {
+            lokasiMap[tdTujuan] = tdJumlah;
+        }
+    });
+
+    const tbody = document.getElementById("card2Body");
+    if(!tbody) return;
+    tbody.innerHTML = "";
+
+    let i = 1;
+    for(const lokasi of Object.keys(lokasiMap)){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${i}</td>
+            <td>${lokasi}</td>
+            <td style="text-align:right">${lokasiMap[lokasi].toLocaleString('id-ID')}</td>
+        `;
+        tbody.appendChild(tr);
+        i++;
+    }
+}
+  
   
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
@@ -748,9 +783,6 @@ function renderLokasi(lokasi){
 function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
 
 
- 
-
-
 </script>
 
 
@@ -778,3 +810,6 @@ function logout(){ sessionStorage.clear(); window.location.replace("index.html")
 </div>
 </body>
 </html>
+
+
+
