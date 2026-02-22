@@ -1798,7 +1798,41 @@ function logout(){ sessionStorage.clear(); window.location.replace("index.html")
 
 </script>
 
+<script>
+function showDetail(status){
+    if(!allRows || !allRows.length) return;
 
+    const filtered = allRows.filter(r => r.P === status);
+    const tbody = document.getElementById("detailBody");
+    tbody.innerHTML = "";
+
+    if(filtered.length === 0){
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data untuk status "${status}"</td></tr>`;
+        document.getElementById("detailTotal").textContent = "";
+        return;
+    }
+
+    let total = 0;
+
+    filtered.forEach(r=>{
+        total += Number(r.M || 0);
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td class="wrap">${r.B}</td>
+            <td class="wrap">${r.C}</td>
+            <td>${r.D || ""}</td>
+            <td>${r.E || ""}</td>
+            <td style="text-align:right;">${Number(r.M || 0).toLocaleString("id-ID")}</td>
+            <td class="status status-${r.P.replace(/\s/g,'')}" style="text-align:center;">${r.P}</td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById("detailTotal").textContent = `Total: Rp ${total.toLocaleString("id-ID")}`;
+}
+</script>
   
 <div id="globalOverlay" style="
     display:none;
