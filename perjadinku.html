@@ -542,23 +542,95 @@ function renderDetailTable(rows) {
 }
 
 // render ringkasan status Card 1
+// --- render ringkasan status Card 1 ---
 function renderStatusSummary(rows){
     const statusList = ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"];
-    statusList.forEach((status, idx)=>{
-        const frekElem = document.querySelectorAll(".status-table tbody tr")[idx].querySelector(".link-frek");
-        const count = rows.filter(r=>r.Status===status).length;
-        frekElem.textContent = count;
+    const summary = {};
+
+    // inisialisasi summary
+    statusList.forEach(status => {
+        summary[status] = {frek:0, jumlah:0};
     });
 
-    const total = rows.length;
-    document.querySelector(".status-table tbody tr:last-child strong").textContent = total;
+    // hitung frek & jumlah
+    rows.forEach(r => {
+        const s = r.Status; // huruf kapital sesuai loadData
+        const jumlah = Number(r.Jumlah.replace(/\./g,""));
+        if(summary[s]){
+            summary[s].frek += 1;
+            summary[s].jumlah += jumlah;
+        }
+    });
+
+    // render tbody
+    const tbody = document.getElementById("statusSummary");
+    tbody.innerHTML = "";
+
+    let totalFrek = 0;
+    let totalJumlah = 0;
+
+    statusList.forEach(status => {
+        const item = summary[status];
+        totalFrek += item.frek;
+        totalJumlah += item.jumlah;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${status}</td>
+            <td>
+                <span class="link-frek" onclick="showDetail('${status}')">${item.frek}</span>
+            </td>
+            <td style="text-align:right">${item.jumlah.toLocaleString("id-ID")}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // row total
+    const trTotal = document.createElement("tr");
+    trTotal.innerHTML = `
+        <td><strong>Total</strong></td>
+        <td style="text-align:center"><strong>${totalFrek}</strong></td>
+        <td style="text-align:right"><strong>${totalJumlah.toLocaleString("id-ID")}</strong></td>
+    `;
+    tbody.appendChild(trTotal);
 }
 
-// fungsi untuk klik frek -> filter detail
+// --- show detail ketika frek diklik ---
 function showDetail(status){
     if(!allRows.length) return;
-    const filtered = allRows.filter(r => r.Status === status);
-    renderDetailTable(filtered);
+
+    const filtered = allRows.filter(r => r.Status === status); // huruf kapital
+    const tbody = document.getElementById("detailBody");
+    tbody.innerHTML = "";
+
+    if(filtered.length === 0){
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
+        document.getElementById("detailTotal").textContent = "";
+        return;
+    }
+
+    let total = 0;
+
+    filtered.forEach(r => {
+        total += Number(r.Jumlah.replace(/\./g,""));
+        const tglFormat = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
+        const tglMulai = r.TglMulai ? new Date(r.TglMulai) : null;
+        const tglSelesai = r.TglSelesai ? new Date(r.TglSelesai) : null;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td class="wrap">${r.MAK}</td>
+            <td class="wrap">${r.Uraian}</td>
+            <td class="wrap">${r.Tujuan}</td>
+            <td>${tglFormat(tglMulai)}</td>
+            <td>${tglFormat(tglSelesai)}</td>
+            <td style="text-align:right">${Number(r.Jumlah.replace(/\./g,"")).toLocaleString("id-ID")}</td>
+            <td class="status">${r.Status}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById("detailTotal").textContent = `Total: ${total.toLocaleString("id-ID")}`;
 }
 
 // load data pertama kali
