@@ -308,6 +308,10 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 .status-table th:nth-child(3){
     text-align:right;
 }
+
+#grafikPerjadin{
+    height:300px !important;
+}
   
 </style>
 </head>
@@ -480,6 +484,8 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
 <div class="footer">© KPKNL Denpasar 2026</div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
 <script>
 const urlGAS="https://script.google.com/macros/s/AKfycbxNMdl8x8jk2CeG6XS8rKOaOESS4U4lIpCS9wDRR9-PFkmUiQ6ACoq3wO8WfdcURU94bA/exec";
 
@@ -677,7 +683,10 @@ function renderJenis(jenis){
 // ================= GRAFIK =================
 function renderGrafik(grafik){
 
+    if(!grafik || grafik.length === 0) return;
+
     const ctx = document.getElementById("grafikPerjadin");
+    if(!ctx) return;
 
     if(chartPerjadin){
         chartPerjadin.destroy();
@@ -689,7 +698,7 @@ function renderGrafik(grafik){
             labels: grafik.map(g=>"Bln "+g.bulan),
             datasets:[{
                 label:"Frekuensi",
-                data: grafik.map(g=>g.frek),
+                data: grafik.map(g=>g.frek)
             }]
         },
         options:{
@@ -734,7 +743,7 @@ function logout(){
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   
 </body>
 </html>
