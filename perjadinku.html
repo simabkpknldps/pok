@@ -519,6 +519,7 @@ async function loadData() {
         renderDetailTable(allRows);
         renderStatusSummary(allRows);
         updateLokasiFavorit(); // 🔥 update Card 2 otomatis
+        updateJenisPerjadin();
 
     } catch(err) {
         console.error(err);
@@ -676,8 +677,26 @@ document.addEventListener("DOMContentLoaded", ()=>{
         i++;
     }
 }
-  
-  
+
+  function updateJenisPerjadin() {
+    let luar = 0;
+    let dalam = 0;
+
+    allRows.forEach(r => {
+        if(r.MAK === "524111") luar += 1;
+        else if(r.MAK === "524113") dalam += 1;
+    });
+
+    // update tabel Card 3
+    const card3 = document.querySelector(".bottom-cards .card:nth-child(2) tbody");
+    if(card3){
+        card3.innerHTML = `
+            <tr><td>Luar Kota</td><td style="text-align:right">${luar}</td></tr>
+            <tr><td>Dalam Kota</td><td style="text-align:right">${dalam}</td></tr>
+        `;
+    }
+}
+
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
 }
