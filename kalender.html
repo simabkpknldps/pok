@@ -1034,13 +1034,10 @@ let currentDate = new Date();
     try {
         const kantor = sessionStorage.getItem("kantor");
 
-        const response = await fetch("https://script.google.com/macros/s/AKfycbzqRhk8gTSKMFwj03SWJlYwonAXX7wx0j3rqgY3W_KlxfeXEjuezpwEJn7y_sCTgTCS3Q/exec", {
-            method: "POST",
-            body: JSON.stringify({
-                action: "getCalendar",
-                kantor: kantor
-            })
-        });
+        const response = await fetch(
+            "https://script.google.com/macros/s/AKfycbzqRhk8gTSKMFwj03SWJlYwonAXX7wx0j3rqgY3W_KlxfeXEjuezpwEJn7y_sCTgTCS3Q/exec" 
+            + kantor
+        );
 
         const result = await response.json();
 
@@ -1103,6 +1100,13 @@ function renderCalendar(){
                     if(!isOtherMonth){
                         td.addEventListener("dblclick", function(){
                             openDatePopup(dayNum, month+1, year);
+                        });
+                        
+                        events.forEach(ev=>{
+                            const span = document.createElement("span");
+                            span.className = `calendar-event event-${ev.color}`;
+                            span.textContent = ev.title;
+                            td.appendChild(span);
                         });
                     }
                     td.appendChild(span);
@@ -1351,7 +1355,7 @@ setInterval(async function(){
             <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeDatePopup()"></i>
         </div>
 
-        <div style="overflow-x:auto;">
+        <div style="max-height:400px; overflow:auto;">
             <table style="width:100%; border-collapse:collapse; font-size:13px;">
                 <thead>
                     <tr style="background:#f1f5f9;">
