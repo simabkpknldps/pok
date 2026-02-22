@@ -1737,44 +1737,47 @@ function showDetail(status){
         "Total : " + total.toLocaleString("id-ID");
 }
 
-function renderSummary(summary) {
+function renderSummary(summary){
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
 
-    // urutan tetap
+    let totalJumlah = 0;
+
+    // urutan yang diinginkan
     const urutanStatus = ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"];
-    let total = 0;
 
     urutanStatus.forEach(status => {
-        // cari item di summary
-        let item = [];
-        if(Array.isArray(summary)) {
-            item = summary.find(s => s.P === status) || {};
-        }
+        const item = summary[status] || {frek:0, jumlah:0};
+        const frek = item.frek;
+        const jumlah = item.jumlah;
+        totalJumlah += jumlah;
 
-        const frek = Number(item.F || 0);
-        const jumlah = Number(item.M || 0);
-        total += jumlah;
-
-        tbody.innerHTML += `
-            <tr>
-                <td>${status}</td>
-                <td><span class="link-frek" onclick="showDetail('${status}')">${frek}</span></td>
-                <td>${jumlah.toLocaleString('id-ID')}</td>
-            </tr>
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${status}</td>
+            <td>
+                <span class="link-frek" onclick="showDetail('${status}')">
+                    ${frek}
+                </span>
+            </td>
+            <td style="text-align:right">
+                ${jumlah.toLocaleString('id-ID')}
+            </td>
         `;
+        tbody.appendChild(tr);
     });
 
     // total row
-    tbody.innerHTML += `
-        <tr>
-            <td><strong>Total</strong></td>
-            <td></td>
-            <td><strong>${total.toLocaleString('id-ID')}</strong></td>
-        </tr>
+    const trTotal = document.createElement("tr");
+    trTotal.innerHTML = `
+        <td><strong>Total</strong></td>
+        <td></td>
+        <td style="text-align:right">
+            <strong>${totalJumlah.toLocaleString('id-ID')}</strong>
+        </td>
     `;
+    tbody.appendChild(trTotal);
 }
-
 function renderLokasi(lokasi){
 
     const tbody = document.getElementById("lokasiBody");
