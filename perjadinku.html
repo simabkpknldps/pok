@@ -528,31 +528,7 @@ async function loadData() {
 }
 
   
-// render tabel detail Card 1
-function renderDetailTable(rows) {
-    const tbody = document.getElementById("detailBody");
-    tbody.innerHTML = "";
-
-    rows.forEach((r, idx) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${r.MAK}</td>
-            <td>${r.Uraian}</td>
-            <td>${r.Tujuan}</td>
-            <td>${r.TglMulai}</td>
-            <td>${r.TglSelesai}</td>
-            <td style="text-align:right;">${r.Jumlah}</td>
-            <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    // total
-    const totalElem = document.getElementById("detailTotal");
-    const total = rows.reduce((sum, r) => sum + Number(r.Jumlah.replace(/\./g,"")),0);
-    totalElem.textContent = `Total: ${total.toLocaleString("id-ID")}`;
-}
-
+// --- helper untuk format tanggal yyyy-MM-dd ---
 function formatDate(d){
     if(!d) return "";
     const date = new Date(d);
@@ -562,9 +538,47 @@ function formatDate(d){
     const day = String(date.getDate()).padStart(2,'0');
     return `${year}-${month}-${day}`;
 }
-  
-// render ringkasan status Card 1
-// --- render ringkasan status Card 1 ---
+
+// --- render tabel detail langsung tanpa klik frek ---
+function renderDetailTable(rows) {
+    const tbody = document.getElementById("detailBody");
+    tbody.innerHTML = "";
+
+    let total = 0;
+
+    rows.forEach(r => {
+        total += r.Jumlah;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td class="wrap">${r.MAK}</td>
+            <td class="wrap">${r.Uraian}</td>
+            <td class="wrap">${r.Tujuan}</td>
+            <td>${formatDate(r.TglMulai)}</td>       <!-- yyyy-MM-dd -->
+            <td>${formatDate(r.TglSelesai)}</td>     <!-- yyyy-MM-dd -->
+            <td style="text-align:right">${r.Jumlah.toLocaleString("id-ID")}</td>
+            <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>  <!-- warna status -->
+        `;
+        tbody.appendChild(tr);
+    });
+
+    const totalElem = document.getElementById("detailTotal");
+    if(totalElem) totalElem.textContent = `Total: ${total.toLocaleString("id-ID")}`;
+}
+
+// --- helper untuk warna status ---
+function getStatusClass(status){
+    switch(status){
+        case "Rekam Data": return "status-RekamData";
+        case "Terlaksana": return "status-Terlaksana";
+        case "LPT": return "status-LPT";
+        case "Terbayar": return "status-Terbayar";
+        case "Selesai": return "status-Selesai";
+        default: return "";
+    }
+}
+
+// --- render ringkasan status tetap tapi tanpa onclick ---
 function renderStatusSummary(rows){
     const statusList = ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"];
     const summary = {};
@@ -576,15 +590,14 @@ function renderStatusSummary(rows){
 
     // hitung frek & jumlah
     rows.forEach(r => {
-        const s = r.Status; // huruf kapital sesuai loadData
-        const jumlah = Number(r.Jumlah.replace(/\./g,""));
+        const s = r.Status;
+        const jumlah = Number(r.Jumlah);
         if(summary[s]){
             summary[s].frek += 1;
             summary[s].jumlah += jumlah;
         }
     });
 
-    // render tbody
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
 
@@ -599,74 +612,19 @@ function renderStatusSummary(rows){
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${status}</td>
-            <td>
-                <span class="link-frek" onclick="showDetail('${status}')">${item.frek}</span>
-            </td>
+            <td>${item.frek}</td>
             <td style="text-align:right">${item.jumlah.toLocaleString("id-ID")}</td>
         `;
         tbody.appendChild(tr);
     });
 
-    // row total
     const trTotal = document.createElement("tr");
     trTotal.innerHTML = `
         <td><strong>Total</strong></td>
-        <td style="text-align:center"><strong>${totalFrek}</strong></td>
+        <td><strong>${totalFrek}</strong></td>
         <td style="text-align:right"><strong>${totalJumlah.toLocaleString("id-ID")}</strong></td>
     `;
     tbody.appendChild(trTotal);
-}
-
-// --- show detail ketika frek diklik ---
-// show detail ketika frek diklik
-  
-function showDetail(status){
-    if(!allRows.length) return;
-
-    const filtered = status === "Total" ? allRows : allRows.filter(r => r.Status === status);
-
-    const tbody = document.getElementById("detailBody");
-    tbody.style.display = "table-row-group";
-    tbody.innerHTML = "";
-
-    if(filtered.length === 0){
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
-        return;
-    }
-
-    let total = 0;
-
-    filtered.forEach(r => {
-        total += r.Jumlah;
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td class="wrap">${r.MAK}</td>
-            <td class="wrap">${r.Uraian}</td>
-            <td class="wrap">${r.Tujuan}</td>
-            <td>${formatDate(r.TglMulai)}</td>       <!-- format yyyy-MM-dd -->
-            <td>${formatDate(r.TglSelesai)}</td>     <!-- format yyyy-MM-dd -->
-            <td style="text-align:right">${r.Jumlah.toLocaleString("id-ID")}</td>
-            <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>  <!-- warna status -->
-        `;
-        tbody.appendChild(tr);
-    });
-
-    // update total di bawah tabel (jika ada element)
-    const totalElem = document.getElementById("detailTotal");
-    if(totalElem) totalElem.textContent = `Total: ${total.toLocaleString("id-ID")}`;
-}
-
-// helper warna status
-function getStatusClass(status){
-    switch(status){
-        case "Rekam Data": return "status-RekamData";
-        case "Terlaksana": return "status-Terlaksana";
-        case "LPT": return "status-LPT";
-        case "Terbayar": return "status-Terbayar";
-        case "Selesai": return "status-Selesai";
-        default: return "";
-    }
 }
 
   
