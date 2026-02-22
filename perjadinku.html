@@ -540,8 +540,10 @@ async function loadStatistik(kantor, nama){
 
 // ================= LOAD DATA =================
 async function loadData(kantor){
+
     try{
-        const res = await fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`);
+
+        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
         if(data.status !== "success") return;
@@ -554,18 +556,26 @@ async function loadData(kantor){
         console.error("Error loadData:", e);
     }
 }
-
 // ================= RENDER SUMMARY =================
 function renderSummary(summary){
 
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
 
+    const statusList = [
+        "Rekam Data",
+        "Terlaksana",
+        "LPT",
+        "Terbayar",
+        "Selesai"
+    ];
+
     let totalJumlah = 0;
 
-    Object.keys(summary).forEach(status=>{
-        const frek = summary[status].frek;
-        const jumlah = summary[status].jumlah;
+    statusList.forEach(status=>{
+
+        const frek = summary[status]?.frek || 0;
+        const jumlah = summary[status]?.jumlah || 0;
 
         totalJumlah += jumlah;
 
@@ -582,6 +592,7 @@ function renderSummary(summary){
             </td>
         `;
         tbody.appendChild(tr);
+
     });
 
     const trTotal = document.createElement("tr");
