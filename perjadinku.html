@@ -487,7 +487,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbxNMdl8x8jk2CeG6XS8rKOaOESS4U4lIpCS9wDRR9-PFkmUiQ6ACoq3wO8WfdcURU94bA/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbzbH_76HdP7KqPbcAuWk6Dep18icl3W3xf4pAx0q_x9U49COnvXX5eV53QtENrJiYfwFg/exec";
 
 let globalDetailData = [];
 let chartPerjadin = null;
@@ -541,7 +541,7 @@ async function loadStatistik(kantor, nama){
 // ================= LOAD DATA =================
 async function loadData(kantor){
     try{
-        const res = await fetch(`${urlGAS}?kantor=${kantor}`);
+        const res = await fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`);
         const data = await res.json();
 
         if(data.status !== "success") return;
