@@ -725,43 +725,7 @@ function goPerjadinku(){
     window.location.href = "perjadinku.html";
 }
 
-function showDetail(status) {
-    if (!allRows.length) return;
 
-    // filter rows berdasarkan status
-    const filtered = allRows.filter(r => r.status === status); // 🔥 pastikan r.status sesuai dengan key JSON-mu
-
-    const tbody = document.getElementById("detailBody");
-    tbody.innerHTML = "";
-
-    if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
-        document.getElementById("detailTotal").textContent = "";
-        return;
-    }
-
-    let total = 0;
-    filtered.forEach(r => {
-        total += Number(r.jumlah || 0);
-        const tglMulai = r.tglMulai ? new Date(r.tglMulai) : null;
-        const tglSelesai = r.tglSelesai ? new Date(r.tglSelesai) : null;
-
-        const formatDate = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td class="wrap">${r.uraian}</td>
-            <td class="wrap">${r.tujuan}</td>
-            <td>${formatDate(tglMulai)}</td>
-            <td>${formatDate(tglSelesai)}</td>
-            <td style="text-align:right;">${Number(r.jumlah).toLocaleString("id-ID")}</td>
-            <td class="status">${r.status}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    document.getElementById("detailTotal").textContent = `Total: ${total.toLocaleString("id-ID")}`;
-}
   
 function renderSummary(summary){
     const tbody = document.getElementById("statusSummary");
