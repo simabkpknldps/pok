@@ -721,8 +721,13 @@ else if(btn.classList.contains("btn-sp2d")){
 });
 
 function renderJenis(jenisData){
-    const tbody = document.querySelector("#jenisPerjadinBody"); // buat tbody id
+    const tbody = document.getElementById("jenisPerjadinBody");
     tbody.innerHTML = "";
+
+    if(!jenisData || !jenisData.length){
+        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center;">Tidak ada data</td></tr>`;
+        return;
+    }
 
     jenisData.forEach(j => {
         tbody.innerHTML += `<tr>
@@ -1758,13 +1763,12 @@ function renderSummary(summaryData){
 
     order.forEach(status => {
         const data = summaryData.find(s => s.status === status);
-
         if(data){
             tbody.innerHTML += `
             <tr>
                 <td>${data.status}</td>
                 <td><span class="link-frek" onclick="showDetail('${data.status}')">${data.frek}</span></td>
-                <td>${Number(data.jumlah||0).toLocaleString('id-ID')}</td>
+                <td style="text-align:right;">${Number(data.jumlah||0).toLocaleString('id-ID')}</td>
             </tr>
             `;
         }
@@ -1776,7 +1780,7 @@ function renderSummary(summaryData){
     <tr>
         <td><strong>Total</strong></td>
         <td></td>
-        <td><strong>${total.toLocaleString('id-ID')}</strong></td>
+        <td style="text-align:right;"><strong>${total.toLocaleString('id-ID')}</strong></td>
     </tr>`;
 }
 
