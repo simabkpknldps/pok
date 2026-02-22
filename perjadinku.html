@@ -476,10 +476,8 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
         </div>
 
         <div class="card">
-            <h3>Grafik Perjadin</h3>
-            <div style="height:220px; display:flex; align-items:center; justify-content:center; color:#94a3b8;">
-                Grafik akan tampil di sini
-            </div>
+            <div class="card-title">Grafik Perjadin</div>
+            <canvas id="chartPerjadin" height="220"></canvas>
         </div>
 
     </div>
@@ -488,6 +486,8 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 
 <div class="footer">© KPKNL Denpasar 2026</div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
 <script>
 const urlGAS="https://script.google.com/macros/s/AKfycbwE3cduQaxbFIq6T9cXHKE0yagSDAw0T8qtRUFA7LsjNAOe6EScaA9DgYzTulomQ-ohzQ/exec";
 
@@ -520,6 +520,7 @@ async function loadData() {
         renderStatusSummary(allRows);
         updateLokasiFavorit(); // 🔥 update Card 2 otomatis
         updateJenisPerjadin();
+        updateChartPerjadin();
 
     } catch(err) {
         console.error(err);
@@ -697,6 +698,67 @@ document.addEventListener("DOMContentLoaded", ()=>{
     }
 }
 
+let chartPerjadinInstance = null;
+
+function updateChartPerjadin() {
+    // array 12 bulan inisialisasi 0
+    const monthCounts = new Array(12).fill(0);
+
+    allRows.forEach(r => {
+        const d = new Date(r.TglMulai);
+        if(!isNaN(d)){
+            monthCounts[d.getMonth()] += 1; // bulan 0=Jan
+        }
+    });
+
+    const ctx = document.getElementById("chartPerjadin").getContext("2d");
+
+    if(chartPerjadinInstance){
+        chartPerjadinInstance.destroy();
+    }
+
+    chartPerjadinInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"],
+            datasets: [{
+                label: "Frekuensi Perjadin",
+                data: monthCounts,
+                borderColor: "#0369a1",
+                backgroundColor: "rgba(3,105,161,0.2)",
+                tension: 0.3,
+                fill: true,
+                pointRadius: 5,
+                pointBackgroundColor: "#0369a1",
+                pointBorderColor: "#fff"
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: "Jumlah"
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: "Bulan"
+                    }
+                }
+            }
+        }
+    });
+}
+  
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
 }
