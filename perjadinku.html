@@ -485,6 +485,9 @@ const urlGAS="https://script.google.com/macros/s/AKfycbwE3cduQaxbFIq6T9cXHKE0yag
 
 const kantor = sessionStorage.getItem("kantor");
 const nama = sessionStorage.getItem("nama");
+
+document.getElementById("namaUser").textContent = nama
+
 let allRows = []; // semua data dari GAS
 
 // fetch data dari GAS
