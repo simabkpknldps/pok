@@ -1746,27 +1746,31 @@ function renderSummary(summary) {
     let total = 0;
 
     urutanStatus.forEach(status => {
-        // cari item sesuai status
-        const item = summary.find(s => s.P === status) || {F:0, M:0}; // sesuaikan key dengan data GAS
-        const frek = item.F || 0;        // frekensi
-        const jumlah = Number(item.M || 0); // jumlah
+        // cari item di summary
+        let item = [];
+        if(Array.isArray(summary)) {
+            item = summary.find(s => s.P === status) || {};
+        }
+
+        const frek = Number(item.F || 0);
+        const jumlah = Number(item.M || 0);
         total += jumlah;
 
         tbody.innerHTML += `
             <tr>
                 <td>${status}</td>
                 <td><span class="link-frek" onclick="showDetail('${status}')">${frek}</span></td>
-                <td>${jumlah}</td>
+                <td>${jumlah.toLocaleString('id-ID')}</td>
             </tr>
         `;
     });
 
-    // row total
+    // total row
     tbody.innerHTML += `
         <tr>
             <td><strong>Total</strong></td>
             <td></td>
-            <td><strong>${total}</strong></td>
+            <td><strong>${total.toLocaleString('id-ID')}</strong></td>
         </tr>
     `;
 }
