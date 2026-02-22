@@ -308,6 +308,29 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 .status-table th:nth-child(3){
     text-align:right;
 }
+
+/* Status Table Borders */
+.status-table table {
+    border-collapse: collapse; /* pastikan garis menyatu */
+    width: 100%;
+}
+
+.status-table th,
+.status-table td {
+    border: 1px solid #cbd5e1; /* garis abu terang */
+    padding: 8px;
+    text-align: left;
+}
+
+/* optional: header beda warna */
+.status-table th {
+    background: #f1f5f9;
+    font-weight: 600;
+}
+
+/* center kolom frek & kanan kolom jumlah */
+.status-table td:nth-child(2) { text-align: center; }
+.status-table td:nth-child(3) { text-align: right; }
   
 </style>
 </head>
