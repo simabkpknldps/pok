@@ -560,6 +560,105 @@ document.addEventListener("DOMContentLoaded", ()=>{
     loadData();
 });
   
+// format date ke yyyy-MM-dd
+function formatDate(d){
+    if(!d) return "";
+    const date = new Date(d);
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+// update detail table
+function showDetail(status){
+    if(!allRows.length) return;
+
+    const filtered = allRows.filter(r => r.P === status || status==="Semua");
+
+    const tbody = document.getElementById("detailBody");
+    tbody.innerHTML = "";
+
+    let totalJumlah = 0;
+
+    filtered.forEach((r, i)=>{
+        const tglMulai = formatDate(r.G);
+        const tglSelesai = formatDate(r.H);
+        const jumlah = Number(r.M||0);
+        totalJumlah += jumlah;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${r.B}</td>
+            <td>${r.C}</td>
+            <td>${r.E}</td>
+            <td>${tglMulai}</td>
+            <td>${tglSelesai}</td>
+            <td style="text-align:right;">${jumlah.toLocaleString('id-ID')}</td>
+            <td class="status">${r.P}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // update total di bawah tabel detail
+    document.getElementById("detailTotal").textContent = `Total: ${totalJumlah.toLocaleString('id-ID')}`;
+
+    return totalJumlah;
+}
+
+// update tabel status card 1
+function updateStatusSummary(){
+    const tbody = document.getElementById("statusSummary");
+    let totalSemua = 0;
+
+    Array.from(tbody.querySelectorAll("tr")).forEach(tr=>{
+        const status = tr.cells[0].textContent.trim();
+        if(status === "Total") return;
+
+        // hitung jumlah berdasarkan status
+        const jumlah = allRows
+            .filter(r => r.P === status)
+            .reduce((sum, r)=> sum + Number(r.M||0), 0);
+        
+        tr.cells[1].querySelector(".link-frek").textContent = allRows.filter(r=>r.P===status).length; // frek
+        tr.cells[2].textContent = jumlah.toLocaleString('id-ID'); // jumlah
+
+        totalSemua += jumlah;
+    });
+
+    // update total
+    const totalRow = Array.from(tbody.querySelectorAll("tr")).find(tr=>tr.cells[0].textContent.trim()==="Total");
+    if(totalRow){
+        totalRow.cells[2].textContent = totalSemua.toLocaleString('id-ID');
+    }
+}
+
+// setelah load data
+function renderAllSummary(){
+    updateStatusSummary();
+    showDetail("Semua"); // default tampil semua
+}
+
+// contoh loadData() setelah data berhasil diambil
+async function loadData() {
+    const kantor = sessionStorage.getItem("kantor");
+    const nama = sessionStorage.getItem("nama");
+    const res = await fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`);
+    const data = await res.json();
+
+    if(data.status === "success") {
+        allRows = data.detail.map(d => ({
+            B: d.B,        // MAK
+            C: d.C,        // Uraian
+            E: d.E,        // Tujuan
+            G: d.G,        // Tgl Mulai
+            H: d.H,        // Tgl Selesai
+            M: d.M,        // Jumlah
+            P: d.P         // Status
+        }));
+
+        renderAllSummary();
+    } else {
+        console.error(data.message);
+    }
+}
   
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
