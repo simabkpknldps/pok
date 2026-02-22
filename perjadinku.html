@@ -497,16 +497,12 @@ document.addEventListener("DOMContentLoaded", async function(){
 
     document.getElementById("namaUser").textContent = nama;
 
-    // LOAD STATISTIK
     await loadStatistik(kantor, nama);
+    await loadData(kantor);
 
-    // LOAD TABEL
-    await loadData();
-
-    // AUTO REFRESH 1 MENIT
     setInterval(()=>{
         loadStatistik(kantor, nama);
-        loadData();
+        loadData(kantor);
     },60000);
 
 });
@@ -669,18 +665,7 @@ let pegawaiList = [];
 let lokasiList = [];
 
 
-document.addEventListener("DOMContentLoaded", async function(){
-    const nama = sessionStorage.getItem("nama");
-    if(!nama) window.location.replace("index.html");
-    else document.getElementById("namaUser").textContent = nama;
 
-    let allRows = [];
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor){
-        alert("Session kantor tidak ditemukan. Silakan login ulang.");
-        window.location.replace("index.html");
-        return;
-    }
 
     // ===== LOAD STATISTIK =====
     loadStatistik(kantor);
@@ -785,28 +770,23 @@ async function loadStatistik(kantor, nama){
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
-async function loadData(showOverlay = false){
+async function loadData(kantor){
     try{
-
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
         if(data.status !== "success") return;
 
-        allRows = data.rows;
+        allRows = data.rows || [];
         pegawaiList = data.pegawai || [];
         lokasiList = data.lokasi || [];
 
-        populateDatalist();
+        renderTable(allRows);
 
-        const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
-        const filtered = filterByStatus(allRows, defaultRadio);
-
-        renderTable(filtered);
-
-    } catch(e){
-        console.error(e);
+    }catch(e){
+        console.error("Error loadData:", e);
     }
+}
 }
 
  // load pertama (dengan overlay)
