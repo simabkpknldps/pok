@@ -1282,6 +1282,7 @@ function logout(){
 
 function openDatePopup(day, month, year){
 
+    document.getElementById("popupSearch").value = "";
     const key = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     const items = calendarData[key] || [];
 
@@ -1354,6 +1355,24 @@ function getStatusBadge(status){
 
     return `<span class="status-badge ${className}">${status}</span>`;
 }
+
+function filterPopupTable(){
+
+    const input = document.getElementById("popupSearch");
+    const filter = input.value.toLowerCase();
+    const tbody = document.getElementById("popupTableBody");
+    const rows = tbody.getElementsByTagName("tr");
+
+    for(let i = 0; i < rows.length; i++){
+        const rowText = rows[i].innerText.toLowerCase();
+
+        if(rowText.includes(filter)){
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+}
     
 function showLoading() {
     document.getElementById("overlayLoading").style.display = "flex";
@@ -1415,6 +1434,20 @@ setInterval(async function(){
             <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeDatePopup()"></i>
         </div>
 
+        <div style="margin-bottom:10px;">
+            <input type="text"
+                   id="popupSearch"
+                   placeholder="Cari uraian, pelaksana, tujuan, status..."
+                   onkeyup="filterPopupTable()"
+                   style="
+                        width:100%;
+                        padding:8px 10px;
+                        border:1px solid #cbd5e1;
+                        border-radius:8px;
+                        font-size:13px;
+                   ">
+        </div>
+        
         <div style="max-height:400px; overflow:auto;">
             <table style="width:100%; border-collapse:collapse; font-size:13px;">
                 <thead>
