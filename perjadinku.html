@@ -441,11 +441,9 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
           <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap; margin-bottom:15px;">
         
             <div class="card-title" style="font-weight:600; color:#0369a1;">Ringkasan Status Perjadin</div>
-        
-            <input type="text" id="searchDetail" placeholder="Cari..."
-              style="padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px; flex:1; min-width:250px; max-width:100%;">
-        
-            <div class="radio-group" style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="filter-bar">
+            <input type="text" id="searchDetail" placeholder="Cari...">
+            <div class="radio-group">
                 <label><input type="radio" name="statusFilter" value="Rekam Data"> Rekam Data</label>
                 <label><input type="radio" name="statusFilter" value="Terlaksana"> Terlaksana</label>
                 <label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
@@ -453,6 +451,7 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
                 <label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
                 <label><input type="radio" name="statusFilter" value="Semua" checked> Semua</label>
             </div>
+        </div>
          </div>
 
       
