@@ -483,6 +483,8 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <script>
 const urlGAS="https://script.google.com/macros/s/AKfycbwgnKlAm5naQfRhlBLJ0Iimuz2sW0LvSJ-sfvHQB6phFe7_iTjCRgjGGJZH4lRrRVJLzg/exec";
 
+let globalDetailData = [];
+let chartPerjadin = null;
 const kantor = sessionStorage.getItem("kantor");
 
 fetch(`${urlGAS}?kantor=${kantor}`)
@@ -490,11 +492,157 @@ fetch(`${urlGAS}?kantor=${kantor}`)
 .then(data=>{
    if(data.status!=="success") return;
 
+   globalDetailData = data.detail || [];
+
    renderSummary(data.summary);
    renderLokasi(data.lokasi);
    renderJenis(data.jenis);
    renderGrafik(data.grafik);
 });
+
+function renderSummary(summary){
+
+    const tbody = document.getElementById("statusSummary");
+    tbody.innerHTML = "";
+
+    let totalJumlah = 0;
+
+    Object.keys(summary).forEach(status=>{
+        const frek = summary[status].frek;
+        const jumlah = summary[status].jumlah;
+
+        totalJumlah += jumlah;
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${status}</td>
+                <td>
+                    <span class="link-frek" onclick="showDetail('${status}')">
+                        ${frek}
+                    </span>
+                </td>
+                <td style="text-align:right;">
+                    ${Number(jumlah).toLocaleString("id-ID")}
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML += `
+        <tr>
+            <td><strong>Total</strong></td>
+            <td></td>
+            <td style="text-align:right;">
+                <strong>${Number(totalJumlah).toLocaleString("id-ID")}</strong>
+            </td>
+        </tr>
+    `;
+}
+
+function renderLokasi(lokasi){
+
+    const tbody = document.getElementById("lokasiBody");
+    tbody.innerHTML = "";
+
+    lokasi.forEach((row,i)=>{
+        tbody.innerHTML += `
+            <tr>
+                <td>${i+1}</td>
+                <td>${row.lokasi}</td>
+                <td>${row.frek}</td>
+            </tr>
+        `;
+    });
+}
+
+function renderJenis(jenis){
+
+    const tbody = document.getElementById("jenisBody");
+    tbody.innerHTML = "";
+
+    Object.keys(jenis).forEach(j=>{
+        tbody.innerHTML += `
+            <tr>
+                <td>${j}</td>
+                <td>${jenis[j]}</td>
+            </tr>
+        `;
+    });
+}
+
+  function showDetail(status){
+
+    const detailBody = document.getElementById("detailBody");
+    const detailTotal = document.getElementById("detailTotal");
+
+    const filtered = globalDetailData.filter(d=>d.status === status);
+
+    if(filtered.length === 0){
+        detailBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center; padding:20px;">
+                    Tidak ada data
+                </td>
+            </tr>
+        `;
+        detailTotal.innerHTML = "";
+        return;
+    }
+
+    let total = 0;
+    detailBody.innerHTML = "";
+
+    filtered.forEach(d=>{
+        total += d.jumlah;
+
+        detailBody.innerHTML += `
+            <tr>
+                <td>${d.uraian}</td>
+                <td>${d.tujuan}</td>
+                <td>${formatDate(d.tglMulai)}</td>
+                <td>${formatDate(d.tglSelesai)}</td>
+                <td style="text-align:right;">
+                    ${Number(d.jumlah).toLocaleString("id-ID")}
+                </td>
+                <td>${d.status}</td>
+            </tr>
+        `;
+    });
+
+    detailTotal.innerHTML =
+        "Total : " + Number(total).toLocaleString("id-ID");
+}
+
+function formatDate(d){
+    if(!d) return "";
+    const dt = new Date(d);
+    if(isNaN(dt)) return "";
+    return dt.toISOString().split("T")[0];
+}
+  
+function renderGrafik(grafik){
+
+    const ctx = document.getElementById("grafikPerjadin");
+
+    if(chartPerjadin){
+        chartPerjadin.destroy();
+    }
+
+    chartPerjadin = new Chart(ctx,{
+        type:"bar",
+        data:{
+            labels: grafik.map(g=>"Bln "+g.bulan),
+            datasets:[{
+                label:"Frekuensi",
+                data: grafik.map(g=>g.frek),
+            }]
+        },
+        options:{
+            responsive:true,
+            maintainAspectRatio:false
+        }
+    });
+}
   
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
@@ -1875,5 +2023,8 @@ function populateDatalist(){
         ⏳ Menyimpan data...
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
 </body>
 </html>
