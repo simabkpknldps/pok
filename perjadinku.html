@@ -602,7 +602,8 @@ function renderStatusSummary(rows){
 function showDetail(status){
     if(!allRows.length) return;
 
-    const filtered = allRows.filter(r => r.Status === status);
+    const filtered = allRows.filter(r => r.Status === status); // 🟢 pakai 'Status' sesuai allRows
+
     const tbody = document.getElementById("detailBody");
     tbody.innerHTML = "";
 
@@ -618,7 +619,6 @@ function showDetail(status){
         const jumlahNum = Number(r.Jumlah.toString().replace(/\./g,""));
         total += jumlahNum;
 
-        // Format tanggal yyyy-MM-dd
         const formatDate = d => {
             if(!d) return "";
             const date = new Date(d);
