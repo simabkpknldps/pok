@@ -598,6 +598,8 @@ document.addEventListener("DOMContentLoaded", async function(){
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
+
+  
 async function loadData(showOverlay = false){
     try{
 
@@ -1646,6 +1648,49 @@ function showDeletePopup(tr){
         });
     };
 }
+
+// render semua data di detail table tanpa filter
+function renderAllDetails(rows){
+    const tbody = document.getElementById("detailBody");
+    tbody.innerHTML = ""; // clear dulu
+
+    if(!rows.length){
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
+        return;
+    }
+
+    let totalJumlah = 0;
+
+    rows.forEach(r => {
+        const tglMulai = r.G ? new Date(r.G) : null;
+        const tglSelesai = r.H ? new Date(r.H) : null;
+
+        const formatDate = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
+
+        const jumlah = Number(r.M || 0);
+        totalJumlah += jumlah;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td class="wrap">${r.B}</td>
+            <td class="wrap">${r.C}</td>
+            <td>${formatDate(tglMulai)}</td>
+            <td>${formatDate(tglSelesai)}</td>
+            <td style="text-align:right;">${jumlah.toLocaleString('id-ID')}</td>
+            <td class="status ${"status-" + r.P.replace(/\s/g,"")}">${r.P}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // tampilkan total
+    document.getElementById("detailTotal").textContent = `Total: ${totalJumlah.toLocaleString('id-ID')}`;
+}
+
+// langsung render semua data saat load
+document.addEventListener("DOMContentLoaded", async function(){
+    await loadData(); // pastikan allRows sudah terisi
+    renderAllDetails(allRows); // tampilkan semua tanpa filter
+});
   
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
