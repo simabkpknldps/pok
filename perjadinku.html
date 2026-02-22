@@ -654,17 +654,17 @@ async function loadData() {
 }
 
 function updateCard2ByLocation(){
-    const tbody = document.getElementById("card2Body"); // tbody Card 2
+    const tbody = document.getElementById("lokasiBody"); // tbody Card 2
     tbody.innerHTML = "";
 
-    // Ambil semua lokasi dari detail table
+    // Ambil semua lokasi dari allRows, tapi hanya lokasi valid (kolom E)
     const semuaLokasi = allRows.map(r => r.E || "").filter(l => l !== "");
 
     // Ambil lokasi unik
     const lokasiUnik = [...new Set(semuaLokasi)];
 
-    // Loop lokasi unik dan hitung jumlah baris
     lokasiUnik.forEach((lokasi, idx)=>{
+        // hitung jumlah baris yang sesuai lokasi
         const jumlah = allRows.filter(r => r.E === lokasi).length;
 
         const tr = document.createElement("tr");
@@ -675,16 +675,7 @@ function updateCard2ByLocation(){
         `;
         tbody.appendChild(tr);
     });
-
-    // total semua baris
-    const totalRow = document.createElement("tr");
-    totalRow.innerHTML = `
-        <td colspan="2" style="text-align:center; font-weight:bold;">Total</td>
-        <td style="text-align:right; font-weight:bold;">${allRows.length}</td>
-    `;
-    tbody.appendChild(totalRow);
-}
-  
+}  
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
 }
