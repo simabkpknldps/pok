@@ -350,6 +350,35 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
     font-size:13px;
     white-space:nowrap;
 }
+
+.card-header input[type="text"]{
+    flex-grow:1;           /* ambil ruang sisa */
+    margin-right:15px;     /* jarak ke radio button */
+    padding:6px 12px;
+    border-radius:8px;
+    border:1px solid #cbd5e1;
+    font-size:14px;
+    min-width:200px;       /* tetap responsive */
+}
+
+@media(max-width:900px){
+    .card-header{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
+    }
+    .card-header input[type="text"]{
+        width:100%;
+        margin-right:0;
+    }
+    .card-header .radio-group{
+        width:100%;
+        justify-content:flex-start;
+        flex-wrap:wrap;
+    }
+}
+
+
   
 </style>
 </head>
@@ -455,7 +484,7 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 
             <!-- DETAIL TABLE -->
             <div class="detail-table">
-                <div style="overflow:auto; max-height:300px;">
+                <div style="overflow:auto; max-height:270px;">
                     <table>
                         <thead>
                             <tr>
