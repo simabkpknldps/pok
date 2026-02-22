@@ -486,7 +486,7 @@ const urlGAS="https://script.google.com/macros/s/AKfycbwE3cduQaxbFIq6T9cXHKE0yag
 const kantor = sessionStorage.getItem("kantor");
 const nama = sessionStorage.getItem("nama");
 
-document.getElementById("namaUser").textContent = nama
+
 
 let allRows = []; // semua data dari GAS
 
@@ -659,7 +659,19 @@ function getStatusClass(status){
 // load data pertama kali
 document.addEventListener("DOMContentLoaded", ()=>{
     const nama = sessionStorage.getItem("nama"); 
-    loadData();
+    const kantor = sessionStorage.getItem("kantor");
+
+    // tampilkan nama di topbar
+    if(nama){
+        document.getElementById("namaUser").textContent = nama;
+    }
+
+    // load data hanya jika ada session
+    if(kantor && nama){
+        loadData();
+    } else {
+        console.warn("Session nama atau kantor belum ada");
+    }
 });
   
 function showLoading(show){
