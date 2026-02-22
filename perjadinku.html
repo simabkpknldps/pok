@@ -262,16 +262,38 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 }
 
 /* layout bawah */
-.bottom-cards{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
+.bottom-cards .card table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+}
+
+.bottom-cards .card th,
+.bottom-cards .card td{
+    padding:10px;
+    border-bottom:1px solid #e5e7eb;
+}
+
+.bottom-cards .card th{
+    background:#f1f5f9;
+    text-align:left;
 }
 
 @media(max-width:900px){
     .bottom-cards{
         grid-template-columns:1fr;
     }
+}
+
+/* CARD 1 alignment */
+.status-table td:nth-child(2),
+.status-table th:nth-child(2){
+    text-align:center;
+}
+
+.status-table td:nth-child(3),
+.status-table th:nth-child(3){
+    text-align:right;
 }
   
 </style>
@@ -363,6 +385,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
             <!-- DETAIL TABLE -->
             <div class="detail-table">
+            <div style="overflow:auto; max-height:300px;">
                 <table>
                     <thead>
                         <tr>
@@ -382,6 +405,9 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                         </tr>
                     </tbody>
                 </table>
+            </div>
+              
+                
                 <div class="total-detail" id="detailTotal"></div>
             </div>
 
@@ -393,6 +419,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
           <div class="card">
               <div class="card-title">Lokasi Favorit</div>
+            <div style="overflow:auto; max-height:300px;">
               <table>
                   <thead>
                       <tr>
@@ -407,6 +434,8 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                       <tr><td>3</td><td>Denpasar</td><td>2</td></tr>
                   </tbody>
               </table>
+              </div>
+              
           </div>
   
           <div class="card">
@@ -538,34 +567,26 @@ document.addEventListener("DOMContentLoaded", async function(){
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
-async function loadData(showOverlay = true){
+async function loadData(showOverlay = false){
     try{
-        if(showOverlay && firstLoad) showLoading(true);
 
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
-
-        if(showOverlay && firstLoad) showLoading(false);
 
         if(data.status !== "success") return;
 
         allRows = data.rows;
         pegawaiList = data.pegawai || [];
         lokasiList = data.lokasi || [];
-        
-        // 🔥 TAMBAHKAN DI SINI
+
         populateDatalist();
 
         const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
+        const filtered = filterByStatus(allRows, defaultRadio);
 
-        // skip row 2 & 3 saat load pertama
-        const initialRows = allRows.filter((r, idx) => idx !== 1 && idx !== 2);
-        const filtered = filterByStatus(initialRows, defaultRadio);
         renderTable(filtered);
 
-        firstLoad = false; // overlay hanya sekali
     } catch(e){
-        if(showOverlay && firstLoad) showLoading(false);
         console.error(e);
     }
 }
@@ -576,8 +597,8 @@ async function loadData(showOverlay = true){
   
 // 🔁 Reload data tiap 30 detik
     setInterval(() => {
-        loadData();
-    }, 30000); // 30000ms = 30 detik
+    loadData(false);
+    }, 60000); // 1 menit
 
 
   
