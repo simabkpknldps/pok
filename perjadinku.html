@@ -1692,7 +1692,6 @@ function goPerjadinku(){
 }
 
 function showDetail(status){
-
     const filtered = allRows.filter(r => r.status === status);
 
     const tbody = document.getElementById("detailBody");
@@ -1713,7 +1712,6 @@ function showDetail(status){
     let total = 0;
 
     filtered.forEach(r => {
-
         const mulai = r.tglMulai ? new Date(r.tglMulai).toISOString().split("T")[0] : "";
         const selesai = r.tglSelesai ? new Date(r.tglSelesai).toISOString().split("T")[0] : "";
         const jumlah = Number(r.jumlah || 0);
@@ -1736,7 +1734,6 @@ function showDetail(status){
     document.getElementById("detailTotal").innerText =
         "Total : " + total.toLocaleString("id-ID");
 }
-
 function renderSummary(summary){
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
