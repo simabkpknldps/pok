@@ -182,6 +182,97 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   .topbar-right .fa-calendar {
     display: none;
 }
+
+/* ===== STAT CARD ===== */
+.stat-container{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    margin-bottom:30px;
+}
+
+.card{
+    background:white;
+    border-radius:14px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.06);
+    padding:20px;
+}
+
+.card-title{
+    font-weight:600;
+    margin-bottom:15px;
+    color:#0369a1;
+}
+
+.status-flex{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+}
+
+.status-table{
+    min-width:300px;
+}
+
+.status-table table,
+.detail-table table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+}
+
+.status-table th,
+.status-table td,
+.detail-table th,
+.detail-table td{
+    border-bottom:1px solid #e5e7eb;
+    padding:8px;
+}
+
+.status-table th{
+    background:#f1f5f9;
+}
+
+.detail-table{
+    flex:1;
+    min-width:500px;
+    max-height:350px;
+    overflow:auto;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+}
+
+.detail-table th{
+    position:sticky;
+    top:0;
+    background:#f1f5f9;
+}
+
+.link-frek{
+    color:#2563eb;
+    cursor:pointer;
+    font-weight:600;
+    text-decoration:underline;
+}
+
+.total-detail{
+    text-align:right;
+    font-weight:600;
+    padding-top:10px;
+}
+
+/* layout bawah */
+.bottom-cards{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+@media(max-width:900px){
+    .bottom-cards{
+        grid-template-columns:1fr;
+    }
+}
   
 </style>
 </head>
@@ -216,40 +307,127 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
     </div>
 
     <div class="content">
-        <div class="filter-bar">
-            <input type="text" id="searchBox" placeholder="Cari data...">
-            <div class="radio-group">
-                <label><input type="radio" name="statusFilter" value="Dalam Proses" checked> Dalam Proses</label>
-                <label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
-                <label><input type="radio" name="statusFilter" value="Terbayar"> Terbayar</label>
-                <label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
-                <label><input type="radio" name="statusFilter" value="Semua"> Semua</label>
-            </div>
-        </div>
+        
+        <div class="stat-container">
 
-        <div class="table-wrapper">
-            <div class="table-box">
+    <!-- CARD 1 -->
+    <div class="card">
+        <div class="card-title">Ringkasan Status Perjadin</div>
+
+        <div class="status-flex">
+
+            <!-- TABEL STATUS -->
+            <div class="status-table">
                 <table>
                     <thead>
                         <tr>
-                            <th class="wrap">MAK</th>
-                            <th class="wrap">Uraian / No ST</th>
-                            <th class="wrap">Pelaksana Tugas</th>
-                            <th class="wrap">Tujuan</th>
-                            <th>Tgl ST/ND</th>
-                            <th>Tgl Mulai</th>
-                            <th>Jumlah</th>
-                            <th>User</th>
                             <th>Status</th>
-                            <th class="actions">Aksi</th>
+                            <th>Frek</th>
+                            <th>Jumlah</th>
                         </tr>
                     </thead>
-                    <tbody id="dataTableBody">
-                        <!-- Data dari GAS -->
+                    <tbody id="statusSummary">
+                        <tr>
+                            <td>Rekam Data</td>
+                            <td><span class="link-frek" onclick="showDetail('Rekam Data')">2</span></td>
+                            <td>768.000</td>
+                        </tr>
+                        <tr>
+                            <td>Terlaksana</td>
+                            <td><span class="link-frek" onclick="showDetail('Terlaksana')">0</span></td>
+                            <td>0</td>
+                        </tr>
+                        <tr>
+                            <td>LPT</td>
+                            <td><span class="link-frek" onclick="showDetail('LPT')">5</span></td>
+                            <td>1.920.000</td>
+                        </tr>
+                        <tr>
+                            <td>Terbayar</td>
+                            <td><span class="link-frek" onclick="showDetail('Terbayar')">1</span></td>
+                            <td>384.000</td>
+                        </tr>
+                        <tr>
+                            <td>Selesai</td>
+                            <td><span class="link-frek" onclick="showDetail('Selesai')">10</span></td>
+                            <td>3.840.000</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total</strong></td>
+                            <td></td>
+                            <td><strong>6.912.000</strong></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
+
+            <!-- DETAIL TABLE -->
+            <div class="detail-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Uraian</th>
+                            <th>Tujuan</th>
+                            <th>Tgl Mulai</th>
+                            <th>Tgl Selesai</th>
+                            <th>Jumlah</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailBody">
+                        <tr>
+                            <td colspan="6" style="text-align:center; padding:20px;">
+                                Klik frekensi untuk melihat detail
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="total-detail" id="detailTotal"></div>
+            </div>
+
         </div>
+    </div>
+
+    <!-- CARD 2 & 3 -->
+    <div class="bottom-cards">
+
+          <div class="card">
+              <div class="card-title">Lokasi Favorit</div>
+              <table>
+                  <thead>
+                      <tr>
+                          <th>No</th>
+                          <th>Lokasi</th>
+                          <th>Frek</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      <tr><td>1</td><td>Jakarta</td><td>5</td></tr>
+                      <tr><td>2</td><td>Surabaya</td><td>3</td></tr>
+                      <tr><td>3</td><td>Denpasar</td><td>2</td></tr>
+                  </tbody>
+              </table>
+          </div>
+  
+          <div class="card">
+              <div class="card-title">Jenis Perjadin</div>
+              <table>
+                  <thead>
+                      <tr>
+                          <th>Jenis</th>
+                          <th>Frek</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      <tr><td>Luar Kota</td><td>12</td></tr>
+                      <tr><td>Dalam Kota</td><td>6</td></tr>
+                  </tbody>
+              </table>
+          </div>
+  
+      </div>
+
+</div>
 
     </div>
 </div>
@@ -1457,6 +1635,52 @@ function goPerjadinku(){
         return;
     }
     window.location.href = "perjadinku.html";
+}
+
+function showDetail(status){
+
+    const filtered = allRows.filter(r => r.P === status);
+
+    const tbody = document.getElementById("detailBody");
+    tbody.innerHTML = "";
+
+    if(filtered.length === 0){
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center; padding:20px;">
+                    Tidak ada data
+                </td>
+            </tr>
+        `;
+        document.getElementById("detailTotal").innerText = "";
+        return;
+    }
+
+    let total = 0;
+
+    filtered.forEach(r => {
+
+        const mulai = r.G ? new Date(r.G).toISOString().split("T")[0] : "";
+        const selesai = r.H ? new Date(r.H).toISOString().split("T")[0] : "";
+        const jumlah = Number(r.M || 0);
+        total += jumlah;
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${r.C}</td>
+            <td>${r.E}</td>
+            <td>${mulai}</td>
+            <td>${selesai}</td>
+            <td style="text-align:right;">${jumlah.toLocaleString("id-ID")}</td>
+            <td>${r.P}</td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById("detailTotal").innerText =
+        "Total : " + total.toLocaleString("id-ID");
 }
   
 function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
