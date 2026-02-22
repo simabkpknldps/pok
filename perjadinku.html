@@ -485,19 +485,30 @@ const urlGAS="https://script.google.com/macros/s/AKfycbwgnKlAm5naQfRhlBLJ0Iimuz2
 
 let globalDetailData = [];
 let chartPerjadin = null;
-const kantor = sessionStorage.getItem("kantor");
+document.addEventListener("DOMContentLoaded", async function(){
 
-fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`)
-.then(res=>res.json())
-.then(data=>{
-   if(data.status!=="success") return;
+    const nama = sessionStorage.getItem("nama");
+    const kantor = sessionStorage.getItem("kantor");
 
-   globalDetailData = data.detail || [];
+    if(!nama || !kantor){
+        window.location.replace("index.html");
+        return;
+    }
 
-   renderSummary(data.summary);
-   renderLokasi(data.lokasi);
-   renderJenis(data.jenis);
-   renderGrafik(data.grafik);
+    document.getElementById("namaUser").textContent = nama;
+
+    // LOAD STATISTIK
+    await loadStatistik(kantor, nama);
+
+    // LOAD TABEL
+    await loadData();
+
+    // AUTO REFRESH 1 MENIT
+    setInterval(()=>{
+        loadStatistik(kantor, nama);
+        loadData();
+    },60000);
+
 });
 
 function renderSummary(summary){
@@ -694,18 +705,14 @@ document.addEventListener("DOMContentLoaded", async function(){
         }
     }
 
-function loadStatistik(kantor){
+async function loadStatistik(kantor, nama){
+    try{
+        const res = await fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`);
+        const data = await res.json();
 
-    fetch(`${urlGAS}?kantor=${kantor}`)
-    .then(res=>res.json())
-    .then(data=>{
+        console.log("STAT:", data);
 
-        console.log("STATISTIK:", data); // 🔥 debug penting
-
-        if(data.status!=="success"){
-            console.log("Status bukan success");
-            return;
-        }
+        if(data.status !== "success") return;
 
         globalDetailData = data.detail || [];
 
@@ -714,11 +721,9 @@ function loadStatistik(kantor){
         if(data.jenis) renderJenis(data.jenis);
         if(data.grafik) renderGrafik(data.grafik);
 
-    })
-    .catch(err=>{
-        console.error("Error statistik:", err);
-    });
-
+    }catch(e){
+        console.error("Error statistik:", e);
+    }
 }
   
     // render table
