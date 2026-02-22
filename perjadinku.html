@@ -1692,49 +1692,47 @@ function goPerjadinku(){
 }
 
 function showDetail(status){
+    if(!allRows || allRows.length === 0) return;
 
-    const filtered = allRows.filter(r => r.P === status);
+    const statusKey = Object.keys(allRows[0]).find(k => k.toLowerCase().includes("p") || k.toLowerCase().includes("status"));
+    const uraianKey = Object.keys(allRows[0]).find(k => k.toLowerCase().includes("c") || k.toLowerCase().includes("uraian"));
+    const tujuanKey = Object.keys(allRows[0]).find(k => k.toLowerCase().includes("e") || k.toLowerCase().includes("tujuan"));
+    const mulaiKey = Object.keys(allRows[0]).find(k => k.toLowerCase().includes("g"));
+    const selesaiKey = Object.keys(allRows[0]).find(k => k.toLowerCase().includes("h"));
+    const jumlahKey = Object.keys(allRows[0]).find(k => k.toLowerCase().includes("m") || k.toLowerCase().includes("jumlah"));
+
+    const filtered = allRows.filter(r => r[statusKey] === status);
 
     const tbody = document.getElementById("detailBody");
     tbody.innerHTML = "";
 
     if(filtered.length === 0){
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align:center; padding:20px;">
-                    Tidak ada data
-                </td>
-            </tr>
-        `;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
         document.getElementById("detailTotal").innerText = "";
         return;
     }
 
     let total = 0;
 
-    filtered.forEach(r => {
-
-        const mulai = r.G ? new Date(r.G).toISOString().split("T")[0] : "";
-        const selesai = r.H ? new Date(r.H).toISOString().split("T")[0] : "";
-        const jumlah = Number(r.M || 0);
+    filtered.forEach(r=>{
+        const mulai = r[mulaiKey] ? new Date(r[mulaiKey]).toISOString().split("T")[0] : "";
+        const selesai = r[selesaiKey] ? new Date(r[selesaiKey]).toISOString().split("T")[0] : "";
+        const jumlah = Number(r[jumlahKey] || 0);
         total += jumlah;
 
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
-            <td>${r.C}</td>
-            <td>${r.E}</td>
+            <td>${r[uraianKey]}</td>
+            <td>${r[tujuanKey]}</td>
             <td>${mulai}</td>
             <td>${selesai}</td>
             <td style="text-align:right;">${jumlah.toLocaleString("id-ID")}</td>
-            <td>${r.P}</td>
+            <td>${r[statusKey]}</td>
         `;
-
         tbody.appendChild(tr);
     });
 
-    document.getElementById("detailTotal").innerText =
-        "Total : " + total.toLocaleString("id-ID");
+    document.getElementById("detailTotal").innerText = "Total : " + total.toLocaleString("id-ID");
 }
 
 function renderSummary(summary){
