@@ -544,14 +544,35 @@ function renderStatusSummary(rows){
 // fungsi untuk klik frek -> filter detail
 function showDetail(status){
     if(!allRows.length) return;
-    const filtered = allRows.filter(r => r.Status === status);
-    renderDetailTable(filtered);
-}
 
-// load data pertama kali
-document.addEventListener("DOMContentLoaded", ()=>{
-    loadData();
-});
+    const filtered = status==="Semua" ? allRows : allRows.filter(r => r.P === status);
+
+    const tbody = document.getElementById("detailBody");
+    tbody.innerHTML = "";
+
+    let totalJumlah = 0;
+
+    filtered.forEach((r)=>{
+        const tglMulai = formatDate(r.G);
+        const tglSelesai = formatDate(r.H);
+        const jumlah = Number(r.M||0);
+        totalJumlah += jumlah;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${r.B}</td>
+            <td>${r.C}</td>
+            <td>${r.E}</td>
+            <td>${tglMulai}</td>
+            <td>${tglSelesai}</td>
+            <td style="text-align:right;">${jumlah.toLocaleString('id-ID')}</td>
+            <td class="status status-${r.P.replace(/\s/g,'')}">${r.P}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById("detailTotal").textContent = `Total: ${totalJumlah.toLocaleString('id-ID')}`;
+}
   
 // format date ke yyyy-MM-dd
 function formatDate(d){
@@ -560,6 +581,7 @@ function formatDate(d){
     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
 
+  
 // update detail table
 function showDetail(status){
     if(!allRows.length) return;
@@ -605,68 +627,61 @@ function updateStatusSummary(){
         const status = tr.cells[0].textContent.trim();
         if(status === "Total") return;
 
-        // hitung jumlah berdasarkan status
-        const jumlah = allRows
-            .filter(r => r.P === status)
-            .reduce((sum, r)=> sum + Number(r.M||0), 0);
-        
-        tr.cells[1].querySelector(".link-frek").textContent = allRows.filter(r=>r.P===status).length; // frek
-        tr.cells[2].textContent = jumlah.toLocaleString('id-ID'); // jumlah
+        const rowsByStatus = allRows.filter(r => r.P === status);
+        const frek = rowsByStatus.length;
+        const jumlah = rowsByStatus.reduce((sum,r)=> sum + Number(r.M||0),0);
 
+        tr.cells[1].querySelector(".link-frek").textContent = frek;
+        tr.cells[2].textContent = jumlah.toLocaleString("id-ID");
         totalSemua += jumlah;
     });
 
-    // update total
+    // total
     const totalRow = Array.from(tbody.querySelectorAll("tr")).find(tr=>tr.cells[0].textContent.trim()==="Total");
-    if(totalRow){
-        totalRow.cells[2].textContent = totalSemua.toLocaleString('id-ID');
-    }
+    if(totalRow) totalRow.cells[2].textContent = totalSemua.toLocaleString("id-ID");
 }
 
 // setelah load data
 function renderAllSummary(){
     updateStatusSummary();
     showDetail("Semua"); // default tampil semua
+    updateCard2ByLocation();
 }
 
 // contoh loadData() setelah data berhasil diambil
 async function loadData() {
     const kantor = sessionStorage.getItem("kantor");
     const nama = sessionStorage.getItem("nama");
+    if(!kantor || !nama) return;
+
     const res = await fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`);
     const data = await res.json();
 
-    if(data.status === "success") {
-        allRows = data.detail.map(d => ({
-            B: d.B,        // MAK
-            C: d.C,        // Uraian
-            E: d.E,        // Tujuan
-            G: d.G,        // Tgl Mulai
-            H: d.H,        // Tgl Selesai
-            M: d.M,        // Jumlah
-            P: d.P         // Status
+    if(data.status==="success"){
+        allRows = data.detail.map(d=>({
+            B:d.B,
+            C:d.C,
+            E:d.E,
+            G:d.G,
+            H:d.H,
+            M:d.M,
+            P:d.P
         }));
-
         renderAllSummary();
-    } else {
-        console.error(data.message);
-    }
+    } else console.error(data.message);
 }
 
+document.addEventListener("DOMContentLoaded", loadData);
+
 function updateCard2ByLocation(){
-    const tbody = document.getElementById("lokasiBody"); // tbody Card 2
+    const tbody = document.getElementById("lokasiBody");
     tbody.innerHTML = "";
 
-    // Ambil semua lokasi dari allRows, tapi hanya lokasi valid (kolom E)
-    const semuaLokasi = allRows.map(r => r.E || "").filter(l => l !== "");
-
-    // Ambil lokasi unik
+    const semuaLokasi = allRows.map(r=>r.E||"").filter(l=>l!=="");
     const lokasiUnik = [...new Set(semuaLokasi)];
 
     lokasiUnik.forEach((lokasi, idx)=>{
-        // hitung jumlah baris yang sesuai lokasi
-        const jumlah = allRows.filter(r => r.E === lokasi).length;
-
+        const jumlah = allRows.filter(r=>r.E===lokasi).length;
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>${idx+1}</td>
@@ -675,7 +690,9 @@ function updateCard2ByLocation(){
         `;
         tbody.appendChild(tr);
     });
-}  
+}
+
+  
 function showLoading(show){
     document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
 }
