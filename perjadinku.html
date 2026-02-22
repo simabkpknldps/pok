@@ -378,6 +378,22 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
     }
 }
 
+  .card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 15px; /* jarak antar elemen */
+}
+
+.card-header input[type="text"] {
+    flex-grow: 1;       /* ambil ruang tersisa */
+    min-width: 200px;
+    max-width: 250px;
+}
+
+.card-header .radio-group {
+    flex-shrink: 0;     /* jangan mengecil */
+}
 
   
 </style>
