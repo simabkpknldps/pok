@@ -511,14 +511,14 @@ function hideOverlay(){
   
 let pegawaiList = [];
 let lokasiList = [];
-
+ let allRows = [];
   
 document.addEventListener("DOMContentLoaded", async function(){
     const nama = sessionStorage.getItem("nama");
     if(!nama) window.location.replace("index.html");
     else document.getElementById("namaUser").textContent = nama;
 
-    let allRows = [];
+   
     const kantor = sessionStorage.getItem("kantor");
     if(!kantor){
         alert("Session kantor tidak ditemukan. Silakan login ulang.");
@@ -1692,48 +1692,37 @@ function goPerjadinku(){
 }
 
 function showDetail(status){
-    const filtered = allRows.filter(r => r.status === status);
+    if(!allRows.length) return;
+
+    const filtered = allRows.filter(r => r.P === status);
 
     const tbody = document.getElementById("detailBody");
     tbody.innerHTML = "";
 
     if(filtered.length === 0){
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align:center; padding:20px;">
-                    Tidak ada data
-                </td>
-            </tr>
-        `;
-        document.getElementById("detailTotal").innerText = "";
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Tidak ada data</td></tr>`;
+        document.getElementById("detailTotal").textContent = "";
         return;
     }
 
     let total = 0;
-
-    filtered.forEach(r => {
-        const mulai = r.tglMulai ? new Date(r.tglMulai).toISOString().split("T")[0] : "";
-        const selesai = r.tglSelesai ? new Date(r.tglSelesai).toISOString().split("T")[0] : "";
-        const jumlah = Number(r.jumlah || 0);
-        total += jumlah;
-
+    filtered.forEach(r=>{
+        total += Number(r.M||0);
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
-            <td>${r.uraian}</td>
-            <td>${r.tujuan}</td>
-            <td>${mulai}</td>
-            <td>${selesai}</td>
-            <td style="text-align:right;">${jumlah.toLocaleString("id-ID")}</td>
-            <td>${r.status}</td>
+            <td>${r.B}</td>
+            <td>${r.E}</td>
+            <td>${r.G}</td>
+            <td>${r.H}</td>
+            <td style="text-align:right;">${Number(r.M||0).toLocaleString("id-ID")}</td>
+            <td>${r.P}</td>
         `;
-
         tbody.appendChild(tr);
     });
 
-    document.getElementById("detailTotal").innerText =
-        "Total : " + total.toLocaleString("id-ID");
+    document.getElementById("detailTotal").textContent = "Total: " + total.toLocaleString("id-ID");
 }
+  
 function renderSummary(summary){
     const tbody = document.getElementById("statusSummary");
     tbody.innerHTML = "";
