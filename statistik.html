@@ -518,6 +518,12 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
     text-align:right;
     font-size:13px;
 }
+
+  .progress-fill{
+    height:100%;
+    background:linear-gradient(90deg,#0ea5e9,#0369a1);
+    min-width:6px;
+}
   
 </style>
 </head>
@@ -557,7 +563,7 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 
 <!-- CARD 1 : PROGRESS BULANAN -->
 <div class="card">
-<div class="card-title">Progress Per Seksi</div>
+<div class="card-title">Realisasi Per Seksi</div>
 
 <table class="progress-table">
 <tbody id="bulananBody"></tbody>
@@ -925,17 +931,13 @@ function renderProgressBulanan(data){
 
         const label = r.label;
 
-        // nilai asli dari GAS
-        const value = Number(r.value);
-
-        // ubah ke persen
-        const percent = (value * 100).toFixed(2);
+        // nilai langsung dari GAS
+        const percent = Number(r.value).toFixed(2);
 
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
         <td>
-
         <div class="progress-row">
 
             <div class="progress-label">${label}</div>
@@ -947,7 +949,6 @@ function renderProgressBulanan(data){
             <div class="progress-value">${percent}%</div>
 
         </div>
-
         </td>
         `;
 
