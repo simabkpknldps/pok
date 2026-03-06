@@ -665,7 +665,7 @@ function filterDetailTable(){
 }
 
 // event listener searchbox
-document.getElementById("searchDetail").addEventListener("input", filterDetailTable);
+//document.getElementById("searchDetail").addEventListener("input", filterDetailTable);
 
 // event listener radio buttons
 document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
@@ -958,6 +958,58 @@ function renderProgressBulanan(data){
         <td style="text-align:right">${r.luar}</td>
         <td style="text-align:right">${r.dalam}</td>
         <td style="text-align:right"><b>${r.total}</b></td>
+        `;
+
+        tbody.appendChild(tr);
+
+    });
+
+}
+
+  function renderProgressBulananLocal(){
+
+    const monthMap = {
+        "Jan":0,"Feb":0,"Mar":0,"Apr":0,"Mei":0,"Jun":0,
+        "Jul":0,"Agu":0,"Sep":0,"Okt":0,"Nov":0,"Des":0
+    };
+
+    allRows.forEach(r=>{
+        const d = new Date(r.TglMulai);
+
+        if(!isNaN(d)){
+            const bulan = d.getMonth();
+            const namaBulan = Object.keys(monthMap)[bulan];
+            monthMap[namaBulan]++;
+        }
+    });
+
+    const max = Math.max(...Object.values(monthMap));
+
+    const tbody = document.getElementById("bulananBody");
+    tbody.innerHTML="";
+
+    Object.entries(monthMap).forEach(([bulan,val])=>{
+
+        const percent = max ? Math.round(val/max*100) : 0;
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+        <td>
+
+        <div class="progress-row">
+
+            <div class="progress-label">${bulan}</div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${percent}%"></div>
+            </div>
+
+            <div class="progress-value">${val}</div>
+
+        </div>
+
+        </td>
         `;
 
         tbody.appendChild(tr);
