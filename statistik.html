@@ -422,7 +422,71 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
-  
+
+/* ===== CARD TAMBAHAN ===== */
+
+.extra-cards{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-top:20px;
+}
+
+/* progress bar */
+.progress-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:8px;
+}
+
+.progress-label{
+    width:120px;
+    font-size:13px;
+}
+
+.progress-bar{
+    flex:1;
+    height:12px;
+    background:#e5e7eb;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.progress-fill{
+    height:100%;
+    background:#0284c7;
+}
+
+.progress-value{
+    width:40px;
+    text-align:right;
+    font-size:12px;
+}
+
+/* ranking table */
+.ranking-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+}
+
+.ranking-table th,
+.ranking-table td{
+    padding:8px;
+    border-bottom:1px solid #e5e7eb;
+}
+
+.ranking-table th{
+    background:#f1f5f9;
+}
+
+@media(max-width:900px){
+    .extra-cards{
+        grid-template-columns:1fr;
+    }
+}
+
 </style>
 </head>
 
@@ -457,165 +521,37 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 
     <div class="content">
 
-<div class="stat-container">
+<div class="extra-cards">
 
-<!-- TOP CARD -->
-<div class="top-cards">
-
-<!-- CARD 1 : STATUS (KECIL) -->
-<div class="card card-status">
-
-<div class="card-title">Status Perjadin</div>
-
-<div class="status-table">
-<table>
-<thead>
-<tr>
-<th>Status</th>
-<th>Frek</th>
-<th>Jumlah</th>
-</tr>
-</thead>
-<tbody id="statusSummary"></tbody>
-</table>
-</div>
-
-</div>
-
-
-<!-- CARD 2 : DETAIL (BESAR) -->
-<div class="card card-detail">
-
-<div class="card-header">
-
-<input type="text" id="searchDetail" placeholder="Cari MAK / Uraian / Tujuan">
-
-<div class="radio-group">
-<label><input type="radio" name="statusFilter" value="Semua" checked> Semua</label>
-<label><input type="radio" name="statusFilter" value="Rekam Data"> Rekam</label>
-<label><input type="radio" name="statusFilter" value="Terlaksana"> Terlaksana</label>
-<label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
-<label><input type="radio" name="statusFilter" value="Terbayar"> Terbayar</label>
-<label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
-</div>
-
-</div>
-
-<div class="detail-table">
-
-<table>
-<thead>
-<tr>
-<th>MAK</th>
-<th class="wrap">Uraian</th>
-<th class="wrap">Tujuan</th>
-<th>Tgl Mulai</th>
-<th>Tgl Selesai</th>
-<th>Jumlah</th>
-<th>Status</th>
-</tr>
-</thead>
-
-<tbody id="detailBody"></tbody>
-
-</table>
-
-</div>
-
-<div class="total-detail" id="detailTotal"></div>
-
-</div>
-
-</div>
-
-
-<!-- CARD BAWAH -->
-<div class="bottom-cards">
-
-<!-- CARD 3 -->
+<!-- CARD 1 : PROGRESS BULANAN -->
 <div class="card">
-<div class="card-title">Lokasi Perjadin Terbanyak</div>
-<table>
+<div class="card-title">Progress Perjadin Bulanan</div>
+
+<table class="progress-table">
+<tbody id="bulananBody"></tbody>
+</table>
+
+</div>
+
+
+<!-- CARD 2 : RANKING PERJADIN -->
+<div class="card">
+<div class="card-title">Ranking Perjadin Pegawai</div>
+
+<table class="ranking-table">
 <thead>
 <tr>
 <th>No</th>
-<th>Lokasi</th>
-<th>Frekuensi</th>
+<th>Nama</th>
+<th>Luar Kota</th>
+<th>Dalam Kota</th>
+<th>Total</th>
 </tr>
 </thead>
-<tbody id="lokasiBody"></tbody>
+
+<tbody id="rankingBody"></tbody>
+
 </table>
-</div>
-
-
-<!-- CARD 4 -->
-<div class="card">
-<div class="card-title">Jenis Perjadin</div>
-<table>
-<thead>
-<tr>
-<th>Jenis</th>
-<th>Frekuensi</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-
-
-<!-- CARD 5 -->
-<div class="card">
-<div class="card-title">Grafik Perjadin per Bulan</div>
-<canvas id="chartPerjadin" height="120"></canvas>
-</div>
-
-</div>
-
-</div>
-
-
-<!-- CARD BAWAH -->
-<div class="bottom-cards">
-
-<!-- CARD 2 : LOKASI FAVORIT -->
-<div class="card">
-<div class="card-title">Lokasi Perjadin Terbanyak</div>
-<table>
-<thead>
-<tr>
-<th>No</th>
-<th>Lokasi</th>
-<th>Frekuensi</th>
-</tr>
-</thead>
-<tbody id="lokasiBody"></tbody>
-</table>
-</div>
-
-
-<!-- CARD 3 : JENIS PERJADIN -->
-<div class="card">
-<div class="card-title">Jenis Perjadin</div>
-<table>
-<thead>
-<tr>
-<th>Jenis</th>
-<th>Frekuensi</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-
-
-<!-- CARD 4 : GRAFIK PERJADIN -->
-<div class="card">
-<div class="card-title">Grafik Perjadin per Bulan</div>
-<canvas id="chartPerjadin" height="120"></canvas>
-</div>
-
-</div>
-
 </div>
 
 </div>
@@ -625,7 +561,7 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbzxEJSLMUFgMnTNJJjpg3sjINiCV4yRAsBwOtNaC9xRvmwHTc8GOZwv70gBTBmPPG0qPA/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbxtKN35HVROykNT7kXNJ-o0-xx32x-2dGrA-iaw-Oek0BYasQ2K4jxQVSgZokXecEQ1nQ/exec";
 
 const kantor = sessionStorage.getItem("kantor");
 const nama = sessionStorage.getItem("nama");
@@ -659,7 +595,9 @@ async function loadData() {
         updateLokasiFavorit();
         updateJenisPerjadin();
         updateChartPerjadin();
-
+        renderRanking(data.detail);
+        renderProgressBulanan(data.bulanan);
+      
     } catch(err) {
         console.error(err);
     } finally {
@@ -942,6 +880,90 @@ function showGlobalLoading(show, message="Memuat data..."){
     if(textDiv) textDiv.textContent = message;
 
     overlay.style.display = show ? "flex" : "none";
+}
+
+function renderProgressBulanan(data){
+
+    const tbody = document.getElementById("bulananBody");
+    tbody.innerHTML = "";
+
+    data.forEach(r=>{
+
+        const label = r[0]; // kolom E
+        const percent = Number(r[6]); // kolom K
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+        <td>
+
+        <div class="progress-row">
+
+            <div class="progress-label">${label}</div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${percent}%"></div>
+            </div>
+
+            <div class="progress-value">${percent}%</div>
+
+        </div>
+
+        </td>
+        `;
+
+        tbody.appendChild(tr);
+
+    });
+
+}
+
+  function renderRanking(data){
+
+    const map = {};
+
+    data.forEach(r=>{
+
+        const nama = r.D;
+        const mak = r.B.slice(-9).substr(0,6);
+
+        if(!map[nama]){
+            map[nama] = {luar:0,dalam:0};
+        }
+
+        if(mak === "524111") map[nama].luar++;
+        if(mak === "524113") map[nama].dalam++;
+
+    });
+
+    const arr = Object.entries(map).map(([nama,v])=>({
+        nama,
+        luar:v.luar,
+        dalam:v.dalam,
+        total:v.luar+v.dalam
+    }));
+
+    arr.sort((a,b)=>b.total-a.total);
+
+    const tbody = document.getElementById("rankingBody");
+    tbody.innerHTML="";
+
+    arr.forEach((r,i)=>{
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${r.nama}</td>
+        <td style="text-align:right">${r.luar}</td>
+        <td style="text-align:right">${r.dalam}</td>
+        <td style="text-align:right"><b>${r.total}</b></td>
+        `;
+
+        tbody.appendChild(tr);
+
+    });
+
 }
   
 function showLoading(show){
