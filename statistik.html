@@ -892,8 +892,11 @@ function renderProgressBulanan(data){
     data.forEach(r=>{
 
         const label = r.label;
-        const value = Number(r.value);
-        const percent = value.toFixed(2); // 2 desimal
+
+        // ubah desimal menjadi persen
+        const value = Number(r.value) * 100;
+
+        const percent = value.toFixed(2);
 
         const tr = document.createElement("tr");
 
@@ -920,7 +923,6 @@ function renderProgressBulanan(data){
     });
 
 }
-
   
   function renderRanking(data){
 
