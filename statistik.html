@@ -893,6 +893,7 @@ function renderProgressBulanan(data){
 
         const label = r.label;
         const value = Number(r.value);
+        const percent = value.toFixed(2); // 2 desimal
 
         const tr = document.createElement("tr");
 
@@ -904,10 +905,10 @@ function renderProgressBulanan(data){
             <div class="progress-label">${label}</div>
 
             <div class="progress-bar">
-                <div class="progress-fill" style="width:${value}%"></div>
+                <div class="progress-fill" style="width:${percent}%"></div>
             </div>
 
-            <div class="progress-value">${value}%</div>
+            <div class="progress-value">${percent}%</div>
 
         </div>
 
@@ -919,6 +920,8 @@ function renderProgressBulanan(data){
     });
 
 }
+
+  
   function renderRanking(data){
 
     const map = {};
