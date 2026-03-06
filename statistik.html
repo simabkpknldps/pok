@@ -930,9 +930,8 @@ function renderProgressBulanan(data){
     data.forEach(r=>{
 
         const label = r.label;
-
-        // nilai langsung dari GAS
-        const percent = Number(r.value).toFixed(2);
+        const value = Number(r.value) * 100; // dikali 100
+        const percent = value.toFixed(2);
 
         const tr = document.createElement("tr");
 
