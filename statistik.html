@@ -561,7 +561,7 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbxtKN35HVROykNT7kXNJ-o0-xx32x-2dGrA-iaw-Oek0BYasQ2K4jxQVSgZokXecEQ1nQ/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbwp1uiXjbQi2Hl8byc0WzT8fraLLotj_5VFnxn-KfY9qxbJgm23EXq9D34s90q2Hofyfw/exec";
 
 const kantor = sessionStorage.getItem("kantor");
 const nama = sessionStorage.getItem("nama");
@@ -596,7 +596,7 @@ async function loadData() {
         renderRanking(data.detail);
 
         /* ===== CARD 1 ===== */
-        renderProgressBulananLocal();
+        renderProgressBulanan(data.dashBulanan);
 
     } catch(err) {
         console.error(err);
@@ -887,10 +887,12 @@ function renderProgressBulanan(data){
     const tbody = document.getElementById("bulananBody");
     tbody.innerHTML = "";
 
+    if(!data) return;
+
     data.forEach(r=>{
 
-        const label = r[0]; // kolom E
-        const percent = Number(r[6]); // kolom K
+        const label = r.label;
+        const value = Number(r.value);
 
         const tr = document.createElement("tr");
 
@@ -902,10 +904,10 @@ function renderProgressBulanan(data){
             <div class="progress-label">${label}</div>
 
             <div class="progress-bar">
-                <div class="progress-fill" style="width:${percent}%"></div>
+                <div class="progress-fill" style="width:${value}%"></div>
             </div>
 
-            <div class="progress-value">${percent}%</div>
+            <div class="progress-value">${value}%</div>
 
         </div>
 
@@ -917,7 +919,6 @@ function renderProgressBulanan(data){
     });
 
 }
-
   function renderRanking(data){
 
     const map = {};
