@@ -965,40 +965,15 @@ function renderProgressBulanan(data){
   
   function renderRanking(data){
 
-    const map = {};
-
-    data.forEach(r=>{
-
-        const nama = r.D;
-        const mak = r.B.slice(-9).substr(0,6);
-
-        if(!map[nama]){
-            map[nama] = {luar:0,dalam:0};
-        }
-
-        if(mak === "524111") map[nama].luar++;
-        if(mak === "524113") map[nama].dalam++;
-
-    });
-
-    const arr = Object.entries(map).map(([nama,v])=>({
-        nama,
-        luar:v.luar,
-        dalam:v.dalam,
-        total:v.luar+v.dalam
-    }));
-
-    arr.sort((a,b)=>b.total-a.total);
-
     const tbody = document.getElementById("rankingBody");
     tbody.innerHTML="";
 
-    arr.forEach((r,i)=>{
+    data.forEach(r=>{
 
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-        <td>${i+1}</td>
+        <td>${r.no}</td>
         <td>${r.nama}</td>
         <td style="text-align:right">${r.luar}</td>
         <td style="text-align:right">${r.dalam}</td>
@@ -1010,7 +985,6 @@ function renderProgressBulanan(data){
     });
 
 }
-
   function renderProgressBulananLocal(){
 
     const monthMap = {
