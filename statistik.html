@@ -433,11 +433,110 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
     </div>
 
     <div class="content">
-    
-    
-            
 
-    </div>
+<div class="stat-container">
+
+<!-- CARD 1 : STATUS + DETAIL -->
+<div class="card">
+
+<div class="card-header">
+<input type="text" id="searchDetail" placeholder="Cari MAK / Uraian / Tujuan">
+
+<div class="radio-group">
+<label><input type="radio" name="statusFilter" value="Semua" checked> Semua</label>
+<label><input type="radio" name="statusFilter" value="Rekam Data"> Rekam Data</label>
+<label><input type="radio" name="statusFilter" value="Terlaksana"> Terlaksana</label>
+<label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
+<label><input type="radio" name="statusFilter" value="Terbayar"> Terbayar</label>
+<label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
+</div>
+</div>
+
+<div class="status-flex">
+
+<!-- tabel status -->
+<div class="status-table">
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Frek</th>
+<th>Jumlah</th>
+</tr>
+</thead>
+<tbody id="statusSummary"></tbody>
+</table>
+</div>
+
+<!-- tabel detail -->
+<div class="detail-table">
+<table>
+<thead>
+<tr>
+<th>MAK</th>
+<th class="wrap">Uraian</th>
+<th class="wrap">Tujuan</th>
+<th>Tgl Mulai</th>
+<th>Tgl Selesai</th>
+<th>Jumlah</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="detailBody"></tbody>
+</table>
+
+<div class="total-detail" id="detailTotal"></div>
+</div>
+
+</div>
+</div>
+
+
+<!-- CARD BAWAH -->
+<div class="bottom-cards">
+
+<!-- CARD 2 : LOKASI FAVORIT -->
+<div class="card">
+<div class="card-title">Lokasi Perjadin Terbanyak</div>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>Lokasi</th>
+<th>Frekuensi</th>
+</tr>
+</thead>
+<tbody id="lokasiBody"></tbody>
+</table>
+</div>
+
+
+<!-- CARD 3 : JENIS PERJADIN -->
+<div class="card">
+<div class="card-title">Jenis Perjadin</div>
+<table>
+<thead>
+<tr>
+<th>Jenis</th>
+<th>Frekuensi</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+
+<!-- CARD 4 : GRAFIK PERJADIN -->
+<div class="card">
+<div class="card-title">Grafik Perjadin per Bulan</div>
+<canvas id="chartPerjadin" height="120"></canvas>
+</div>
+
+</div>
+
+</div>
+
+</div>
 
 <div class="footer">© KPKNL Denpasar 2026</div>
 
