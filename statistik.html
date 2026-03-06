@@ -571,10 +571,11 @@ let allRows = []; // semua data dari GAS
 // fetch data dari GAS
 async function loadData() {
     if(!kantor || !nama) return;
-    
-    showGlobalLoading(true, "Memuat data..."); // tampilkan overlay
+
+    showLoading(true);
 
     try {
+
         const res = await fetch(`${urlGAS}?kantor=${kantor}&nama=${encodeURIComponent(nama)}`);
         const data = await res.json();
 
@@ -582,6 +583,7 @@ async function loadData() {
 
         allRows = data.detail.map(d => ({
             MAK: d.B.slice(-9).substr(0,6),
+            Nama: d.D,
             Uraian: d.C,
             Tujuan: d.E,
             TglMulai: d.G,
@@ -590,19 +592,17 @@ async function loadData() {
             Status: d.P
         }));
 
-        renderDetailTable(allRows);
-        renderStatusSummary(allRows);
-        updateLokasiFavorit();
-        updateJenisPerjadin();
-        updateChartPerjadin();
+        /* ===== CARD 2 ===== */
         renderRanking(data.detail);
-        renderProgressBulanan(data.bulanan);
-      
+
+        /* ===== CARD 1 ===== */
+        renderProgressBulananLocal();
+
     } catch(err) {
         console.error(err);
-    } finally {
-        showGlobalLoading(false); // sembunyikan overlay
     }
+
+    showLoading(false);
 }
 
   
