@@ -893,10 +893,11 @@ function renderProgressBulanan(data){
 
         const label = r.label;
 
-        // ubah desimal menjadi persen
-        const value = Number(r.value) * 100;
+        // nilai asli dari GAS
+        const value = Number(r.value);
 
-        const percent = value.toFixed(2);
+        // ubah ke persen
+        const percent = (value * 100).toFixed(2);
 
         const tr = document.createElement("tr");
 
