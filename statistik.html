@@ -184,11 +184,34 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 }
 
 /* ===== STAT CARD ===== */
+/* ===== TOP CARD LAYOUT ===== */
+
 .stat-container{
     display:flex;
     flex-direction:column;
     gap:20px;
-    margin-bottom:30px;
+}
+
+/* baris atas */
+.top-cards{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:20px;
+}
+
+/* card status kecil */
+.card-status{
+    padding:20px;
+}
+
+/* card detail besar */
+.card-detail{
+    padding:20px;
+}
+
+/* tabel detail lebih tinggi */
+.card-detail .detail-table{
+    max-height:420px;
 }
 
 .card{
@@ -436,25 +459,14 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 
 <div class="stat-container">
 
-<!-- CARD 1 : STATUS + DETAIL -->
-<div class="card">
+<!-- TOP CARD -->
+<div class="top-cards">
 
-<div class="card-header">
-<input type="text" id="searchDetail" placeholder="Cari MAK / Uraian / Tujuan">
+<!-- CARD 1 : STATUS (KECIL) -->
+<div class="card card-status">
 
-<div class="radio-group">
-<label><input type="radio" name="statusFilter" value="Semua" checked> Semua</label>
-<label><input type="radio" name="statusFilter" value="Rekam Data"> Rekam Data</label>
-<label><input type="radio" name="statusFilter" value="Terlaksana"> Terlaksana</label>
-<label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
-<label><input type="radio" name="statusFilter" value="Terbayar"> Terbayar</label>
-<label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
-</div>
-</div>
+<div class="card-title">Status Perjadin</div>
 
-<div class="status-flex">
-
-<!-- tabel status -->
 <div class="status-table">
 <table>
 <thead>
@@ -468,8 +480,29 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 </table>
 </div>
 
-<!-- tabel detail -->
+</div>
+
+
+<!-- CARD 2 : DETAIL (BESAR) -->
+<div class="card card-detail">
+
+<div class="card-header">
+
+<input type="text" id="searchDetail" placeholder="Cari MAK / Uraian / Tujuan">
+
+<div class="radio-group">
+<label><input type="radio" name="statusFilter" value="Semua" checked> Semua</label>
+<label><input type="radio" name="statusFilter" value="Rekam Data"> Rekam</label>
+<label><input type="radio" name="statusFilter" value="Terlaksana"> Terlaksana</label>
+<label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
+<label><input type="radio" name="statusFilter" value="Terbayar"> Terbayar</label>
+<label><input type="radio" name="statusFilter" value="Selesai"> Selesai</label>
+</div>
+
+</div>
+
 <div class="detail-table">
+
 <table>
 <thead>
 <tr>
@@ -482,13 +515,62 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 <th>Status</th>
 </tr>
 </thead>
+
 <tbody id="detailBody"></tbody>
+
 </table>
 
+</div>
+
 <div class="total-detail" id="detailTotal"></div>
+
 </div>
 
 </div>
+
+
+<!-- CARD BAWAH -->
+<div class="bottom-cards">
+
+<!-- CARD 3 -->
+<div class="card">
+<div class="card-title">Lokasi Perjadin Terbanyak</div>
+<table>
+<thead>
+<tr>
+<th>No</th>
+<th>Lokasi</th>
+<th>Frekuensi</th>
+</tr>
+</thead>
+<tbody id="lokasiBody"></tbody>
+</table>
+</div>
+
+
+<!-- CARD 4 -->
+<div class="card">
+<div class="card-title">Jenis Perjadin</div>
+<table>
+<thead>
+<tr>
+<th>Jenis</th>
+<th>Frekuensi</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+
+<!-- CARD 5 -->
+<div class="card">
+<div class="card-title">Grafik Perjadin per Bulan</div>
+<canvas id="chartPerjadin" height="120"></canvas>
+</div>
+
+</div>
+
 </div>
 
 
