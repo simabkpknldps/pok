@@ -596,7 +596,7 @@ async function loadData() {
         renderRanking(data.detail);
 
         /* ===== CARD 1 ===== */
-        renderProgressBulanan(data.dashBulanan);
+        renderProgressBulananLocal();
 
     } catch(err) {
         console.error(err);
@@ -997,19 +997,15 @@ function renderProgressBulanan(data){
 
         tr.innerHTML = `
         <td>
+            <div class="progress-row">
+                <div class="progress-label">${bulan}</div>
 
-        <div class="progress-row">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width:${percent}%"></div>
+                </div>
 
-            <div class="progress-label">${bulan}</div>
-
-            <div class="progress-bar">
-                <div class="progress-fill" style="width:${percent}%"></div>
+                <div class="progress-value">${val}</div>
             </div>
-
-            <div class="progress-value">${val}</div>
-
-        </div>
-
         </td>
         `;
 
