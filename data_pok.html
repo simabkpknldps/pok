@@ -388,6 +388,10 @@ th,td{
                 <option>KI</option>
             </select>
             <input type="text" id="searchBox" placeholder="Cari kode / uraian..." onkeyup="applyFilter()">
+            <label><input type="checkbox" id="cbPerjadin" onchange="applyFilter()"> Akun Perjadin</label>
+            <label><input type="checkbox" id="cbRM" onchange="applyFilter()"> Rupiah Murni</label>
+            <label><input type="checkbox" id="cbPNBP" onchange="applyFilter()"> PNBP</label>
+            
             <button class="btn-download" onclick="downloadExcel()">
                 <i class="fa-solid fa-file-excel">  Excel</i> 
             </button>
@@ -518,21 +522,60 @@ function applyFilter(){
     const kategori = document.getElementById("filterPok").value.toLowerCase();
     const search   = document.getElementById("searchBox").value.toLowerCase();
 
+    // checkbox
+    const cbPerjadin = document.getElementById("cbPerjadin").checked;
+    const cbRM       = document.getElementById("cbRM").checked;
+    const cbPNBP     = document.getElementById("cbPNBP").checked;
+
     const filtered = allData.filter(row => {
 
-        const kode    = (row[0] || "").toLowerCase();
-        const uraian  = (row[1] || "").toLowerCase();
-        const kolomI  = (row[7] || "").toLowerCase(); // ✅ ambil dari kolom I
+        const kode   = (row[0] || "").toString();
+        const uraian = (row[1] || "").toLowerCase();
+        const kolomI = (row[7] || "").toLowerCase();
+        const sd     = (row[6] || "").toString().toUpperCase();
 
+        // =========================
+        // FILTER KATEGORI & SEARCH
+        // =========================
         const cocokKategori = 
             kategori === "semua" || 
-            kolomI === kategori;   // filter exact match kolom I
+            kolomI === kategori;
 
         const cocokSearch =
-            kode.includes(search) ||
+            kode.toLowerCase().includes(search) ||
             uraian.includes(search);
 
-        return cocokKategori && cocokSearch;
+        // =========================
+        // FILTER AKUN PERJADIN
+        // =========================
+        let cocokPerjadin = true;
+
+        if(cbPerjadin){
+            // ambil 9 digit terakhir
+            const last9 = kode.slice(-9);
+
+            // ambil 6 digit pertama dari 9 digit terakhir
+            const akun6 = last9.slice(0,6);
+
+            cocokPerjadin = (akun6 === "524111" || akun6 === "524113");
+        }
+
+        // =========================
+        // FILTER SUMBER DANA (SD)
+        // =========================
+        let cocokSD = true;
+
+        if(cbRM && !cbPNBP){
+            cocokSD = (sd === "RM");
+        } 
+        else if(!cbRM && cbPNBP){
+            cocokSD = (sd === "PNBP");
+        }
+        else if(cbRM && cbPNBP){
+            cocokSD = (sd === "RM" || sd === "PNBP");
+        }
+
+        return cocokKategori && cocokSearch && cocokPerjadin && cocokSD;
     });
 
     renderTable(filtered);
