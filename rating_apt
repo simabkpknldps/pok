@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .header-title {
+      font-weight: 700;
+      color: #0d6efd;
+      margin-top: 20px;
+    }
+    .sub-title {
+      font-size: 1.1rem;
+      color: #6c757d;
+      margin-bottom: 25px;
+    }
+    .card-mobile {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      margin-bottom: 15px;
+      padding: 15px;
+      border-left: 5px solid #0d6efd;
+    }
+    .label-custom {
+      font-size: 0.8rem;
+      color: #adb5bd;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .value-custom {
+      font-size: 1rem;
+      color: #212529;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    .loading-state {
+      text-align: center;
+      margin-top: 50px;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container mobile-container text-center">
+    <h3 class="header-title">Layanan APT KPKNL Denpasar</h3>
+    <p class="sub-title">Data Antrean Hari Ini</p>
+  </div>
+
+  <div class="container">
+    <div id="area-antrian">
+      <div class="loading-state" id="loading">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Memuat data antrean...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Jalankan fungsi penarikan data saat halaman web dibuka
+    window.addEventListener('load', function() {
+      google.script.run.withSuccessHandler(tampilkanData).ambilDataAntrianHariIni();
+    });
+
+    function tampilkanData(response) {
+      var container = document.getElementById('area-antrian');
+      container.innerHTML = ''; // Hilangkan loading spinner
+
+      if (response.status === 'SUCCESS') {
+        var listAntrian = response.data;
+
+        if (listAntrian.length === 0) {
+          container.innerHTML = '<div class="alert alert-warning text-center">Tidak ada data antrean baru untuk hari ini.</div>';
+          return;
+        }
+
+        // Tampilan Responsif Gaya Kartu Mobile (Sangat direkomendasikan untuk HP dibanding tabel kaku)
+        listAntrian.forEach(function(item) {
+          var htmlCard = `
+            <div class="card-mobile">
+              <div class="row align-items-center">
+                <div class="col-8">
+                  <div class="label-custom">ID Antrean</div>
+                  <div class="value-custom">${item.id}</div>
+                  
+                  <div class="label-custom">Nama</div>
+                  <div class="value-custom">${item.nama}</div>
+                  
+                  <div class="label-custom">Keperluan</div>
+                  <div class="value-custom">${item.keperluan}</div>
+                </div>
+                <div class="col-4 text-end">
+                  <button class="btn btn-primary btn-sm px-3 shadow-sm" onclick="aksiRating('${item.id}')">Rating</button>
+                </div>
+              </div>
+            </div>
+          `;
+          container.innerHTML += htmlCard;
+        });
+
+      } else {
+        container.innerHTML = `<div class="alert alert-danger">Gagal mengambil data: ${response.message}</div>`;
+      }
+    }
+
+    // Fungsi pemicu saat tombol rating diklik
+    function aksiRating(idAntrian) {
+      alert("Membuka penilaian rating untuk ID Antrean: " & idAntrian);
+      // Di sini Anda bisa arahkan window.location.href ke link Form penilaian jika diperlukan
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/bootstrap.bundle.min.js"></script>
+</body>
+</html>
