@@ -7,6 +7,7 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
 *{margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif;}
@@ -63,6 +64,25 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 .filter-bar .radio-group{display:flex; gap:12px;}
 .filter-bar .radio-group label{display:flex; align-items:center; gap:4px; font-size:14px; cursor:pointer;}
 
+/* Style Tombol Download Excel */
+.btn-download {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background-color: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-download:hover {
+  background-color: #15803d;
+}
+
 /* --- Tabel --- */
 .table-wrapper {
   width: 100%;
@@ -112,7 +132,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   vertical-align: middle;   /* vertical center */
   font-weight: 600;         /* opsional agar lebih jelas */
   color: white;             /* biar kontras dengan background */
-  border-radius: 6px;       /* agar background lebih rapi */
+  border-radius: 6px;        /* agar background lebih rapi */
 }
 
 /* freeze kolom aksi di kanan */
@@ -218,6 +238,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
     <div class="content">
         <div class="filter-bar">
             <input type="text" id="searchBox" placeholder="Cari data...">
+            <button class="btn-download" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
             <div class="radio-group">
                 <label><input type="radio" name="statusFilter" value="Dalam Proses" checked> Dalam Proses</label>
                 <label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
@@ -229,7 +250,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
         <div class="table-wrapper">
             <div class="table-box">
-                <table>
+                <table id="mainDataTable">
                     <thead>
                         <tr>
                             <th class="wrap">MAK</th>
@@ -245,8 +266,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                         </tr>
                     </thead>
                     <tbody id="dataTableBody">
-                        <!-- Data dari GAS -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
@@ -272,6 +292,31 @@ function hideOverlay(){
 let pegawaiList = [];
 let lokasiList = [];
 
+// Fungsi untuk download data tabel ke Excel (Mengabaikan kolom Aksi)
+function downloadExcel() {
+    const table = document.getElementById("mainDataTable");
+    
+    // Duplikasi tabel agar manipulasi penghapusan kolom aksi tidak merusak tabel asli di UI
+    const clonedTable = table.cloneNode(true);
+    
+    // Hapus kolom terakhir (Aksi) dari elemen thead klon
+    const ths = clonedTable.querySelectorAll("thead tr th");
+    if(ths.length > 0) ths[ths.length - 1].remove();
+    
+    // Hapus kolom terakhir (Aksi) dari semua baris di tbody klon
+    const trs = clonedTable.querySelectorAll("tbody tr");
+    trs.forEach(tr => {
+        if(tr.cells.length > 0) {
+            tr.cells[tr.cells.length - 1].remove();
+        }
+    });
+
+    // Convert tabel klon ke workbook Excel
+    const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Data Kegiatan" });
+    
+    // Trigger download file
+    XLSX.writeFile(wb, "Daftar_Kegiatan_SiMAB.xlsx");
+}
   
 document.addEventListener("DOMContentLoaded", async function(){
     const nama = sessionStorage.getItem("nama");
@@ -673,7 +718,6 @@ function showPelaksanaPopup(tr){
     <input type="text" value="${tujuan}" readonly
         style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
 
-    <!-- USER & TGL ST SEJAJAR -->
     <div style="display:flex; gap:12px;">
         <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
             <label>User</label>
@@ -699,7 +743,6 @@ function showPelaksanaPopup(tr){
         </button>
     </div>
 
-    <!-- TABEL DENGAN SCROLL -->
     <div style="
         border:1px solid #e5e7eb;
         border-radius:8px;
@@ -1507,9 +1550,6 @@ function populateDatalist(){
         lokasiDL.appendChild(opt);
     });
 }
-
- 
-
 
 </script>
 <datalist id="listPegawai"></datalist>
