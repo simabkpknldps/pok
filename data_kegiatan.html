@@ -292,30 +292,44 @@ function hideOverlay(){
 let pegawaiList = [];
 let lokasiList = [];
 
-// Fungsi untuk download data tabel ke Excel (Mengabaikan kolom Aksi)
+// Fungsi untuk download data tabel ke Excel (Mengabaikan kolom Aksi & Format Kolom G ke Angka murni)
 function downloadExcel() {
     const table = document.getElementById("mainDataTable");
     
-    // Duplikasi tabel agar manipulasi penghapusan kolom aksi tidak merusak tabel asli di UI
+    // Duplikasi tabel agar manipulasi tidak merusak tabel asli di UI
     const clonedTable = table.cloneNode(true);
     
     // Hapus kolom terakhir (Aksi) dari elemen thead klon
     const ths = clonedTable.querySelectorAll("thead tr th");
     if(ths.length > 0) ths[ths.length - 1].remove();
     
-    // Hapus kolom terakhir (Aksi) dari semua baris di tbody klon
+    // Proses semua baris di tbody klon
     const trs = clonedTable.querySelectorAll("tbody tr");
     trs.forEach(tr => {
         if(tr.cells.length > 0) {
+            // Kolom G adalah indeks ke-6 (0: MAK, 1: Uraian, ..., 6: Jumlah)
+            const cellJumlah = tr.cells[6];
+            if (cellJumlah) {
+                // Ambil teks angka murni dengan menghapus titik (.) pemisah ribuan
+                const rawValue = cellJumlah.textContent.replace(/\./g, "").trim();
+                const numericValue = parseFloat(rawValue);
+                
+                // Jika valid berupa angka, masukkan kembali ke elemen cell
+                if (!isNaN(numericValue)) {
+                    cellJumlah.textContent = numericValue;
+                }
+            }
+
+            // Hapus kolom terakhir (Aksi) setelah kolom G selesai diproses
             tr.cells[tr.cells.length - 1].remove();
         }
     });
 
-    // Convert tabel klon ke workbook Excel
-    const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Data Kegiatan" });
+    // Convert tabel klon ke workbook Excel dengan opsi raw: false agar angka di-parsing dengan benar
+    const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Data Kegiatan", raw: false });
     
     // Trigger download file
-    XLSX.writeFile(wb, "Daftar_Kegiatan_SiMAB.xlsx");
+    Xcontent = XLSX.writeFile(wb, "Daftar_Kegiatan_SiMAB.xlsx");
 }
   
 document.addEventListener("DOMContentLoaded", async function(){
@@ -398,8 +412,6 @@ document.addEventListener("DOMContentLoaded", async function(){
               </td>
             `;
 
-
-    
             tbody.appendChild(tr);
         });
     }
@@ -484,7 +496,6 @@ async function loadData(showOverlay = true){
     });
 
     // tombol aksi
-    // tombol aksi
 document.getElementById("dataTableBody").addEventListener("click", function(e){
     const btn = e.target.closest("button");
     if(!btn) return;
@@ -530,17 +541,15 @@ else if(btn.classList.contains("btn-sp2d")){
         alert("Anda tidak memiliki kewenangan!");
     }
 }
-    //else if(btn.classList.contains("btn-sp2d")) alert("SP2D ID: "+idKegiatan);
 });
 
-// contoh fungsi popup edit
+// fungsi popup edit
 function showEditPopup(tr){
     const idKegiatan = tr.dataset.id;
     const uraian = tr.cells[1].textContent;
     const pelaksana = tr.cells[2].textContent;
     const tujuan = tr.cells[3].textContent;
     const tglST = tr.cells[4].textContent;
-    //const tglMulai = tr.cells[6].textContent;
     const jumlah = tr.cells[6].textContent.replace(/\./g,"");
 
     // overlay
@@ -594,17 +603,14 @@ function showEditPopup(tr){
 
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
-    //document.getElementById("uraian").value = uraian;
-    //document.getElementById("tglST").value = tglST;
 
-  
     // tombol batal
     document.getElementById("popupCancel").onclick = () => overlay.remove();
 
     // tombol update
     document.getElementById("popupUpdate").onclick = function(){
 
-    const btn = this; // 🔥 ambil tombolnya sendiri
+    const btn = this; 
     btn.disabled = true;
 
     showOverlay("Menyimpan perubahan...");
@@ -646,38 +652,32 @@ function showEditPopup(tr){
     .catch(err=>{
         hideOverlay();
         btn.disabled = false;
-        //alert("Error koneksi");
-        //console.error(err);
     });
 };
 }
-
 
     loadData();
 });
 
 function getStatusColor(status){
     switch(status){
-        case "Rekam Data": return "#f87171"; // pink
-        case "Terlaksana": return "#9ca3af"; // abu
-        case "LPT": return "#facc15";        // kuning
-        case "Terbayar": return "#22c55e";   // hijau
-        case "Selesai": return "#3b82f6";    // biru
-        default: return "#6b7280";            // default abu gelap
+        case "Rekam Data": return "#f87171"; 
+        case "Terlaksana": return "#9ca3af"; 
+        case "LPT": return "#facc15";        
+        case "Terbayar": return "#22c55e";   
+        case "Selesai": return "#3b82f6";    
+        default: return "#6b7280";            
     }
 }
+
 function showPelaksanaPopup(tr){
-
     const idKegiatan = tr.dataset.id;
-
-    // ambil data dari tabel
     const mak = tr.cells[0].textContent;
     const uraian = tr.cells[1].textContent;
     const tujuan = tr.cells[3].textContent;
     const tglST = tr.cells[4].textContent;
     const user = tr.cells[7].textContent;
 
-    // ===== Overlay =====
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.inset = 0;
@@ -687,7 +687,6 @@ function showPelaksanaPopup(tr){
     overlay.style.alignItems = "center";
     overlay.style.zIndex = 9999;
 
-    // ===== Popup =====
     const popup = document.createElement("div");
     popup.style.background = "#fff";
     popup.style.borderRadius = "12px";
@@ -702,54 +701,35 @@ function showPelaksanaPopup(tr){
     popup.style.overflowY = "auto";
 
     popup.innerHTML = `
-    <h3 style="text-align:center; color:#0369a1;">
-        Pelaksana Kegiatan #${idKegiatan}
-    </h3>
+    <h3 style="text-align:center; color:#0369a1;">Pelaksana Kegiatan #${idKegiatan}</h3>
 
     <label>MAK</label>
-    <input type="text" value="${mak}" readonly
-        style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
+    <input type="text" value="${mak}" readonly style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
 
     <label>Uraian</label>
-    <input type="text" value="${uraian}"
-        style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+    <input type="text" value="${uraian}" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
 
     <label>Tujuan</label>
-    <input type="text" value="${tujuan}" readonly
-        style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
+    <input type="text" value="${tujuan}" readonly style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
 
     <div style="display:flex; gap:12px;">
         <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
             <label>User</label>
-            <input type="text" value="${user}" readonly
-                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
+            <input type="text" value="${user}" readonly style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
         </div>
-
         <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
             <label>Tgl ST/ND</label>
-            <input type="date" id="pelTglST" value="${tglST}"
-                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+            <input type="date" id="pelTglST" value="${tglST}" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
         </div>
     </div>
 
     <label>Pelaksana</label>
     <div style="display:flex; gap:8px;">
-        <input type="text" list="listPegawai" id="pelNama"
-            style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-        <button id="btnTambahPelaksana"
-            style="padding:8px 14px; border:none; border-radius:6px;
-            background:#38bdf8; color:white; cursor:pointer;">
-            Submit
-        </button>
+        <input type="text" list="listPegawai" id="pelNama" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+        <button id="btnTambahPelaksana" style="padding:8px 14px; border:none; border-radius:6px; background:#38bdf8; color:white; cursor:pointer;">Submit</button>
     </div>
 
-    <div style="
-        border:1px solid #e5e7eb;
-        border-radius:8px;
-        max-height:220px;
-        overflow-y:auto;
-        margin-top:5px;
-    ">
+    <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:220px; overflow-y:auto; margin-top:5px;">
         <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead style="background:#f1f5f9; position:sticky; top:0;">
                 <tr>
@@ -765,26 +745,15 @@ function showPelaksanaPopup(tr){
     </div>
 
     <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
-        <button id="pelCancel"
-            style="padding:8px 14px; border:none; border-radius:6px;
-            background:#e5e7eb; cursor:pointer;">
-            Batal
-        </button>
-        <button id="pelSave"
-            style="padding:8px 14px; border:none; border-radius:6px;
-            background:#22c55e; color:white; cursor:pointer;">
-            Simpan
-        </button>
+        <button id="pelCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
+        <button id="pelSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
     </div>
-`;
-
+    `;
 
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    // ===== Tambah Pelaksana =====
     document.getElementById("btnTambahPelaksana").onclick = function(){
-
         const namaInput = document.getElementById("pelNama");
         const nama = namaInput.value.trim();
         if(!nama) return;
@@ -793,31 +762,12 @@ function showPelaksanaPopup(tr){
         const row = document.createElement("tr");
 
         row.innerHTML = `
-    <td style="padding:6px;">${nama}</td>
-
-    <td style="padding:6px;">
-        <input type="date"
-            style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;">
-    </td>
-
-    <td style="padding:6px;">
-        <input type="date"
-            style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;">
-    </td>
-
-    <td style="padding:6px;">
-        <input type="text" class="jumlah-input"
-            style="width:100%; padding:4px; border:1px solid #cbd5e1;
-            border-radius:6px; text-align:right;">
-    </td>
-
-    <td style="padding:6px; text-align:center;">
-        <button style="border:none; background:none; cursor:pointer; color:red;">
-            <i class="fa-solid fa-trash"></i>
-        </button>
-    </td>
-`;
-
+            <td style="padding:6px;">${nama}</td>
+            <td style="padding:6px;"><input type="date" style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;"></td>
+            <td style="padding:6px;"><input type="date" style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;"></td>
+            <td style="padding:6px;"><input type="text" class="jumlah-input" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:6px; text-align:right;"></td>
+            <td style="padding:6px; text-align:center;"><button style="border:none; background:none; cursor:pointer; color:red;"><i class="fa-solid fa-trash"></i></button></td>
+        `;
 
         row.querySelector("button").onclick = () => row.remove();
         tbody.appendChild(row);
@@ -835,75 +785,61 @@ function showPelaksanaPopup(tr){
     document.getElementById("pelCancel").onclick = () => overlay.remove();
 
     document.getElementById("pelSave").onclick = () => {
+        showOverlay("Menyimpan pelaksana...");
+        document.getElementById("pelSave").disabled = true;
 
-    showOverlay("Menyimpan pelaksana...");
-    document.getElementById("pelSave").disabled = true;
+        const rows = document.querySelectorAll("#pelaksanaTableBody tr");
+        const dataPelaksana = [];
 
-    const rows = document.querySelectorAll("#pelaksanaTableBody tr");
-    const dataPelaksana = [];
+        rows.forEach(r=>{
+            const nama = r.cells[0].textContent;
+            const mulaiRaw = r.cells[1].querySelector("input").value;
+            const selesaiRaw = r.cells[2].querySelector("input").value;
+            const mulai = mulaiRaw ? mulaiRaw.split("T")[0] : "";
+            const selesai = selesaiRaw ? selesaiRaw.split("T")[0] : "";
+            const jumlahText = r.cells[3].querySelector("input").value;
+            const jumlah = Number(jumlahText.replace(/\./g,"")) || 0;
 
-    rows.forEach(r=>{
-        const nama = r.cells[0].textContent;
+            dataPelaksana.push({nama, mulai, selesai, jumlah});
+        });
 
-        const mulaiRaw = r.cells[1].querySelector("input").value;
-        const selesaiRaw = r.cells[2].querySelector("input").value;
-
-        const mulai = mulaiRaw ? mulaiRaw.split("T")[0] : "";
-        const selesai = selesaiRaw ? selesaiRaw.split("T")[0] : "";
-
-        const jumlahText = r.cells[3].querySelector("input").value;
-        const jumlah = Number(jumlahText.replace(/\./g,"")) || 0;
-
-        dataPelaksana.push({nama, mulai, selesai, jumlah});
-    });
-
-    fetch(urlGAS,{
-        method:"POST",
-        body: JSON.stringify({
-            action: "savePelaksana",
-            kantor: sessionStorage.getItem("kantor"),
-            idLama: idKegiatan,
-            mak: mak,
-            uraian: popup.querySelectorAll("input")[1].value,
-            tujuan: tujuan,
-            tglST: document.getElementById("pelTglST").value,
-            user: user,
-            pelaksana: dataPelaksana
+        fetch(urlGAS,{
+            method:"POST",
+            body: JSON.stringify({
+                action: "savePelaksana",
+                kantor: sessionStorage.getItem("kantor"),
+                idLama: idKegiatan,
+                mak: mak,
+                uraian: popup.querySelectorAll("input")[1].value,
+                tujuan: tujuan,
+                tglST: document.getElementById("pelTglST").value,
+                user: user,
+                pelaksana: dataPelaksana
+            })
         })
-    })
-    .then(res=>res.json())
-    .then(result=>{
-        hideOverlay();
-        document.getElementById("pelSave").disabled = false;
-
-        if(result.status==="success"){
-            overlay.remove();
-            loadData(false);
-        }else{
-            alert("Gagal: "+result.message);
-        }
-    })
-    .catch(err=>{
-        hideOverlay();
-        document.getElementById("pelSave").disabled = false;
-        //alert("Error koneksi");
-    });
-
-};
+        .then(res=>res.json())
+        .then(result=>{
+            hideOverlay();
+            document.getElementById("pelSave").disabled = false;
+            if(result.status==="success"){
+                overlay.remove();
+                loadData(false);
+            }else{
+                alert("Gagal: "+result.message);
+            }
+        })
+        .catch(err=>{
+            hideOverlay();
+            document.getElementById("pelSave").disabled = false;
+        });
+    };
 }
 
 function showLPTPopup(tr){
-
     const uraianTarget = tr.cells[1].textContent;
-
     const allMainRows = document.querySelectorAll("#dataTableBody tr");
+    const filteredRows = Array.from(allMainRows).filter(row => row.cells[1].textContent === uraianTarget);
 
-    // filter berdasarkan Uraian / No ST
-    const filteredRows = Array.from(allMainRows).filter(row =>
-        row.cells[1].textContent === uraianTarget
-    );
-
-    // ===== Overlay =====
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.inset = 0;
@@ -913,7 +849,6 @@ function showLPTPopup(tr){
     overlay.style.alignItems = "center";
     overlay.style.zIndex = 9999;
 
-    // ===== Popup =====
     const popup = document.createElement("div");
     popup.style.background = "#fff";
     popup.style.borderRadius = "12px";
@@ -928,20 +863,11 @@ function showLPTPopup(tr){
     popup.style.overflowY = "auto";
 
     popup.innerHTML = `
-        <h3 style="text-align:center; color:#0369a1;">
-            LPT Kegiatan
-        </h3>
-
+        <h3 style="text-align:center; color:#0369a1;">LPT Kegiatan</h3>
         <label>Tanggal LPT</label>
-        <input type="date" id="lptTanggal"
-            style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+        <input type="date" id="lptTanggal" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
 
-        <div style="
-            border:1px solid #e5e7eb;
-            border-radius:8px;
-            max-height:300px;
-            overflow-y:auto;
-        ">
+        <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:300px; overflow-y:auto;">
             <table style="width:100%; border-collapse:collapse; font-size:13px;">
                 <thead style="background:#f1f5f9; position:sticky; top:0;">
                     <tr>
@@ -956,16 +882,8 @@ function showLPTPopup(tr){
         </div>
 
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
-            <button id="lptCancel"
-                style="padding:8px 14px; border:none; border-radius:6px;
-                background:#e5e7eb; cursor:pointer;">
-                Batal
-            </button>
-            <button id="lptSave"
-                style="padding:8px 14px; border:none; border-radius:6px;
-                background:#22c55e; color:white; cursor:pointer;">
-                Simpan
-            </button>
+            <button id="lptCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
+            <button id="lptSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
         </div>
     `;
 
@@ -974,138 +892,81 @@ function showLPTPopup(tr){
 
     const tbody = document.getElementById("lptTableBody");
 
-    // 🔥 Isi tabel dengan ID dari dataset
     filteredRows.forEach(row => {
-
-        const id = row.dataset.id;        // ✅ BENAR
-        const uraian = row.cells[1].textContent;   // ✅ indeks 1
-        const pelaksana = row.cells[2].textContent; // ✅ indeks 2
+        const id = row.dataset.id;        
+        const uraian = row.cells[1].textContent;   
+        const pelaksana = row.cells[2].textContent; 
 
         const newRow = document.createElement("tr");
-
         newRow.innerHTML = `
             <td style="padding:6px;">${id}</td>
             <td style="padding:6px;">${uraian}</td>
             <td style="padding:6px;">${pelaksana}</td>
             <td style="padding:6px; text-align:center;">
-                <button style="
-                    border:none;
-                    background:none;
-                    cursor:pointer;
-                    color:red;
-                ">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+                <button style="border:none; background:none; cursor:pointer; color:red;"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
-
         newRow.querySelector("button").onclick = () => newRow.remove();
-
         tbody.appendChild(newRow);
     });
 
     document.getElementById("lptCancel").onclick = () => overlay.remove();
 
     document.getElementById("lptSave").onclick = () => {
-
-    const tanggal = document.getElementById("lptTanggal").value;
-
-    if(!tanggal){
-        alert("Tanggal LPT harus diisi!");
-        return;
-    }
-
-    const rows = document.querySelectorAll("#lptTableBody tr");
-    const dataLPT = [];
-
-    rows.forEach(r => {
-        const id = r.cells[0].textContent;  // ID Kegiatan
-        dataLPT.push({ id, lptDate: tanggal }); // semua row pakai tanggal yang sama
-    });
-
-    // tampilkan overlay
-    showOverlay("Menyimpan LPT...");
-    document.getElementById("lptSave").disabled = true;
-
-    fetch(urlGAS, {
-        method: "POST",
-        body: JSON.stringify({
-            action: "updateLPT",
-            kantor: sessionStorage.getItem("kantor"),
-            rows: dataLPT
-        })
-    })
-    .then(res => res.json())
-    .then(result => {
-        hideOverlay();
-        document.getElementById("lptSave").disabled = false;
-
-        if(result.status === "success"){
-            //alert("Update LPT berhasil!");
-            overlay.remove();
-            loadData(false); // reload tabel utama
-        } else {
-            alert("Gagal update LPT: " + result.message);
+        const tanggal = document.getElementById("lptTanggal").value;
+        if(!tanggal){
+            alert("Tanggal LPT harus diisi!");
+            return;
         }
-    })
-    .catch(err => {
-        hideOverlay();
-        document.getElementById("lptSave").disabled = false;
-        //console.error(err);
-        //alert("Error koneksi");
-    });
-};
-}
 
-function saveLPTPopup(idKegiatan){
-    const rows = document.querySelectorAll("#lptTableBody tr"); // tbody LPT popup
-    const dataToSend = [];
+        const rows = document.querySelectorAll("#lptTableBody tr");
+        const dataLPT = [];
+        rows.forEach(r => {
+            const id = r.cells[0].textContent;  
+            dataLPT.push({ id, lptDate: tanggal }); 
+        });
 
-    rows.forEach(tr=>{
-        const id = tr.dataset.id; // id kegiatan di tr
-        const lptInput = tr.querySelector("input[type='date']");
-        const lptDate = lptInput ? lptInput.value : "";
-        dataToSend.push({id, lptDate});
-    });
+        showOverlay("Menyimpan LPT...");
+        document.getElementById("lptSave").disabled = true;
 
-    fetch(urlGAS, {
-        method: "POST",
-        body: JSON.stringify({
-            action: "updateLPT",
-            kantor: sessionStorage.getItem("kantor"),
-            rows: dataToSend
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "updateLPT",
+                kantor: sessionStorage.getItem("kantor"),
+                rows: dataLPT
+            })
         })
-    })
-    .then(res=>res.json())
-    .then(result=>{
-        if(result.status === "success"){
-            alert("Update LPT berhasil!");
-            loadData(false); // reload tabel utama
-        } else {
-            alert("Gagal update LPT: "+result.message);
-        }
-    })
-    .catch(err=>{
-        console.error(err);
-        //alert("Error koneksi");
-    });
+        .then(res => res.json())
+        .then(result => {
+            hideOverlay();
+            document.getElementById("lptSave").disabled = false;
+            if(result.status === "success"){
+                overlay.remove();
+                loadData(false); 
+            } else {
+                alert("Gagal update LPT: " + result.message);
+            }
+        })
+        .catch(err => {
+            hideOverlay();
+            document.getElementById("lptSave").disabled = false;
+        });
+    };
 }
 
 function showBayarPopup(tr) {
     const idKegiatan = tr.dataset.id;
-    const uraian = tr.cells[1].textContent; // kolom ke-2 tabel utama
+    const uraian = tr.cells[1].textContent; 
 
-    // ===== Overlay =====
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
 
-    // ===== Popup =====
     const popup = document.createElement("div");
     popup.style.cssText = "background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:600px; max-width:95%; padding:25px 20px; display:flex; flex-direction:column; gap:12px; max-height:80vh; overflow:auto;";
 
     popup.innerHTML = `
         <h3 style="text-align:center; color:#0369a1;">Bayar Kegiatan #${idKegiatan}</h3>
-
         <label>Uraian / No ST</label>
         <input type="text" id="uraianInput" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
 
@@ -1133,43 +994,32 @@ function showBayarPopup(tr) {
     overlay.appendChild(popup);
     document.body.appendChild(overlay);
 
-    // ===== Cancel =====
     document.getElementById("bayarCancel").onclick = () => overlay.remove();
 
-    // ===== Isi tabel filter berdasarkan Uraian / No ST =====
     const tbody = popup.querySelector("#tblPelaksana tbody");
     tbody.innerHTML = "";
-
-    // ambil semua row dari tabel utama
     const allRows = document.querySelectorAll("#dataTableBody tr");
 
     allRows.forEach(r => {
         const rowUraian = r.cells[1].textContent;
-        if(rowUraian === uraian){ // cocokkan uraian
+        if(rowUraian === uraian){ 
             const id = r.dataset.id;
             const pelaksana = r.cells[2].textContent;
 
             const newRow = document.createElement("tr");
-            newRow.dataset.id = id; // simpan ID kegiatan di dataset
-
+            newRow.dataset.id = id; 
             newRow.innerHTML = `
                 <td style="padding:6px;">${id}</td>
                 <td style="padding:6px;">${pelaksana}</td>
                 <td style="padding:6px; text-align:center;">
-                    <button style="border:none; background:none; cursor:pointer; color:red;">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <button style="border:none; background:none; cursor:pointer; color:red;"><i class="fa-solid fa-trash"></i></button>
                 </td>
             `;
-
-            // tombol hapus row
             newRow.querySelector("button").onclick = () => newRow.remove();
-
             tbody.appendChild(newRow);
         }
     });
 
-    // ===== Simpan =====
     document.getElementById("bayarSave").onclick = () => {
         const uraianValue = document.getElementById("uraianInput").value.trim();
         const tglBayar = document.getElementById("tglBayarInput").value;
@@ -1181,18 +1031,11 @@ function showBayarPopup(tr) {
 
         const rows = document.querySelectorAll("#tblPelaksana tbody tr");
         const tblData = [];
-        
         rows.forEach(r => {
             const id = r.dataset.id;
             const pelaksana = r.cells[1].textContent;
-            tblData.push({ 
-                id, 
-                pelaksana, 
-                uraian: uraianValue,  // tambahkan uraian di tiap row
-                tglBayar: tglBayar    // tambahkan tglBayar di tiap row
-            });
+            tblData.push({ id, pelaksana, uraian: uraianValue, tglBayar: tglBayar });
         });
-
 
         showOverlay("Menyimpan pembayaran...");
 
@@ -1216,8 +1059,6 @@ function showBayarPopup(tr) {
         })
         .catch(err => {
             hideOverlay();
-            //console.error(err);
-            //alert("Error koneksi");
         });
     };
 }
@@ -1225,21 +1066,14 @@ function showBayarPopup(tr) {
 function showSP2DPopup(tr){
     const allRows = document.querySelectorAll("#dataTableBody tr");
 
-    // ===== Overlay =====
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
 
-    // ===== Popup =====
     const popup = document.createElement("div");
-    popup.style.cssText = `
-        background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2);
-        width:800px; max-width:95%; padding:25px; display:flex; flex-direction:column;
-        gap:12px; max-height:90vh; overflow:auto;
-    `;
+    popup.style.cssText = `background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:800px; max-width:95%; padding:25px; display:flex; flex-direction:column; gap:12px; max-height:90vh; overflow:auto;`;
 
     popup.innerHTML = `
         <h3 style="text-align:center; color:#0369a1;">SP2D Kegiatan</h3>
-
         <label>Nomor SPM</label>
         <input type="text" id="spmNomor" placeholder="0000" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;" maxlength="4">
 
@@ -1276,9 +1110,8 @@ function showSP2DPopup(tr){
 
     const tbody = document.getElementById("sp2dTableBody");
 
-    // populate tabel dari tabel utama
     allRows.forEach(row => {
-        const id = row.dataset.id; // kolom hidden
+        const id = row.dataset.id; 
         const uraian = row.cells[1].textContent;
         const nama = row.cells[2].textContent;
         const tujuan = row.cells[3].textContent;
@@ -1292,19 +1125,15 @@ function showSP2DPopup(tr){
             <td style="padding:6px;">${tujuan}</td>
             <td style="padding:6px; text-align:right;">${jumlah}</td>
             <td style="padding:6px; text-align:center;">
-                <button style="border:none; background:none; cursor:pointer; color:red;">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+                <button style="border:none; background:none; cursor:pointer; color:red;"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
         newRow.querySelector("button").onclick = () => newRow.remove();
         tbody.appendChild(newRow);
     });
 
-    // tombol batal
     document.getElementById("sp2dCancel").onclick = () => overlay.remove();
 
-    // search tabel
     document.getElementById("sp2dSearch").addEventListener("input", function(){
         const val = this.value.toLowerCase();
         tbody.querySelectorAll("tr").forEach(tr=>{
@@ -1313,114 +1142,70 @@ function showSP2DPopup(tr){
         });
     });
 
-    // format nomor SPM 4 digit saat blur
     document.getElementById("spmNomor").addEventListener("blur", function(){
         const val = parseInt(this.value) || 0;
         this.value = String(val).padStart(4,"0");
     });
 
-    // tombol simpan
     document.getElementById("sp2dSave").onclick = () => {
+        const nomorSPM = document.getElementById("spmNomor").value.trim();
+        const tglSP2D = document.getElementById("tglSP2D").value;
 
-    const nomorSPM = document.getElementById("spmNomor").value.trim();
-    const tglSP2D = document.getElementById("tglSP2D").value;
-
-    if(!nomorSPM){
-        alert("Nomor SPM harus diisi!");
-        return;
-    }
-
-    if(!tglSP2D){
-        alert("Tanggal SP2D harus diisi!");
-        return;
-    }
-
-    const rows = document.querySelectorAll("#sp2dTableBody tr");
-    const dataSP2D = [];
-
-    rows.forEach(r=>{
-        const id = r.cells[0].textContent;
-        dataSP2D.push({
-            id,
-            nomorSPM,
-            tglSP2D
-        });
-    });
-
-    showOverlay("Menyimpan SP2D...");
-
-    fetch(urlGAS,{
-        method:"POST",
-        body: JSON.stringify({
-            action: "saveSP2D",
-            kantor: sessionStorage.getItem("kantor"),
-            rows: dataSP2D
-        })
-    })
-    .then(res=>res.json())
-    .then(result=>{
-        hideOverlay();
-        if(result.status==="success"){
-            overlay.remove();
-            loadData(false);
-        }else{
-            alert("Gagal: "+result.message);
+        if(!nomorSPM || !tglSP2D){
+            alert("Nomor SPM dan Tanggal SP2D harus diisi!");
+            return;
         }
-    })
-    .catch(err=>{
-        hideOverlay();
-        //alert("Error koneksi");
-    });
-};
+
+        const rows = document.querySelectorAll("#sp2dTableBody tr");
+        const dataSP2D = [];
+        rows.forEach(r=>{
+            const id = r.cells[0].textContent;
+            dataSP2D.push({ id, nomorSPM, tglSP2D });
+        });
+
+        showOverlay("Menyimpan SP2D...");
+
+        fetch(urlGAS,{
+            method:"POST",
+            body: JSON.stringify({
+                action: "saveSP2D",
+                kantor: sessionStorage.getItem("kantor"),
+                rows: dataSP2D
+            })
+        })
+        .then(res=>res.json())
+        .then(result=>{
+            hideOverlay();
+            if(result.status==="success"){
+                overlay.remove();
+                loadData(false);
+            }else{
+                alert("Gagal: "+result.message);
+            }
+        })
+        .catch(err=>{
+            hideOverlay();
+        });
+    };
 }
 
 function showDeletePopup(tr){
-
     const idKegiatan = tr.dataset.id;
     const uraian = tr.cells[1].textContent;
 
     const overlay = document.createElement("div");
-    overlay.style.cssText = `
-        position:fixed;
-        inset:0;
-        background:rgba(0,0,0,0.4);
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        z-index:9999;
-    `;
+    overlay.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;`;
 
     const popup = document.createElement("div");
-    popup.style.cssText = `
-        background:#fff;
-        border-radius:12px;
-        box-shadow:0 8px 20px rgba(0,0,0,0.2);
-        width:400px;
-        max-width:90%;
-        padding:25px;
-        display:flex;
-        flex-direction:column;
-        gap:15px;
-        text-align:center;
-    `;
+    popup.style.cssText = `background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:400px; max-width:90%; padding:25px; display:flex; flex-direction:column; gap:15px; text-align:center;`;
 
     popup.innerHTML = `
         <h3 style="color:#dc2626;">Konfirmasi Hapus</h3>
         <p>Yakin ingin menghapus kegiatan:</p>
         <strong>${uraian}</strong>
-
         <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
-            <button id="deleteCancel"
-                style="padding:8px 14px; border:none; border-radius:6px;
-                background:#e5e7eb; cursor:pointer;">
-                Batal
-            </button>
-
-            <button id="deleteConfirm"
-                style="padding:8px 14px; border:none; border-radius:6px;
-                background:#dc2626; color:white; cursor:pointer;">
-                Hapus
-            </button>
+            <button id="deleteCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
+            <button id="deleteConfirm" style="padding:8px 14px; border:none; border-radius:6px; background:#dc2626; color:white; cursor:pointer;">Hapus</button>
         </div>
     `;
 
@@ -1430,7 +1215,6 @@ function showDeletePopup(tr){
     document.getElementById("deleteCancel").onclick = () => overlay.remove();
 
     document.getElementById("deleteConfirm").onclick = function(){
-
         this.disabled = true;
         showOverlay("Menghapus data...");
 
@@ -1445,7 +1229,6 @@ function showDeletePopup(tr){
         .then(res=>res.json())
         .then(result=>{
             hideOverlay();
-
             if(result.status === "success"){
                 overlay.remove();
                 loadData(false);
@@ -1455,7 +1238,6 @@ function showDeletePopup(tr){
         })
         .catch(err=>{
             hideOverlay();
-            //alert("Error koneksi");
         });
     };
 }
@@ -1466,66 +1248,32 @@ function showLoading(show){
   
 function goDashboard(){
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
+    if(!kantor){ alert("Session kantor belum ada. Silakan login ulang!"); return; }
     window.location.href="dashboard.html";
 }
 function goPOK(){ 
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
+    if(!kantor){ alert("Session kantor belum ada. Silakan login ulang!"); return; }
     window.location.href="data_pok.html";
 }
 function goKegiatan(){
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
+    if(!kantor){ alert("Session kantor belum ada. Silakan login ulang!"); return; }
     window.location.href = "data_kegiatan.html";
 }
-
 function goPerjadinku(){
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-    if(!kantor){
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
+    if(!kantor){ alert("Session kantor belum ada. Silakan login ulang!"); return; }
     window.location.href = "perjadinku.html";
 }
-
 function goKalender() {
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-
-    if (!kantor) {
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
-
-    // Tidak perlu kirim apa-apa, sessionStorage tetap terbaca di halaman berikutnya
+    if (!kantor) { alert("Session kantor belum ada. Silakan login ulang!"); return; }
     window.location.href = "kalender.html";
 }
-
 function goStatistik() {
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-
-    if (!kantor) {
-        alert("Session kantor belum ada. Silakan login ulang!");
-        return;
-    }
-
-
-    // Tidak perlu kirim apa-apa, sessionStorage tetap terbaca di halaman berikutnya
+    if (!kantor) { alert("Session kantor belum ada. Silakan login ulang!"); return; }
     window.location.href = "statistik.html";
 }
   
@@ -1534,46 +1282,23 @@ function logout(){ sessionStorage.clear(); window.location.replace("index.html")
 function populateDatalist(){
     const pegawaiDL = document.getElementById("listPegawai");
     const lokasiDL = document.getElementById("listLokasi");
-
     pegawaiDL.innerHTML = "";
     lokasiDL.innerHTML = "";
 
     pegawaiList.forEach(nama=>{
-        const opt = document.createElement("option");
-        opt.value = nama;
-        pegawaiDL.appendChild(opt);
+        const opt = document.createElement("option"); opt.value = nama; pegawaiDL.appendChild(opt);
     });
-
     lokasiList.forEach(lok=>{
-        const opt = document.createElement("option");
-        opt.value = lok;
-        lokasiDL.appendChild(opt);
+        const opt = document.createElement("option"); opt.value = lok; lokasiDL.appendChild(opt);
     });
 }
-
 </script>
+
 <datalist id="listPegawai"></datalist>
 <datalist id="listLokasi"></datalist>
 
-  
-<div id="globalOverlay" style="
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.4);
-    backdrop-filter:blur(3px);
-    z-index:20000;   /* 🔥 NAIKKAN INI */
-    align-items:center;
-    justify-content:center;
-">
-    <div style="
-        background:white;
-        padding:24px 32px;
-        border-radius:12px;
-        box-shadow:0 10px 30px rgba(0,0,0,0.2);
-        font-family:Inter;
-        font-weight:600;
-    ">
+<div id="globalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(3px); z-index:20000; align-items:center; justify-content:center;">
+    <div style="background:white; padding:24px 32px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); font-family:Inter; font-weight:600;">
         ⏳ Menyimpan data...
     </div>
 </div>
