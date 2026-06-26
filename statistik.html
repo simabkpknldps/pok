@@ -345,7 +345,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
 td.status-RekamData{ background:#fca5a5; color:white; }       /* pink */
 td.status-Terlaksana{ background:#d1d5db; color:black; }      /* abu2 */
-td.status-LPT{ background:#fde68a; color:black; }             /* kuning */
+td.status-LPT{ background:#fde68a; color:black; }              /* kuning */
 td.status-Terbayar{ background:#4ade80; color:white; }        /* hijau */
 td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 
@@ -567,7 +567,6 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 
 <div class="extra-cards">
 
-<!-- CARD 1 : PROGRESS BULANAN -->
 <div class="card card-progress">
 <div class="card-title">Realisasi Per Seksi</div>
 
@@ -578,7 +577,6 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 </div>
 
 
-<!-- CARD 2 : RANKING PERJADIN -->
 <div class="card">
 <div class="card-title">Ranking Perjadin Pegawai</div>
 
@@ -598,6 +596,21 @@ td.status-Selesai{ background:#60a5fa; color:white; }         /* biru */
 </table>
 </div>
 
+</div>
+
+<div class="extra-cards" style="margin-top: 20px; display: none;">
+    <div class="card">
+        <div class="card-title">Grafik Frekuensi Perjadin</div>
+        <canvas id="chartPerjadin"></canvas>
+    </div>
+    <div style="display:none;">
+        <table><tbody id="detailBody"></tbody></table>
+        <table><tbody id="lokasiBody"></tbody></table>
+        <table><tbody id="statusSummary"></tbody></table>
+        <div id="detailTotal"></div>
+        <input type="text" id="searchDetail" value="">
+        <input type="radio" name="statusFilter" value="Semua" checked>
+    </div>
 </div>
 
 <div class="footer">© KPKNL Denpasar 2026</div>
@@ -642,6 +655,10 @@ async function loadData() {
         /* ===== CARD 1 ===== */
         renderProgressBulanan(data.dashBulanan);
 
+        // Memanggil fungsi sisa agar sinkron dengan data baru tanpa merusak alur asli
+        updateJenisPerjadin();
+        updateChartPerjadin();
+
     } catch(err) {
         console.error(err);
     }
@@ -676,11 +693,8 @@ function renderDetailTable(rows) {
             <td class="wrap">${r.MAK}</td>
             <td class="wrap">${r.Uraian}</td>
             <td class="wrap">${r.Tujuan}</td>
-            <td>${formatDate(r.TglMulai)}</td>       <!-- yyyy-MM-dd -->
-            <td>${formatDate(r.TglSelesai)}</td>     <!-- yyyy-MM-dd -->
-            <td style="text-align:right">${r.Jumlah.toLocaleString("id-ID")}</td>
-            <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>  <!-- warna status -->
-        `;
+            <td>${formatDate(r.TglMulai)}</td>       <td>${formatDate(r.TglSelesai)}</td>     <td style="text-align:right">${r.Jumlah.toLocaleString("id-ID")}</td>
+            <td class="status ${getStatusClass(r.Status)}">${r.Status}</td>  `;
         tbody.appendChild(tr);
     });
 
@@ -844,7 +858,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
         else if(r.MAK === "524113") dalam += 1;
     });
 
-    // update tabel Card 3
+    // update tabel Card 3 jika ada komponennya
     const card3 = document.querySelector(".bottom-cards .card:nth-child(2) tbody");
     if(card3){
         card3.innerHTML = `
@@ -867,7 +881,9 @@ function updateChartPerjadin() {
         }
     });
 
-    const ctx = document.getElementById("chartPerjadin").getContext("2d");
+    const chartElem = document.getElementById("chartPerjadin");
+    if(!chartElem) return;
+    const ctx = chartElem.getContext("2d");
 
     if(chartPerjadinInstance){
         chartPerjadinInstance.destroy();
@@ -966,7 +982,13 @@ function renderProgressBulanan(data){
   function renderRanking(data){
 
     const tbody = document.getElementById("rankingBody");
+    if(!tbody) return;
     tbody.innerHTML="";
+
+    if(!data || data.length === 0){
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Data tidak ditemukan</td></tr>`;
+        return;
+    }
 
     data.forEach(r=>{
 
@@ -1039,7 +1061,6 @@ function showLoading(show){
   
 function goDashboard(){
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
     if(!kantor){
         alert("Session kantor belum ada. Silakan login ulang!");
         return;
@@ -1048,7 +1069,6 @@ function goDashboard(){
 }
 function goPOK(){ 
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
     if(!kantor){
         alert("Session kantor belum ada. Silakan login ulang!");
         return;
@@ -1057,7 +1077,6 @@ function goPOK(){
 }
 function goKegiatan(){
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
     if(!kantor){
         alert("Session kantor belum ada. Silakan login ulang!");
         return;
@@ -1067,7 +1086,6 @@ function goKegiatan(){
 
 function goPerjadinku(){
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
     if(!kantor){
         alert("Session kantor belum ada. Silakan login ulang!");
         return;
@@ -1077,91 +1095,22 @@ function goPerjadinku(){
 
   function goKalender() {
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-
     if (!kantor) {
         alert("Session kantor belum ada. Silakan login ulang!");
         return;
     }
-
   }
 
   function goStatistik() {
     const kantor = sessionStorage.getItem("kantor");
-    const admin = sessionStorage.getItem("admin");
-
     if (!kantor) {
         alert("Session kantor belum ada. Silakan login ulang!");
         return;
     }
-
-
-    // Tidak perlu kirim apa-apa, sessionStorage tetap terbaca di halaman berikutnya
     window.location.href = "statistik.html";
 }
 
-/*  
-function renderSummary(summary){
-    const tbody = document.getElementById("statusSummary");
-    tbody.innerHTML = "";
-
-    let totalJumlah = 0;
-
-    // urutan yang diinginkan
-    const urutanStatus = ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"];
-
-    urutanStatus.forEach(status => {
-        const item = summary[status] || {frek:0, jumlah:0};
-        const frek = item.frek;
-        const jumlah = item.jumlah;
-        totalJumlah += jumlah;
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${status}</td>
-            <td>
-                <span class="link-frek" onclick="showDetail('${status}')">
-                    ${frek}
-                </span>
-            </td>
-            <td style="text-align:right">
-                ${jumlah.toLocaleString('id-ID')}
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    // total row
-    const trTotal = document.createElement("tr");
-    trTotal.innerHTML = `
-        <td><strong>Total</strong></td>
-        <td></td>
-        <td style="text-align:right">
-            <strong>${totalJumlah.toLocaleString('id-ID')}</strong>
-        </td>
-    `;
-    tbody.appendChild(trTotal);
-}
-function renderLokasi(lokasi){
-
-    const tbody = document.getElementById("lokasiBody");
-    tbody.innerHTML = "";
-
-    lokasi.forEach((row,i)=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${i+1}</td>
-            <td>${row.lokasi}</td>
-            <td>${row.frek}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-*/
-  
 function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
-
-
 </script>
 
 <div id="globalLoading" style="
