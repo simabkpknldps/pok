@@ -399,21 +399,20 @@ document.addEventListener("DOMContentLoaded", async function(){
         rows.forEach(r=>{
             
             const tglST = r.F ? new Date(r.F) : null;
-          const tglMulai = r.G ? new Date(r.G) : null;
+            const tglMulai = r.G ? new Date(r.G) : null;
             const tglSelesai = r.H ? new Date(r.H) : null;
               
-              const formatDate = (d) => 
+            const formatDate = (d) => 
                 d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
               
-              const tglSTFormatted = formatDate(tglST);
-              const tglMulaiFormatted = formatDate(tglMulai);
+            const tglSTFormatted = formatDate(tglST);
+            const tglMulaiFormatted = formatDate(tglMulai);
 
             const jumlahFormatted = Number(r.M||0).toLocaleString('id-ID');
     
             const tr = document.createElement("tr");
-            tr.dataset.id = r.A; // simpan ID di attribute (DI SINI, bukan di innerHTML)
+            tr.dataset.id = r.A; // simpan ID di attribute
 
-    
             // assign class status untuk coloring
             let statusClass = "";
             switch(r.P){
@@ -448,8 +447,8 @@ document.addEventListener("DOMContentLoaded", async function(){
             tbody.appendChild(tr);
         });
         
-        // Panggil kalkulasi total setiap kali tabel berhasil dirender
-        kallkulasiTotalJumlah(rows);
+        // 🔥 PERBAIKAN DI SINI: Nama fungsi disesuaikan dengan deklarasi aslinya
+        kalkulasiTotalJumlah(rows);
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
