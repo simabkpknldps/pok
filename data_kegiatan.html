@@ -436,6 +436,8 @@ document.addEventListener("DOMContentLoaded", async function(){
 
     // render table
     function renderTable(rows){
+      // TAMBAHKAN BARIS INI:
+        currentTableRowsData = rows;
         const tbody = document.getElementById("dataTableBody");
         tbody.innerHTML = "";
         rows.forEach(r=>{
@@ -487,11 +489,17 @@ document.addEventListener("DOMContentLoaded", async function(){
             `;
 
             tbody.appendChild(tr);
+          
+          // TAMBAHKAN DI SINI
+              document.getElementById("btnOpenNominatif").addEventListener("click", openNominatifPopup);
+
+    await loadData(true);
+          
         });
         
         kalkulasiTotalJumlah(rows);
 
-    document.getElementById("btnOpenNominatif").addEventListener("click", openNominatifPopup);
+    //document.getElementById("btnOpenNominatif").addEventListener("click", openNominatifPopup);
 
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
