@@ -250,7 +250,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
             
             <div class="spm-search-container">
                 <span>Cari SPM</span>
-                <input type="text" id="spmSearchBox" placeholder="0000" maxlength="4">
+                <input type="text" id="spmSearchBox" placeholder="81" maxlength="10">
                 <button class="btn-search-spm" id="btnSearchSPM"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
             </div>
 
@@ -293,7 +293,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbzx_CcgvupfgSeEJLu7Q7rBZTiNym7AFzs5Hggabr8K-QD0kJ-E1rioSfXi07NeKf6t/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbxsh6feMDQF1CTX3vt_Jq3deyJfa5kn3wlIl2Wy7nbxePrU6fGwBwH-kyDEgjXJnuGb/exec";
 
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
@@ -458,7 +458,7 @@ async function loadData(showOverlay = true){
         const filtered = filterByStatus(initialRows, defaultRadio);
         renderTable(filtered);
 
-        firstLoad = false; // overlay hanya sekali
+        firstLoad = false; // overlay only once
     } catch(e){
         if(showOverlay && firstLoad) showLoading(false);
         console.error(e);
@@ -476,7 +476,7 @@ async function loadData(showOverlay = true){
 
 
   
-    // search
+    // search box utama
     document.getElementById("searchBox").addEventListener("input", function(){
         const val = this.value.toLowerCase();
         const radioVal = document.querySelector('input[name="statusFilter"]:checked').value;
@@ -493,28 +493,23 @@ async function loadData(showOverlay = true){
         renderTable(filtered);
     });
 
-    // Fitur Pencarian Berdasarkan Nomor SPM di Sisi Client
+    // Fitur Pencarian Berdasarkan Nomor SPM (Sesuai aslinya di Sheets)
     document.getElementById("btnSearchSPM").addEventListener("click", function(){
         let valBox = document.getElementById("spmSearchBox").value.trim();
         if(!valBox) {
             alert("Masukkan nomor SPM terlebih dahulu!");
             return;
         }
-        
-        // Format angka menjadi 4 digit (misal: 76 -> 0076)
-        let numericVal = parseInt(valBox) || 0;
-        let formattedSPM = String(numericVal).padStart(4, "0");
-        document.getElementById("spmSearchBox").value = formattedSPM;
 
-        // Lakukan filter pada allRows berdasarkan Kolom R (di response dipetakan sebagai 'R')
-        let filtered = allRows.filter(r => String(r.R || "").trim() === formattedSPM);
+        // Bandingkan nilai string langsung apa adanya tanpa padding empat digit
+        let filtered = allRows.filter(r => String(r.R || "").trim() === valBox);
         
-        // Atur radio filter ke "Semua" agar data tersembunyi dapat muncul jika ditemukan
+        // Atur radio filter ke "Semua" agar data status apa pun yang cocok dapat muncul
         document.querySelector('input[name="statusFilter"][value="Semua"]').checked = true;
         
         renderTable(filtered);
         if(filtered.length === 0){
-            alert("Data dengan Nomor SPM " + formattedSPM + " tidak ditemukan.");
+            alert("Data dengan Nomor SPM " + valBox + " tidak ditemukan.");
         }
     });
 
