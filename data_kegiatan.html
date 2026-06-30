@@ -70,6 +70,9 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 .btn-search-spm{padding:8px 12px; background:#0369a1; color:white; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:background 0.2s;}
 .btn-search-spm:hover{background:#025a87;}
 
+/* Label Jumlah Pada Tabel */
+.table-total-info{font-size:14px; font-weight:600; color:#0369a1; background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center;}
+
 /* Style Tombol Download Excel */
 .btn-download {
   display: flex;
@@ -250,8 +253,12 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
             
             <div class="spm-search-container">
                 <span>Cari SPM</span>
-                <input type="text" id="spmSearchBox" placeholder="81" maxlength="10">
+                <input type="text" id="spmSearchBox" maxlength="10">
                 <button class="btn-search-spm" id="btnSearchSPM"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+            </div>
+
+            <div class="table-total-info">
+                Jumlah Pada Tabel: &nbsp;<span id="totalJumlahLabel">0</span>
             </div>
 
             <button class="btn-download" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
@@ -376,6 +383,12 @@ document.addEventListener("DOMContentLoaded", async function(){
         }
     }
 
+    // fungsi pembantu untuk kalkulasi total kolom jumlah dari array baris yang aktif
+    function kalkulasiTotalJumlah(rows){
+        let total = rows.reduce((sum, r) => sum + Number(r.M || 0), 0);
+        document.getElementById("totalJumlahLabel").textContent = total.toLocaleString('id-ID');
+    }
+
     // render table
     function renderTable(rows){
         const tbody = document.getElementById("dataTableBody");
@@ -430,6 +443,9 @@ document.addEventListener("DOMContentLoaded", async function(){
 
             tbody.appendChild(tr);
         });
+        
+        // Panggil kalkulasi total setiap kali tabel berhasil dirender
+        kalkulasiTotalJumlah(rows);
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
