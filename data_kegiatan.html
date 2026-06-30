@@ -1732,19 +1732,20 @@ async function openNominatifPopup() {
                     .tte-info { 
                         font-style: normal; 
                         color: #64748b; 
-                        margin: 0 0 10px 0; /* Jarak bawah (ke nama) lebih besar, jarak atas (ke jabatan) */
+                        margin: 25px 0 10px 0; /* Margin atas ditingkatkan menjadi 25px agar jarak ke jabatan semakin lebar */
                         padding: 0; 
                         display: block; 
                         font-size: 10px; 
                         text-align: center; 
                     }
+                    
                     .tte-box { 
                         display: table-cell; 
                         width: 50%; 
                         text-align: center; 
                         vertical-align: top; 
                         font-size: 11px; 
-                        padding-top: 20px; /* Menambah jarak dari Jabatan ke tulisan TTE */
+                        padding-top: 10px; /* Opsional: sesuaikan jika masih kurang */
                     }
                     @media print {
                         @page { size: landscape; margin: 20px; }
