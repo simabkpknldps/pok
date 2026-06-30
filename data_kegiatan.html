@@ -491,9 +491,9 @@ document.addEventListener("DOMContentLoaded", async function(){
             tbody.appendChild(tr);
           
           // TAMBAHKAN DI SINI
-              document.getElementById("btnOpenNominatif").addEventListener("click", openNominatifPopup);
+             // document.getElementById("btnOpenNominatif").addEventListener("click", openNominatifPopup);
 
-    await loadData(true);
+    //await loadData(true);
           
         });
         
@@ -504,6 +504,7 @@ document.addEventListener("DOMContentLoaded", async function(){
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
+  
 async function loadData(showOverlay = true){
     try{
         if(showOverlay && firstLoad) showLoading(true);
@@ -535,6 +536,8 @@ async function loadData(showOverlay = true){
     }
 }
 
+    document.getElementById("btnOpenNominatif").addEventListener("click", openNominatifPopup);
+  
  // load pertama (dengan overlay)
     await loadData(true);
 
