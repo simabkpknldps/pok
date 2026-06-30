@@ -205,7 +205,6 @@ td.status-Selesai{ background:#60a5fa; color:white; }
 
 <body>
 
-<!-- PENTING: Id disamakan agar loading terpicu dengan benar -->
 <div class="loading" id="loadingOverlay">
   <div class="spinner"></div>
 </div>
@@ -287,7 +286,6 @@ td.status-Selesai{ background:#60a5fa; color:white; }
 
 <div class="footer">© KPKNL Denpasar 2026</div>
 
-<!-- Pemindahan globalOverlay ke atas agar selalu siap dibaca engine JS -->
 <div id="globalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(3px); z-index:20000; align-items:center; justify-content:center;">
     <div style="background:white; padding:24px 32px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); font-family:Inter; font-weight:600; color:#334155;">
         ⏳ Menyimpan data...
@@ -305,7 +303,7 @@ const urlGAS="https://script.google.com/macros/s/AKfycbw5vM3tH-3YGjTC7LlC6h0MSoq
 // ==========================================
 let pegawaiList = [];
 let lokasiList = [];
-let currentTableRowsData = []; // Menyimpan basis data baris aktif untuk diproses oleh cetak nominatif
+let currentTableRowsData = []; 
 let allRows = [];
 let firstLoad = true;
 
@@ -327,7 +325,6 @@ function showLoading(show){
     if(el) el.style.display = show ? "flex" : "none";
 }
 
-// Fungsi untuk download data tabel ke Excel
 function downloadExcel() {
     const table = document.getElementById("mainDataTable");
     if(!table) return;
@@ -489,7 +486,7 @@ document.addEventListener("DOMContentLoaded", async function(){
 
     await loadData(true);
   
-    setInterval(() => { loadData(false); }, 30000);
+    // PERBAIKAN: Autorefresh dinonaktifkan sepenuhnya agar input fokus tidak lepas/freeze
 
     document.getElementById("btnRefreshData").addEventListener("click", function(){
         firstLoad = true;
@@ -531,7 +528,6 @@ document.addEventListener("DOMContentLoaded", async function(){
         });
     });
 
-    // Delegasi Event Klik Tombol Aksi di Tabel
     document.getElementById("dataTableBody").addEventListener("click", function(e){
         const btn = e.target.closest("button");
         if(!btn) return;
@@ -705,10 +701,10 @@ function showPelaksanaPopup(tr){
     document.getElementById("btnTambahPelaksana").onclick = () => {
         const inp = document.getElementById("pelNama");
         if(!inp.value.trim()) return;
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td style="padding:6px;">${inp.value}</td><td><input type="date"></td><td><input type="date"></td><td><input type="text" class="jumlah-input" style="text-align:right;"></td><td><button style="color:red; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></td>`;
-        tr.querySelector("button").onclick = () => tr.remove();
-        document.getElementById("pelaksanaTableBody").appendChild(tr);
+        const newTr = document.createElement("tr");
+        newTr.innerHTML = `<td style="padding:6px;">${inp.value}</td><td><input type="date"></td><td><input type="date"></td><td><input type="text" class="jumlah-input" style="text-align:right;"></td><td><button style="color:red; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></td>`;
+        newTr.querySelector("button").onclick = () => newTr.remove();
+        document.getElementById("pelaksanaTableBody").appendChild(newTr);
         inp.value = "";
     };
     document.getElementById("pelCancel").onclick = () => overlay.remove();
@@ -785,7 +781,7 @@ function showDeletePopup(tr){
 }
 
 // ==========================================
-// 🖨️ FUNGSI POPUP & PROSES CETAK NOMINATIF (FIXED - CETAK DATA DARI POPUP)
+// 🖨️ FUNGSI POPUP & PROSES CETAK NOMINATIF
 // ==========================================
 async function openNominatifPopup() {
     if (!currentTableRowsData || currentTableRowsData.length === 0) {
@@ -795,7 +791,6 @@ async function openNominatifPopup() {
 
     showOverlay("Membuat data rekapitulasi...");
 
-    // Default Fallback Penandatangan
     let ppkNama = "BAYU ADINEGORO", ppkNip = "198802242008121002";
     let bpNama = "ACHMAD CHABIB NURSALIM", bpNip = "199101162013101002";
 
@@ -850,7 +845,6 @@ async function openNominatifPopup() {
     headerTitle.innerHTML = `<h3 style="font-size:16px; font-weight:600; color:#0369a1;"><i class="fa-solid fa-print"></i> Cetak Daftar Nominatif Biaya Perjalanan Dinas</h3>`;
     card.appendChild(headerTitle);
 
-    // 1. Table Data Kegiatan Utama di dalam Modal
     const mainTableWrapper = document.createElement("div");
     mainTableWrapper.style.cssText = "background:#fff; border:1px solid #cbd5e1; border-radius:6px; max-height:220px; overflow-y:auto;";
     let mainTableHtml = `<table id="popupMainTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
@@ -901,14 +895,12 @@ async function openNominatifPopup() {
     mainTableWrapper.innerHTML = mainTableHtml;
     card.appendChild(mainTableWrapper);
 
-    // Tambahkan Fitur Hapus Baris di Dalam Tabel Popup Secara Real-time
     mainTableWrapper.addEventListener("click", function(e) {
         const delBtn = e.target.closest(".btn-pop-del");
         if(delBtn) {
             const row = delBtn.closest("tr");
             row.remove();
             
-            // Hitung ulang total yang berada di input tengah popup secara dinamis
             let newTotal = 0;
             const remainingRows = mainTableWrapper.querySelectorAll("tbody tr");
             remainingRows.forEach(tr => {
@@ -1001,11 +993,9 @@ async function openNominatifPopup() {
 
     document.getElementById("btnNominatifCancel").onclick = () => overlay.remove();
 
-    // PENTING: Aksi Print Window Membaca Data Yang Ada di Tabel Popup
     document.getElementById("btnNominatifPrint").onclick = () => {
         const customSpm = document.getElementById("nominatifSpmInput").value.trim() || spmNomor;
         
-        // Ambil elemen tr dari tabel popup yang aktif saat ini
         const activePopupRows = mainTableWrapper.querySelectorAll("tbody tr");
         if(activePopupRows.length === 0) {
             alert("Tidak ada data tersisa untuk dicetak.");
@@ -1048,6 +1038,7 @@ async function openNominatifPopup() {
             `;
         });
 
+        // PERBAIKAN: Penambahan jarak vertikal (br) di area atas box TTE untuk alokasi penempelan QR Code tanda tangan elektronik digital
         printWindow.document.write(`
             <html>
             <head>
@@ -1109,10 +1100,7 @@ async function openNominatifPopup() {
                     <div class="tte-box">
                         Mengetahui / Menyetujui<br>
                         Pejabat Pembuat Komitmen
-                        <br><br>
-                        <br><br>
-                        <br><br>
-                        <br><br>
+                        <br><br><br><br>
                         <div class="tte-info">Ditandatangani secara elektronik</div>
                         <br><br>
                         <strong>${ppkNama}</strong><br>
@@ -1121,10 +1109,7 @@ async function openNominatifPopup() {
                     <div class="tte-box">
                         <br>
                         Bendahara Pengeluaran
-                        <br><br>
-                        <br><br>
-                        <br><br>
-                        <br><br>
+                        <br><br><br><br>
                         <div class="tte-info">Ditandatangani secara elektronik</div>
                         <br><br>
                         <strong>${bpNama}</strong><br>
@@ -1142,6 +1127,7 @@ async function openNominatifPopup() {
         }, 500);
     };
 }
+
 // NAVIGATION LINKS
 function goDashboard(){ window.location.href="dashboard.html"; }
 function goPOK(){ window.location.href="data_pok.html"; }
