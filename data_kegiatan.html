@@ -140,7 +140,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   text-align: center;      /* horizontal center */
   vertical-align: middle;   /* vertical center */
   font-weight: 600;         /* opsional agar lebih jelas */
-  color: white;             /* biar kontras dengan background */
+  color: white;              /* biar kontras dengan background */
   border-radius: 6px;        /* agar background lebih rapi */
 }
 
@@ -250,7 +250,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
             
             <div class="spm-search-container">
                 <span>Cari SPM</span>
-                <input type="text" id="spmSearchBox" maxlength="10">
+                <input type="text" id="spmSearchBox" placeholder="81" maxlength="10">
                 <button class="btn-search-spm" id="btnSearchSPM"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
             </div>
 
@@ -293,7 +293,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 <div class="footer">© KPKNL Denpasar 2026</div>
 
 <script>
-const urlGAS="https://script.google.com/macros/s/AKfycbxsh6feMDQF1CTX3vt_Jq3deyJfa5kn3wlIl2Wy7nbxePrU6fGwBwH-kyDEgjXJnuGb/exec";
+const urlGAS="https://script.google.com/macros/s/AKfycbw5vM3tH-3YGjTC7LlC6h0MSoqZgsdIGSItJTIfYx3pmh51xBO0vVwNfp9waXE3YTBi/exec";
 
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
@@ -501,8 +501,11 @@ async function loadData(showOverlay = true){
             return;
         }
 
-        // Bandingkan nilai string langsung apa adanya tanpa padding empat digit
-        let filtered = allRows.filter(r => String(r.R || "").trim() === valBox);
+        // Bandingkan nilai string langsung apa adanya ATAU secara angka murni
+        let filtered = allRows.filter(r => {
+            let spmSheet = String(r.R || "").trim();
+            return spmSheet === valBox || parseInt(spmSheet, 10) === parseInt(valBox, 10);
+        });
         
         // Atur radio filter ke "Semua" agar data status apa pun yang cocok dapat muncul
         document.querySelector('input[name="statusFilter"][value="Semua"]').checked = true;
