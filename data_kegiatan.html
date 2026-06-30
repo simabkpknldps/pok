@@ -785,7 +785,7 @@ function showDeletePopup(tr){
 }
 
 // ==========================================
-// 🖨️ FUNGSI POPUP & PROSES CETAK NOMINATIF (FIXED)
+// 🖨️ FUNGSI POPUP & PROSES CETAK NOMINATIF (FIXED - CETAK DATA DARI POPUP)
 // ==========================================
 async function openNominatifPopup() {
     if (!currentTableRowsData || currentTableRowsData.length === 0) {
@@ -805,7 +805,6 @@ async function openNominatifPopup() {
         const response = await fetch(refUrl);
         const text = await response.text();
         
-        // Parsing hasil json gviz visualization
         const dataJson = JSON.parse(text.substr(47).slice(0, -2));
         const rowCells = dataJson.table.rows[0].c;
         
@@ -819,25 +818,19 @@ async function openNominatifPopup() {
 
     hideOverlay();
 
-    // Olah data rekapitulasi real-time dari data tabel yang tampil saat ini
     let totalBiaya = 0;
     let rekapMAK = {};
     let rekapWilayah = {};
     let rekapPeserta = {};
     let spmNomor = document.getElementById("spmSearchBox") ? document.getElementById("spmSearchBox").value.trim() : "";
-    if(!spmNomor) spmNomor = "0075"; // Default mock display
+    if(!spmNomor) spmNomor = "0075";
 
     currentTableRowsData.forEach(r => {
         let jml = Number(r.M || 0);
         totalBiaya += jml;
-
-        // 1. Rekap Per MAK
         rekapMAK[r.B] = (rekapMAK[r.B] || 0) + jml;
-        
-        // 2. Rekap Per Wilayah
         rekapWilayah[r.E] = (rekapWilayah[r.E] || 0) + jml;
 
-        // 3. Rekap Per Peserta
         let keyPeserta = r.D;
         if(!rekapPeserta[keyPeserta]) {
             rekapPeserta[keyPeserta] = { nama: r.D, uraian: `SPM-${spmNomor} (${String(r.C).split('/')[0].replace('ST-','')})`, jumlah: 0 };
@@ -845,7 +838,6 @@ async function openNominatifPopup() {
         rekapPeserta[keyPeserta].jumlah += jml;
     });
 
-    // Buat Struktur HTML Modal Popup
     const overlay = document.createElement("div");
     overlay.id = "nominatifPopupOverlay";
     overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999; font-family:'Inter', sans-serif; padding:15px;";
@@ -853,16 +845,15 @@ async function openNominatifPopup() {
     const card = document.createElement("div");
     card.style.cssText = "background:#f1f5f9; border-radius:12px; width:1100px; max-width:98%; box-shadow:0 12px 28px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:14px; padding:20px; max-height:95vh; overflow-y:auto; color:#1e293b;";
     
-    // Header popup
     const headerTitle = document.createElement("div");
     headerTitle.style.cssText = "display:flex; justify-content:between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:8px;";
     headerTitle.innerHTML = `<h3 style="font-size:16px; font-weight:600; color:#0369a1;"><i class="fa-solid fa-print"></i> Cetak Daftar Nominatif Biaya Perjalanan Dinas</h3>`;
     card.appendChild(headerTitle);
 
-    // 1. Table Data Kegiatan Utama
+    // 1. Table Data Kegiatan Utama di dalam Modal
     const mainTableWrapper = document.createElement("div");
     mainTableWrapper.style.cssText = "background:#fff; border:1px solid #cbd5e1; border-radius:6px; max-height:220px; overflow-y:auto;";
-    let mainTableHtml = `<table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+    let mainTableHtml = `<table id="popupMainTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
         <thead style="background:#f8fafc; position:sticky; top:0; border-bottom:1px solid #cbd5e1; box-shadow:inset 0 -1px 0 #cbd5e1;">
             <tr>
                 <th style="padding:8px; border-right:1px solid #e2e8f0;">Nama</th>
@@ -873,12 +864,13 @@ async function openNominatifPopup() {
                 <th style="padding:8px; border-right:1px solid #e2e8f0;">Tanggal Selesai</th>
                 <th style="padding:8px; border-right:1px solid #e2e8f0;">Hari</th>
                 <th style="padding:8px; border-right:1px solid #e2e8f0;">Tujuan</th>
-                <th style="padding:8px; text-align:right;">Jumlah</th>
+                <th style="padding:8px; text-align:right; border-right:1px solid #e2e8f0;">Jumlah</th>
+                <th style="padding:8px; text-align:center;">Aksi</th>
             </tr>
         </thead>
         <tbody>`;
     
-    currentTableRowsData.forEach((r, idx) => {
+    currentTableRowsData.forEach((r) => {
         let cleanST = r.F ? String(r.F).split('T')[0] : "";
         let cleanMulai = r.G ? String(r.G).split('T')[0] : "";
         let cleanSelesai = r.H ? String(r.H).split('T')[0] : "";
@@ -899,12 +891,36 @@ async function openNominatifPopup() {
             <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${cleanSelesai}</td>
             <td style="padding:6px 8px; border-right:1px solid #e2e8f0; text-align:center;">${hari}</td>
             <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${r.E}</td>
-            <td style="padding:6px 8px; text-align:right;">${barisJml.toLocaleString('id-ID')},00</td>
+            <td style="padding:6px 8px; text-align:right; border-right:1px solid #e2e8f0;" data-raw="${barisJml}">${barisJml.toLocaleString('id-ID')},00</td>
+            <td style="padding:6px 8px; text-align:center;">
+                <button class="btn-pop-del" style="border:none; background:none; color:#dc2626; cursor:pointer; font-size:14px;"><i class="fa-solid fa-trash"></i></button>
+            </td>
         </tr>`;
     });
     mainTableHtml += `</tbody></table>`;
     mainTableWrapper.innerHTML = mainTableHtml;
     card.appendChild(mainTableWrapper);
+
+    // Tambahkan Fitur Hapus Baris di Dalam Tabel Popup Secara Real-time
+    mainTableWrapper.addEventListener("click", function(e) {
+        const delBtn = e.target.closest(".btn-pop-del");
+        if(delBtn) {
+            const row = delBtn.closest("tr");
+            row.remove();
+            
+            // Hitung ulang total yang berada di input tengah popup secara dinamis
+            let newTotal = 0;
+            const remainingRows = mainTableWrapper.querySelectorAll("tbody tr");
+            remainingRows.forEach(tr => {
+                const cellJml = tr.cells[8];
+                if(cellJml) {
+                    newTotal += Number(cellJml.getAttribute("data-raw") || 0);
+                }
+            });
+            const inputTotal = controlRow.querySelector("#nominatifTotalInput");
+            if(inputTotal) inputTotal.value = newTotal.toLocaleString('id-ID');
+        }
+    });
 
     // 2. Baris Parameter Tengah
     const controlRow = document.createElement("div");
@@ -912,7 +928,7 @@ async function openNominatifPopup() {
     controlRow.innerHTML = `
         <div style="display:flex; align-items:center; gap:8px;">
             <label style="font-weight:500;">Total Daftar Nominatif</label>
-            <input type="text" value="${totalBiaya.toLocaleString('id-ID')}" readonly style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; font-weight:600; text-align:right; width:160px;">
+            <input type="text" id="nominatifTotalInput" value="${totalBiaya.toLocaleString('id-ID')}" readonly style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; font-weight:600; text-align:right; width:160px;">
             <label style="font-weight:500; margin-left:15px;">Nomor SPM</label>
             <input type="text" id="nominatifSpmInput" value="${spmNomor}" style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; font-weight:600; text-align:center; width:90px;">
         </div>
@@ -927,7 +943,6 @@ async function openNominatifPopup() {
     const rekapContainer = document.createElement("div");
     rekapContainer.style.cssText = "display:grid; grid-template-columns:1fr 1fr 1.3fr; gap:15px; min-height:180px;";
 
-    // A. Tabel Rekap Per MAK
     let makHtml = `<div style="display:flex; flex-direction:column; gap:4px;">
         <h4 style="font-size:13px; font-weight:600; color:#475569;">Rekapitulasi Per MAK</h4>
         <div style="background:#fff; border:1px solid #cbd5e1; border-radius:6px; flex:1; overflow-y:auto; max-height:180px;">
@@ -943,7 +958,6 @@ async function openNominatifPopup() {
     });
     makHtml += `</tbody></table></div></div>`;
     
-    // B. Tabel Rekap Per Wilayah
     let wilayahHtml = `<div style="display:flex; flex-direction:column; gap:4px;">
         <h4 style="font-size:13px; font-weight:600; color:#475569;">Rekapitulasi Per Wilayah</h4>
         <div style="background:#fff; border:1px solid #cbd5e1; border-radius:6px; flex:1; overflow-y:auto; max-height:180px;">
@@ -959,7 +973,6 @@ async function openNominatifPopup() {
     });
     wilayahHtml += `</tbody></table></div></div>`;
 
-    // C. Tabel Rekap Per Peserta
     let pesertaHtml = `<div style="display:flex; flex-direction:column; gap:4px;">
         <h4 style="font-size:13px; font-weight:600; color:#475569;">Rekapitulasi Per Peserta</h4>
         <div style="background:#fff; border:1px solid #cbd5e1; border-radius:6px; flex:1; overflow-y:auto; max-height:180px;">
@@ -983,44 +996,53 @@ async function openNominatifPopup() {
 
     rekapContainer.innerHTML = makHtml + wilayahHtml + pesertaHtml;
     card.appendChild(rekapContainer);
-
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
     document.getElementById("btnNominatifCancel").onclick = () => overlay.remove();
 
-    // Aksi Print Window (Landscape A4)
+    // PENTING: Aksi Print Window Membaca Data Yang Ada di Tabel Popup
     document.getElementById("btnNominatifPrint").onclick = () => {
         const customSpm = document.getElementById("nominatifSpmInput").value.trim() || spmNomor;
+        
+        // Ambil elemen tr dari tabel popup yang aktif saat ini
+        const activePopupRows = mainTableWrapper.querySelectorAll("tbody tr");
+        if(activePopupRows.length === 0) {
+            alert("Tidak ada data tersisa untuk dicetak.");
+            return;
+        }
+
         overlay.remove();
         
         const printWindow = window.open("", "_blank");
         let printTableRows = "";
+        let finalTotalCetak = 0;
         
-        currentTableRowsData.forEach((r, idx) => {
-            let cleanST = r.F ? String(r.F).split('T')[0] : "";
-            let cleanMulai = r.G ? String(r.G).split('T')[0] : "";
-            let cleanSelesai = r.H ? String(r.H).split('T')[0] : "";
-            let barisJml = Number(r.M || 0);
-
-            let hari = 1;
-            if(r.G && r.H) {
-                let diff = new Date(r.H) - new Date(r.G);
-                hari = Math.max(1, Math.round(diff / (1000*60*60*24)) + 1);
-            }
+        activePopupRows.forEach((tr, idx) => {
+            let nama = tr.cells[0].textContent;
+            let mak = tr.cells[1].textContent;
+            let noST = tr.cells[2].textContent;
+            let tglST = tr.cells[3].textContent;
+            let tglMulai = tr.cells[4].textContent;
+            let tglSelesai = tr.cells[5].textContent;
+            let hari = tr.cells[6].textContent;
+            let tujuan = tr.cells[7].textContent;
+            let rawJml = Number(tr.cells[8].getAttribute("data-raw") || 0);
+            
+            finalTotalCetak += rawJml;
 
             printTableRows += `
                 <tr>
                     <td style="text-align:center; padding:5px;">${idx + 1}</td>
-                    <td style="padding:5px;">${r.D}</td>
-                    <td style="padding:5px; font-size:10px;">${r.B}</td>
-                    <td style="padding:5px; font-size:10px;">${r.C}</td>
-                    <td style="text-align:center; padding:5px; white-space:nowrap;">${cleanST}</td>
-                    <td style="text-align:center; padding:5px; white-space:nowrap;">${cleanMulai}</td>
-                    <td style="text-align:center; padding:5px; white-space:nowrap;">${cleanSelesai}</td>
+                    <td style="padding:5px;">${nama}</td>
+                    <td style="padding:5px; font-size:10px;">${mak}</td>
+                    <td style="padding:5px; font-size:10px;">${noST}</td>
+                    <td style="text-align:center; padding:5px; white-space:nowrap;">${tglST}</td>
+                    <td style="text-align:center; padding:5px; white-space:nowrap;">${tglMulai}</td>
+                    <td style="text-align:center; padding:5px; white-space:nowrap;">${tglSelesai}</td>
                     <td style="text-align:center; padding:5px;">${hari}</td>
-                    <td style="padding:5px;">${r.E}</td>
-                    <td style="text-align:right; padding:5px; white-space:nowrap;">${barisJml.toLocaleString('id-ID')}</td>
+                    <td style="padding:5px;">${tujuan}</td>
+                    <td style="text-align:right; padding:5px; white-space:nowrap;">${rawJml.toLocaleString('id-ID')}</td>
                     <td style="padding:5px;"></td>
                 </tr>
             `;
@@ -1077,7 +1099,7 @@ async function openNominatifPopup() {
                         <tr style="font-weight:bold; background:#fafafa;">
                             <td colspan="3" style="border-right:none;"></td>
                             <td colspan="6" style="text-align:center; font-weight:bold; padding:7px; border-left:none;">JUMLAH</td>
-                            <td style="text-align:right; padding:7px; white-space:nowrap;">${totalBiaya.toLocaleString('id-ID')}</td>
+                            <td style="text-align:right; padding:7px; white-space:nowrap;">${finalTotalCetak.toLocaleString('id-ID')}</td>
                             <td></td>
                         </tr>
                     </tbody>
@@ -1088,6 +1110,12 @@ async function openNominatifPopup() {
                         Mengetahui / Menyetujui<br>
                         Pejabat Pembuat Komitmen
                         <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
                         <div class="tte-info">Ditandatangani secara elektronik</div>
                         <br><br>
                         <strong>${ppkNama}</strong><br>
@@ -1096,6 +1124,12 @@ async function openNominatifPopup() {
                     <div class="tte-box">
                         <br>
                         Bendahara Pengeluaran
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
                         <br>
                         <div class="tte-info">Ditandatangani secara elektronik</div>
                         <br><br>
@@ -1114,7 +1148,6 @@ async function openNominatifPopup() {
         }, 500);
     };
 }
-
 // NAVIGATION LINKS
 function goDashboard(){ window.location.href="dashboard.html"; }
 function goPOK(){ window.location.href="data_pok.html"; }
