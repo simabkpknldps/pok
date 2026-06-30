@@ -74,6 +74,25 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 /* Label Jumlah Pada Tabel */
 .table-total-info{font-size:14px; font-weight:600; color:#0369a1; background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center;}
 
+/* Style Tombol Refresh */
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background-color: #0369a1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-refresh:hover {
+  background-color: #025a87;
+}
+
 /* Style Tombol Download Excel */
 .btn-download {
   display: flex;
@@ -263,6 +282,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                     Jumlah Pada Tabel: &nbsp;<span id="totalJumlahLabel">0</span>
                 </div>
 
+                <button class="btn-refresh" id="btnRefreshData"><i class="fa-solid fa-arrow-rotate-right"></i> Refresh</button>
                 <button class="btn-download" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
             </div>
             <div class="radio-group">
@@ -447,7 +467,6 @@ document.addEventListener("DOMContentLoaded", async function(){
             tbody.appendChild(tr);
         });
         
-        // 🔥 PERBAIKAN DI SINI: Nama fungsi disesuaikan dengan deklarasi aslinya
         kalkulasiTotalJumlah(rows);
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
@@ -467,7 +486,6 @@ async function loadData(showOverlay = true){
         pegawaiList = data.pegawai || [];
         lokasiList = data.lokasi || [];
         
-        // 🔥 TAMBAHKAN DI SINI
         populateDatalist();
 
         const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
@@ -493,6 +511,11 @@ async function loadData(showOverlay = true){
         loadData();
     }, 30000); // 30000ms = 30 detik
 
+    // Tombol manual Refresh Data
+    document.getElementById("btnRefreshData").addEventListener("click", function(){
+        firstLoad = true; // Set ke true agar overlay loading paksa muncul
+        loadData(true);
+    });
 
   
     // search box utama
