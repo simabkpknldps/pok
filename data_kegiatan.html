@@ -52,11 +52,11 @@ body{display:grid; grid-template-columns:240px 1fr; background:#f8fafc; color:#3
 }
 
 /* Status colors */
-td.status-RekamData{ background:#fca5a5; }       /* pink */
-td.status-Terlaksana{ background:#d1d5db; }      /* abu */
-td.status-LPT{ background:#fde68a; }             /* yellow */
-td.status-Terbayar{ background:#4ade80; }        /* hijau */
-td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
+td.status-RekamData{ background:#fca5a5; color:#fff; }
+td.status-Terlaksana{ background:#d1d5db; color:#334155; }
+td.status-LPT{ background:#fde68a; color:#334155; }
+td.status-Terbayar{ background:#4ade80; color:#fff; }
+td.status-Selesai{ background:#60a5fa; color:white; }
   
 /* --- Filter --- */
 .filter-bar{display:flex; flex-direction:column; gap:12px; margin-bottom:15px;}
@@ -64,17 +64,14 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 .filter-bar input[type="text"]{padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;}
 #searchBox{flex:1; min-width: 200px;}
 
-/* Container khusus pencarian SPM */
 .spm-search-container{display:flex; align-items:center; gap:8px; background:#f1f5f9; padding:4px 10px; border-radius:10px; border:1px solid #e2e8f0;}
 .spm-search-container span{font-size:13px; font-weight:600; color:#475569; white-space:nowrap;}
 .spm-search-container input{width:80px; text-align:center;}
 .btn-search-spm{padding:8px 12px; background:#0369a1; color:white; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:background 0.2s;}
 .btn-search-spm:hover{background:#025a87;}
 
-/* Label Jumlah Pada Tabel */
 .table-total-info{font-size:14px; font-weight:600; color:#0369a1; background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 14px; border-radius:8px; display:inline-flex; align-items:center;}
 
-/* Style Tombol Refresh */
 .btn-refresh {
   display: flex;
   align-items: center;
@@ -93,7 +90,6 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   background-color: #025a87;
 }
 
-/* Style Tombol Download Excel */
 .btn-download {
   display: flex;
   align-items: center;
@@ -112,20 +108,38 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   background-color: #15803d;
 }
 
+.btn-print-nominatif {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background-color: #0284c7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-print-nominatif:hover {
+  background-color: #0369a1;
+}
+
 .filter-bar .radio-group{display:flex; gap:12px; align-items: center; padding-top: 4px;}
 .filter-bar .radio-group label{display:flex; align-items:center; gap:4px; font-size:14px; cursor:pointer;}
 
 /* --- Tabel --- */
 .table-wrapper {
   width: 100%;
-  overflow-x: auto; /* scroll horizontal */
+  overflow-x: auto;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   background: white;
 }
 
 .table-box {
-  min-width: 1200px; /* minimal lebar agar kolom panjang tidak terpotong */
+  min-width: 1200px;
   overflow-y: auto;
   max-height: calc(100vh - 250px);
 }
@@ -133,23 +147,20 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 .table-box table {
   border-collapse: collapse;
   width: 100%;
-  overflow-y: auto;
 }
 
 .table-box th, .table-box td {
-  padding: 10px;
+  padding: 8px 10px;
   border-bottom: 1px solid #e5e7eb;
   text-align: left;
-  /* white-space: nowrap; */ /* hapus default nowrap */
-  word-wrap: break-word;   /* agar teks bisa wrap */
+  word-wrap: break-word;
   overflow-wrap: break-word;
+  font-size: 13px;
 }
 
-  /* wrap hanya untuk kolom tertentu */
 .table-box td.wrap, .table-box th.wrap {
-  white-space: normal; /* memungkinkan wrap */
+  white-space: normal;
 }
-
   
 .table-box th {
   background: #f1f5f9;
@@ -159,25 +170,15 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   z-index: 10;
 }
 
-  .table-box td.status {
-  text-align: center;      /* horizontal center */
-  vertical-align: middle;   /* vertical center */
-  font-weight: 600;         /* opsional agar lebih jelas */
-  color: white;              /* biar kontras dengan background */
-  border-radius: 6px;        /* agar background lebih rapi */
-}
-
-/* freeze kolom aksi di kanan */
 .table-box td.actions {
   position: sticky;
   right: 0;
   background: white;
   display: flex;
-  justify-content: center;   /* horizontal center */
-  align-items: center;       /* vertical center */
+  justify-content: center;
+  align-items: center;
   gap: 5px;
   z-index: 5;
-  height: 100%; /* agar flex vertical penuh */
 }
 
 .table-box td.actions button {
@@ -185,54 +186,18 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   background: none;
   cursor: pointer;
   font-size: 16px;
-  display: flex;              /* agar icon juga center */
+  display: flex;
   justify-content: center;
   align-items: center;
   padding: 5px;
-  width: 30px;               /* ukuran tombol seragam */
-  height: 30px;              /* tinggi tombol */
-  border-radius: 6px;        /* opsional */
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
   transition: 0.2s;
 }
 
 .table-box td.actions button:hover{
-  background: #f1f5f9; /* hover tombol */
-}
-
-.table-box td.actions button:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #000;
-  color: #fff;
-  padding: 3px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-  .table-box table {
-  font-size: 14px;   /* samakan dengan sidebar */
-}
-
-.table-box th {
-  font-size: 14px;
-}
-
-.table-box td {
-  font-size: 14px;
-}
-
-.table-box th,
-.table-box td {
-  font-size: 13px;
-  padding: 8px 10px;
-}
-
-  .topbar-right .fa-calendar {
-    display: none;
+  background: #f1f5f9;
 }
   
 </style>
@@ -260,7 +225,6 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
     <div class="topbar">
         <div class="topbar-left">Sistem Monitoring Anggaran Belanja</div>
         <div class="topbar-right">
-            <i class="fa-regular fa-calendar"></i>
             <i class="fa-solid fa-gear"></i>
             <div class="user-info"><i class="fa-regular fa-user"></i><span id="namaUser"></span></div>
             <i class="fa-solid fa-right-from-bracket" title="Logout" onclick="logout()"></i>
@@ -284,6 +248,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
                 <button class="btn-refresh" id="btnRefreshData"><i class="fa-solid fa-arrow-rotate-right"></i> Refresh</button>
                 <button class="btn-download" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
+                <button class="btn-print-nominatif" id="btnOpenNominatif"><i class="fa-solid fa-print"></i> Cetak Nominatif</button>
             </div>
             <div class="radio-group">
                 <label><input type="radio" name="statusFilter" value="Dalam Proses" checked> Dalam Proses</label>
@@ -311,8 +276,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
                             <th class="actions">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="dataTableBody">
-                        </tbody>
+                    <tbody id="dataTableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -322,164 +286,155 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
 <div class="footer">© KPKNL Denpasar 2026</div>
 
+<div id="globalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(3px); z-index:20000; align-items:center; justify-content:center;">
+    <div style="background:white; padding:24px 32px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); font-family:Inter; font-weight:600; color:#334155;">
+        ⏳ Menyimpan data...
+    </div>
+</div>
+
+<datalist id="listPegawai"></datalist>
+<datalist id="listLokasi"></datalist>
+
 <script>
 const urlGAS="https://script.google.com/macros/s/AKfycbw5vM3tH-3YGjTC7LlC6h0MSoqZgsdIGSItJTIfYx3pmh51xBO0vVwNfp9waXE3YTBi/exec";
 
+// ==========================================
+// GLOBALS & UTILITIES OVERLAY
+// ==========================================
+let pegawaiList = [];
+let lokasiList = [];
+let currentTableRowsData = []; 
+let allRows = [];
+let firstLoad = true;
+
 function showOverlay(text="Menyimpan data..."){
     const ov = document.getElementById("globalOverlay");
-    ov.querySelector("div").innerText = "⏳ " + text;
-    ov.style.display = "flex";
+    if(ov) {
+        ov.querySelector("div").innerText = "⏳ " + text;
+        ov.style.display = "flex";
+    }
 }
 
 function hideOverlay(){
-    document.getElementById("globalOverlay").style.display = "none";
+    const ov = document.getElementById("globalOverlay");
+    if(ov) ov.style.display = "none";
 }
-  
-let pegawaiList = [];
-let lokasiList = [];
 
-// Fungsi untuk download data tabel ke Excel (Mengabaikan kolom Aksi & Format Kolom G ke Angka murni)
+function showLoading(show){
+    const el = document.getElementById("loadingOverlay");
+    if(el) el.style.display = show ? "flex" : "none";
+}
+
 function downloadExcel() {
     const table = document.getElementById("mainDataTable");
+    if(!table) return;
     
-    // Duplikasi tabel agar manipulasi tidak merusak tabel asli di UI
     const clonedTable = table.cloneNode(true);
-    
-    // Hapus kolom terakhir (Aksi) dari elemen thead klon
     const ths = clonedTable.querySelectorAll("thead tr th");
     if(ths.length > 0) ths[ths.length - 1].remove();
     
-    // Proses semua baris di tbody klon
     const trs = clonedTable.querySelectorAll("tbody tr");
     trs.forEach(tr => {
         if(tr.cells.length > 0) {
-            // Kolom G adalah indeks ke-6 (0: MAK, 1: Uraian, ..., 6: Jumlah)
             const cellJumlah = tr.cells[6];
             if (cellJumlah) {
-                // Ambil teks angka murni dengan menghapus titik (.) pemisah ribuan
                 const rawValue = cellJumlah.textContent.replace(/\./g, "").trim();
                 const numericValue = parseFloat(rawValue);
-                
-                // Jika valid berupa angka, masukkan kembali ke elemen cell
                 if (!isNaN(numericValue)) {
                     cellJumlah.textContent = numericValue;
                 }
             }
-
-            // Hapus kolom terakhir (Aksi) setelah kolom G selesai diproses
             tr.cells[tr.cells.length - 1].remove();
         }
     });
 
-    // Convert tabel klon ke workbook Excel dengan opsi raw: false agar angka di-parsing dengan benar
     const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Data Kegiatan", raw: false });
-    
-    // Trigger download file
-    Xcontent = XLSX.writeFile(wb, "Daftar_Kegiatan_SiMAB.xlsx");
+    XLSX.writeFile(wb, "Daftar_Kegiatan_SiMAB.xlsx");
 }
-  
-document.addEventListener("DOMContentLoaded", async function(){
-    const nama = sessionStorage.getItem("nama");
-    if(!nama) window.location.replace("index.html");
-    else document.getElementById("namaUser").textContent = nama;
 
-    let allRows = [];
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor){
-        alert("Session kantor tidak ditemukan. Silakan login ulang.");
-        window.location.replace("index.html");
+// ==========================================
+// CORE APP LOGIC (LOAD & FILTER DATA)
+// ==========================================
+function filterByStatus(rows, status){
+    switch(status){
+        case "Dalam Proses": return rows.filter(r => ["Rekam Data","Terlaksana"].includes(r.P));
+        case "LPT": return rows.filter(r => r.P==="LPT");
+        case "Terbayar": return rows.filter(r => r.P==="Terbayar");
+        case "Selesai": return rows.filter(r => r.P==="Selesai");
+        case "Semua": return rows.filter(r => ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"].includes(r.P));
+        default: return rows;
     }
+}
 
-    const admin = sessionStorage.getItem("admin");
-  
-    let skipFirstLoadRows = true; // skip row 2 & 3 hanya saat load pertama
+function kalkulasiTotalJumlah(rows){
+    let total = rows.reduce((sum, r) => sum + Number(r.M || 0), 0);
+    document.getElementById("totalJumlahLabel").textContent = total.toLocaleString('id-ID');
+}
 
-    // fungsi filter berdasarkan status radio
-    function filterByStatus(rows, status){
-        switch(status){
-            case "Dalam Proses": return rows.filter(r => ["Rekam Data","Terlaksana"].includes(r.P));
-            case "LPT": return rows.filter(r => r.P==="LPT");
-            case "Terbayar": return rows.filter(r => r.P==="Terbayar");
-            case "Selesai": return rows.filter(r => r.P==="Selesai");
-            case "Semua": return rows.filter(r => ["Rekam Data","Terlaksana","LPT","Terbayar","Selesai"].includes(r.P));
-            default: return rows;
+function renderTable(rows){
+    currentTableRowsData = rows; 
+    const tbody = document.getElementById("dataTableBody");
+    if(!tbody) return;
+    tbody.innerHTML = "";
+    
+    rows.forEach(r=>{
+        const tglST = r.F ? new Date(r.F) : null;
+        const tglMulai = r.G ? new Date(r.G) : null;
+          
+        const formatDate = (d) => 
+            d && !isNaN(d.getTime()) ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
+          
+        const tglSTFormatted = formatDate(tglST);
+        const tglMulaiFormatted = formatDate(tglMulai);
+        const jumlahFormatted = Number(r.M||0).toLocaleString('id-ID');
+
+        const tr = document.createElement("tr");
+        tr.dataset.id = r.A;
+
+        let statusClass = "";
+        switch(r.P){
+            case "Rekam Data": statusClass="status-RekamData"; break;
+            case "Terlaksana": statusClass="status-Terlaksana"; break;
+            case "LPT": statusClass="status-LPT"; break;
+            case "Terbayar": statusClass="status-Terbayar"; break;
+            case "Selesai": statusClass="status-Selesai"; break;
         }
-    }
 
-    // fungsi pembantu untuk kalkulasi total kolom jumlah dari array baris yang aktif
-    function kalkulasiTotalJumlah(rows){
-        let total = rows.reduce((sum, r) => sum + Number(r.M || 0), 0);
-        document.getElementById("totalJumlahLabel").textContent = total.toLocaleString('id-ID');
-    }
+        tr.innerHTML = `
+          <td class="wrap">${r.B}</td>
+          <td class="wrap">${r.C}</td>
+          <td class="wrap">${r.D}</td>
+          <td class="wrap">${r.E}</td>
+          <td>${tglSTFormatted}</td>
+          <td>${tglMulaiFormatted}</td>
+          <td style="text-align:right;">${jumlahFormatted}</td>
+          <td>${r.N}</td>
+          <td class="${statusClass}">${r.P}</td>
+          <td class="actions">
+              <button class="btn-copy" data-tooltip="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
+              <button class="btn-ubah" data-tooltip="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button class="btn-pelaksana" data-tooltip="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
+              <button class="btn-lpt" data-tooltip="LPT"><i class="fa-solid fa-file-lines"></i></button>
+              <button class="btn-bayar" data-tooltip="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
+              <button class="btn-sp2d" data-tooltip="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
+              <button class="btn-hapus" data-tooltip="Hapus"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    kalkulasiTotalJumlah(rows);
+}
 
-    // render table
-    function renderTable(rows){
-        const tbody = document.getElementById("dataTableBody");
-        tbody.innerHTML = "";
-        rows.forEach(r=>{
-            
-            const tglST = r.F ? new Date(r.F) : null;
-            const tglMulai = r.G ? new Date(r.G) : null;
-            const tglSelesai = r.H ? new Date(r.H) : null;
-              
-            const formatDate = (d) => 
-                d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : "";
-              
-            const tglSTFormatted = formatDate(tglST);
-            const tglMulaiFormatted = formatDate(tglMulai);
-
-            const jumlahFormatted = Number(r.M||0).toLocaleString('id-ID');
-    
-            const tr = document.createElement("tr");
-            tr.dataset.id = r.A; // simpan ID di attribute
-
-            // assign class status untuk coloring
-            let statusClass = "";
-            switch(r.P){
-                case "Rekam Data": statusClass="status-RekamData"; break;
-                case "Terlaksana": statusClass="status-Terlaksana"; break;
-                case "LPT": statusClass="status-LPT"; break;
-                case "Terbayar": statusClass="status-Terbayar"; break;
-                case "Selesai": statusClass="status-Selesai"; break;
-            }
-    
-            tr.innerHTML = `
-              <td class="wrap">${r.B}</td>
-              <td class="wrap">${r.C}</td>
-              <td class="wrap">${r.D}</td>
-              <td class="wrap">${r.E}</td>
-              <td>${tglSTFormatted}</td>
-              <td>${tglMulaiFormatted}</td>
-              <td style="text-align:right;">${jumlahFormatted}</td>
-              <td>${r.N}</td>
-              <td class="${statusClass}">${r.P}</td>
-              <td class="actions">
-                  <button class="btn-copy" data-tooltip="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
-                  <button class="btn-ubah" data-tooltip="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
-                  <button class="btn-pelaksana" data-tooltip="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
-                  <button class="btn-lpt" data-tooltip="LPT"><i class="fa-solid fa-file-lines"></i></button>
-                  <button class="btn-bayar" data-tooltip="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
-                  <button class="btn-sp2d" data-tooltip="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
-                  <button class="btn-hapus" data-tooltip="Hapus"><i class="fa-solid fa-trash"></i></button>
-              </td>
-            `;
-
-            tbody.appendChild(tr);
-        });
-        
-        kalkulasiTotalJumlah(rows);
-    }
-let firstLoad = true; // untuk overlay hanya saat load pertama
-
-async function loadData(showOverlay = true){
+async function loadData(showOverlayFlag = true){
+    const kantor = sessionStorage.getItem("kantor");
+    if(!kantor) return;
     try{
-        if(showOverlay && firstLoad) showLoading(true);
+        if(showOverlayFlag && firstLoad) showLoading(true);
 
         const res = await fetch(`${urlGAS}?kantor=${kantor}`);
         const data = await res.json();
 
-        if(showOverlay && firstLoad) showLoading(false);
-
+        if(showOverlayFlag && firstLoad) showLoading(false);
         if(data.status !== "success") return;
 
         allRows = data.rows;
@@ -489,982 +444,22 @@ async function loadData(showOverlay = true){
         populateDatalist();
 
         const defaultRadio = document.querySelector('input[name="statusFilter"]:checked').value;
-
-        // skip row 2 & 3 saat load pertama
         const initialRows = allRows.filter((r, idx) => idx !== 1 && idx !== 2);
         const filtered = filterByStatus(initialRows, defaultRadio);
         renderTable(filtered);
 
-        firstLoad = false; // overlay only once
+        firstLoad = false;
     } catch(e){
-        if(showOverlay && firstLoad) showLoading(false);
-        console.error(e);
+        if(showOverlayFlag && firstLoad) showLoading(false);
+        console.error("Gagal memuat data: ", e);
     }
 }
-
- // load pertama (dengan overlay)
-    await loadData(true);
-
-  
-// 🔁 Reload data tiap 30 detik
-    setInterval(() => {
-        loadData();
-    }, 30000); // 30000ms = 30 detik
-
-    // Tombol manual Refresh Data
-    document.getElementById("btnRefreshData").addEventListener("click", function(){
-        firstLoad = true; // Set ke true agar overlay loading paksa muncul
-        loadData(true);
-    });
-
-  
-    // search box utama
-    document.getElementById("searchBox").addEventListener("input", function(){
-        const val = this.value.toLowerCase();
-        const radioVal = document.querySelector('input[name="statusFilter"]:checked').value;
-        let filtered = filterByStatus(allRows, radioVal);
-    
-        if(val){
-            filtered = filtered.filter(r =>
-                Object.keys(r)
-                      .filter(k => k !== "N") // skip kolom User
-                      .some(k => String(r[k]||"").toLowerCase().includes(val))
-            );
-        }
-    
-        renderTable(filtered);
-    });
-
-    // Fitur Pencarian Berdasarkan Nomor SPM (Sesuai aslinya di Sheets)
-    document.getElementById("btnSearchSPM").addEventListener("click", function(){
-        let valBox = document.getElementById("spmSearchBox").value.trim();
-        if(!valBox) {
-            alert("Masukkan nomor SPM terlebih dahulu!");
-            return;
-        }
-
-        // Bandingkan nilai string langsung apa adanya ATAU secara angka murni
-        let filtered = allRows.filter(r => {
-            let spmSheet = String(r.R || "").trim();
-            return spmSheet === valBox || parseInt(spmSheet, 10) === parseInt(valBox, 10);
-        });
-        
-        // Atur radio filter ke "Semua" agar data status apa pun yang cocok dapat muncul
-        document.querySelector('input[name="statusFilter"][value="Semua"]').checked = true;
-        
-        renderTable(filtered);
-        if(filtered.length === 0){
-            alert("Data dengan Nomor SPM " + valBox + " tidak ditemukan.");
-        }
-    });
-
-
-    // radio filter
-    document.querySelectorAll('input[name="statusFilter"]').forEach(rb=>{
-        rb.addEventListener("change", function(){
-            const val = this.value;
-            const searchVal = document.getElementById("searchBox").value.toLowerCase();
-            let filtered = filterByStatus(allRows, val);
-
-            if(searchVal){
-                filtered = filtered.filter(r =>
-                    Object.keys(r).some(k => String(r[k]||"").toLowerCase().includes(searchVal))
-                );
-            }
-
-            renderTable(filtered);
-        });
-    });
-
-    // tombol aksi
-document.getElementById("dataTableBody").addEventListener("click", function(e){
-    const btn = e.target.closest("button");
-    if(!btn) return;
-    const tr = btn.closest("tr");
-    const idKegiatan = tr.dataset.id;
-    const statusKegiatan = tr.cells[8].textContent; // kolom Status
-    const isAdmin = sessionStorage.getItem("admin") === "1";
-
-    if(btn.classList.contains("btn-copy")){
-        showCopyPopup(tr);
-    }
-    else if(btn.classList.contains("btn-ubah")){
-        if(statusKegiatan === "Rekam Data" || isAdmin){
-            // tampilkan popup edit
-            showEditPopup(tr);
-        } else {
-            alert("Anda tidak memiliki kewenangan!");
-        }
-    }
-    else if(btn.classList.contains("btn-hapus")){
-
-        if(isAdmin || statusKegiatan === "Rekam Data"){
-            showDeletePopup(tr);
-        } else {
-            alert("Anda tidak memiliki kewenangan!");
-        }
-    }
-    else if(btn.classList.contains("btn-pelaksana")){
-        showPelaksanaPopup(tr);
-    }
-
-    else if(btn.classList.contains("btn-lpt")){
-        showLPTPopup(tr);
-    }
-    else if(btn.classList.contains("btn-bayar")){
-    if(isAdmin){
-        showBayarPopup(tr);
-    } else {
-        alert("Anda tidak memiliki kewenangan!");
-    }
-}
-else if(btn.classList.contains("btn-sp2d")){
-    if(isAdmin){
-        showSP2DPopup(tr);
-    } else {
-        alert("Anda tidak memiliki kewenangan!");
-    }
-}
-});
-
-// fungsi popup salin uraian
-function showCopyPopup(tr){
-    const uraianTarget = tr.cells[1].textContent.trim();
-    const allMainRows = document.querySelectorAll("#dataTableBody tr");
-    const filteredRows = Array.from(allMainRows).filter(row => row.cells[1].textContent.trim() === uraianTarget);
-
-    // Dapatkan data-data pendukung dari basis baris yang ditemukan
-    const rowCount = filteredRows.length;
-    const firstRow = filteredRows[0];
-    const targetUraianRaw = firstRow.cells[1].textContent.trim();
-    const targetTujuan = firstRow.cells[3].textContent.trim();
-    const targetTgl = firstRow.cells[4].textContent.trim();
-    
-    // Logika Pembersihan String Opsi 1
-    let cleanNoST = targetUraianRaw;
-    if (targetUraianRaw.includes(")")) {
-        const parts = targetUraianRaw.split(")");
-        cleanNoST = parts[parts.length - 1].trim(); 
-    }
-
-    // Bangun teks Opsi 1
-    let teksOpsi1 = "";
-    if (rowCount > 1) {
-        const namaPegawaiList = filteredRows.map(row => row.cells[2].textContent.trim());
-        const namaPertama = namaPegawaiList[0];
-        teksOpsi1 = `Belanja barang untuk keperluan perjalanan dinas sesuai surat tugas nomor ${cleanNoST} tanggal ${targetTgl} tujuan ${targetTujuan} an ${namaPertama} dkk`;
-    } else {
-        const namaPegawai = firstRow.cells[2].textContent.trim();
-        teksOpsi1 = `Belanja barang untuk keperluan perjalanan dinas sesuai surat tugas nomor ${cleanNoST} tanggal ${targetTgl} tujuan ${targetTujuan} an ${namaPegawai}`;
-    }
-
-    // Bangun teks Opsi 2
-    let teksOpsi2 = targetUraianRaw;
-
-    // overlay popup
-    const overlay = document.createElement("div");
-    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
-
-    const popup = document.createElement("div");
-    popup.style.cssText = "background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:650px; max-width:95%; padding:25px; display:flex; flex-direction:column; gap:15px;";
-
-    popup.innerHTML = `
-        <h3 style="text-align:center; color:#0369a1; margin-bottom:5px;">Salin Uraian</h3>
-        <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:left;">
-            <thead>
-                <tr style="background:#f1f5f9; border-bottom:2px solid #e5e7eb;">
-                    <th style="padding:10px; width:15%;">Opsi</th>
-                    <th style="padding:10px; width:70%;">Teks Uraian</th>
-                    <th style="padding:10px; width:15%; text-align:center;">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr style="border-bottom:1px solid #e5e7eb;">
-                    <td style="padding:12px 10px; font-weight:600; color:#475569;">Opsi 1</td>
-                    <td style="padding:12px 10px; color:#334155; word-break:break-word;">${teksOpsi1}</td>
-                    <td style="padding:12px 10px; text-align:center;">
-                        <button class="btn-copy-action" data-text="${teksOpsi1.replace(/"/g, '&quot;')}" style="padding:6px 12px; background:#0369a1; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500;">Salin</button>
-                    </td>
-                </tr>
-                <tr style="border-bottom:1px solid #e5e7eb;">
-                    <td style="padding:12px 10px; font-weight:600; color:#475569;">Opsi 2</td>
-                    <td style="padding:12px 10px; color:#334155; word-break:break-word;">${teksOpsi2}</td>
-                    <td style="padding:12px 10px; text-align:center;">
-                        <button class="btn-copy-action" data-text="${teksOpsi2.replace(/"/g, '&quot;')}" style="padding:6px 12px; background:#0369a1; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500;">Salin</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <div style="display:flex; justify-content:flex-end; margin-top:5px;">
-            <button id="closeCopyPopup" style="padding:8px 16px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer; font-weight:500;">Tutup</button>
-        </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    document.getElementById("closeCopyPopup").onclick = () => overlay.remove();
-
-    // Event handler klik tombol salin internal tabel popup
-    popup.querySelectorAll(".btn-copy-action").forEach(button => {
-        button.onclick = function() {
-            const textToCopy = this.getAttribute("data-text");
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const originalText = this.innerText;
-                this.innerText = "Tersalin!";
-                this.style.background = "#22c55e";
-                setTimeout(() => {
-                    this.innerText = originalText;
-                    this.style.background = "#0369a1";
-                }, 1500);
-            }).catch(err => {
-                alert("Gagal menyalin teks.");
-            });
-        };
-    });
-}
-
-// fungsi popup edit
-function showEditPopup(tr){
-    const idKegiatan = tr.dataset.id;
-    const uraian = tr.cells[1].textContent;
-    const pelaksana = tr.cells[2].textContent;
-    const tujuan = tr.cells[3].textContent;
-    const tglST = tr.cells[4].textContent;
-    const jumlah = tr.cells[6].textContent.replace(/\./g,"");
-
-    // overlay
-    const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = 0;
-    overlay.style.background = "rgba(0,0,0,0.4)";
-    overlay.style.display = "flex";
-    overlay.style.justifyContent = "center";
-    overlay.style.alignItems = "center";
-    overlay.style.zIndex = 9999;
-
-    // popup card
-    const popup = document.createElement("div");
-    popup.style.background = "#fff";
-    popup.style.borderRadius = "12px";
-    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
-    popup.style.width = "400px";
-    popup.style.maxWidth = "90%";
-    popup.style.padding = "25px 20px";
-    popup.style.display = "flex";
-    popup.style.flexDirection = "column";
-    popup.style.gap = "12px";
-
-    popup.innerHTML = `
-        <h3 style="margin-bottom:10px; text-align:center; color:#0369a1;">Ubah Kegiatan #${idKegiatan}</h3>
-
-        <label>Uraian</label>
-        <input type="text" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-        <label>Pelaksana</label>
-        <input type="text" list="listPegawai" value="${pelaksana}"
-        style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-        
-        <label>Tujuan</label>
-        <input type="text" list="listLokasi" value="${tujuan}"
-        style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-
-        <label>Tgl ST/ND</label>
-        <input type="date" value="${tglST}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-        <label>Jumlah</label>
-        <input type="number" value="${jumlah}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
-            <button id="popupCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer;">Batal</button>
-            <button id="popupUpdate" style="padding:8px 14px; border:none; border-radius:6px; background:#38bdf8; color:white; cursor:pointer;">Update</button>
-        </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    // tombol batal
-    document.getElementById("popupCancel").onclick = () => overlay.remove();
-
-    // tombol update
-    document.getElementById("popupUpdate").onclick = function(){
-
-    const btn = this; 
-    btn.disabled = true;
-
-    showOverlay("Menyimpan perubahan...");
-
-    const inputs = popup.querySelectorAll("input");
-
-    const updatedData = {
-        uraian: inputs[0].value,
-        pelaksana: inputs[1].value,
-        purpose: inputs[2].value,
-        tglST: inputs[3].value,
-        jumlah: Number(inputs[4].value)
-    };
-
-    fetch(urlGAS, {
-        method: "POST",
-        body: JSON.stringify({
-            kantor: sessionStorage.getItem("kantor"),
-            id: idKegiatan,
-            uraian: updatedData.uraian,
-            pelaksana: updatedData.pelaksana,
-            tujuan: updatedData.purpose,
-            tglST: updatedData.tglST,
-            jumlah: updatedData.jumlah
-        })
-    })
-    .then(res => res.json())
-    .then(result=>{
-        hideOverlay();
-        btn.disabled = false;
-
-        if(result.status === "success"){
-            overlay.remove();
-            loadData(false);
-        } else {
-            alert("Gagal update: "+result.message);
-        }
-    })
-    .catch(err=>{
-        hideOverlay();
-        btn.disabled = false;
-    });
-};
-}
-
-    loadData();
-});
-
-function getStatusColor(status){
-    switch(status){
-        case "Rekam Data": return "#f87171"; 
-        case "Terlaksana": return "#9ca3af"; 
-        case "LPT": return "#facc15";        
-        case "Terbayar": return "#22c55e";   
-        case "Selesai": return "#3b82f6";    
-        default: return "#6b7280";            
-    }
-}
-
-function showPelaksanaPopup(tr){
-    const idKegiatan = tr.dataset.id;
-    const mak = tr.cells[0].textContent;
-    const uraian = tr.cells[1].textContent;
-    const tujuan = tr.cells[3].textContent;
-    const tglST = tr.cells[4].textContent;
-    const user = tr.cells[7].textContent;
-
-    const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = 0;
-    overlay.style.background = "rgba(0,0,0,0.4)";
-    overlay.style.display = "flex";
-    overlay.style.justifyContent = "center";
-    overlay.style.alignItems = "center";
-    overlay.style.zIndex = 9999;
-
-    const popup = document.createElement("div");
-    popup.style.background = "#fff";
-    popup.style.borderRadius = "12px";
-    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
-    popup.style.width = "750px";
-    popup.style.maxWidth = "95%";
-    popup.style.padding = "25px";
-    popup.style.display = "flex";
-    popup.style.flexDirection = "column";
-    popup.style.gap = "12px";
-    popup.style.maxHeight = "90vh";
-    popup.style.overflowY = "auto";
-
-    popup.innerHTML = `
-    <h3 style="text-align:center; color:#0369a1;">Pelaksana Kegiatan #${idKegiatan}</h3>
-
-    <label>MAK</label>
-    <input type="text" value="${mak}" readonly style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
-
-    <label>Uraian</label>
-    <input type="text" value="${uraian}" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-
-    <label>Tujuan</label>
-    <input type="text" value="${tujuan}" readonly style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
-
-    <div style="display:flex; gap:12px;">
-        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-            <label>User</label>
-            <input type="text" value="${user}" readonly style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; background:#f1f5f9;">
-        </div>
-        <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
-            <label>Tgl ST/ND</label>
-            <input type="date" id="pelTglST" value="${tglST}" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-        </div>
-    </div>
-
-    <label>Pelaksana</label>
-    <div style="display:flex; gap:8px;">
-        <input type="text" list="listPegawai" id="pelNama" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-        <button id="btnTambahPelaksana" style="padding:8px 14px; border:none; border-radius:6px; background:#38bdf8; color:white; cursor:pointer;">Submit</button>
-    </div>
-
-    <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:220px; overflow-y:auto; margin-top:5px;">
-        <table style="width:100%; border-collapse:collapse; font-size:13px;">
-            <thead style="background:#f1f5f9; position:sticky; top:0;">
-                <tr>
-                    <th style="padding:8px;">Nama</th>
-                    <th style="padding:8px;">Tgl Mulai</th>
-                    <th style="padding:8px;">Tgl Selesai</th>
-                    <th style="padding:8px; text-align:right;">Jumlah</th>
-                    <th style="padding:8px; text-align:center;">Aksi</th>
-                </tr>
-            </thead>
-            <tbody id="pelaksanaTableBody"></tbody>
-        </table>
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
-        <button id="pelCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
-        <button id="pelSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
-    </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    document.getElementById("btnTambahPelaksana").onclick = function(){
-        const namaInput = document.getElementById("pelNama");
-        const nama = namaInput.value.trim();
-        if(!nama) return;
-
-        const tbody = document.getElementById("pelaksanaTableBody");
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-            <td style="padding:6px;">${nama}</td>
-            <td style="padding:6px;"><input type="date" style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;"></td>
-            <td style="padding:6px;"><input type="date" style="padding:4px; border:1px solid #cbd5e1; border-radius:6px;"></td>
-            <td style="padding:6px;"><input type="text" class="jumlah-input" style="width:100%; padding:4px; border:1px solid #cbd5e1; border-radius:6px; text-align:right;"></td>
-            <td style="padding:6px; text-align:center;"><button style="border:none; background:none; cursor:pointer; color:red;"><i class="fa-solid fa-trash"></i></button></td>
-        `;
-
-        row.querySelector("button").onclick = () => row.remove();
-        tbody.appendChild(row);
-        const jumlahInput = row.querySelector(".jumlah-input");
-        
-        jumlahInput.addEventListener("input", function(){
-            let value = this.value.replace(/\D/g, "");
-            this.value = value ? Number(value).toLocaleString("id-ID") : "";
-        });
-
-        namaInput.value = "";
-        namaInput.focus();
-    };
-
-    document.getElementById("pelCancel").onclick = () => overlay.remove();
-
-    document.getElementById("pelSave").onclick = () => {
-        showOverlay("Menyimpan pelaksana...");
-        document.getElementById("pelSave").disabled = true;
-
-        const rows = document.querySelectorAll("#pelaksanaTableBody tr");
-        const dataPelaksana = [];
-
-        rows.forEach(r=>{
-            const nama = r.cells[0].textContent;
-            const mulaiRaw = r.cells[1].querySelector("input").value;
-            const selesaiRaw = r.cells[2].querySelector("input").value;
-            const mulai = mulaiRaw ? mulaiRaw.split("T")[0] : "";
-            const selesai = selesaiRaw ? selesaiRaw.split("T")[0] : "";
-            const jumlahText = r.cells[3].querySelector("input").value;
-            const jumlah = Number(jumlahText.replace(/\./g,"")) || 0;
-
-            dataPelaksana.push({nama, mulai, selesai, jumlah});
-        });
-
-        fetch(urlGAS,{
-            method:"POST",
-            body: JSON.stringify({
-                action: "savePelaksana",
-                kantor: sessionStorage.getItem("kantor"),
-                idLama: idKegiatan,
-                mak: mak,
-                uraian: popup.querySelectorAll("input")[1].value,
-                tujuan: tujuan,
-                tglST: document.getElementById("pelTglST").value,
-                user: user,
-                pelaksana: dataPelaksana
-            })
-        })
-        .then(res=>res.json())
-        .then(result=>{
-            hideOverlay();
-            document.getElementById("pelSave").disabled = false;
-            if(result.status==="success"){
-                overlay.remove();
-                loadData(false);
-            }else{
-                alert("Gagal: "+result.message);
-            }
-        })
-        .catch(err=>{
-            hideOverlay();
-            document.getElementById("pelSave").disabled = false;
-        });
-    };
-}
-
-function showLPTPopup(tr){
-    const uraianTarget = tr.cells[1].textContent;
-    const allMainRows = document.querySelectorAll("#dataTableBody tr");
-    const filteredRows = Array.from(allMainRows).filter(row => row.cells[1].textContent === uraianTarget);
-
-    const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = 0;
-    overlay.style.background = "rgba(0,0,0,0.4)";
-    overlay.style.display = "flex";
-    overlay.style.justifyContent = "center";
-    overlay.style.alignItems = "center";
-    overlay.style.zIndex = 9999;
-
-    const popup = document.createElement("div");
-    popup.style.background = "#fff";
-    popup.style.borderRadius = "12px";
-    popup.style.boxShadow = "0 8px 20px rgba(0,0,0,0.2)";
-    popup.style.width = "800px";
-    popup.style.maxWidth = "95%";
-    popup.style.padding = "25px";
-    popup.style.display = "flex";
-    popup.style.flexDirection = "column";
-    popup.style.gap = "12px";
-    popup.style.maxHeight = "90vh";
-    popup.style.overflowY = "auto";
-
-    popup.innerHTML = `
-        <h3 style="text-align:center; color:#0369a1;">LPT Kegiatan</h3>
-        <label>Tanggal LPT</label>
-        <input type="date" id="lptTanggal" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-
-        <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:300px; overflow-y:auto;">
-            <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                <thead style="background:#f1f5f9; position:sticky; top:0;">
-                    <tr>
-                        <th style="padding:8px;">ID Kegiatan</th>
-                        <th style="padding:8px;">Uraian / No ST</th>
-                        <th style="padding:8px;">Pelaksana Tugas</th>
-                        <th style="padding:8px; text-align:center;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="lptTableBody"></tbody>
-            </table>
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
-            <button id="lptCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
-            <button id="lptSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
-        </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    const tbody = document.getElementById("lptTableBody");
-
-    filteredRows.forEach(row => {
-        const id = row.dataset.id;        
-        const uraian = row.cells[1].textContent;   
-        const pelaksana = row.cells[2].textContent; 
-
-        const newRow = document.createElement("tr");
-        newRow.innerHTML = `
-            <td style="padding:6px;">${id}</td>
-            <td style="padding:6px;">${uraian}</td>
-            <td style="padding:6px;">${pelaksana}</td>
-            <td style="padding:6px; text-align:center;">
-                <button style="border:none; background:none; cursor:pointer; color:red;"><i class="fa-solid fa-trash"></i></button>
-            </td>
-        `;
-        newRow.querySelector("button").onclick = () => newRow.remove();
-        tbody.appendChild(newRow);
-    });
-
-    document.getElementById("lptCancel").onclick = () => overlay.remove();
-
-    document.getElementById("lptSave").onclick = () => {
-        const tanggal = document.getElementById("lptTanggal").value;
-        if(!tanggal){
-            alert("Tanggal LPT harus diisi!");
-            return;
-        }
-
-        const rows = document.querySelectorAll("#lptTableBody tr");
-        const dataLPT = [];
-        rows.forEach(r => {
-            const id = r.cells[0].textContent;  
-            dataLPT.push({ id, lptDate: tanggal }); 
-        });
-
-        showOverlay("Menyimpan LPT...");
-        document.getElementById("lptSave").disabled = true;
-
-        fetch(urlGAS, {
-            method: "POST",
-            body: JSON.stringify({
-                action: "updateLPT",
-                kantor: sessionStorage.getItem("kantor"),
-                rows: dataLPT
-            })
-        })
-        .then(res => res.json())
-        .then(result => {
-            hideOverlay();
-            document.getElementById("lptSave").disabled = false;
-            if(result.status === "success"){
-                overlay.remove();
-                loadData(false); 
-            } else {
-                alert("Gagal update LPT: " + result.message);
-            }
-        })
-        .catch(err => {
-            hideOverlay();
-            document.getElementById("lptSave").disabled = false;
-        });
-    };
-}
-
-function showBayarPopup(tr) {
-    const idKegiatan = tr.dataset.id;
-    const uraian = tr.cells[1].textContent; 
-
-    const overlay = document.createElement("div");
-    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
-
-    const popup = document.createElement("div");
-    popup.style.cssText = "background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:600px; max-width:95%; padding:25px 20px; display:flex; flex-direction:column; gap:12px; max-height:80vh; overflow:auto;";
-
-    popup.innerHTML = `
-        <h3 style="text-align:center; color:#0369a1;">Bayar Kegiatan #${idKegiatan}</h3>
-        <label>Uraian / No ST</label>
-        <input type="text" id="uraianInput" value="${uraian}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-        <label>Tanggal Bayar</label>
-        <input type="date" id="tglBayarInput" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-        <label>Daftar Pelaksana Tugas</label>
-        <table id="tblPelaksana" style="width:100%; border-collapse:collapse; border:1px solid #cbd5e1;">
-            <thead style="background:#f1f5f9;">
-                <tr>
-                    <th style="padding:6px; border-bottom:1px solid #cbd5e1;">ID Kegiatan</th>
-                    <th style="padding:6px; border-bottom:1px solid #cbd5e1;">Pelaksana Tugas</th>
-                    <th style="padding:6px; border-bottom:1px solid #cbd5e1;">Aksi</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
-            <button id="bayarCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer;">Batal</button>
-            <button id="bayarSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
-        </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    document.getElementById("bayarCancel").onclick = () => overlay.remove();
-
-    const tbody = popup.querySelector("#tblPelaksana tbody");
-    tbody.innerHTML = "";
-    const allRows = document.querySelectorAll("#dataTableBody tr");
-
-    allRows.forEach(r => {
-        const rowUraian = r.cells[1].textContent;
-        if(rowUraian === uraian){ 
-            const id = r.dataset.id;
-            const pelaksana = r.cells[2].textContent;
-
-            const newRow = document.createElement("tr");
-            newRow.dataset.id = id; 
-            newRow.innerHTML = `
-                <td style="padding:6px;">${id}</td>
-                <td style="padding:6px;">${pelaksana}</td>
-                <td style="padding:6px; text-align:center;">
-                    <button style="border:none; background:none; cursor:pointer; color:red;"><i class="fa-solid fa-trash"></i></button>
-                </td>
-            `;
-            newRow.querySelector("button").onclick = () => newRow.remove();
-            tbody.appendChild(newRow);
-        }
-    });
-
-    document.getElementById("bayarSave").onclick = () => {
-        const uraianValue = document.getElementById("uraianInput").value.trim();
-        const tglBayar = document.getElementById("tglBayarInput").value;
-
-        if(!tglBayar){
-            alert("Tanggal Bayar harus diisi!");
-            return;
-        }
-
-        const rows = document.querySelectorAll("#tblPelaksana tbody tr");
-        const tblData = [];
-        rows.forEach(r => {
-            const id = r.dataset.id;
-            const pelaksana = r.cells[1].textContent;
-            tblData.push({ id, pelaksana, uraian: uraianValue, tglBayar: tglBayar });
-        });
-
-        showOverlay("Menyimpan pembayaran...");
-
-        fetch(urlGAS, {
-            method: "POST",
-            body: JSON.stringify({
-                action: "updateBayarMultiple",
-                kantor: sessionStorage.getItem("kantor"),
-                data: tblData
-            })
-        })
-        .then(res => res.json())
-        .then(result => {
-            hideOverlay();
-            if(result.status === "success"){
-                overlay.remove();
-                loadData(false);
-            } else {
-                alert("Gagal: " + result.message);
-            }
-        })
-        .catch(err => {
-            hideOverlay();
-        });
-    };
-}
-
-function showSP2DPopup(tr){
-    const allRows = document.querySelectorAll("#dataTableBody tr");
-
-    const overlay = document.createElement("div");
-    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
-
-    const popup = document.createElement("div");
-    popup.style.cssText = `background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:800px; max-width:95%; padding:25px; display:flex; flex-direction:column; gap:12px; max-height:90vh; overflow:auto;`;
-
-    popup.innerHTML = `
-        <h3 style="text-align:center; color:#0369a1;">SP2D Kegiatan</h3>
-        <label>Nomor SPM</label>
-        <input type="text" id="spmNomor" placeholder="0000" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;" maxlength="4">
-
-        <label>Tanggal SP2D</label>
-        <input type="date" id="tglSP2D" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
-
-        <label>Cari di tabel</label>
-        <input type="text" id="sp2dSearch" placeholder="Cari..." style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:8px;">
-
-        <div style="border:1px solid #e5e7eb; border-radius:8px; max-height:300px; overflow-y:auto;">
-            <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                <thead style="background:#f1f5f9; position:sticky; top:0;">
-                    <tr>
-                        <th style="padding:6px;">ID Kegiatan</th>
-                        <th style="padding:6px;">Uraian / No ST</th>
-                        <th style="padding:6px;">Nama</th>
-                        <th style="padding:6px;">Tujuan</th>
-                        <th style="padding:6px; text-align:right;">Jumlah</th>
-                        <th style="padding:6px; text-align:center;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="sp2dTableBody"></tbody>
-            </table>
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
-            <button id="sp2dCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
-            <button id="sp2dSave" style="padding:8px 14px; border:none; border-radius:6px; background:#22c55e; color:white; cursor:pointer;">Simpan</button>
-        </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    const tbody = document.getElementById("sp2dTableBody");
-
-    allRows.forEach(row => {
-        const id = row.dataset.id; 
-        const uraian = row.cells[1].textContent;
-        const nama = row.cells[2].textContent;
-        const tujuan = row.cells[3].textContent;
-        const jumlah = row.cells[6].textContent;
-
-        const newRow = document.createElement("tr");
-        newRow.innerHTML = `
-            <td style="padding:6px;">${id}</td>
-            <td style="padding:6px;">${uraian}</td>
-            <td style="padding:6px;">${nama}</td>
-            <td style="padding:6px;">${tujuan}</td>
-            <td style="padding:6px; text-align:right;">${jumlah}</td>
-            <td style="padding:6px; text-align:center;">
-                <button style="border:none; background:none; cursor:pointer; color:red;"><i class="fa-solid fa-trash"></i></button>
-            </td>
-        `;
-        newRow.querySelector("button").onclick = () => newRow.remove();
-        tbody.appendChild(newRow);
-    });
-
-    document.getElementById("sp2dCancel").onclick = () => overlay.remove();
-
-    document.getElementById("sp2dSearch").addEventListener("input", function(){
-        const val = this.value.toLowerCase();
-        tbody.querySelectorAll("tr").forEach(tr=>{
-            const match = Array.from(tr.cells).some(td => td.textContent.toLowerCase().includes(val));
-            tr.style.display = match ? "" : "none";
-        });
-    });
-
-    document.getElementById("spmNomor").addEventListener("blur", function(){
-        const val = parseInt(this.value) || 0;
-        this.value = String(val).padStart(4,"0");
-    });
-
-    document.getElementById("sp2dSave").onclick = () => {
-        const nomorSPM = document.getElementById("spmNomor").value.trim();
-        const tglSP2D = document.getElementById("tglSP2D").value;
-
-        if(!nomorSPM || !tglSP2D){
-            alert("Nomor SPM dan Tanggal SP2D harus diisi!");
-            return;
-        }
-
-        const rows = document.querySelectorAll("#sp2dTableBody tr");
-        const dataSP2D = [];
-        rows.forEach(r=>{
-            const id = r.cells[0].textContent;
-            dataSP2D.push({ id, nomorSPM, tglSP2D });
-        });
-
-        showOverlay("Menyimpan SP2D...");
-
-        fetch(urlGAS,{
-            method:"POST",
-            body: JSON.stringify({
-                action: "saveSP2D",
-                kantor: sessionStorage.getItem("kantor"),
-                rows: dataSP2D
-            })
-        })
-        .then(res=>res.json())
-        .then(result=>{
-            hideOverlay();
-            if(result.status==="success"){
-                overlay.remove();
-                loadData(false);
-            }else{
-                alert("Gagal: "+result.message);
-            }
-        })
-        .catch(err=>{
-            hideOverlay();
-        });
-    };
-}
-
-function showDeletePopup(tr){
-    const idKegiatan = tr.dataset.id;
-    const uraian = tr.cells[1].textContent;
-
-    const overlay = document.createElement("div");
-    overlay.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;`;
-
-    const popup = document.createElement("div");
-    popup.style.cssText = `background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:400px; max-width:90%; padding:25px; display:flex; flex-direction:column; gap:15px; text-align:center;`;
-
-    popup.innerHTML = `
-        <h3 style="color:#dc2626;">Konfirmasi Hapus</h3>
-        <p>Yakin ingin menghapus kegiatan:</p>
-        <strong>${uraian}</strong>
-        <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
-            <button id="deleteCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; cursor:pointer;">Batal</button>
-            <button id="deleteConfirm" style="padding:8px 14px; border:none; border-radius:6px; background:#dc2626; color:white; cursor:pointer;">Hapus</button>
-        </div>
-    `;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-
-    document.getElementById("deleteCancel").onclick = () => overlay.remove();
-
-    document.getElementById("deleteConfirm").onclick = function(){
-        this.disabled = true;
-        showOverlay("Menghapus data...");
-
-        fetch(urlGAS,{
-            method:"POST",
-            body: JSON.stringify({
-                action:"deleteKegiatan",
-                kantor: sessionStorage.getItem("kantor"),
-                id: idKegiatan
-            })
-        })
-        .then(res=>res.json())
-        .then(result=>{
-            hideOverlay();
-            if(result.status === "success"){
-                overlay.remove();
-                loadData(false);
-            } else {
-                alert("Gagal hapus: " + result.message);
-            }
-        })
-        .catch(err=>{
-            hideOverlay();
-        });
-    };
-}
-  
-function showLoading(show){
-    document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
-}
-  
-function goDashboard(){
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor){ alert("Session kantor belum ada. Silakan login ulang!"); return; }
-    window.location.href="dashboard.html";
-}
-function goPOK(){ 
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor){ alert("Session kantor belum ada. Silakan login ulang!"); return; }
-    window.location.href="data_pok.html";
-}
-function goKegiatan(){
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor){ alert("Session kantor belum ada. Silakan login ulang!"); return; }
-    window.location.href = "data_kegiatan.html";
-}
-function goPerjadinku(){
-    const kantor = sessionStorage.getItem("kantor");
-    if(!kantor){ alert("Session kantor belum ada. Silakan login ulang!"); return; }
-    window.location.href = "perjadinku.html";
-}
-function goKalender() {
-    const kantor = sessionStorage.getItem("kantor");
-    if (!kantor) { alert("Session kantor belum ada. Silakan login ulang!"); return; }
-    window.location.href = "kalender.html";
-}
-function goStatistik() {
-    const kantor = sessionStorage.getItem("kantor");
-    if (!kantor) { alert("Session kantor belum ada. Silakan login ulang!"); return; }
-    window.location.href = "statistik.html";
-}
-  
-function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
 
 function populateDatalist(){
     const pegawaiDL = document.getElementById("listPegawai");
     const lokasiDL = document.getElementById("listLokasi");
-    pegawaiDL.innerHTML = "";
-    lokasiDL.innerHTML = "";
+    if(pegawaiDL) pegawaiDL.innerHTML = "";
+    if(lokasiDL) lokasiDL.innerHTML = "";
 
     pegawaiList.forEach(nama=>{
         const opt = document.createElement("option"); opt.value = nama; pegawaiDL.appendChild(opt);
@@ -1473,15 +468,719 @@ function populateDatalist(){
         const opt = document.createElement("option"); opt.value = lok; lokasiDL.appendChild(opt);
     });
 }
+
+// ==========================================
+// DOM CONTENT LOADED EVENT LISTENERS
+// ==========================================
+document.addEventListener("DOMContentLoaded", async function(){
+    const nama = sessionStorage.getItem("nama");
+    if(!nama) { window.location.replace("index.html"); return; }
+    document.getElementById("namaUser").textContent = nama;
+
+    const kantor = sessionStorage.getItem("kantor");
+    if(!kantor){
+        alert("Session kantor tidak ditemukan. Silakan login ulang.");
+        window.location.replace("index.html");
+        return;
+    }
+
+    await loadData(true);
+  
+    document.getElementById("btnRefreshData").addEventListener("click", function(){
+        firstLoad = true;
+        loadData(true);
+    });
+  
+    document.getElementById("searchBox").addEventListener("input", function(){
+        const val = this.value.toLowerCase();
+        const radioVal = document.querySelector('input[name="statusFilter"]:checked').value;
+        let filtered = filterByStatus(allRows, radioVal);
+        if(val){
+            filtered = filtered.filter(r =>
+                Object.keys(r).filter(k => k !== "N").some(k => String(r[k]||"").toLowerCase().includes(val))
+            );
+        }
+        renderTable(filtered);
+    });
+
+    document.getElementById("btnSearchSPM").addEventListener("click", function(){
+        let valBox = document.getElementById("spmSearchBox").value.trim();
+        if(!valBox) { alert("Masukkan nomor SPM terlebih dahulu!"); return; }
+        let filtered = allRows.filter(r => {
+            let spmSheet = String(r.R || "").trim();
+            return spmSheet === valBox || parseInt(spmSheet, 10) === parseInt(valBox, 10);
+        });
+        document.querySelector('input[name="statusFilter"][value="Semua"]').checked = true;
+        renderTable(filtered);
+    });
+
+    document.querySelectorAll('input[name="statusFilter"]').forEach(rb=>{
+        rb.addEventListener("change", function(){
+            const val = this.value;
+            const searchVal = document.getElementById("searchBox").value.toLowerCase();
+            let filtered = filterByStatus(allRows, val);
+            if(searchVal){
+                filtered = filtered.filter(r => Object.keys(r).some(k => String(r[k]||"").toLowerCase().includes(searchVal)));
+            }
+            renderTable(filtered);
+        });
+    });
+
+    document.getElementById("dataTableBody").addEventListener("click", function(e){
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const tr = btn.closest("tr");
+    const statusKegiatan = tr.cells[8].textContent;
+    const isAdmin = sessionStorage.getItem("admin") === "1";
+
+    if(btn.classList.contains("btn-copy")){
+        showCopyPopup(tr);
+    } else if(btn.classList.contains("btn-ubah")){
+        if(statusKegiatan === "Rekam Data" || isAdmin){
+            showEditPopup(tr);
+        } else {
+            alert("Anda tidak memiliki kewenangan!");
+        }
+    } else if(btn.classList.contains("btn-hapus")){
+        if(isAdmin || statusKegiatan === "Rekam Data"){
+            showDeletePopup(tr);
+        } else {
+            alert("Anda tidak memiliki kewenangan!");
+        }
+    } else if(btn.classList.contains("btn-pelaksana")){
+        showPelaksanaPopup(tr);
+    } else if(btn.classList.contains("btn-lpt")){
+        showLPTPopup(tr);
+    } else if(btn.classList.contains("btn-bayar")){
+        if(isAdmin){ showBayarPopup(tr); } else { alert("Anda tidak memiliki kewenangan!"); }
+    } else if(btn.classList.contains("btn-sp2d")){
+        if(isAdmin){ showSP2DPopup(tr); } else { alert("Anda tidak memiliki kewenangan!"); }
+    }
+});
+
+    document.getElementById("btnOpenNominatif").addEventListener("click", openNominatifPopup);
+});
+
+// ==========================================
+// POPUP DIALOG FUNCTIONS (GLOBAL SCOPE)
+// ==========================================
+function showCopyPopup(tr){
+    const uraianTarget = tr.cells[1].textContent.trim();
+    const allMainRows = document.querySelectorAll("#dataTableBody tr");
+    const filteredRows = Array.from(allMainRows).filter(row => row.cells[1].textContent.trim() === uraianTarget);
+
+    const rowCount = filteredRows.length;
+    const firstRow = filteredRows[0];
+    const targetUraianRaw = firstRow.cells[1].textContent.trim();
+    const targetTujuan = firstRow.cells[3].textContent.trim();
+    const targetTgl = firstRow.cells[4].textContent.trim();
+    
+    let cleanNoST = targetUraianRaw;
+    if (targetUraianRaw.includes(")")) {
+        const parts = targetUraianRaw.split(")");
+        cleanNoST = parts[parts.length - 1].trim(); 
+    }
+
+    let teksOpsi1 = "";
+    if (rowCount > 1) {
+        const namaPegawaiList = filteredRows.map(row => row.cells[2].textContent.trim());
+        teksOpsi1 = `Belanja barang untuk keperluan perjalanan dinas sesuai surat tugas nomor ${cleanNoST} tanggal ${targetTgl} tujuan ${targetTujuan} an ${namaPegawaiList[0]} dkk`;
+    } else {
+        teksOpsi1 = `Belanja barang untuk keperluan perjalanan dinas sesuai surat tugas nomor ${cleanNoST} tanggal ${targetTgl} tujuan ${targetTujuan} an ${firstRow.cells[2].textContent.trim()}`;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
+
+    overlay.innerHTML = `
+        <div style="background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:650px; max-width:95%; padding:25px; display:flex; flex-direction:column; gap:15px;">
+            <h3 style="text-align:center; color:#0369a1; margin-bottom:5px;">Salin Uraian</h3>
+            <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:left;">
+                <thead>
+                    <tr style="background:#f1f5f9; border-bottom:2px solid #e5e7eb;">
+                        <th style="padding:10px; width:15%;">Opsi</th>
+                        <th style="padding:10px; width:70%;">Teks Uraian</th>
+                        <th style="padding:10px; width:15%; text-align:center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:12px 10px; font-weight:600; color:#475569;">Opsi 1</td>
+                        <td style="padding:12px 10px; color:#334155; word-break:break-word;">${teksOpsi1}</td>
+                        <td style="padding:12px 10px; text-align:center;">
+                            <button class="btn-copy-action" data-text="${teksOpsi1.replace(/"/g, '&quot;')}" style="padding:6px 12px; background:#0369a1; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500;">Salin</button>
+                        </td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:12px 10px; font-weight:600; color:#475569;">Opsi 2</td>
+                        <td style="padding:12px 10px; color:#334155; word-break:break-word;">${targetUraianRaw}</td>
+                        <td style="padding:12px 10px; text-align:center;">
+                            <button class="btn-copy-action" data-text="${targetUraianRaw.replace(/"/g, '&quot;')}" style="padding:6px 12px; background:#0369a1; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500;">Salin</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="display:flex; justify-content:flex-end; margin-top:5px;">
+                <button id="closeCopyPopup" style="padding:8px 16px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer; font-weight:500;">Tutup</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.getElementById("closeCopyPopup").onclick = () => overlay.remove();
+
+    overlay.querySelectorAll(".btn-copy-action").forEach(button => {
+        button.onclick = function() {
+            navigator.clipboard.writeText(this.getAttribute("data-text")).then(() => {
+                this.innerText = "Tersalin!";
+                this.style.background = "#22c55e";
+                setTimeout(() => { this.innerText = "Salin"; this.style.background = "#0369a1"; }, 1500);
+            });
+        };
+    });
+}
+
+function showEditPopup(tr){
+    const id = tr.dataset.id;
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
+    overlay.innerHTML = `
+        <div style="background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:400px; max-width:90%; padding:25px 20px; display:flex; flex-direction:column; gap:12px;">
+            <h3 style="text-align:center; color:#0369a1;">Ubah Kegiatan #${id}</h3>
+            <label>Uraian</label><input type="text" value="${tr.cells[1].textContent}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+            <label>Pelaksana</label><input type="text" list="listPegawai" value="${tr.cells[2].textContent}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+            <label>Tujuan</label><input type="text" list="listLokasi" value="${tr.cells[3].textContent}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+            <label>Tgl ST/ND</label><input type="date" value="${tr.cells[4].textContent}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+            <label>Jumlah</label><input type="number" value="${tr.cells[6].textContent.replace(/\./g,"")}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+                <button id="popupCancel" style="padding:8px 14px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer;">Batal</button>
+                <button id="popupUpdate" style="padding:8px 14px; border:none; border-radius:6px; background:#38bdf8; color:white; cursor:pointer;">Update</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById("popupCancel").onclick = () => overlay.remove();
+
+    document.getElementById("popupUpdate").onclick = function(){
+        this.disabled = true; showOverlay("Menyimpan perubahan...");
+        const inputs = overlay.querySelectorAll("input");
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "updateKegiatan",
+                kantor: sessionStorage.getItem("kantor"), id: id,
+                uraian: inputs[0].value, pelaksana: inputs[1].value, tujuan: inputs[2].value, tglST: inputs[3].value, jumlah: Number(inputs[4].value)
+            })
+        }).then(res => res.json()).then(result => {
+            hideOverlay(); overlay.remove(); loadData(false);
+        }).catch(() => { hideOverlay(); this.disabled = false; });
+    };
+}
+
+function showPelaksanaPopup(tr){
+    const id = tr.dataset.id;
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
+    overlay.innerHTML = `
+        <div style="background:#fff; border-radius:12px; padding:25px; width:750px; max-width:95%; display:flex; flex-direction:column; gap:12px; max-height:90vh; overflow-y:auto;">
+            <h3 style="text-align:center; color:#0369a1;">Pelaksana Kegiatan #${id}</h3>
+            <label>MAK</label><input type="text" value="${tr.cells[0].textContent}" readonly style="padding:8px; border:1px solid #cbd5e1; background:#f1f5f9; border-radius:6px;">
+            <label>Uraian</label><input type="text" value="${tr.cells[1].textContent}" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+            <label>Tujuan</label><input type="text" value="${tr.cells[3].textContent}" readonly style="padding:8px; border:1px solid #cbd5e1; background:#f1f5f9; border-radius:6px;">
+            <div style="display:flex; gap:8px;">
+                <input type="text" list="listPegawai" id="pelNama" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+                <button id="btnTambahPelaksana" style="padding:8px 14px; background:#38bdf8; color:white; border:none; border-radius:6px; cursor:pointer;">Submit</button>
+            </div>
+            <div style="border:1px solid #e5e7eb; max-height:220px; overflow-y:auto;"><table style="width:100%; border-collapse:collapse;"><tbody id="pelaksanaTableBody"></tbody></table></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;"><button id="pelCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px; cursor:pointer;">Batal</button><button id="pelSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px; cursor:pointer;">Simpan</button></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    document.getElementById("btnTambahPelaksana").onclick = () => {
+        const inp = document.getElementById("pelNama");
+        if(!inp.value.trim()) return;
+        const newTr = document.createElement("tr");
+        newTr.innerHTML = `<td style="padding:6px;">${inp.value}</td><td><input type="date"></td><td><input type="date"></td><td><input type="text" class="jumlah-input" style="text-align:right;"></td><td><button style="color:red; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></td>`;
+        newTr.querySelector("button").onclick = () => newTr.remove();
+        document.getElementById("pelaksanaTableBody").appendChild(newTr);
+        inp.value = "";
+    };
+    document.getElementById("pelCancel").onclick = () => overlay.remove();
+    document.getElementById("pelSave").onclick = function(){
+        this.disabled = true; showOverlay("Menyimpan data pelaksana...");
+        // Simulasi/Koneksi penyimpanan data pelaksana ke backend GAS jika diperlukan
+        setTimeout(() => { hideOverlay(); overlay.remove(); loadData(false); }, 800);
+    };
+}
+
+function showLPTPopup(tr){
+    const id = tr.dataset.id;
+    // Sesuai dengan action 'updateLPT' di GAS
+    const tglLpt = prompt("Masukkan Tanggal LPT (yyyy-mm-dd):");
+    if(!tglLpt) return;
+    
+    showOverlay("Memproses LPT...");
+    fetch(urlGAS, {
+        method: "POST",
+        body: JSON.stringify({ 
+            action: "updateLPT", 
+            kantor: sessionStorage.getItem("kantor"), 
+            rows: [{ id: id, lptDate: tglLpt }] 
+        })
+    }).then(() => { hideOverlay(); loadData(false); });
+}
+
+function showBayarPopup(tr){
+    const id = tr.dataset.id;
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
+    overlay.innerHTML = `
+        <div style="background:#fff; border-radius:12px; padding:25px; width:400px; display:flex; flex-direction:column; gap:12px;">
+            <h3>Bayar Kegiatan #${id}</h3>
+            <label>Tanggal Bayar</label><input type="date" id="tglBayarInput" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button id="bayarCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px; cursor:pointer;">Batal</button>
+                <button id="bayarSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px; cursor:pointer;">Simpan</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById("bayarCancel").onclick = () => overlay.remove();
+    
+    document.getElementById("bayarSave").onclick = function(){
+        const tglBayar = document.getElementById("tglBayarInput").value;
+        if(!tglBayar) { alert("Pilih tanggal bayar!"); return; }
+        this.disabled = true; showOverlay("Memproses Pembayaran...");
+        
+        // Sesuai dengan action 'updateBayarMultiple' di GAS
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({ 
+                action: "updateBayarMultiple", 
+                kantor: sessionStorage.getItem("kantor"), 
+                data: [{ id: id, tglBayar: tglBayar, uraian: tr.cells[1].textContent }] 
+            })
+        }).then(() => { hideOverlay(); overlay.remove(); loadData(false); })
+          .catch(() => { hideOverlay(); this.disabled = false; });
+    };
+}
+
+function showSP2DPopup(tr){
+    const id = tr.dataset.id;
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
+    overlay.innerHTML = `
+        <div style="background:#fff; border-radius:12px; padding:25px; width:400px; display:flex; flex-direction:column; gap:12px;">
+            <h3>SP2D Kegiatan #${id}</h3>
+            <label>Nomor SPM</label><input type="text" id="spmNomor" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+            <label>Tanggal SP2D</label><input type="date" id="tglSP2D" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button id="sp2dCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px; cursor:pointer;">Batal</button>
+                <button id="sp2dSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px; cursor:pointer;">Simpan</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById("sp2dCancel").onclick = () => overlay.remove();
+    
+    document.getElementById("sp2dSave").onclick = function(){
+        const noSpm = document.getElementById("spmNomor").value.trim();
+        const tglSp2d = document.getElementById("tglSP2D").value;
+        if(!noSpm || !tglSp2d) { alert("Nomor SPM dan Tanggal SP2D wajib diisi!"); return; }
+        this.disabled = true; showOverlay("Memproses SP2D...");
+        
+        // Sesuai dengan action 'saveSP2D' di GAS
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({ 
+                action: "saveSP2D", 
+                kantor: sessionStorage.getItem("kantor"), 
+                rows: [{ id: id, nomorSPM: noSpm, tglSP2D: tglSp2d }] 
+            })
+        }).then(() => { hideOverlay(); overlay.remove(); loadData(false); })
+          .catch(() => { hideOverlay(); this.disabled = false; });
+    };
+}
+  
+function showDeletePopup(tr){
+    const id = tr.dataset.id;
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
+    overlay.innerHTML = `
+        <div style="background:#fff; border-radius:12px; padding:25px; text-align:center;">
+            <h3 style="color:red;">Konfirmasi Hapus</h3>
+            <p style="margin:10px 0;">Yakin ingin menghapus kegiatan #${id}?</p>
+            <button id="delCancel" style="padding:8px 14px; background:#e5e7eb; border:none; margin-right:8px; cursor:pointer;">Batal</button>
+            <button id="delConfirm" style="padding:8px 14px; background:red; color:white; border:none; cursor:pointer;">Hapus</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById("delCancel").onclick = () => overlay.remove();
+    document.getElementById("delConfirm").onclick = () => {
+        showOverlay("Menghapus data...");
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({ action: "deleteKegiatan", kantor: sessionStorage.getItem("kantor"), id: id })
+        }).then(() => { hideOverlay(); overlay.remove(); loadData(false); });
+    };
+}
+
+// ==========================================
+// 🖨️ FUNGSI POPUP & PROSES CETAK NOMINATIF
+// ==========================================
+async function openNominatifPopup() {
+    if (!currentTableRowsData || currentTableRowsData.length === 0) {
+        alert("Tidak ada data di tabel saat ini untuk dicetak.");
+        return;
+    }
+
+    showOverlay("Membuat data rekapitulasi...");
+
+    let ppkNama = "BAYU ADINEGORO", ppkNip = "198802242008121002";
+    let bpNama = "ACHMAD CHABIB NURSALIM", bpNip = "199101162013101002";
+
+    try {
+        const sheetId = "10JQ3ysZai7yNXHMWw81UeztwbxSPwsCMiykJj2w5AHE";
+        const refUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=ref&range=T3:W3`;
+        const response = await fetch(refUrl);
+        const text = await response.text();
+        
+        const dataJson = JSON.parse(text.substr(47).slice(0, -2));
+        const rowCells = dataJson.table.rows[0].c;
+        
+        if(rowCells[0] && rowCells[0].v) ppkNama = rowCells[0].v;
+        if(rowCells[1] && rowCells[1].v) ppkNip = String(rowCells[1].v);
+        if(rowCells[2] && rowCells[2].v) bpNama = rowCells[2].v;
+        if(rowCells[3] && rowCells[3].v) bpNip = String(rowCells[3].v);
+    } catch (err) {
+        console.warn("Gagal mengambil data penandatangan dari online sheet ref, menggunakan nilai default.", err);
+    }
+
+    hideOverlay();
+
+    let totalBiaya = 0;
+    let rekapMAK = {};
+    let rekapWilayah = {};
+    let rekapPeserta = {};
+    let spmNomor = document.getElementById("spmSearchBox") ? document.getElementById("spmSearchBox").value.trim() : "";
+    if(!spmNomor) spmNomor = "0075";
+
+    currentTableRowsData.forEach(r => {
+        let jml = Number(r.M || 0);
+        totalBiaya += jml;
+        rekapMAK[r.B] = (rekapMAK[r.B] || 0) + jml;
+        rekapWilayah[r.E] = (rekapWilayah[r.E] || 0) + jml;
+
+        let keyPeserta = r.D;
+        if(!rekapPeserta[keyPeserta]) {
+            rekapPeserta[keyPeserta] = { nama: r.D, uraian: `SPM-${spmNomor} (${String(r.C).split('/')[0].replace('ST-','')})`, jumlah: 0 };
+        }
+        rekapPeserta[keyPeserta].jumlah += jml;
+    });
+
+    const overlay = document.createElement("div");
+    overlay.id = "nominatifPopupOverlay";
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999; font-family:'Inter', sans-serif; padding:15px;";
+
+    const card = document.createElement("div");
+    card.style.cssText = "background:#f1f5f9; border-radius:12px; width:1100px; max-width:98%; box-shadow:0 12px 28px rgba(0,0,0,0.25); display:flex; flex-direction:column; gap:14px; padding:20px; max-height:95vh; overflow-y:auto; color:#1e293b;";
+    
+    const headerTitle = document.createElement("div");
+    headerTitle.style.cssText = "display:flex; justify-content:between; align-items:center; border-bottom:1px solid #cbd5e1; padding-bottom:8px;";
+    headerTitle.innerHTML = `<h3 style="font-size:16px; font-weight:600; color:#0369a1;"><i class="fa-solid fa-print"></i> Cetak Daftar Nominatif Biaya Perjalanan Dinas</h3>`;
+    card.appendChild(headerTitle);
+
+    const mainTableWrapper = document.createElement("div");
+    mainTableWrapper.style.cssText = "background:#fff; border:1px solid #cbd5e1; border-radius:6px; max-height:220px; overflow-y:auto;";
+    let mainTableHtml = `<table id="popupMainTable" style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+        <thead style="background:#f8fafc; position:sticky; top:0; border-bottom:1px solid #cbd5e1; box-shadow:inset 0 -1px 0 #cbd5e1;">
+            <tr>
+                <th style="padding:8px; border-right:1px solid #e2e8f0;">Nama</th>
+                <th style="padding:8px; border-right:1px solid #e2e8f0;">MAK</th>
+                <th style="padding:8px; border-right:1px solid #e2e8f0;">Nomor ST</th>
+                <th style="padding:8px; border-right:1px solid #e2e8f0;">Tanggal ST</th>
+                <th style="padding:8px; border-right:1px solid #e2e8f0;">Tanggal Mulai</th>
+                <th style="padding:8px; border-right:1px solid #e2e8f0;">Tanggal Selesai</th>
+                <th style="padding:8px; border-right:1px solid #e2e8f0;">Hari</th>
+                <th style="padding:8px; border-right:1px solid #e2e8f0;">Tujuan</th>
+                <th style="padding:8px; text-align:right; border-right:1px solid #e2e8f0;">Jumlah</th>
+                <th style="padding:8px; text-align:center;">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>`;
+    
+    currentTableRowsData.forEach((r) => {
+        let cleanST = r.F ? String(r.F).split('T')[0] : "";
+        let cleanMulai = r.G ? String(r.G).split('T')[0] : "";
+        let cleanSelesai = r.H ? String(r.H).split('T')[0] : "";
+        let barisJml = Number(r.M || 0);
+
+        let hari = 1;
+        if(r.G && r.H) {
+            let diff = new Date(r.H) - new Date(r.G);
+            hari = Math.max(1, Math.round(diff / (1000*60*60*24)) + 1);
+        }
+
+        mainTableHtml += `<tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${r.D}</td>
+            <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${r.B}</td>
+            <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${r.C}</td>
+            <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${cleanST}</td>
+            <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${cleanMulai}</td>
+            <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${cleanSelesai}</td>
+            <td style="padding:6px 8px; border-right:1px solid #e2e8f0; text-align:center;">${hari}</td>
+            <td style="padding:6px 8px; border-right:1px solid #e2e8f0;">${r.E}</td>
+            <td style="padding:6px 8px; text-align:right; border-right:1px solid #e2e8f0;" data-raw="${barisJml}">${barisJml.toLocaleString('id-ID')},00</td>
+            <td style="padding:6px 8px; text-align:center;">
+                <button class="btn-pop-del" style="border:none; background:none; color:#dc2626; cursor:pointer; font-size:14px;"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`;
+    });
+    mainTableHtml += `</tbody></table>`;
+    mainTableWrapper.innerHTML = mainTableHtml;
+    card.appendChild(mainTableWrapper);
+
+    mainTableWrapper.addEventListener("click", function(e) {
+        const delBtn = e.target.closest(".btn-pop-del");
+        if(delBtn) {
+            const row = delBtn.closest("tr");
+            row.remove();
+            
+            let newTotal = 0;
+            const remainingRows = mainTableWrapper.querySelectorAll("tbody tr");
+            remainingRows.forEach(tr => {
+                const cellJml = tr.cells[8];
+                if(cellJml) {
+                    newTotal += Number(cellJml.getAttribute("data-raw") || 0);
+                }
+            });
+            const inputTotal = controlRow.querySelector("#nominatifTotalInput");
+            if(inputTotal) inputTotal.value = newTotal.toLocaleString('id-ID');
+        }
+    });
+
+    // 2. Baris Parameter Tengah
+    const controlRow = document.createElement("div");
+    controlRow.style.cssText = "display:flex; justify-content:between; align-items:center; gap:15px; flex-wrap:wrap; font-size:13px;";
+    controlRow.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+            <label style="font-weight:500;">Total Daftar Nominatif</label>
+            <input type="text" id="nominatifTotalInput" value="${totalBiaya.toLocaleString('id-ID')}" readonly style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; font-weight:600; text-align:right; width:160px;">
+            <label style="font-weight:500; margin-left:15px;">Nomor SPM</label>
+            <input type="text" id="nominatifSpmInput" value="${spmNomor}" style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; background:#fff; font-weight:600; text-align:center; width:90px;">
+        </div>
+        <div style="display:flex; gap:8px; margin-left:auto;">
+            <button id="btnNominatifCancel" style="padding:8px 18px; border:1px solid #cbd5e1; background:#fff; color:#475569; border-radius:6px; font-weight:500; cursor:pointer;">Batal</button>
+            <button id="btnNominatifPrint" style="padding:8px 24px; border:none; background:#0284c7; color:#fff; border-radius:6px; font-weight:500; cursor:pointer;"><i class="fa-solid fa-print"></i> Cetak</button>
+        </div>
+    `;
+    card.appendChild(controlRow);
+
+    // 3. Tiga Kolom Rekapitulasi di Bagian Bawah Popup
+    const rekapContainer = document.createElement("div");
+    rekapContainer.style.cssText = "display:grid; grid-template-columns:1fr 1fr 1.3fr; gap:15px; min-height:180px;";
+
+    let makHtml = `<div style="display:flex; flex-direction:column; gap:4px;">
+        <h4 style="font-size:13px; font-weight:600; color:#475569;">Rekapitulasi Per MAK</h4>
+        <div style="background:#fff; border:1px solid #cbd5e1; border-radius:6px; flex:1; overflow-y:auto; max-height:180px;">
+            <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+                <thead style="background:#f8fafc; border-bottom:1px solid #cbd5e1; position:sticky; top:0;">
+                    <tr><th style="padding:6px 8px; border-right:1px solid #e2e8f0;">MAK</th><th style="padding:6px 8px; text-align:right;">Jumlah</th></tr>
+                </thead><tbody>`;
+    Object.keys(rekapMAK).forEach((makKey) => {
+        makHtml += `<tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:5px 8px; border-right:1px solid #e2e8f0;">${makKey}</td>
+            <td style="padding:5px 8px; text-align:right;">${rekapMAK[makKey].toLocaleString('id-ID')}</td>
+        </tr>`;
+    });
+    makHtml += `</tbody></table></div></div>`;
+    
+    let wilayahHtml = `<div style="display:flex; flex-direction:column; gap:4px;">
+        <h4 style="font-size:13px; font-weight:600; color:#475569;">Rekapitulasi Per Wilayah</h4>
+        <div style="background:#fff; border:1px solid #cbd5e1; border-radius:6px; flex:1; overflow-y:auto; max-height:180px;">
+            <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+                <thead style="background:#f8fafc; border-bottom:1px solid #cbd5e1; position:sticky; top:0;">
+                    <tr><th style="padding:6px 8px; border-right:1px solid #e2e8f0;">Wilayah</th><th style="padding:6px 8px; text-align:right;">Jumlah</th></tr>
+                </thead><tbody>`;
+    Object.keys(rekapWilayah).forEach((wKey) => {
+        wilayahHtml += `<tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:5px 8px; border-right:1px solid #e2e8f0;">${wKey}</td>
+            <td style="padding:5px 8px; text-align:right;">${rekapWilayah[wKey].toLocaleString('id-ID')}</td>
+        </tr>`;
+    });
+    wilayahHtml += `</tbody></table></div></div>`;
+
+    let pesertaHtml = `<div style="display:flex; flex-direction:column; gap:4px;">
+        <h4 style="font-size:13px; font-weight:600; color:#475569;">Rekapitulasi Per Peserta</h4>
+        <div style="background:#fff; border:1px solid #cbd5e1; border-radius:6px; flex:1; overflow-y:auto; max-height:180px;">
+            <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+                <thead style="background:#f8fafc; border-bottom:1px solid #cbd5e1; position:sticky; top:0;">
+                    <tr>
+                        <th style="padding:6px 8px; border-right:1px solid #e2e8f0;">Nama</th>
+                        <th style="padding:6px 8px; border-right:1px solid #e2e8f0;">Uraian</th>
+                        <th style="padding:6px 8px; text-align:right;">Jumlah</th>
+                    </tr>
+                </thead><tbody>`;
+    Object.keys(rekapPeserta).forEach((pKey) => {
+        let item = rekapPeserta[pKey];
+        pesertaHtml += `<tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:5px 8px; border-right:1px solid #e2e8f0;">${item.nama}</td>
+            <td style="padding:5px 8px; border-right:1px solid #e2e8f0;">${item.uraian}</td>
+            <td style="padding:5px 8px; text-align:right;">${item.jumlah.toLocaleString('id-ID')}</td>
+        </tr>`;
+    });
+    pesertaHtml += `</tbody></table></div></div>`;
+
+    rekapContainer.innerHTML = makHtml + wilayahHtml + pesertaHtml;
+    card.appendChild(rekapContainer);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    document.getElementById("btnNominatifCancel").onclick = () => overlay.remove();
+
+    document.getElementById("btnNominatifPrint").onclick = () => {
+        const customSpm = document.getElementById("nominatifSpmInput").value.trim() || spmNomor;
+        
+        const activePopupRows = mainTableWrapper.querySelectorAll("tbody tr");
+        if(activePopupRows.length === 0) {
+            alert("Tidak ada data tersisa untuk dicetak.");
+            return;
+        }
+
+        overlay.remove();
+        
+        const printWindow = window.open("", "_blank");
+        let printTableRows = "";
+        let finalTotalCetak = 0;
+        
+        activePopupRows.forEach((tr, idx) => {
+            let nama = tr.cells[0].textContent;
+            let mak = tr.cells[1].textContent;
+            let noST = tr.cells[2].textContent;
+            let tglST = tr.cells[3].textContent;
+            let tglMulai = tr.cells[4].textContent;
+            let tglSelesai = tr.cells[5].textContent;
+            let hari = tr.cells[6].textContent;
+            let tujuan = tr.cells[7].textContent;
+            let rawJml = Number(tr.cells[8].getAttribute("data-raw") || 0);
+            
+            finalTotalCetak += rawJml;
+
+            printTableRows += `
+                <tr>
+                    <td style="text-align:center; padding:5px;">${idx + 1}</td>
+                    <td style="padding:5px;">${nama}</td>
+                    <td style="padding:5px; font-size:10px;">${mak}</td>
+                    <td style="padding:5px; font-size:10px;">${noST}</td>
+                    <td style="text-align:center; padding:5px; white-space:nowrap;">${tglST}</td>
+                    <td style="text-align:center; padding:5px; white-space:nowrap;">${tglMulai}</td>
+                    <td style="text-align:center; padding:5px; white-space:nowrap;">${tglSelesai}</td>
+                    <td style="text-align:center; padding:5px;">${hari}</td>
+                    <td style="padding:5px;">${tujuan}</td>
+                    <td style="text-align:right; padding:5px; white-space:nowrap;">${rawJml.toLocaleString('id-ID')}</td>
+                    <td style="padding:5px;"></td>
+                </tr>
+            `;
+        });
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Daftar Nominatif Perjalanan Dinas - SPM ${customSpm}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; font-size: 11px; margin: 30px; color: #000; }
+                    .kop { text-align: left; font-weight: bold; line-height: 1.3; font-size: 11px; margin-bottom: 20px; text-transform: uppercase; }
+                    .title { text-align: center; font-weight: bold; font-size: 13px; margin-bottom: 20px; text-decoration: none; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                    th { background: #f2f2f2; font-weight: bold; text-align: center; padding: 6px; border: 1px solid #000; font-size: 10px; }
+                    td { border: 1px solid #000; padding: 5px; font-size: 10px; vertical-align: middle; }
+                    .tte-container { width: 100%; margin-top: 25px; display: table; table-layout: fixed; page-break-inside: avoid; }
+                    .tte-box { display: table-cell; width: 50%; text-align: center; vertical-align: top; font-size: 11px; }
+                    .tte-info { font-style: italic; color: #000; margin: 8px 0; border: 1px dashed #000; padding: 4px 10px; display: inline-block; font-size: 9px; line-height: 1.2; text-align: center; }
+                    @media print {
+                        @page { size: landscape; margin: 20px; }
+                        body { margin: 10px; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="kop">
+                    KEMENTERIAN KEUANGAN REPUBLIK INDONESIA<br>
+                    DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>
+                    KANTOR WILAYAH BALI DAN NUSA TENGGARA<br>
+                    KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG DENPASAR
+                </div>
+                
+                <div class="title">DAFTAR NOMINATIF BIAYA PERJALANAN DINAS</div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:3%;">No</th>
+                            <th style="width:18%;">Nama</th>
+                            <th style="width:14%;">MAK</th>
+                            <th style="width:16%;">Nomor ST</th>
+                            <th style="width:8%;">Tgl ST</th>
+                            <th style="width:8%;">Tgl Mulai</th>
+                            <th style="width:8%;">Tgl Selesai</th>
+                            <th style="width:4%;">Hari</th>
+                            <th style="width:12%;">Tujuan</th>
+                            <th style="width:9%;">Jumlah</th>
+                            <th style="width:4%;">Tanda Tangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${printTableRows}
+                        <tr style="font-weight:bold; background:#fafafa;">
+                            <td colspan="3" style="border-right:none;"></td>
+                            <td colspan="6" style="text-align:center; font-weight:bold; padding:7px; border-left:none;">JUMLAH</td>
+                            <td style="text-align:right; padding:7px; white-space:nowrap;">${finalTotalCetak.toLocaleString('id-ID')}</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="tte-container">
+                    <div class="tte-box">
+                        Mengetahui / Menyetujui<br>
+                        Pejabat Pembuat Komitmen
+                        <br><br><br><br>
+                        <div class="tte-info">Ditandatangani secara elektronik</div>
+                        <br><br>
+                        <strong>${ppkNama}</strong><br>
+                        NIP. ${ppkNip}
+                    </div>
+                    <div class="tte-box">
+                        <br>
+                        Bendahara Pengeluaran
+                        <br><br><br><br>
+                        <div class="tte-info">Ditandatangani secara elektronik</div>
+                        <br><br>
+                        <strong>${bpNama}</strong><br>
+                        NIP. ${bpNip}
+                    </div>
+                </div>
+            </body>
+            </html>
+        `);
+        
+        printWindow.document.close();
+        setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+        }, 500);
+    };
+}
+
+// NAVIGATION LINKS
+function goDashboard(){ window.location.href="dashboard.html"; }
+function goPOK(){ window.location.href="data_pok.html"; }
+function goKegiatan(){ window.location.href = "data_kegiatan.html"; }
+function goPerjadinku(){ window.location.href = "perjadinku.html"; }
+function goKalender() { window.location.href = "kalender.html"; }
+function goStatistik() { window.location.href = "statistik.html"; }
+function logout(){ sessionStorage.clear(); window.location.replace("index.html"); }
 </script>
-
-<datalist id="listPegawai"></datalist>
-<datalist id="listLokasi"></datalist>
-
-<div id="globalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(3px); z-index:20000; align-items:center; justify-content:center;">
-    <div style="background:white; padding:24px 32px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); font-family:Inter; font-weight:600;">
-        ⏳ Menyimpan data...
-    </div>
-</div>
 </body>
 </html>
