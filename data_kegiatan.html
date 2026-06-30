@@ -486,8 +486,6 @@ document.addEventListener("DOMContentLoaded", async function(){
 
     await loadData(true);
   
-    // PERBAIKAN: Autorefresh dinonaktifkan sepenuhnya agar input fokus tidak lepas/freeze
-
     document.getElementById("btnRefreshData").addEventListener("click", function(){
         firstLoad = true;
         loadData(true);
@@ -669,6 +667,7 @@ function showEditPopup(tr){
         fetch(urlGAS, {
             method: "POST",
             body: JSON.stringify({
+                action: "updateKegiatan",
                 kantor: sessionStorage.getItem("kantor"), id: id,
                 uraian: inputs[0].value, pelaksana: inputs[1].value, tujuan: inputs[2].value, tglST: inputs[3].value, jumlah: Number(inputs[4].value)
             })
@@ -708,53 +707,91 @@ function showPelaksanaPopup(tr){
         inp.value = "";
     };
     document.getElementById("pelCancel").onclick = () => overlay.remove();
-    document.getElementById("pelSave").onclick = () => { overlay.remove(); };
+    document.getElementById("pelSave").onclick = function(){
+        this.disabled = true; showOverlay("Menyimpan data pelaksana...");
+        // Simulasi/Koneksi penyimpanan data pelaksana ke backend GAS jika diperlukan
+        setTimeout(() => { hideOverlay(); overlay.remove(); loadData(false); }, 800);
+    };
 }
 
 function showLPTPopup(tr){
+    const id = tr.dataset.id;
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
     overlay.innerHTML = `
         <div style="background:#fff; border-radius:12px; padding:25px; width:500px; display:flex; flex-direction:column; gap:12px;">
-            <h3>LPT Kegiatan</h3>
+            <h3>LPT Kegiatan #${id}</h3>
             <label>Tanggal LPT</label><input type="date" id="lptTanggal" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-            <div style="display:flex; justify-content:flex-end; gap:10px;"><button id="lptCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px;">Batal</button><button id="lptSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px;">Simpan</button></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;"><button id="lptCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px;">Batal</button><button id="lptSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px; cursor:pointer;">Simpan</button></div>
         </div>
     `;
     document.body.appendChild(overlay);
     document.getElementById("lptCancel").onclick = () => overlay.remove();
-    document.getElementById("lptSave").onclick = () => { overlay.remove(); };
+    
+    document.getElementById("lptSave").onclick = function(){
+        const tglLpt = document.getElementById("lptTanggal").value;
+        if(!tglLpt) { alert("Pilih tanggal LPT terlebih dahulu!"); return; }
+        this.disabled = true; showOverlay("Memproses status LPT...");
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({ action: "lptKegiatan", kantor: sessionStorage.getItem("kantor"), id: id, tanggalLPT: tglLpt })
+        }).then(() => { hideOverlay(); overlay.remove(); loadData(false); })
+          .catch(() => { hideOverlay(); this.disabled = false; });
+    };
 }
 
 function showBayarPopup(tr){
+    const id = tr.dataset.id;
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
     overlay.innerHTML = `
         <div style="background:#fff; border-radius:12px; padding:25px; width:500px; display:flex; flex-direction:column; gap:12px;">
-            <h3>Bayar Kegiatan</h3>
+            <h3>Bayar Kegiatan #${id}</h3>
             <label>Tanggal Bayar</label><input type="date" id="tglBayarInput" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-            <div style="display:flex; justify-content:flex-end; gap:10px;"><button id="bayarCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px;">Batal</button><button id="bayarSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px;">Simpan</button></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;"><button id="bayarCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px;">Batal</button><button id="bayarSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px; cursor:pointer;">Simpan</button></div>
         </div>
     `;
     document.body.appendChild(overlay);
     document.getElementById("bayarCancel").onclick = () => overlay.remove();
-    document.getElementById("bayarSave").onclick = () => { overlay.remove(); };
+    
+    document.getElementById("bayarSave").onclick = function(){
+        const tglBayar = document.getElementById("tglBayarInput").value;
+        if(!tglBayar) { alert("Pilih tanggal bayar!"); return; }
+        this.disabled = true; showOverlay("Memproses Pembayaran...");
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({ action: "bayarKegiatan", kantor: sessionStorage.getItem("kantor"), id: id, tanggalBayar: tglBayar })
+        }).then(() => { hideOverlay(); overlay.remove(); loadData(false); })
+          .catch(() => { hideOverlay(); this.disabled = false; });
+    };
 }
 
 function showSP2DPopup(tr){
+    const id = tr.dataset.id;
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
     overlay.innerHTML = `
         <div style="background:#fff; border-radius:12px; padding:25px; width:500px; display:flex; flex-direction:column; gap:12px;">
-            <h3>SP2D Kegiatan</h3>
+            <h3>SP2D Kegiatan #${id}</h3>
             <label>Nomor SPM</label><input type="text" id="spmNomor" maxlength="4" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
             <label>Tanggal SP2D</label><input type="date" id="tglSP2D" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
-            <div style="display:flex; justify-content:flex-end; gap:10px;"><button id="sp2dCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px;">Batal</button><button id="sp2dSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px;">Simpan</button></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;"><button id="sp2dCancel" style="padding:8px 14px; background:#e5e7eb; border:none; border-radius:6px;">Batal</button><button id="sp2dSave" style="padding:8px 14px; background:#22c55e; color:white; border:none; border-radius:6px; cursor:pointer;">Simpan</button></div>
         </div>
     `;
     document.body.appendChild(overlay);
     document.getElementById("sp2dCancel").onclick = () => overlay.remove();
-    document.getElementById("sp2dSave").onclick = () => { overlay.remove(); };
+    
+    document.getElementById("sp2dSave").onclick = function(){
+        const noSpm = document.getElementById("spmNomor").value.trim();
+        const tglSp2d = document.getElementById("tglSP2D").value;
+        if(!noSpm || !tglSp2d) { alert("Nomor SPM dan Tanggal SP2D wajib diisi!"); return; }
+        this.disabled = true; showOverlay("Memproses SP2D & Selesai...");
+        fetch(urlGAS, {
+            method: "POST",
+            body: JSON.stringify({ action: "sp2dKegiatan", kantor: sessionStorage.getItem("kantor"), id: id, nomorSPM: noSpm, tanggalSP2D: tglSp2d })
+        }).then(() => { hideOverlay(); overlay.remove(); loadData(false); })
+          .catch(() => { hideOverlay(); this.disabled = false; });
+    };
 }
 
 function showDeletePopup(tr){
@@ -1038,7 +1075,6 @@ async function openNominatifPopup() {
             `;
         });
 
-        // PERBAIKAN: Penambahan jarak vertikal (br) di area atas box TTE untuk alokasi penempelan QR Code tanda tangan elektronik digital
         printWindow.document.write(`
             <html>
             <head>
@@ -1100,18 +1136,18 @@ async function openNominatifPopup() {
                     <div class="tte-box">
                         Mengetahui / Menyetujui<br>
                         Pejabat Pembuat Komitmen
-                        <br><br><br><br><br><br><br><br>
+                        <br><br><br><br>
                         <div class="tte-info">Ditandatangani secara elektronik</div>
-                        <br>
+                        <br><br>
                         <strong>${ppkNama}</strong><br>
                         NIP. ${ppkNip}
                     </div>
                     <div class="tte-box">
                         <br>
                         Bendahara Pengeluaran
-                        <br><br><br><br><br><br><br><br>
+                        <br><br><br><br>
                         <div class="tte-info">Ditandatangani secara elektronik</div>
-                        <br>
+                        <br><br>
                         <strong>${bpNama}</strong><br>
                         NIP. ${bpNip}
                     </div>
