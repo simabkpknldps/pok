@@ -59,7 +59,8 @@ td.status-Terbayar{ background:#4ade80; }        /* hijau */
 td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   
 /* --- Filter --- */
-.filter-bar{display:flex; align-items:center; gap:15px; margin-bottom:15px; flex-wrap: wrap;}
+.filter-bar{display:flex; flex-direction:column; gap:12px; margin-bottom:15px;}
+.filter-row-top{display:flex; align-items:center; gap:15px; flex-wrap: wrap; width: 100%;}
 .filter-bar input[type="text"]{padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;}
 #searchBox{flex:1; min-width: 200px;}
 
@@ -92,7 +93,7 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
   background-color: #15803d;
 }
 
-.filter-bar .radio-group{display:flex; gap:12px;}
+.filter-bar .radio-group{display:flex; gap:12px; align-items: center; padding-top: 4px;}
 .filter-bar .radio-group label{display:flex; align-items:center; gap:4px; font-size:14px; cursor:pointer;}
 
 /* --- Tabel --- */
@@ -249,19 +250,21 @@ td.status-Selesai{ background:#60a5fa; color:white; } /* biru */
 
     <div class="content">
         <div class="filter-bar">
-            <input type="text" id="searchBox" placeholder="Cari data...">
-            
-            <div class="spm-search-container">
-                <span>Cari SPM</span>
-                <input type="text" id="spmSearchBox" maxlength="10">
-                <button class="btn-search-spm" id="btnSearchSPM"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
-            </div>
+            <div class="filter-row-top">
+                <input type="text" id="searchBox" placeholder="Cari data...">
+                
+                <div class="spm-search-container">
+                    <span>Cari SPM</span>
+                    <input type="text" id="spmSearchBox" maxlength="10">
+                    <button class="btn-search-spm" id="btnSearchSPM"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+                </div>
 
-            <div class="table-total-info">
-                Jumlah Pada Tabel: &nbsp;<span id="totalJumlahLabel">0</span>
-            </div>
+                <div class="table-total-info">
+                    Jumlah Pada Tabel: &nbsp;<span id="totalJumlahLabel">0</span>
+                </div>
 
-            <button class="btn-download" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
+                <button class="btn-download" onclick="downloadExcel()"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
+            </div>
             <div class="radio-group">
                 <label><input type="radio" name="statusFilter" value="Dalam Proses" checked> Dalam Proses</label>
                 <label><input type="radio" name="statusFilter" value="LPT"> LPT</label>
@@ -432,6 +435,7 @@ document.addEventListener("DOMContentLoaded", async function(){
               <td>${r.N}</td>
               <td class="${statusClass}">${r.P}</td>
               <td class="actions">
+                  <button class="btn-copy" data-tooltip="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
                   <button class="btn-ubah" data-tooltip="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
                   <button class="btn-pelaksana" data-tooltip="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
                   <button class="btn-lpt" data-tooltip="LPT"><i class="fa-solid fa-file-lines"></i></button>
@@ -445,7 +449,7 @@ document.addEventListener("DOMContentLoaded", async function(){
         });
         
         // Panggil kalkulasi total setiap kali tabel berhasil dirender
-        kalkulasiTotalJumlah(rows);
+        kallkulasiTotalJumlah(rows);
     }
 let firstLoad = true; // untuk overlay hanya saat load pertama
 
@@ -559,7 +563,10 @@ document.getElementById("dataTableBody").addEventListener("click", function(e){
     const statusKegiatan = tr.cells[8].textContent; // kolom Status
     const isAdmin = sessionStorage.getItem("admin") === "1";
 
-    if(btn.classList.contains("btn-ubah")){
+    if(btn.classList.contains("btn-copy")){
+        showCopyPopup(tr);
+    }
+    else if(btn.classList.contains("btn-ubah")){
         if(statusKegiatan === "Rekam Data" || isAdmin){
             // tampilkan popup edit
             showEditPopup(tr);
@@ -597,6 +604,103 @@ else if(btn.classList.contains("btn-sp2d")){
     }
 }
 });
+
+// fungsi popup salin uraian
+function showCopyPopup(tr){
+    const uraianTarget = tr.cells[1].textContent.trim();
+    const allMainRows = document.querySelectorAll("#dataTableBody tr");
+    const filteredRows = Array.from(allMainRows).filter(row => row.cells[1].textContent.trim() === uraianTarget);
+
+    // Dapatkan data-data pendukung dari basis baris yang ditemukan
+    const rowCount = filteredRows.length;
+    const firstRow = filteredRows[0];
+    const targetUraianRaw = firstRow.cells[1].textContent.trim();
+    const targetTujuan = firstRow.cells[3].textContent.trim();
+    const targetTgl = firstRow.cells[4].textContent.trim();
+    
+    // Logika Pembersihan String Opsi 1
+    let cleanNoST = targetUraianRaw;
+    if (targetUraianRaw.includes(")")) {
+        const parts = targetUraianRaw.split(")");
+        cleanNoST = parts[parts.length - 1].trim(); 
+    }
+
+    // Bangun teks Opsi 1
+    let teksOpsi1 = "";
+    if (rowCount > 1) {
+        const namaPegawaiList = filteredRows.map(row => row.cells[2].textContent.trim());
+        const namaPertama = namaPegawaiList[0];
+        teksOpsi1 = `Belanja barang untuk keperluan perjalanan dinas sesuai surat tugas nomor ${cleanNoST} tanggal ${targetTgl} tujuan ${targetTujuan} an ${namaPertama} dkk`;
+    } else {
+        const namaPegawai = firstRow.cells[2].textContent.trim();
+        teksOpsi1 = `Belanja barang untuk keperluan perjalanan dinas sesuai surat tugas nomor ${cleanNoST} tanggal ${targetTgl} tujuan ${targetTujuan} an ${namaPegawai}`;
+    }
+
+    // Bangun teks Opsi 2
+    let teksOpsi2 = targetUraianRaw;
+
+    // overlay popup
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999;";
+
+    const popup = document.createElement("div");
+    popup.style.cssText = "background:#fff; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.2); width:650px; max-width:95%; padding:25px; display:flex; flex-direction:column; gap:15px;";
+
+    popup.innerHTML = `
+        <h3 style="text-align:center; color:#0369a1; margin-bottom:5px;">Salin Uraian</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:left;">
+            <thead>
+                <tr style="background:#f1f5f9; border-bottom:2px solid #e5e7eb;">
+                    <th style="padding:10px; width:15%;">Opsi</th>
+                    <th style="padding:10px; width:70%;">Teks Uraian</th>
+                    <th style="padding:10px; width:15%; text-align:center;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:12px 10px; font-weight:600; color:#475569;">Opsi 1</td>
+                    <td style="padding:12px 10px; color:#334155; word-break:break-word;">${teksOpsi1}</td>
+                    <td style="padding:12px 10px; text-align:center;">
+                        <button class="btn-copy-action" data-text="${teksOpsi1.replace(/"/g, '&quot;')}" style="padding:6px 12px; background:#0369a1; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500;">Salin</button>
+                    </td>
+                </tr>
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:12px 10px; font-weight:600; color:#475569;">Opsi 2</td>
+                    <td style="padding:12px 10px; color:#334155; word-break:break-word;">${teksOpsi2}</td>
+                    <td style="padding:12px 10px; text-align:center;">
+                        <button class="btn-copy-action" data-text="${teksOpsi2.replace(/"/g, '&quot;')}" style="padding:6px 12px; background:#0369a1; color:white; border:none; border-radius:6px; font-size:13px; cursor:pointer; font-weight:500;">Salin</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div style="display:flex; justify-content:flex-end; margin-top:5px;">
+            <button id="closeCopyPopup" style="padding:8px 16px; border:none; border-radius:6px; background:#e5e7eb; color:#475569; cursor:pointer; font-weight:500;">Tutup</button>
+        </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    document.getElementById("closeCopyPopup").onclick = () => overlay.remove();
+
+    // Event handler klik tombol salin internal tabel popup
+    popup.querySelectorAll(".btn-copy-action").forEach(button => {
+        button.onclick = function() {
+            const textToCopy = this.getAttribute("data-text");
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = this.innerText;
+                this.innerText = "Tersalin!";
+                this.style.background = "#22c55e";
+                setTimeout(() => {
+                    this.innerText = originalText;
+                    this.style.background = "#0369a1";
+                }, 1500);
+            }).catch(err => {
+                alert("Gagal menyalin teks.");
+            });
+        };
+    });
+}
 
 // fungsi popup edit
 function showEditPopup(tr){
