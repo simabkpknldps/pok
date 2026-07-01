@@ -1,7 +1,6 @@
-<!-- v3_pok.html -->
 <div class="space-y-4">
     <h2 class="text-xl font-bold text-slate-800">Daftar POK</h2>
-    <div id="pok-container" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 border-b border-slate-200">
                 <tr>
@@ -14,52 +13,61 @@
                 </tr>
             </thead>
             <tbody id="pok-tbody">
-                <!-- Data akan dimuat lewat JS -->
+                <tr><td colspan="6" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-async function loadPokData() {
-    const tbody = document.getElementById('pok-tbody');
+let rawPokData = [];
+let expandedCodes = new Set();
+
+async function initPokPage() {
     const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getPOKData' }) });
-    const data = await res.json();
-
-    // Tampilkan hanya kode dengan panjang 12 (Root level)
-    const render = (items, parentCode = null) => {
-        return items
-            .filter(i => parentCode ? i.kode.startsWith(parentCode) && i.kode !== parentCode : i.kode.length === 12)
-            .map(i => {
-                const isPNBP = i.sumber === 'PNBP';
-                const rowColor = isPNBP ? 'bg-pink-50' : 'bg-blue-50';
-                const hasChildren = items.some(child => child.kode.startsWith(i.kode) && child.kode !== i.kode);
-                
-                return `
-                    <tr class="border-b cursor-pointer hover:bg-slate-100 ${i.kode.length > 27 ? rowColor : ''}" onclick="toggleRow('${i.kode}')">
-                        <td class="p-3 font-mono">${i.kode}</td>
-                        <td class="p-3">${i.uraian}</td>
-                        <td class="p-3 text-right">${i.pagu.toLocaleString()}</td>
-                        <td class="p-3 text-right">${i.realisasi.toLocaleString()}</td>
-                        <td class="p-3 text-right">${i.sisa.toLocaleString()}</td>
-                        <td class="p-3 text-center">
-                            ${i.kode.length > 27 ? `
-                                <button class="bg-sky-500 text-white px-2 py-1 rounded text-xs">Rekam</button>
-                                <button class="bg-sky-500 text-white px-2 py-1 rounded text-xs">Detil</button>
-                            ` : ''}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-    };
-
-    tbody.innerHTML = render(data);
+    rawPokData = await res.json();
+    renderPok();
 }
 
-function toggleRow(code) {
-    // Implementasi logika expand/collapse di sini
-    console.log("Klik pada:", code);
+function renderPok() {
+    const tbody = document.getElementById('pok-tbody');
+    // Filter: Tampilkan root (len 12) ATAU anak yang parent-nya sudah di-expand
+    const filtered = rawPokData.filter(i => {
+        if (i.kode.length === 12) return true;
+        return Array.from(expandedCodes).some(parent => i.kode.startsWith(parent) && i.kode !== parent);
+    });
+
+    tbody.innerHTML = filtered.map(i => {
+        const isPNBP = i.sumber === 'PNBP';
+        const bgClass = i.kode.length > 27 ? (isPNBP ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white';
+        const hasChildren = rawPokData.some(child => child.kode.startsWith(i.kode) && child.kode !== i.kode);
+        
+        return `
+            <tr class="border-b hover:bg-slate-100 ${bgClass} transition-colors cursor-pointer" onclick="toggleExpand('${i.kode}')">
+                <td class="p-3 font-mono text-xs">${i.kode}</td>
+                <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (expandedCodes.has(i.kode) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
+                <td class="p-3 text-right">${Number(i.pagu).toLocaleString()}</td>
+                <td class="p-3 text-right">${Number(i.realisasi).toLocaleString()}</td>
+                <td class="p-3 text-right">${Number(i.sisa).toLocaleString()}</td>
+                <td class="p-3 text-center">
+                    ${i.kode.length > 27 ? `
+                        <button class="bg-sky-500 hover:bg-sky-600 text-white px-2 py-1 rounded text-[10px] mr-1">Rekam</button>
+                        <button class="bg-slate-500 hover:bg-slate-600 text-white px-2 py-1 rounded text-[10px]">Detil</button>
+                    ` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
-loadPokData();
+function toggleExpand(code) {
+    if (expandedCodes.has(code)) {
+        expandedCodes.delete(code);
+    } else {
+        expandedCodes.add(code);
+    }
+    renderPok();
+}
+
+initPokPage();
 </script>
