@@ -380,6 +380,7 @@
         }
 
         async function simpanData() {
+                const namaUser = sessionStorage.getItem('namaUser') || "Guest";
                 const payload = {
                     action: 'simpanKegiatan',
                     idKegiatan: document.getElementById("idUsulan").value,
