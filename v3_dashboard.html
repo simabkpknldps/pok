@@ -107,10 +107,47 @@
                             <div>Pagu: <span class="font-bold text-blue-600">${d.pagu.toLocaleString()}</span></div>
                         </div>
                     </div>
+                    <!-- Tambahkan di sebelah card realisasi Anda -->
+                    <div class="card" id="topPerjadinCard">
+                      <h5>Top 5 Perjadin</h5>
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>No</th>
+                            <th>Pelaksana</th>
+                            <th>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody id="topPerjadinBody">
+                          <!-- Data akan diisi via JS -->
+                        </tbody>
+                      </table>
+                    </div>
+                    
                 </div>
             `;
         }
-    
+
+        function loadTopPerjadin() {
+          google.script.run.withSuccessHandler(function(data) {
+            var tbody = document.getElementById('topPerjadinBody');
+            tbody.innerHTML = '';
+            data.forEach(function(item, index) {
+              var icon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🎖️';
+              tbody.innerHTML += `<tr>
+                <td>${icon}</td>
+                <td>${item[0]}</td>
+                <td>${item[1]}</td>
+              </tr>`;
+            });
+          }).getTopPerjadin();
+        }
+        
+        // Panggil fungsi saat page load
+        window.onload = function() {
+          loadTopPerjadin();
+        };
+        
         function logout() {
             sessionStorage.clear();
             window.location.href = 'v3_index.html';
