@@ -16,7 +16,7 @@
 
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
         <div class="p-6 border-b border-slate-100"><h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB</h1></div>
-        <nav id="sidebar" class="p-4 space-y-2 flex-grow">
+        <nav class="p-4 space-y-2 flex-grow">
             <button onclick="navigate('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-gauge mr-3"></i> Dashboard</button>
             <button onclick="navigate('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-folder-open mr-3"></i> POK</button>
             <button onclick="navigate('kegiatan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-list-check mr-3"></i> Daftar Kegiatan</button>
@@ -28,14 +28,7 @@
     <main class="flex-1 flex flex-col overflow-hidden">
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
             <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
-            <div class="flex items-center gap-6">
-                <button class="text-slate-500 hover:text-sky-600"><i class="fa-solid fa-gear"></i></button>
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center font-bold"><i class="fa-solid fa-user"></i></div>
-                    <span id="namaUser" class="text-sm font-medium text-slate-700">User</span>
-                </div>
-                <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
-            </div>
+            <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
         </header>
         <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
     </main>
@@ -45,14 +38,8 @@
 
         function navigate(page) {
             document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
-            const container = document.getElementById('app');
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('bg-sky-50', 'text-sky-700'));
-            event?.currentTarget.classList.add('bg-sky-50', 'text-sky-700');
-            container.innerHTML = '';
-            
-            if (page === 'dashboard') renderDashboardPage(container);
-            else if (page === 'pok') renderPOKPage(container);
-            else container.innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
+            if (page === 'dashboard') renderDashboardPage(document.getElementById('app'));
+            else document.getElementById('app').innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
         }
 
         async function fetchDashboardData() {
@@ -66,8 +53,10 @@
 
         async function renderDashboardPage(container, isRefresh = false) {
             if (!isRefresh) container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
+            
             const data = dashboardDataCache || await fetchDashboardData();
             if (!data) return;
+
             container.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
@@ -80,54 +69,34 @@
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi (Rp)</h3><canvas id="chartRp"></canvas></div>
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi (Frek)</h3><canvas id="chartFrek"></canvas></div>
-                </div>`;
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">${Object.entries(data.seksi).map(([nama, val]) => { const p = (val * 100).toFixed(2); return `<div><div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${p<30?'bg-red-500':p<70?'bg-orange-500':p<90?'bg-yellow-400':'bg-green-500'} h-2 rounded-full" style="width: ${p}%"></div></div></div>`; }).join('')}</div>
+                </div>
+            `;
             initCharts(data);
         }
 
-        async function renderPOKPage(container) {
-            container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
-            try {
-                const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getPOKData' }) });
-                const data = await res.json();
-                container.innerHTML = `
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <table class="w-full text-sm">
-                            <thead><tr class="text-slate-400 border-b"><th class="py-3 text-left">Kode</th><th class="py-3 text-left">Uraian</th><th class="py-3 text-right">Pagu</th><th class="py-3 text-right">Realisasi</th><th class="py-3 text-center">Aksi</th></tr></thead>
-                            <tbody id="pok-body">${data.map(item => {
-                                const level = item.kode.split('.').length;
-                                const isParent = level <= 2;
-                                return `<tr class="border-b ${isParent ? '' : 'hidden'} level-${level} cursor-pointer hover:bg-slate-50" data-kode="${item.kode}" onclick="toggleChild('${item.kode}')">
-                                    <td class="py-3 font-mono pl-${level * 4}">${item.kode}</td>
-                                    <td class="py-3">${item.uraian}</td>
-                                    <td class="py-3 text-right">${item.pagu.toLocaleString()}</td>
-                                    <td class="py-3 text-right">${item.realisasi.toLocaleString()}</td>
-                                    <td class="py-3 text-center" onclick="event.stopPropagation()">${item.pagu > 0 ? `<button class="text-xs bg-sky-500 text-white px-2 py-1 rounded">Rekam</button>` : ''}</td>
-                                </tr>`;
-                            }).join('')}</tbody>
-                        </table>
-                    </div>`;
-            } catch (e) { container.innerHTML = `<p class="text-red-500 text-center mt-10">Gagal memuat data POK.</p>`; }
+        function initCharts(data) {
+            const labels = data.grafikPerjadin.map(d => d.bulan);
+            new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels, datasets: [{ label: 'Rupiah', data: data.grafikPerjadin.map(d => d.rupiah), borderColor: '#0284c7', tension: 0.3 }] } });
+            new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels, datasets: [{ label: 'Frekuensi', data: data.grafikPerjadin.map(d => d.frekuensi), backgroundColor: '#0ea5e9' }] } });
         }
 
-        function toggleChild(kode) {
-            document.querySelectorAll(`tr[data-kode^="${kode}."]`).forEach(row => row.classList.toggle('hidden'));
-        }
-
-        function initCharts(d) {
-            new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels: d.grafikPerjadin.map(x=>x.bulan), datasets: [{ label: 'Rp', data: d.grafikPerjadin.map(x=>x.rupiah), borderColor: '#0284c7' }] } });
-            new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels: d.grafikPerjadin.map(x=>x.bulan), datasets: [{ label: 'Frek', data: d.grafikPerjadin.map(x=>x.frekuensi), backgroundColor: '#0ea5e9' }] } });
-        }
-
-        function renderBelanjaCard(t, d, c) { return `<h3 class="font-semibold text-slate-700">${t}</h3><div class="text-2xl font-bold text-${c}-600">${(d.persen*100).toFixed(2)}%</div>`; }
-        function renderMPCard(t, d) { return `<h3 class="font-semibold text-slate-700">${t}</h3><div class="text-2xl font-bold text-emerald-600">${(d.persen*100).toFixed(2)}%</div>`; }
-        function renderTopPerjadin(l) { return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0,3).map((i,idx)=>`<div class="flex justify-between text-xs">${idx+1}. ${i[0]} <span class="font-bold text-sky-600">${i[1]}x</span></div>`).join('')}</div>`; }
+        function renderBelanjaCard(t, d, c) { const p = (d.persen * 100).toFixed(2); return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${t}</h3><div class="text-2xl font-bold text-${c}-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-${c}-600 h-2 rounded-full" style="width: ${p}%"></div></div><div class="text-[11px] text-slate-500">Realisasi: ${d.realisasi.toLocaleString()}<br><span class="font-bold text-slate-700">Sisa: ${d.sisa.toLocaleString()}</span></div></div>`; }
+        function renderMPCard(t, d) { const p = (d.persen * 100).toFixed(2); return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${t}</h3><div class="text-2xl font-bold text-emerald-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-emerald-500 h-2 rounded-full" style="width: ${p}%"></div></div><div class="text-[11px] text-slate-500">Realisasi MP: ${d.realisasi.toLocaleString()}<br><span class="font-bold text-slate-700">Sisa MP: ${d.sisa.toLocaleString()}</span></div></div>`; }
+        function renderTopPerjadin(l) { return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${idx + 1}. ${i[0]}</div><div class="text-xs font-bold text-sky-600">${i[1]}x</div></div>`).join('')}</div>`; }
         function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
 
         document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById('namaUser').textContent = sessionStorage.getItem('nama') || 'User';
             navigate('dashboard');
+            setInterval(async () => {
+                await fetchDashboardData();
+                if (document.getElementById('page-title').innerText === 'Dashboard') renderDashboardPage(document.getElementById('app'), true);
+            }, 60000);
         });
     </script>
 </body>
