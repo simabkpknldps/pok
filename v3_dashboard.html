@@ -40,6 +40,7 @@
         window.searchResults = [];
         window.searchIndex = -1;
         window.selectedKode = "";
+        window.detilKegiatanData = []; // Menyimpan data detil sementara
 
         async function navigate(page) {
             const container = document.getElementById('app');
@@ -133,7 +134,7 @@
                         ${c.length > 27 ? `
                             <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
                                 class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
-                            <button class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
+                            <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
                         ` : ''}
                     </td>
                 </tr>`;
@@ -434,21 +435,55 @@
                 }
             }
 
-        function formatRibuan(angka) {
-            // Hapus karakter selain angka
-            let v = angka.replace(/\D/g, "");
-            // Tambahkan format ribuan
-            return v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        }
+            function formatRibuan(angka) {
+                // Hapus karakter selain angka
+                let v = angka.replace(/\D/g, "");
+                // Tambahkan format ribuan
+                return v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            }
+    
+            function showToast(message) {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = "bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center animate-in slide-in-from-right-10";
+                toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
+                container.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000); // Hilang setelah 3 detik
+            }
 
-        function showToast(message) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = "bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center animate-in slide-in-from-right-10";
-            toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000); // Hilang setelah 3 detik
-        }
+            async function openDetilModal(mak) {
+                document.getElementById("detilModal").classList.replace("hidden", "flex");
+                document.getElementById("detilTitle").innerText = "Detil kegiatan pada MAK " + mak;
+                
+                // Fetch data ke server dengan parameter MAK
+                const res = await fetch(`${sessionStorage.getItem('realUrl')}?action=getDetil&mak=${mak}`);
+                window.detilKegiatanData = await res.json();
+                renderDetilTable(window.detilKegiatanData);
+            }
+
+            function renderDetilTable(data) {
+                const tbody = document.getElementById("detil-tbody");
+                tbody.innerHTML = data.map(i => `
+                    <tr class="border-b">
+                        <td class="p-3">${i.uraian}</td>
+                        <td class="p-3">${i.userLogin}</td>
+                        <td class="p-3">${i.tujuan}</td>
+                        <td class="p-3">${i.tglSt}</td>
+                        <td class="p-3">${Number(i.estimasi).toLocaleString()}</td>
+                        <td class="p-3">${i.status}</td>
+                        <td class="p-3 space-x-2">
+                            <button title="Pilih Pengguna" class="text-sky-600"><i class="fa-solid fa-user-check"></i></button>
+                            ${i.status === 'Rekam Data' ? `<button title="Hapus" onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            
+            function filterDetil() {
+                const keyword = document.getElementById("cariDetil").value.toLowerCase();
+                const filtered = window.detilKegiatanData.filter(i => i.uraian.toLowerCase().includes(keyword));
+                renderDetilTable(filtered);
+            }
         
             </script>
 
@@ -670,6 +705,26 @@
 
         <!-- Toast Container -->
         <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
+
+        <div id="detilModal" class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-[980px] max-w-[96vw] overflow-hidden">
+            <div class="bg-slate-700 text-white px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold" id="detilTitle">Detil Kegiatan</h2>
+                <button onclick="document.getElementById('detilModal').classList.replace('flex', 'hidden')" class="hover:text-red-300"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <input type="text" id="cariDetil" oninput="filterDetil()" placeholder="Cari uraian / nomor ST..." class="w-full border p-2 rounded-xl mb-4">
+                <div class="overflow-y-auto max-h-[60vh]">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-100">
+                            <tr><th class="p-3">Uraian/Nomor ST</th><th class="p-3">Pelaksana</th><th class="p-3">Tujuan</th><th class="p-3">Tgl</th><th class="p-3">Jumlah</th><th class="p-3">Status</th><th class="p-3">Aksi</th></tr>
+                        </thead>
+                        <tbody id="detil-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
     
 </body>
 </html>
