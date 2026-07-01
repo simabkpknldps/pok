@@ -41,6 +41,8 @@
             const title = document.getElementById('page-title');
             
             title.innerText = page.charAt(0).toUpperCase() + page.slice(1);
+            
+            // Tampilkan loading
             container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
         
             if (page === 'dashboard') {
@@ -51,9 +53,15 @@
                     const html = await response.text();
                     container.innerHTML = html;
                     
-                    // PANGGIL FUNGSI INI SETELAH HTML MASUK
-                    if (page === 'pok' && typeof loadPokData === 'function') {
-                        loadPokData();
+                    // JEDA SINGKAT untuk memastikan DOM siap, lalu panggil fungsi
+                    if (page === 'pok') {
+                        setTimeout(() => {
+                            if (typeof window.loadPokData === 'function') {
+                                window.loadPokData();
+                            } else {
+                                console.error("Fungsi loadPokData belum terdaftar di window!");
+                            }
+                        }, 100);
                     }
                 } catch (e) {
                     container.innerHTML = `<p class="text-red-500">Error memuat halaman.</p>`;
