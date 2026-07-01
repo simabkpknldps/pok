@@ -93,4 +93,13 @@
         window.renderPok();
     };
 })();
+
+// TAMBAHKAN INI DI BAWAH (di luar kurung IIFE):
+console.log("Mencoba memicu loadPokData langsung dari file...");
+if (typeof window.loadPokData === 'function') {
+    window.loadPokData();
+} else {
+    // Fallback: jika window.loadPokData belum terdaftar, coba panggil lagi setelah 500ms
+    setTimeout(window.loadPokData, 500);
+}
 </script>
