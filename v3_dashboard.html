@@ -37,6 +37,9 @@
         let dashboardDataCache = null;
         window.rawPokData = [];
         window.expandedCodes = new Set();
+        window.searchResults = [];
+        window.searchIndex = -1;
+        window.selectedKode = "";
 
         async function navigate(page) {
             const container = document.getElementById('app');
@@ -56,7 +59,7 @@
                         id="searchPok"
                         placeholder="Cari kode atau uraian..."
                         class="flex-1 border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                        oninput="renderPok()">
+                        oninput="searchPok()">
             
                 </div>
             
@@ -97,7 +100,7 @@
             .toLowerCase()
             .trim();
 
-const bidang = document.getElementById("filterBidang")?.value || "Semua";
+        const bidang = document.getElementById("filterBidang")?.value || "Semua";
 
             // 2. Filter untuk tampilan (Root level = 12 karakter)
             const filtered = uniqueData.filter(i => {
@@ -159,6 +162,79 @@ const bidang = document.getElementById("filterBidang")?.value || "Semua";
             }).join('');
         }
 
+        function searchPok(){
+        
+            const keyword = document
+                .getElementById("searchPok")
+                .value
+                .trim()
+                .toLowerCase();
+        
+            if(keyword===""){
+                window.searchResults=[];
+                window.searchIndex=-1;
+                window.selectedKode="";
+                renderPok();
+                return;
+            }
+        
+            const uniqueMap = new Map();
+        
+            window.rawPokData.forEach(r=>{
+                uniqueMap.set(String(r.kode),r);
+            });
+        
+            const data=[...uniqueMap.values()];
+        
+            window.searchResults=data.filter(r=>{
+        
+                return String(r.kode).toLowerCase().includes(keyword)
+                    || String(r.uraian).toLowerCase().includes(keyword);
+        
+            });
+        
+            if(window.searchResults.length===0){
+                return;
+            }
+        
+            window.searchIndex=0;
+        
+            gotoSearchResult();
+        }
+
+        function gotoSearchResult(){
+        
+            const item=window.searchResults[window.searchIndex];
+        
+            if(!item) return;
+        
+            const kode=String(item.kode);
+        
+            window.selectedKode=kode;
+        
+            // buka parent 12 digit
+            if(kode.length>12){
+        
+                window.expandedCodes.clear();
+                window.expandedCodes.add(kode.substring(0,12));
+        
+            }
+        
+            renderPok();
+        
+            setTimeout(()=>{
+        
+                document
+                    .querySelector(`[data-kode="${kode}"]`)
+                    ?.scrollIntoView({
+                        behavior:"smooth",
+                        block:"center"
+                    });
+        
+            },50);
+        
+        }
+        
         function toggleExpand(code) {
 
             // Hanya parent (12 digit) yang bisa expand/collapse
@@ -490,7 +566,7 @@ const bidang = document.getElementById("filterBidang")?.value || "Semua";
 
         <button
         onclick="closeRekamModal()"
-        class="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100">
+        class="px-6 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100">
         <i class="fa-solid fa-right-from-bracket mr-2"></i>
         Batal
         </button>
