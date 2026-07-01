@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>SiMAB - POK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 flex h-screen overflow-hidden">
+
+    <!-- Sidebar (Copy dari Dashboard agar sama) -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
+        <div class="p-6 border-b border-slate-100"><h1 class="text-2xl font-bold text-sky-700"><i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB</h1></div>
+        <nav class="p-4 space-y-2">
+            <button onclick="window.location.href='v3_dashboard.html'" class="w-full text-left p-3 rounded-xl hover:bg-sky-50 transition">Dashboard</button>
+            <button class="w-full text-left p-3 rounded-xl bg-sky-50 text-sky-700 font-bold">POK</button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-20 bg-white border-b flex items-center justify-between px-8">
+            <h2 class="text-lg font-semibold text-slate-700">Daftar POK</h2>
+        </header>
+
+        <div id="pok-container" class="flex-1 p-8 overflow-y-auto">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-slate-400 border-b">
+                            <th class="py-3 text-left">Kode</th>
+                            <th class="py-3 text-left">Uraian</th>
+                            <th class="py-3 text-right">Pagu</th>
+                            <th class="py-3 text-right">Realisasi</th>
+                            <th class="py-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pok-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Sesuaikan dengan URL deployment GAS Anda
+        const GAS_URL = sessionStorage.getItem('realUrl'); 
+
+        async function loadPOK() {
+            const body = document.getElementById('pok-body');
+            const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'getPOKData' }) });
+            const data = await res.json();
+
+            body.innerHTML = data.map(item => {
+                const level = item.kode.split('.').length;
+                const isParent = level <= 2; // Contoh: level 1 & 2 selalu tampil
+                const bg = item.sumber === 'PNBP' ? 'bg-pink-100' : (item.sumber === 'RM' ? 'bg-blue-100' : '');
+                
+                return `
+                    <tr class="border-b ${bg} ${isParent ? '' : 'hidden'} level-${level}" data-kode="${item.kode}">
+                        <td class="py-3 font-mono pl-${level * 4}">${item.kode}</td>
+                        <td class="py-3">${item.uraian}</td>
+                        <td class="py-3 text-right">${item.pagu.toLocaleString()}</td>
+                        <td class="py-3 text-right">${item.realisasi.toLocaleString()}</td>
+                        <td class="py-3 text-center">
+                            ${item.pagu > 0 ? `<button class="text-xs bg-sky-500 text-white px-2 py-1 rounded">Rekam</button> <button class="text-xs bg-purple-500 text-white px-2 py-1 rounded">Detil</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Logika klik untuk membuka child
+        document.getElementById('pok-body').addEventListener('click', (e) => {
+            const tr = e.target.closest('tr');
+            if (!tr) return;
+            const kode = tr.dataset.kode;
+            // Logika sederhana: tampilkan/sembunyikan row berikutnya yang merupakan child
+            // Implementasi nyata biasanya butuh filter berdasarkan awalan kode
+        });
+
+        loadPOK();
+    </script>
+</body>
+</html>
