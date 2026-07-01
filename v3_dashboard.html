@@ -73,6 +73,9 @@
         }
     
         async function renderDashboardPage(container) {
+            // Di dalam renderDashboardPage(container)
+            const data = await res.json();
+            console.log("Data diterima dari server:", data); // BUKA INSPECT ELEMENT (F12) -> CONSOLE
             container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
             try {
                 const res = await fetch(sessionStorage.getItem('realUrl'), {
