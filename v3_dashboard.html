@@ -5,16 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiMAB - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
 
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
-        <div class="p-6 border-b border-slate-100">
-            <h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2">
-                <i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB
-            </h1>
-        </div>
+        <div class="p-6 border-b border-slate-100"><h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB</h1></div>
         <nav class="p-4 space-y-2 flex-grow">
             <button onclick="navigate('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-gauge mr-3"></i> Dashboard</button>
             <button onclick="navigate('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-folder-open mr-3"></i> POK</button>
@@ -29,7 +26,6 @@
             <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
             <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
         </header>
-
         <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
     </main>
 
@@ -37,98 +33,59 @@
         function navigate(page) {
             document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
             const app = document.getElementById('app');
-            if (page === 'dashboard') {
-                renderDashboardPage(app);
-            } else {
-                app.innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
-            }
+            if (page === 'dashboard') renderDashboardPage(app);
         }
     
-        function getProgressColor(p) {
-            if (p < 30) return 'bg-red-500';
-            if (p < 70) return 'bg-orange-500';
-            if (p < 90) return 'bg-yellow-400';
-            return 'bg-green-500';
-        }
-
         async function renderDashboardPage(container) {
             container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
             try {
-                const res = await fetch(sessionStorage.getItem('realUrl'), {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'getDashboardData' })
-                });
+                const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getDashboardData' }) });
                 const data = await res.json();
                 
                 container.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div>
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                             <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
                             <div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">
-                                ${data.kegiatanHariIni.map(item => `
-                                    <div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>
-                                `).join('')}
+                                ${data.kegiatanHariIni.map(item => `<div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>`).join('')}
                             </div>
                         </div>
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp" height="100"></canvas></div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek" height="100"></canvas></div>
                     </div>
 
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                         <h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             ${Object.entries(data.seksi).map(([nama, val]) => {
-                                const p = (val * 100).toFixed(2); // Diubah menjadi toFixed(2)
-                                return `
-                                    <div>
-                                        <div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div>
-                                        <div class="w-full bg-slate-100 rounded-full h-2"><div class="${getProgressColor(p)} h-2 rounded-full" style="width: ${p}%"></div></div>
-                                    </div>
-                                `;
+                                const p = (val * 100).toFixed(2);
+                                return `<div><div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${p<30?'bg-red-500':p<70?'bg-orange-500':p<90?'bg-yellow-400':'bg-green-500'} h-2 rounded-full" style="width: ${p}%"></div></div></div>`;
                             }).join('')}
                         </div>
                     </div>
                 `;
+                
+                // Init Charts
+                const labels = data.grafikPerjadin.map(d => d.bulan);
+                new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels, datasets: [{ label: 'Rp', data: data.grafikPerjadin.map(d => d.rupiah), borderColor: '#0284c7', fill: true }] } });
+                new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels, datasets: [{ label: 'Frekuensi', data: data.grafikPerjadin.map(d => d.frekuensi), backgroundColor: '#0ea5e9' }] } });
             } catch (e) { container.innerHTML = `<p class="text-red-500">Gagal memuat data.</p>`; }
         }
 
-        // ... (Fungsi renderBelanjaCard, renderMPCard, dll tetap sama)
-        function renderBelanjaCard(title, d, color) {
-            const p = (d.persen * 100).toFixed(2);
-            return `
-                <div class="mb-2">
-                    <h3 class="font-semibold text-slate-700 mb-2">${title}</h3>
-                    <div class="text-2xl font-bold text-${color}-600 mb-2">${p}%</div>
-                    <div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-${color}-600 h-2 rounded-full" style="width: ${p}%"></div></div>
-                    <div class="text-[11px] text-slate-500 space-y-0.5"><div>Realisasi: ${d.realisasi.toLocaleString()}</div><div class="font-bold text-slate-700">Sisa: ${d.sisa.toLocaleString()}</div></div>
-                </div>
-            `;
-        }
-
-        function renderMPCard(title, d) {
-            const p = (d.persen * 100).toFixed(2);
-            return `
-                <div class="mb-2">
-                    <h3 class="font-semibold text-slate-700 mb-2">${title}</h3>
-                    <div class="text-2xl font-bold text-emerald-600 mb-2">${p}%</div>
-                    <div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-emerald-500 h-2 rounded-full" style="width: ${p}%"></div></div>
-                    <div class="text-[11px] text-slate-500 space-y-0.5"><div>Realisasi MP: ${d.realisasi.toLocaleString()}</div><div class="font-bold text-slate-700">Sisa MP: ${d.sisa.toLocaleString()}</div></div>
-                </div>
-            `;
-        }
-
-        function renderTopPerjadin(topList) {
-            return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${topList.slice(0, 3).map((item, index) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${index + 1}. ${item[0]}</div><div class="text-xs font-bold text-sky-600">${item[1]}x</div></div>`).join('')}</div>`;
-        }
-    
+        // ... (Fungsi render lainnya sama)
+        function renderBelanjaCard(title, d, color) { const p = (d.persen * 100).toFixed(2); return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${title}</h3><div class="text-2xl font-bold text-${color}-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-${color}-600 h-2 rounded-full" style="width: ${p}%"></div></div><div class="text-[11px] text-slate-500 space-y-0.5"><div>Realisasi: ${d.realisasi.toLocaleString()}</div><div class="font-bold text-slate-700">Sisa: ${d.sisa.toLocaleString()}</div></div></div>`; }
+        function renderMPCard(title, d) { const p = (d.persen * 100).toFixed(2); return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${title}</h3><div class="text-2xl font-bold text-emerald-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-emerald-500 h-2 rounded-full" style="width: ${p}%"></div></div><div class="text-[11px] text-slate-500 space-y-0.5"><div>Realisasi MP: ${d.realisasi.toLocaleString()}</div><div class="font-bold text-slate-700">Sisa MP: ${d.sisa.toLocaleString()}</div></div></div>`; }
+        function renderTopPerjadin(topList) { return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${topList.slice(0, 3).map((item, index) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${index + 1}. ${item[0]}</div><div class="text-xs font-bold text-sky-600">${item[1]}x</div></div>`).join('')}</div>`; }
         function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
         document.addEventListener("DOMContentLoaded", () => navigate('dashboard'));
     </script>
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    </style>
+    <style>.custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }</style>
 </body>
 </html>
