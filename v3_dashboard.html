@@ -64,19 +64,58 @@
         function navigate(page) {
             document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
             const app = document.getElementById('app');
-            app.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
             
-            // Logika render halaman akan dipanggil di sini
-            setTimeout(() => {
+            if (page === 'dashboard') {
+                renderDashboardPage(app);
+            } else {
                 app.innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
-            }, 500);
+            }
         }
-
+    
+        async function renderDashboardPage(container) {
+            container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
+            try {
+                const res = await fetch(sessionStorage.getItem('realUrl'), {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'getDashboardData' })
+                });
+                const data = await res.json();
+                
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-lg">
+                        ${renderBelanjaCard('Belanja Barang', data.barang)}
+                        <div class="my-6 border-t border-slate-100"></div>
+                        ${renderBelanjaCard('Belanja Modal', data.modal)}
+                    </div>
+                `;
+            } catch (e) { container.innerHTML = "Gagal memuat data."; }
+        }
+    
+        function renderBelanjaCard(title, d) {
+            const p = (d.persen * 100).toFixed(2);
+            return `
+                <div class="mb-6">
+                    <h3 class="font-semibold text-slate-700 mb-4">${title}</h3>
+                    <div class="w-full bg-slate-200 rounded-full h-2.5 mb-4">
+                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${p}%"></div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="text-3xl font-bold text-blue-600">${p}%</div>
+                        <div class="text-right text-sm text-slate-500">
+                            <div>Realisasi: <span class="font-bold text-blue-600">${d.realisasi.toLocaleString()}</span></div>
+                            <div>Sisa: <span class="font-bold text-blue-600">${d.sisa.toLocaleString()}</span></div>
+                            <div>Pagu: <span class="font-bold text-blue-600">${d.pagu.toLocaleString()}</span></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    
         function logout() {
             sessionStorage.clear();
             window.location.href = 'v3_index.html';
         }
-
+    
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('namaUser').textContent = sessionStorage.getItem('nama') || 'User';
             navigate('dashboard');
