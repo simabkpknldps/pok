@@ -13,65 +13,17 @@
                 </tr>
             </thead>
             <tbody id="pok-tbody">
-                <tr><td colspan="6" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data...</td></tr>
+                <tr><td colspan="6" class="p-8 text-center text-slate-400">Memuat data...</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-let rawPokData = [];
-let expandedCodes = new Set();
+// Variabel global untuk menyimpan data
+window.rawPokData = [];
+window.expandedCodes = new Set();
 
-async function initPokPage() {
-    const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getPOKData' }) });
-    rawPokData = await res.json();
-    renderPok();
-}
-
-function renderPok() {
-    const tbody = document.getElementById('pok-tbody');
-    // Filter: Tampilkan root (len 12) ATAU anak yang parent-nya sudah di-expand
-    const filtered = rawPokData.filter(i => {
-        if (i.kode.length === 12) return true;
-        return Array.from(expandedCodes).some(parent => i.kode.startsWith(parent) && i.kode !== parent);
-    });
-
-    tbody.innerHTML = filtered.map(i => {
-        const isPNBP = i.sumber === 'PNBP';
-        const bgClass = i.kode.length > 27 ? (isPNBP ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white';
-        const hasChildren = rawPokData.some(child => child.kode.startsWith(i.kode) && child.kode !== i.kode);
-        
-        return `
-            <tr class="border-b hover:bg-slate-100 ${bgClass} transition-colors cursor-pointer" onclick="toggleExpand('${i.kode}')">
-                <td class="p-3 font-mono text-xs">${i.kode}</td>
-                <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (expandedCodes.has(i.kode) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
-                <td class="p-3 text-right">${Number(i.pagu).toLocaleString()}</td>
-                <td class="p-3 text-right">${Number(i.realisasi).toLocaleString()}</td>
-                <td class="p-3 text-right">${Number(i.sisa).toLocaleString()}</td>
-                <td class="p-3 text-center">
-                    ${i.kode.length > 27 ? `
-                        <button class="bg-sky-500 hover:bg-sky-600 text-white px-2 py-1 rounded text-[10px] mr-1">Rekam</button>
-                        <button class="bg-slate-500 hover:bg-slate-600 text-white px-2 py-1 rounded text-[10px]">Detil</button>
-                    ` : ''}
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function toggleExpand(code) {
-    if (expandedCodes.has(code)) {
-        expandedCodes.delete(code);
-    } else {
-        expandedCodes.add(code);
-    }
-    renderPok();
-}
-
-initPokPage();
-
-// Jadikan fungsi ini global agar bisa dipanggil dari dashboard
 window.loadPokData = async function() {
     const tbody = document.getElementById('pok-tbody');
     try {
@@ -79,24 +31,52 @@ window.loadPokData = async function() {
             method: 'POST', 
             body: JSON.stringify({ action: 'getPOKData' }) 
         });
-        const data = await res.json();
-        
-        // Render data awal (kode panjang 12)
-        tbody.innerHTML = data
-            .filter(i => String(i.kode).length === 12)
-            .map(i => `
-                <tr class="border-b hover:bg-slate-50 cursor-pointer">
-                    <td class="p-3 font-mono font-bold">${i.kode}</td>
-                    <td class="p-3">${i.uraian}</td>
-                    <td class="p-3 text-right">${Number(i.pagu).toLocaleString()}</td>
-                    <td class="p-3 text-right">${Number(i.realisasi).toLocaleString()}</td>
-                    <td class="p-3 text-right">${Number(i.sisa).toLocaleString()}</td>
-                    <td class="p-3 text-center">-</td>
-                </tr>
-            `).join('');
+        window.rawPokData = await res.json();
+        renderPok();
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Gagal mengambil data.</td></tr>`;
     }
-}
-    
+};
+
+window.renderPok = function() {
+    const tbody = document.getElementById('pok-tbody');
+    if (!window.rawPokData.length) return;
+
+    // Filter: tampilkan root (len 12) atau anak dari yang di-expand
+    const filtered = window.rawPokData.filter(i => {
+        if (String(i.kode).length === 12) return true;
+        return Array.from(window.expandedCodes).some(parent => String(i.kode).startsWith(parent) && i.kode !== parent);
+    });
+
+    tbody.innerHTML = filtered.map(i => {
+        const isPNBP = i.sumber === 'PNBP';
+        const bgClass = String(i.kode).length > 27 ? (isPNBP ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white';
+        const hasChildren = window.rawPokData.some(child => String(child.kode).startsWith(i.kode) && child.kode !== i.kode);
+        
+        return `
+            <tr class="border-b hover:bg-slate-100 ${bgClass} transition-colors cursor-pointer" onclick="toggleExpand('${i.kode}')">
+                <td class="p-3 font-mono text-xs font-bold">${i.kode}</td>
+                <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(i.kode) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
+                <td class="p-3 text-right">${Number(i.pagu).toLocaleString()}</td>
+                <td class="p-3 text-right">${Number(i.realisasi).toLocaleString()}</td>
+                <td class="p-3 text-right">${Number(i.sisa).toLocaleString()}</td>
+                <td class="p-3 text-center">
+                    ${String(i.kode).length > 27 ? `
+                        <button class="bg-sky-500 text-white px-2 py-1 rounded text-[10px] mr-1">Rekam</button>
+                        <button class="bg-slate-500 text-white px-2 py-1 rounded text-[10px]">Detil</button>
+                    ` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+};
+
+window.toggleExpand = function(code) {
+    if (window.expandedCodes.has(code)) {
+        window.expandedCodes.delete(code);
+    } else {
+        window.expandedCodes.add(code);
+    }
+    window.renderPok();
+};
 </script>
