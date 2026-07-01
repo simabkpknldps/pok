@@ -48,7 +48,57 @@
             } else if (page === 'pok') {
                 container.innerHTML = `
                 <div class="space-y-4">
-                    <h2 class="text-xl font-bold text-slate-800">Daftar POK</h2>
+
+                <div class="flex flex-col md:flex-row gap-3">
+            
+                    <input
+                        type="text"
+                        id="searchPok"
+                        placeholder="Cari kode atau uraian..."
+                        class="flex-1 border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                        oninput="renderPok()">
+            
+                    <select
+                        id="filterBidang"
+                        class="border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                        onchange="renderPok()">
+            
+                        <option value="Semua">Semua</option>
+                        <option value="Umum">Umum</option>
+                        <option value="PKN">PKN</option>
+                        <option value="PN">PN</option>
+                        <option value="Penilaian">Penilaian</option>
+                        <option value="Lelang">Lelang</option>
+                        <option value="HI">HI</option>
+                        <option value="KI">KI</option>
+            
+                    </select>
+            
+                </div>
+            
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 border-b">
+                            <tr>
+                                <th class="p-4">Kode</th>
+                                <th class="p-4">Uraian</th>
+                                <th class="p-4">Pagu</th>
+                                <th class="p-4">Blokir</th>
+                                <th class="p-4">Realisasi</th>
+                                <th class="p-4">Sisa</th>
+                                <th class="p-4">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pok-tbody">
+                            <tr>
+                                <td colspan="7" class="p-8 text-center">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> Memuat...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <table class="w-full text-sm"><thead class="bg-slate-50 border-b"><tr><th class="p-4">Kode</th><th class="p-4">Uraian</th><th class="p-4">Pagu</th><th class="p-4">Blokir</th><th class="p-4">Realisasi</th><th class="p-4">Sisa</th><th class="p-4">Aksi</th></tr></thead><tbody id="pok-tbody"><tr><td colspan="6" class="p-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</td></tr></tbody></table>
                     </div>
@@ -82,12 +132,43 @@
             });
             const uniqueData = Array.from(uniqueMap.values());
 
+            const keyword = (document.getElementById("searchPok")?.value || "")
+            .toLowerCase()
+            .trim();
+
+const bidang = document.getElementById("filterBidang")?.value || "Semua";
+
             // 2. Filter untuk tampilan (Root level = 12 karakter)
             const filtered = uniqueData.filter(i => {
-                const c = String(i.kode);
-                if (c.length === 12) return true;
-                return Array.from(window.expandedCodes).some(p => c.startsWith(p) && c !== p);
-            });
+
+            const kode = String(i.kode);
+            const uraian = String(i.uraian || "").toLowerCase();
+        
+            // filter bidang (kolom I)
+            if (bidang !== "Semua") {
+                if ((i.bidang || "") !== bidang) return false;
+            }
+        
+            // search
+            if (keyword) {
+                const cocok =
+                    kode.toLowerCase().includes(keyword) ||
+                    uraian.includes(keyword);
+        
+                if (!cocok) return false;
+        
+                // jika sedang search tampilkan semua hasil
+                return true;
+            }
+        
+            // tampilan normal
+            if (kode.length === 12) return true;
+        
+            return Array.from(window.expandedCodes).some(p =>
+                kode.startsWith(p) && kode !== p
+            );
+        
+        });
 
             tbody.innerHTML = filtered.map(i => {
                 const c = String(i.kode);
