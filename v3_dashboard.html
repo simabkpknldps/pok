@@ -456,7 +456,7 @@
         <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
             ID Usulan
         </label>
-        <input id="idUsulan"
+        <input readonly id="idUsulan"
         class="w-full rounded-xl border border-slate-300
         px-4 py-2.5
         focus:outline-none
@@ -477,7 +477,14 @@
             <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                 Tgl ST/ND
             </label>
-            <input type="date" id="tglSt" class="w-full rounded-xl ...">
+            <input type="date" id="tglSt" 
+            class="w-full rounded-xl border border-slate-300
+            px-4 py-2.5
+            focus:outline-none
+            focus:ring-2
+            focus:ring-sky-500
+            focus:border-sky-500
+            transition"">
         </div>
         
         <!-- Tambahkan id="estimasiBiaya" dan oninput="cekKecukupanDana()" -->
