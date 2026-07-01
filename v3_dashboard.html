@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SiMAB</title>
+    <title>SiMAB - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-<body class="bg-slate-50 flex h-screen overflow-hidden">
+<body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
 
     <!-- Sidebar -->
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
@@ -39,7 +39,7 @@
     <main class="flex-1 flex flex-col overflow-hidden">
         <!-- Navbar -->
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-            <h2 id="page-title" class="text-lg font-semibold text-slate-700">Sistem Monitoring Anggaran Belanja</h2>
+            <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
             <div class="flex items-center gap-6">
                 <button class="text-slate-500 hover:text-sky-600"><i class="fa-solid fa-gear"></i></button>
                 <div class="flex items-center gap-3">
@@ -56,11 +56,12 @@
 
         <!-- App Content -->
         <div id="app" class="flex-1 p-8 overflow-y-auto">
-            <!-- Konten dimuat di sini -->
+            <!-- Konten dimuat secara dinamis oleh JavaScript -->
         </div>
     </main>
 
     <script>
+        // Fungsi Navigasi
         function navigate(page) {
             document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
             const app = document.getElementById('app');
@@ -68,10 +69,11 @@
             if (page === 'dashboard') {
                 renderDashboardPage(app);
             } else {
-                app.innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
+                app.innerHTML = `<h1 class="text-2xl font-bold text-slate-600">Halaman ${page.toUpperCase()}</h1><p class="text-slate-500 mt-2">Konten untuk fitur ini sedang dalam pengembangan.</p>`;
             }
         }
     
+        // Render Halaman Dashboard
         async function renderDashboardPage(container) {
             container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
             try {
@@ -96,7 +98,7 @@
                             <table class="w-full text-sm">
                                 ${data.topPerjadin.map((item, index) => `
                                     <tr class="border-b border-slate-50">
-                                        <td class="py-3 text-slate-400 font-bold">${['🥇', '🥈', '🥉', '🎖️', '🎖️'][index]}</td>
+                                        <td class="py-3 text-slate-400 font-bold">${['🥇', '🥈', '🥉', '🎖️', '🎖️'][index] || '🔹'}</td>
                                         <td class="py-3 text-slate-600">${item[0]}</td>
                                         <td class="py-3 text-right font-bold text-sky-600">${item[1]}</td>
                                     </tr>
@@ -130,9 +132,12 @@
                         </div>
                     </div>
                 `;
-            } catch (e) { container.innerHTML = `<p class="text-red-500">Gagal memuat data dashboard.</p>`; }
+            } catch (e) { 
+                container.innerHTML = `<p class="text-red-500 bg-red-50 p-4 rounded-xl">Gagal memuat data dashboard. Pastikan koneksi API aktif.</p>`; 
+            }
         }
     
+        // Helper Render Card Belanja
         function renderBelanjaCard(title, d) {
             const p = (d.persen * 100).toFixed(2);
             return `
@@ -153,11 +158,13 @@
             `;
         }
     
+        // Logout Function
         function logout() {
             sessionStorage.clear();
             window.location.href = 'v3_index.html';
         }
     
+        // Initial Load
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('namaUser').textContent = sessionStorage.getItem('nama') || 'User';
             navigate('dashboard');
