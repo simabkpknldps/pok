@@ -9,7 +9,6 @@
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
 
-    <!-- Sidebar -->
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
         <div class="p-6 border-b border-slate-100">
             <h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2">
@@ -35,9 +34,7 @@
         </nav>
     </aside>
 
-    <!-- Main Section -->
     <main class="flex-1 flex flex-col overflow-hidden">
-        <!-- Navbar -->
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
             <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
             <div class="flex items-center gap-6">
@@ -54,10 +51,8 @@
             </div>
         </header>
 
-        <!-- App Content -->
         <div id="app" class="flex-1 p-8 overflow-y-auto">
-            <!-- Konten dimuat secara dinamis -->
-        </div>
+            </div>
     </main>
 
     <script>
@@ -81,31 +76,54 @@
                 const data = await res.json();
                 
                 container.innerHTML = `
-                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        <!-- Card Realisasi Belanja -->
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 lg:col-span-2">
-                            ${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}
-                            <div class="my-6 border-t border-slate-100"></div>
-                            ${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="space-y-6">
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                ${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}
+                                <div class="my-6 border-t border-slate-100"></div>
+                                ${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}
+                            </div>
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                ${renderMPCard('Maksimum Pencairan PNBP', data.mp)}
+                            </div>
                         </div>
 
-                        <!-- Card Maksimum Pencairan PNBP -->
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                            ${renderMPCard('Maksimum Pencairan PNBP', data.mp)}
-                        </div>
-            
-                        <!-- Card Top 5 Perjadin -->
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                            <h3 class="font-semibold text-slate-700 mb-4">Top 5 Perjadin</h3>
-                            <table class="w-full text-sm">
-                                ${data.topPerjadin.map((item, index) => `
-                                    <tr class="border-b border-slate-50">
-                                        <td class="py-3 text-slate-400 font-bold">${['🥇', '🥈', '🥉', '🎖️', '🎖️'][index] || '🔹'}</td>
-                                        <td class="py-3 text-slate-600">${item[0]}</td>
-                                        <td class="py-3 text-right font-bold text-sky-600">${item[1]}</td>
-                                    </tr>
-                                `).join('')}
-                            </table>
+                        <div class="space-y-6">
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                <h3 class="font-semibold text-slate-700 mb-4">Top 5 Perjadin</h3>
+                                <table class="w-full text-sm">
+                                    ${data.topPerjadin.map((item, index) => `
+                                        <tr class="border-b border-slate-50">
+                                            <td class="py-3 text-slate-400 font-bold">${['🥇', '🥈', '🥉', '🎖️', '🎖️'][index] || '🔹'}</td>
+                                            <td class="py-3 text-slate-600">${item[0]}</td>
+                                            <td class="py-3 text-right font-bold text-sky-600">${item[1]}</td>
+                                        </tr>
+                                    `).join('')}
+                                </table>
+                            </div>
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-xs">
+                                        <thead>
+                                            <tr class="text-slate-400 border-b">
+                                                <th class="pb-2 text-left">Uraian / No ST</th>
+                                                <th class="pb-2 text-left">Pelaksana</th>
+                                                <th class="pb-2 text-left">Tujuan</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${data.kegiatanHariIni && data.kegiatanHariIni.length > 0 ? data.kegiatanHariIni.map(item => `
+                                                <tr class="border-b border-slate-50">
+                                                    <td class="py-3 text-slate-700">${item.uraian}</td>
+                                                    <td class="py-3 text-slate-600">${item.pelaksana}</td>
+                                                    <td class="py-3 text-slate-600">${item.tujuan}</td>
+                                                </tr>
+                                            `).join('') : `<tr><td colspan="3" class="py-4 text-center text-slate-400 italic">Tidak ada kegiatan hari ini</td></tr>`}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
