@@ -31,7 +31,8 @@
     </div>
 
     <script>
-        const urlGAS = "https://script.google.com/macros/s/AKfycbwQLbg2uL0QOIVqc-53NNCToB28KkFfKBcQhQDSCNuvipFfJCekc58AqIA2HEH93v3jxw/exec";
+        // MASUKKAN URL DARI "GAS REDIRECTOR" ANDA DI SINI
+        const redirectorUrl = "https://script.google.com/macros/s/AKfycbxhclFUTLCSzjQHK-W-dyZgF3dFeF5SaJEk6JvdhMU_6HA9Bs_avFb9G25gPrWT1XxXxA/exec";
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -39,28 +40,32 @@
             btn.disabled = true;
             btn.innerText = "Memproses...";
 
-            const payload = {
-                action: 'login',
-                nip: document.getElementById('nip').value,
-                password: document.getElementById('password').value
-            };
-
             try {
-                const res = await fetch(urlGAS, {
+                // 1. Ambil URL GAS Utama yang dinamis dari Redirector
+                const resUrl = await fetch(redirectorUrl);
+                const realUrl = await resUrl.text();
+
+                // 2. Gunakan URL tersebut untuk proses login
+                const res = await fetch(realUrl, {
                     method: 'POST',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        action: 'login',
+                        nip: document.getElementById('nip').value,
+                        password: document.getElementById('password').value
+                    })
                 });
                 const data = await res.json();
 
                 if (data.status === 'success') {
                     sessionStorage.setItem('nama', data.nama);
                     sessionStorage.setItem('kantor', data.kantor);
+                    sessionStorage.setItem('realUrl', realUrl); // Simpan agar dashboard tahu URL-nya
                     window.location.href = 'v3_dashboard.html';
                 } else {
                     alert(data.message);
                 }
             } catch (err) {
-                alert("Koneksi gagal");
+                alert("Koneksi ke server gagal, pastikan redirector aktif.");
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Masuk";
