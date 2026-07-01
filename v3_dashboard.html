@@ -101,23 +101,6 @@
             } catch (e) { container.innerHTML = `<p class="text-red-500">Gagal memuat data.</p>`; }
         }
     
-        function renderTopPerjadin(topList) {
-            const top3 = topList.slice(0, 3);
-            return `
-                <div class="mb-2">
-                    <h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3>
-                    <div class="space-y-3">
-                        ${top3.map((item, index) => `
-                            <div class="flex items-center justify-between">
-                                <div class="text-xs font-bold text-slate-600">${index + 1}. ${item[0]}</div>
-                                <div class="text-xs font-bold text-sky-600">${item[1]}x</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-    
         function renderBelanjaCard(title, d, color) {
             const p = (d.persen * 100).toFixed(2);
             return `
@@ -141,7 +124,24 @@
                 </div>
             `;
         }
-    
+
+        function renderTopPerjadin(topList) {
+            const top3 = topList.slice(0, 3);
+            return `
+                <div class="mb-2">
+                    <h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3>
+                    <div class="space-y-3">
+                        ${top3.map((item, index) => `
+                            <div class="flex items-center justify-between">
+                                <div class="text-xs font-bold text-slate-600">${index + 1}. ${item[0]}</div>
+                                <div class="text-xs font-bold text-sky-600">${item[1]}x</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
         function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
     
         document.addEventListener("DOMContentLoaded", () => {
