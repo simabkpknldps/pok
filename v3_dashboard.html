@@ -453,14 +453,21 @@
 
             async function openDetilModal(mak) {
                 document.getElementById("detilModal").classList.replace("hidden", "flex");
-                document.getElementById("detilTitle").innerText = "Detil kegiatan pada MAK " + mak;
+                document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
+                const tbody = document.getElementById("detil-tbody");
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center">Memuat data...</td></tr>';
                 
-                // Fetch data ke server dengan parameter MAK
-                const res = await fetch(`${sessionStorage.getItem('realUrl')}?action=getDetil&mak=${mak}`);
-                window.detilKegiatanData = await res.json();
-                renderDetilTable(window.detilKegiatanData);
+                try {
+                    // Pastikan realUrl benar
+                    const url = sessionStorage.getItem('realUrl');
+                    const res = await fetch(`${url}?action=getDetil&mak=${mak}`);
+                    window.detilKegiatanData = await res.json();
+                    renderDetilTable(window.detilKegiatanData);
+                } catch (e) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-red-500 text-center">Gagal memuat data</td></tr>';
+                }
             }
-
+        
             function renderDetilTable(data) {
                 const tbody = document.getElementById("detil-tbody");
                 tbody.innerHTML = data.map(i => `
@@ -472,17 +479,16 @@
                         <td class="p-3">${Number(i.estimasi).toLocaleString()}</td>
                         <td class="p-3">${i.status}</td>
                         <td class="p-3 space-x-2">
-                            <button title="Pilih Pengguna" class="text-sky-600"><i class="fa-solid fa-user-check"></i></button>
+                            <button title="Pilih" class="text-sky-600"><i class="fa-solid fa-user-check"></i></button>
                             ${i.status === 'Rekam Data' ? `<button title="Hapus" onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}
                         </td>
                     </tr>
                 `).join('');
             }
-            
+        
             function filterDetil() {
                 const keyword = document.getElementById("cariDetil").value.toLowerCase();
-                const filtered = window.detilKegiatanData.filter(i => i.uraian.toLowerCase().includes(keyword));
-                renderDetilTable(filtered);
+                renderDetilTable(window.detilKegiatanData.filter(i => i.uraian.toLowerCase().includes(keyword)));
             }
         
             </script>
