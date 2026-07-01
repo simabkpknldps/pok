@@ -380,6 +380,9 @@
         }
 
         async function simpanData() {
+                const btn = document.getElementById("btnSimpan"); // Pastikan tombol Simpan punya ID ini
+                const namaUser = sessionStorage.getItem('namaUser') || "Guest";
+                
                 const payload = {
                     action: 'simpanKegiatan',
                     idKegiatan: document.getElementById("idUsulan").value,
@@ -391,15 +394,16 @@
                     userLogin: namaUser,
                     tglRekam: new Date().toISOString().split('T')[0]
                 };
-            
+        
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menyimpan...';
+        
                 try {
-                    // Hapus mode: 'no-cors' agar kita bisa menerima respon status dari GAS
-                    const response = await fetch(sessionStorage.getItem('realUrl'), {
-                        method: 'POST',
-                        body: JSON.stringify(payload)
+                    const res = await fetch(sessionStorage.getItem('realUrl'), { 
+                        method: 'POST', 
+                        body: JSON.stringify(payload) 
                     });
-            
-                    const result = await response.json();
+                    const result = await res.json();
                     
                     if (result.status === "success") {
                         alert("Data berhasil disimpan!");
@@ -408,8 +412,11 @@
                         alert("Gagal: " + result.message);
                     }
                 } catch (e) {
-                    console.error("Error detail:", e);
-                    alert("Terjadi kesalahan. Pastikan Google Apps Script sudah dideploy dengan benar.");
+                    alert("Terjadi kesalahan koneksi ke server.");
+                    console.error(e);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan';
                 }
             }
                             
@@ -612,7 +619,8 @@
         Batal
         </button>
         
-        <button onclick="simpanData()" class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-xl shadow">
+        <!-- Cari bagian ini di HTML Anda dan tambahkan ID -->
+        <button id="btnSimpan" onclick="simpanData()" class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-xl shadow">
             <i class="fa-solid fa-floppy-disk mr-2"></i> Simpan
         </button>
         
