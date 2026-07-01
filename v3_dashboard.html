@@ -380,7 +380,9 @@
         }
 
         async function simpanData() {
-                const btn = document.getElementById("btnSimpan"); // Pastikan tombol Simpan punya ID ini
+                const btn = document.getElementById("btnSimpan");
+                
+                // Perbaikan: Mengambil dari key 'nama' sesuai dengan saat login
                 const namaUser = sessionStorage.getItem('nama') || "Guest";
                 
                 const payload = {
@@ -391,7 +393,7 @@
                     tujuan: document.getElementById("inputTujuan").value,
                     tglSt: document.getElementById("tglSt").value,
                     estimasi: document.getElementById("estimasiBiaya").value.replace(/,/g, ''),
-                    userLogin: namaUser,
+                    userLogin: namaUser, // Sekarang akan berisi nama dari session
                     tglRekam: new Date().toISOString().split('T')[0]
                 };
         
@@ -403,17 +405,18 @@
                         method: 'POST', 
                         body: JSON.stringify(payload) 
                     });
+                    
                     const result = await res.json();
                     
                     if (result.status === "success") {
-                        alert("Data berhasil disimpan!");
+                        alert("Data berhasil disimpan oleh " + namaUser);
                         closeRekamModal();
                     } else {
                         alert("Gagal: " + result.message);
                     }
                 } catch (e) {
-                    alert("Terjadi kesalahan koneksi ke server.");
                     console.error(e);
+                    alert("Error koneksi ke server.");
                 } finally {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan';
