@@ -112,7 +112,14 @@
         }
 
         function toggleExpand(code) {
-            window.expandedCodes.has(code) ? window.expandedCodes.delete(code) : window.expandedCodes.add(code);
+            if (window.expandedCodes.has(code)) {
+                // Jika diklik yang sedang terbuka, maka tutup (delete)
+                window.expandedCodes.delete(code);
+            } else {
+                // Jika buka yang baru, hapus semua yang terbuka sebelumnya, lalu buka yang baru
+                window.expandedCodes.clear(); 
+                window.expandedCodes.add(code);
+            }
             renderPok();
         }
 
