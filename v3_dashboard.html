@@ -81,10 +81,16 @@
                         </div>
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                             <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
-                            <div class="text-xs">
+                            <div class="space-y-4">
                                 ${data.kegiatanHariIni && data.kegiatanHariIni.length > 0 ? data.kegiatanHariIni.map(item => `
-                                    <div class="border-b py-2 text-slate-600">${item.uraian}</div>
-                                `).join('') : '<p class="text-slate-400 italic">Tidak ada kegiatan</p>'}
+                                    <div class="border-b pb-2">
+                                        <div class="text-sm font-semibold text-slate-700">${item.uraian}</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">
+                                            <span class="block"><i class="fa-solid fa-user mr-1"></i>${item.pelaksana}</span>
+                                            <span class="block"><i class="fa-solid fa-location-dot mr-1"></i>${item.tujuan}</span>
+                                        </div>
+                                    </div>
+                                `).join('') : '<p class="text-slate-400 italic text-xs">Tidak ada kegiatan</p>'}
                             </div>
                         </div>
                     </div>
