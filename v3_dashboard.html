@@ -275,7 +275,12 @@
         
         document.getElementById("statusDana").value=
         Number(data.sisa)>0?"Dana Tersedia":"Dana Tidak Cukup";
-        
+
+        fetchLokasiData();
+    
+        document.getElementById("rekamModal").classList.remove("hidden");
+        document.getElementById("rekamModal").classList.add("flex");
+            
         }
 
         function closeRekamModal(){
@@ -315,6 +320,32 @@
             status.className="rounded-xl bg-red-50 text-red-700 border border-red-200 px-4 py-2.5 font-semibold";
             status.innerHTML='<i class="fa fa-circle-xmark mr-2"></i>Dana Tidak Cukup';
         
+        }
+
+        async function fetchLokasiData() {
+            const datalist = document.getElementById('listTujuan');
+            
+            // Jika data sudah pernah dimuat, jangan load ulang
+            if (datalist.children.length > 0) return;
+        
+            const baseUrl = sessionStorage.getItem('realUrl');
+            if (!baseUrl) return;
+        
+            try {
+                // Mengambil data dari GAS dengan parameter action=loadLokasi
+                const response = await fetch(`${baseUrl}?action=loadLokasi`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error("Error dari API:", data.error);
+                    return;
+                }
+        
+                // Mengisi datalist dengan opsi dari Sheet
+                datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
+            } catch (e) {
+                console.error("Gagal memuat data lokasi:", e);
+            }
         }
         
     </script>
@@ -420,19 +451,14 @@
         transition">
         </div>
         
+        <!-- Ganti bagian Tujuan lama dengan kode ini -->
         <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Tujuan
-        </label>
-        <input
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                Tujuan
+            </label>
+            <input list="listTujuan" id="inputTujuan" 
+                   class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
+            <datalist id="listTujuan"></datalist>
         </div>
         
         </div>
