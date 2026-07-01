@@ -283,6 +283,7 @@
             document.getElementById("rekamModal").classList.replace("flex", "hidden");
         
             // 2. Kosongkan textbox yang diperlukan
+            document.getElementById("uraianKegiatan").value = "";
             document.getElementById("estimasiBiaya").value = "";
             document.getElementById("inputTujuan").value = "";
             // Jika Anda ingin mengosongkan juga uraian kegiatan (No ST/ND):
@@ -385,6 +386,7 @@
                 // Perbaikan: Mengambil dari key 'nama' sesuai dengan saat login
                 const namaUser = sessionStorage.getItem('nama') || "Guest";
                 //const rawEstimasi = document.getElementById("estimasiBiaya").value.replace(/\./g, '');
+                const scrollPos = document.querySelector('.overflow-y-auto')?.scrollTop;
             
                 const payload = {
                     action: 'simpanKegiatan',
@@ -410,8 +412,16 @@
                     const result = await res.json();
                     
                     if (result.status === "success") {
-                        alert("Data berhasil disimpan oleh " + namaUser);
+                        //alert("Data berhasil disimpan oleh " + namaUser);
                         closeRekamModal();
+                        showToast("Simpan kegiatan berhasil!"); // <--- Panggil Toast
+                        // Refresh POK tanpa pindah halaman
+                           await loadPokData();
+                        // Kembalikan posisi scroll
+                        setTimeout(() => {
+                            document.querySelector('.overflow-y-auto').scrollTop = scrollPos;
+                        }, 100);
+                        
                     } else {
                         alert("Gagal: " + result.message);
                     }
@@ -430,7 +440,16 @@
             // Tambahkan format ribuan
             return v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
-                            
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = "bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center animate-in slide-in-from-right-10";
+            toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000); // Hilang setelah 3 detik
+        }
+        
             </script>
 
         <div id="rekamModal"
@@ -648,6 +667,9 @@
         </div>
         
         </div>
+
+        <!-- Toast Container -->
+        <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
     
 </body>
 </html>
