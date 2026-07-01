@@ -381,7 +381,7 @@
 
         async function simpanData() {
                 const btn = document.getElementById("btnSimpan"); // Pastikan tombol Simpan punya ID ini
-                const namaUser = sessionStorage.getItem('namaUser') || "Guest";
+                const namaUser = sessionStorage.getItem('nama') || "Guest";
                 
                 const payload = {
                     action: 'simpanKegiatan',
