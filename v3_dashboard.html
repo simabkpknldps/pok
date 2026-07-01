@@ -380,47 +380,36 @@
         }
 
         async function simpanData() {
-                // Ambil elemen
-                const idKegiatan = document.getElementById("idUsulan").value;
-                const mak = document.getElementById("mak").value;
-                const uraian = document.getElementById("uraianKegiatan").value;
-                const tujuan = document.getElementById("inputTujuan").value;
-                const tglSt = document.getElementById("tglSt").value;
-                const estimasi = document.getElementById("estimasiBiaya").value.replace(/,/g, '');
-            
-                // Validasi sederhana
-                if (!uraian || !estimasi) {
-                    alert("Mohon lengkapi Uraian Kegiatan dan Estimasi Biaya!");
-                    return;
-                }
-            
                 const payload = {
                     action: 'simpanKegiatan',
-                    idKegiatan: idKegiatan,
-                    mak: mak,
-                    uraian: uraian,
-                    tujuan: tujuan,
-                    tglSt: tglSt,
-                    estimasi: estimasi,
-                    userLogin: sessionStorage.getItem('userEmail') || "Guest", // Mengambil user dari session
+                    idKegiatan: document.getElementById("idUsulan").value,
+                    mak: document.getElementById("mak").value,
+                    uraian: document.getElementById("uraianKegiatan").value,
+                    tujuan: document.getElementById("inputTujuan").value,
+                    tglSt: document.getElementById("tglSt").value,
+                    estimasi: document.getElementById("estimasiBiaya").value.replace(/,/g, ''),
+                    userLogin: "User",
                     tglRekam: new Date().toISOString().split('T')[0]
                 };
             
-                console.log("Mengirim data:", payload); // Cek di Console (F12) apakah data sudah benar
-            
                 try {
+                    // Hapus mode: 'no-cors' agar kita bisa menerima respon status dari GAS
                     const response = await fetch(sessionStorage.getItem('realUrl'), {
                         method: 'POST',
-                        mode: 'no-cors', // Penting untuk GAS
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+            
+                    const result = await response.json();
                     
-                    alert("Data berhasil dikirim ke server!");
-                    closeRekamModal();
+                    if (result.status === "success") {
+                        alert("Data berhasil disimpan!");
+                        closeRekamModal();
+                    } else {
+                        alert("Gagal: " + result.message);
+                    }
                 } catch (e) {
-                    console.error(e);
-                    alert("Gagal menyimpan data. Cek Console F12.");
+                    console.error("Error detail:", e);
+                    alert("Terjadi kesalahan. Pastikan Google Apps Script sudah dideploy dengan benar.");
                 }
             }
                             
