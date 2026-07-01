@@ -73,8 +73,6 @@
         }
     
         async function renderDashboardPage(container) {
-            // Di dalam renderDashboardPage(container)
-            
             container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
             try {
                 const res = await fetch(sessionStorage.getItem('realUrl'), {
@@ -118,8 +116,8 @@
                                             <th class="pb-2 text-left">Tujuan</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        ${data.kegiatanHariIni.length > 0 ? data.kegiatanHariIni.map(item => `
+                                    <tbody id="tabel-kegiatan">
+                                        ${data.kegiatanHariIni && data.kegiatanHariIni.length > 0 ? data.kegiatanHariIni.map(item => `
                                             <tr class="border-b border-slate-50">
                                                 <td class="py-3 text-slate-700">${item.uraian}</td>
                                                 <td class="py-3 text-slate-600">${item.pelaksana}</td>
