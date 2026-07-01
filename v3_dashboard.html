@@ -47,20 +47,17 @@
 
         function navigate(page) {
             document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
-            if (page === 'dashboard') renderDashboardPage(document.getElementById('app'));
-            else document.getElementById('app').innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
-
-            if (page === 'pok') {
-                window.location.href = 'v3_pok.html';
-                return;
-            }
+            const container = document.getElementById('app');
             
-            document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
+            // Reset konten
+            container.innerHTML = '';
             
             if (page === 'dashboard') {
-                renderDashboardPage(document.getElementById('app'));
+                renderDashboardPage(container);
+            } else if (page === 'pok') {
+                renderPOKPage(container);
             } else {
-                document.getElementById('app').innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
+                container.innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
             }
         }
 
@@ -113,6 +110,56 @@
         function renderTopPerjadin(l) { return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${idx + 1}. ${i[0]}</div><div class="text-xs font-bold text-sky-600">${i[1]}x</div></div>`).join('')}</div>`; }
         function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
 
+        async function renderPOKPage(container) {
+            container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
+            
+            try {
+                const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getPOKData' }) });
+                const data = await res.json();
+        
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-slate-400 border-b">
+                                    <th class="py-3 text-left">Kode</th>
+                                    <th class="py-3 text-left">Uraian</th>
+                                    <th class="py-3 text-right">Pagu</th>
+                                    <th class="py-3 text-right">Realisasi</th>
+                                    <th class="py-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pok-body">
+                                ${data.map(item => {
+                                    const level = item.kode.split('.').length;
+                                    const isParent = level <= 2;
+                                    const bg = item.sumber === 'PNBP' ? 'bg-pink-100' : (item.sumber === 'RM' ? 'bg-blue-100' : '');
+                                    return `
+                                        <tr class="border-b ${bg} ${isParent ? '' : 'hidden'} level-${level} cursor-pointer hover:bg-slate-50" data-kode="${item.kode}" onclick="toggleChild('${item.kode}')">
+                                            <td class="py-3 font-mono pl-${level * 4}">${item.kode}</td>
+                                            <td class="py-3">${item.uraian}</td>
+                                            <td class="py-3 text-right">${item.pagu.toLocaleString()}</td>
+                                            <td class="py-3 text-right">${item.realisasi.toLocaleString()}</td>
+                                            <td class="py-3 text-center" onclick="event.stopPropagation()">
+                                                ${item.pagu > 0 ? `<button class="text-xs bg-sky-500 text-white px-2 py-1 rounded">Rekam</button> <button class="text-xs bg-purple-500 text-white px-2 py-1 rounded">Detil</button>` : ''}
+                                            </td>
+                                        </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = `<p class="text-red-500">Gagal memuat data POK.</p>`;
+            }
+        }
+        
+        // Logika expand/collapse
+        function toggleChild(kode) {
+            const rows = document.querySelectorAll(`tr[data-kode^="${kode}."]`);
+            rows.forEach(row => row.classList.toggle('hidden'));
+        }
+        
         document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('namaUser').textContent = sessionStorage.getItem('nama') || 'User';
             navigate('dashboard');
