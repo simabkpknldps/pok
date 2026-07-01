@@ -74,9 +74,6 @@
                             ${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}
                         </div>
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                            ${renderTopPerjadin(data.topPerjadin)}
-                        </div>
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                             ${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}
                         </div>
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -95,6 +92,9 @@
                                     </div>
                                 `).join('') : '<p class="text-slate-400 italic text-xs">Tidak ada kegiatan</p>'}
                             </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            ${renderTopPerjadin(data.topPerjadin)}
                         </div>
                     </div>
                 `;
