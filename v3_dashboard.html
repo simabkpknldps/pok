@@ -193,14 +193,21 @@ const bidang = document.getElementById("filterBidang")?.value || "Semua";
         }
 
         function toggleExpand(code) {
+
+            // Hanya parent (12 digit) yang bisa expand/collapse
+            if (String(code).length !== 12) {
+                return;
+            }
+        
             if (window.expandedCodes.has(code)) {
-                // Jika diklik yang sedang terbuka, maka tutup (delete)
-                window.expandedCodes.delete(code);
+                // klik parent yang sama -> tutup
+                window.expandedCodes.clear();
             } else {
-                // Jika buka yang baru, hapus semua yang terbuka sebelumnya, lalu buka yang baru
-                window.expandedCodes.clear(); 
+                // tutup parent lain lalu buka parent ini
+                window.expandedCodes.clear();
                 window.expandedCodes.add(code);
             }
+        
             renderPok();
         }
 
