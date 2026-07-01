@@ -50,7 +50,7 @@
                 <div class="space-y-4">
                     <h2 class="text-xl font-bold text-slate-800">Daftar POK</h2>
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                        <table class="w-full text-sm"><thead class="bg-slate-50 border-b"><tr><th class="p-4">Kode</th><th class="p-4">Uraian</th><th class="p-4">Pagu</th><th class="p-4">Realisasi</th><th class="p-4">Sisa</th><th class="p-4">Aksi</th></tr></thead><tbody id="pok-tbody"><tr><td colspan="6" class="p-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</td></tr></tbody></table>
+                        <table class="w-full text-sm"><thead class="bg-slate-50 border-b"><tr><th class="p-4">Kode</th><th class="p-4">Uraian</th><th class="p-4">Pagu</th><th class="p-4">Blokir</th><th class="p-4">Realisasi</th><th class="p-4">Sisa</th><th class="p-4">Aksi</th></tr></thead><tbody id="pok-tbody"><tr><td colspan="6" class="p-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</td></tr></tbody></table>
                     </div>
                 </div>`;
                 loadPokData();
@@ -66,23 +66,47 @@
                 window.rawPokData = await res.json();
                 renderPok();
             } catch (e) {
-                document.getElementById('pok-tbody').innerHTML = `<tr><td colspan="6" class="text-red-500 p-4 text-center">Gagal memuat data.</td></tr>`;
+                document.getElementById('pok-tbody').innerHTML = `<tr><td colspan="7" class="text-red-500 p-4 text-center">Gagal memuat data.</td></tr>`;
             }
         }
 
         function renderPok() {
             const tbody = document.getElementById('pok-tbody');
-            const filtered = window.rawPokData.filter(i => String(i.kode).length === 12 || Array.from(window.expandedCodes).some(p => String(i.kode).startsWith(p) && i.kode !== p));
+            if (!window.rawPokData || window.rawPokData.length === 0) return;
+
+            // 1. Mencegah duplikat dengan Map
+            // Kita gunakan Map agar jika ada kode yang sama, hanya satu yang diambil (data terakhir)
+            const uniqueMap = new Map();
+            window.rawPokData.forEach(item => {
+                uniqueMap.set(String(item.kode), item);
+            });
+            const uniqueData = Array.from(uniqueMap.values());
+
+            // 2. Filter untuk tampilan (Root level = 12 karakter)
+            const filtered = uniqueData.filter(i => {
+                const c = String(i.kode);
+                if (c.length === 12) return true;
+                return Array.from(window.expandedCodes).some(p => c.startsWith(p) && c !== p);
+            });
+
             tbody.innerHTML = filtered.map(i => {
-                const c = String(i.kode), h = window.rawPokData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
+                const c = String(i.kode);
+                const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
                 const bg = c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white';
+                
                 return `<tr class="border-b hover:bg-slate-100 ${bg} cursor-pointer" onclick="toggleExpand('${c}')">
                     <td class="p-3 font-mono text-xs font-bold">${c}</td>
-                    <td class="p-3 font-medium">${i.uraian} ${h ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
+                    <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
                     <td class="p-3 text-right">${Number(i.pagu||0).toLocaleString()}</td>
+                    <td class="p-3 text-right">${Number(i.blokir||0).toLocaleString()}</td>
                     <td class="p-3 text-right">${Number(i.realisasi||0).toLocaleString()}</td>
                     <td class="p-3 text-right">${Number(i.sisa||0).toLocaleString()}</td>
-                    <td class="p-3 text-center">${c.length > 27 ? `<button class="bg-sky-500 text-white px-2 py-1 rounded text-[10px]">Rekam</button>` : ''}</td>
+                    <td class="p-3 text-center">
+                        ${c.length > 27 ? `
+                            <button class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
+                            <button class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
+                        ` : ''}
+                    </td>
                 </tr>`;
             }).join('');
         }
