@@ -134,7 +134,7 @@ const bidang = document.getElementById("filterBidang")?.value || "Semua";
             tbody.innerHTML = filtered.map(i => {
                 const c = String(i.kode);
                 const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
-                const bg = c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-80' : 'bg-blue-80') : 'bg-white';
+                const bg = c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white';
                 
                 return `<tr class="border-b hover:bg-slate-100 ${bg} cursor-pointer" onclick="toggleExpand('${c}')">
                     <td class="p-3 font-mono text-xs font-bold">${c}</td>
