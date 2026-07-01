@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login SiMAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 w-full max-w-sm">
+        <div class="mb-8 text-center">
+            <h1 class="text-2xl font-bold text-sky-600">SiMAB</h1>
+            <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold">Sistem Monitoring Anggaran Belanja</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <input type="text" id="nip" placeholder="NIP" required
+                    class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition">
+            </div>
+            <div>
+                <input type="password" id="password" placeholder="Password" required
+                    class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none transition">
+            </div>
+            <button type="submit" id="loginBtn"
+                class="w-full bg-sky-600 text-white py-3 rounded-lg font-semibold hover:bg-sky-700 transition">
+                Masuk
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const urlGAS = "https://script.google.com/macros/s/AKfycbwUSXtJSYRwwgDi3tgis8sYemE59f8wslUz9YC7kWMKtxjkMC8oNTYR9zfxWizBDr8gcw/exec";
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.innerText = "Memproses...";
+
+            const payload = {
+                action: 'login',
+                nip: document.getElementById('nip').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const res = await fetch(urlGAS, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    sessionStorage.setItem('nama', data.nama);
+                    sessionStorage.setItem('kantor', data.kantor);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert("Koneksi gagal");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Masuk";
+            }
+        });
+    </script>
+</body>
+</html>
