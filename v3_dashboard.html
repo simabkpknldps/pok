@@ -145,7 +145,13 @@ const bidang = document.getElementById("filterBidang")?.value || "Semua";
                     <td class="p-3 text-right">${Number(i.sisa||0).toLocaleString()}</td>
                     <td class="p-3 text-center">
                         ${c.length > 27 ? `
-                            <button class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
+                            ${c.length > 27 ? `
+                                <button
+                                    onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
+                                    class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">
+                                    Rekam
+                                </button>
+                                ` : ""}
                             <button class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
                         ` : ''}
                     </td>
@@ -201,7 +207,161 @@ const bidang = document.getElementById("filterBidang")?.value || "Semua";
         function renderTopPerjadin(l) { return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${idx + 1}. ${i[0]}</div><div class="text-xs font-bold text-sky-600">${i[1]}x</div></div>`).join('')}</div>`; }
         function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
 
+        function openRekamModal(idx){
+
+        const data=window.rawPokData[idx];
+        
+        document.getElementById("rekamModal").classList.remove("hidden");
+        document.getElementById("rekamModal").classList.add("flex");
+        
+        // ID Usulan random
+        document.getElementById("idUsulan").value=generateIdUsulan();
+        
+        document.getElementById("mak").value=data.kode;
+        document.getElementById("uraianMak").value=data.uraian;
+        
+        document.getElementById("pagu").value=Number(data.pagu).toLocaleString();
+        document.getElementById("blokir").value=Number(data.blokir).toLocaleString();
+        document.getElementById("realisasi").value=Number(data.realisasi).toLocaleString();
+        document.getElementById("sisa").value=Number(data.sisa).toLocaleString();
+        
+        document.getElementById("statusDana").value=
+        Number(data.sisa)>0?"Dana Tersedia":"Dana Tidak Cukup";
+        
+        }
+
+        function closeRekamModal(){
+        
+        document.getElementById("rekamModal").classList.add("hidden");
+        document.getElementById("rekamModal").classList.remove("flex");
+        
+        }
+
+        function generateIdUsulan(){
+
+        const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        
+        let id="";
+        
+        for(let i=0;i<10;i++){
+        
+        id+=chars.charAt(Math.floor(Math.random()*chars.length));
+        
+        }
+        
+        return id;
+        
+        }
+
         document.addEventListener("DOMContentLoaded", () => navigate('dashboard'));
     </script>
+
+        <div id="rekamModal"
+        class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+        
+        <div class="bg-white rounded-xl shadow-xl w-[900px] max-w-[95%]">
+        
+        <div class="flex justify-between items-center px-6 py-4 border-b">
+        <h2 class="text-xl font-bold">Rekam Kegiatan</h2>
+        
+        <button onclick="closeRekamModal()">
+        <i class="fa fa-times"></i>
+        </button>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-6 p-6">
+        
+        <div class="space-y-3">
+        
+        <div>
+        <label>ID Usulan</label>
+        <input id="idUsulan"
+        class="w-full border rounded-lg px-3 py-2">
+        </div>
+        
+        <div>
+        <label>No ST/ND / Uraian Kegiatan</label>
+        <input class="w-full border rounded-lg px-3 py-2">
+        </div>
+        
+        <div>
+        <label>Tgl ST/ND</label>
+        <input type="date"
+        class="w-full border rounded-lg px-3 py-2">
+        </div>
+        
+        <div>
+        <label>Estimasi Biaya</label>
+        <input class="w-full border rounded-lg px-3 py-2">
+        </div>
+        
+        <div>
+        <label>Status Kecukupan Dana</label>
+        <input readonly id="statusDana"
+        class="w-full border rounded-lg px-3 py-2 bg-slate-100">
+        </div>
+        
+        <div>
+        <label>Tujuan</label>
+        <input class="w-full border rounded-lg px-3 py-2">
+        </div>
+        
+        </div>
+        
+        <div class="space-y-3">
+        
+        <div>
+        <label>MAK</label>
+        <input readonly id="mak"
+        class="w-full border rounded-lg px-3 py-2 bg-slate-100">
+        </div>
+        
+        <div>
+        <label>Uraian MAK</label>
+        <input readonly id="uraianMak"
+        class="w-full border rounded-lg px-3 py-2 bg-slate-100">
+        </div>
+        
+        <div>
+        <label>Pagu</label>
+        <input readonly id="pagu"
+        class="w-full border rounded-lg px-3 py-2 bg-slate-100">
+        </div>
+        
+        <div>
+        <label>Blokir</label>
+        <input readonly id="blokir"
+        class="w-full border rounded-lg px-3 py-2 bg-slate-100">
+        </div>
+        
+        <div>
+        <label>Realisasi</label>
+        <input readonly id="realisasi"
+        class="w-full border rounded-lg px-3 py-2 bg-slate-100">
+        </div>
+        
+        <div>
+        <label>Sisa</label>
+        <input readonly id="sisa"
+        class="w-full border rounded-lg px-3 py-2 bg-slate-100">
+        </div>
+        
+        </div>
+        
+        </div>
+        
+        <div class="border-t p-4 text-right">
+        
+        <button
+        class="bg-sky-600 text-white px-6 py-2 rounded-lg">
+        Simpan
+        </button>
+        
+        </div>
+        
+        </div>
+        
+        </div>
+    
 </body>
 </html>
