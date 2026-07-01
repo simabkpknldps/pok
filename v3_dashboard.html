@@ -36,10 +36,32 @@
     <script>
         let dashboardDataCache = null;
 
-        function navigate(page) {
-            document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
-            if (page === 'dashboard') renderDashboardPage(document.getElementById('app'));
-            else document.getElementById('app').innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
+       async function navigate(page) {
+            const container = document.getElementById('app');
+            const title = document.getElementById('page-title');
+            
+            // Update Judul
+            title.innerText = page.charAt(0).toUpperCase() + page.slice(1);
+            
+            // Tampilkan loading
+            container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
+        
+            if (page === 'dashboard') {
+                renderDashboardPage(container);
+            } else {
+                try {
+                    // Mengambil konten dari file v3_[page].html
+                    const response = await fetch(`v3_${page}.html`);
+                    if (response.ok) {
+                        const html = await response.text();
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = `<p class="text-red-500">Halaman tidak ditemukan.</p>`;
+                    }
+                } catch (error) {
+                    container.innerHTML = `<p class="text-red-500">Terjadi kesalahan saat memuat halaman.</p>`;
+                }
+            }
         }
 
         async function fetchDashboardData() {
