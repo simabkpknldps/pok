@@ -79,9 +79,10 @@
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                             ${renderMPCard('Maksimum Pencairan PNBP', data.mp)}
                         </div>
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                             <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
-                            <div class="space-y-4">
+                            <!-- Container Scrollable -->
+                            <div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">
                                 ${data.kegiatanHariIni && data.kegiatanHariIni.length > 0 ? data.kegiatanHariIni.map(item => `
                                     <div class="border-b pb-2">
                                         <div class="text-sm font-semibold text-slate-700">${item.uraian}</div>
@@ -128,5 +129,10 @@
             navigate('dashboard');
         });
     </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
 </body>
 </html>
