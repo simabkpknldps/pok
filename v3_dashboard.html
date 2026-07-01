@@ -269,10 +269,12 @@
             document.getElementById("blokir").value = Number(data.blokir).toLocaleString();
             document.getElementById("realisasi").value = Number(data.realisasi).toLocaleString();
             document.getElementById("sisa").value = Number(data.sisa).toLocaleString();
+    
+            // Reset estimasi dan status
+            document.getElementById("estimasiBiaya").value = "";
+            document.getElementById("statusDana").value = "Dana Tersedia";
+            document.getElementById("statusDana").className = "w-full rounded-xl border border-slate-300 px-4 py-2.5 transition";
             
-            document.getElementById("statusDana").value = Number(data.sisa) > 0 ? "Dana Tersedia" : "Dana Tidak Cukup";
-            
-            // Panggil fetch data
             fetchLokasiData();
         }
 
@@ -343,6 +345,28 @@
                 }
             } catch (e) {
                 console.error("Gagal memuat data lokasi:", e);
+            }
+        }
+
+
+        function cekKecukupanDana() {
+            // Ambil nilai sisa dan estimasi
+            const sisaStr = document.getElementById("sisa").value.replace(/,/g, ''); // Hapus koma pemisah ribuan
+            const estimasiStr = document.getElementById("estimasiBiaya").value.replace(/,/g, '');
+            
+            const sisa = parseFloat(sisaStr) || 0;
+            const estimasi = parseFloat(estimasiStr) || 0;
+            const statusEl = document.getElementById("statusDana");
+        
+            if (estimasi > sisa) {
+                statusEl.value = "Dana Tidak Cukup";
+                statusEl.className = "w-full rounded-xl border border-red-300 bg-red-50 text-red-700 px-4 py-2.5 font-bold transition";
+            } else if (estimasi === 0) {
+                statusEl.value = "Dana Tersedia";
+                statusEl.className = "w-full rounded-xl border border-slate-300 px-4 py-2.5 transition";
+            } else {
+                statusEl.value = "Dana Tersedia";
+                statusEl.className = "w-full rounded-xl border border-green-300 bg-green-50 text-green-700 px-4 py-2.5 font-bold transition";
             }
         }
         
@@ -418,18 +442,13 @@
         transition">
         </div>
         
+        <!-- Tambahkan id="estimasiBiaya" dan oninput="cekKecukupanDana()" -->
         <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Estimasi Biaya
-        </label>
-        <input class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                Estimasi Biaya
+            </label>
+            <input id="estimasiBiaya" oninput="cekKecukupanDana()"
+            class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 transition">
         </div>
         
         <div>
