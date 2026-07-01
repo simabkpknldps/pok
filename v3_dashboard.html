@@ -254,6 +254,21 @@ const bidang = document.getElementById("filterBidang")?.value || "Semua";
         }
 
         document.addEventListener("DOMContentLoaded", () => navigate('dashboard'));
+        
+        const status=document.getElementById("statusDana");
+        
+        if(Number(data.sisa)>=estimasi){
+        
+            status.className="rounded-xl bg-green-50 text-green-700 border border-green-200 px-4 py-2.5 font-semibold";
+            status.innerHTML='<i class="fa fa-circle-check mr-2"></i>Dana Tersedia';
+        
+        }else{
+        
+            status.className="rounded-xl bg-red-50 text-red-700 border border-red-200 px-4 py-2.5 font-semibold";
+            status.innerHTML='<i class="fa fa-circle-xmark mr-2"></i>Dana Tidak Cukup';
+        
+        }
+        
     </script>
 
         <div id="rekamModal"
@@ -471,10 +486,17 @@ const bidang = document.getElementById("filterBidang")?.value || "Semua";
         
         </div>
         
-        <div class="border-t p-4 text-right">
+        <div class="bg-slate-50 border-t px-6 py-4 flex justify-end gap-3">
+
+        <button
+        onclick="closeRekamModal()"
+        class="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100">
+        Batal
+        </button>
         
         <button
-        class="bg-sky-600 text-white px-6 py-2 rounded-lg">
+        class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-xl shadow">
+        <i class="fa-solid fa-floppy-disk mr-2"></i>
         Simpan
         </button>
         
