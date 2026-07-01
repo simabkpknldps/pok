@@ -70,4 +70,33 @@ function toggleExpand(code) {
 }
 
 initPokPage();
+
+// Jadikan fungsi ini global agar bisa dipanggil dari dashboard
+window.loadPokData = async function() {
+    const tbody = document.getElementById('pok-tbody');
+    try {
+        const res = await fetch(sessionStorage.getItem('realUrl'), { 
+            method: 'POST', 
+            body: JSON.stringify({ action: 'getPOKData' }) 
+        });
+        const data = await res.json();
+        
+        // Render data awal (kode panjang 12)
+        tbody.innerHTML = data
+            .filter(i => String(i.kode).length === 12)
+            .map(i => `
+                <tr class="border-b hover:bg-slate-50 cursor-pointer">
+                    <td class="p-3 font-mono font-bold">${i.kode}</td>
+                    <td class="p-3">${i.uraian}</td>
+                    <td class="p-3 text-right">${Number(i.pagu).toLocaleString()}</td>
+                    <td class="p-3 text-right">${Number(i.realisasi).toLocaleString()}</td>
+                    <td class="p-3 text-right">${Number(i.sisa).toLocaleString()}</td>
+                    <td class="p-3 text-center">-</td>
+                </tr>
+            `).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Gagal mengambil data.</td></tr>`;
+    }
+}
+    
 </script>
