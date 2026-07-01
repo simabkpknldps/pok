@@ -29,7 +29,8 @@
 
     window.loadPokData = async function() {
         const tbody = document.getElementById('pok-tbody');
-        const url = sessionStorage.getItem('realUrl');
+        //const url = sessionStorage.getItem('realUrl');
+        const url = "https://script.google.com/macros/s/AKfycbxhclFUTLCSzjQHK-W-dyZgF3dFeF5SaJEk6JvdhMU_6HA9Bs_avFb9G25gPrWT1XxXxA/exec";
         
         if (!url) {
             console.error("URL API tidak ditemukan di sessionStorage.");
