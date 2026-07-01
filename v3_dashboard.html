@@ -384,7 +384,8 @@
                 
                 // Perbaikan: Mengambil dari key 'nama' sesuai dengan saat login
                 const namaUser = sessionStorage.getItem('nama') || "Guest";
-                
+                const rawEstimasi = document.getElementById("estimasiBiaya").value.replace(/\./g, '');
+            
                 const payload = {
                     action: 'simpanKegiatan',
                     idKegiatan: document.getElementById("idUsulan").value,
@@ -392,7 +393,7 @@
                     uraian: document.getElementById("uraianKegiatan").value,
                     tujuan: document.getElementById("inputTujuan").value,
                     tglSt: document.getElementById("tglSt").value,
-                    estimasi: document.getElementById("estimasiBiaya").value.replace(/,/g, ''),
+                    estimasi: rawEstimasi//document.getElementById("estimasiBiaya").value.replace(/,/g, ''),
                     userLogin: namaUser, // Sekarang akan berisi nama dari session
                     tglRekam: new Date().toISOString().split('T')[0]
                 };
