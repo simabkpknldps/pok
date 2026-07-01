@@ -73,45 +73,50 @@
         }
     
         async function renderDashboardPage(container) {
-                container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
-                try {
-                    const res = await fetch(sessionStorage.getItem('realUrl'), {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'getDashboardData' })
-                    });
-                    const data = await res.json();
-                    
-                    container.innerHTML = `
-                        <div class="flex flex-wrap gap-6 items-start">
-                            <!-- Card Realisasi -->
-                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex-1 min-w-[350px]">
-                                ${renderBelanjaCard('Belanja Barang', data.barang)}
-                                <div class="my-6 border-t border-slate-100"></div>
-                                ${renderBelanjaCard('Belanja Modal', data.modal)}
-                            </div>
-            
-                            <!-- Card Top 5 Perjadin -->
-                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 w-full md:w-96">
-                                <h3 class="font-semibold text-slate-700 mb-4">Top 5 Perjadin</h3>
-                                <table class="w-full text-sm">
-                                    ${data.topPerjadin.map((item, index) => `
-                                        <tr class="border-b border-slate-50">
-                                            <td class="py-3 font-bold text-slate-400 w-8">${index + 1}</td>
-                                            <td class="py-3 text-slate-600">${item[0]}</td>
-                                            <td class="py-3 text-right font-bold text-sky-600">${item[1]}</td>
-                                        </tr>
-                                    `).join('')}
-                                </table>
-                            </div>
+            container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
+            try {
+                const res = await fetch(sessionStorage.getItem('realUrl'), {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'getDashboardData' })
+                });
+                const data = await res.json();
+                
+                container.innerHTML = `
+                    <div class="flex flex-wrap gap-6 items-start">
+                        <!-- Card Realisasi -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex-1 min-w-[350px]">
+                            ${renderBelanjaCard('Belanja Barang', data.barang)}
+                            <div class="my-6 border-t border-slate-100"></div>
+                            ${renderBelanjaCard('Belanja Modal', data.modal)}
                         </div>
-                    `;
-                } catch (e) { container.innerHTML = "Gagal memuat data."; }
+    
+                        <!-- Card Top 5 Perjadin -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 w-full md:w-96">
+                            <h3 class="font-semibold text-slate-700 mb-4">Top 5 Perjadin</h3>
+                            <table class="w-full text-sm">
+                                ${data.topPerjadin.map((item, index) => {
+                                    const icons = ['🥇', '🥈', '🥉', '🎖️', '🎖️'];
+                                    return `
+                                    <tr class="border-b border-slate-50">
+                                        <td class="py-3 font-bold text-slate-400 w-8">${icons[index]}</td>
+                                        <td class="py-3 text-slate-600">${item[0]}</td>
+                                        <td class="py-3 text-right font-bold text-sky-600">${item[1]}</td>
+                                    </tr>`;
+                                }).join('')}
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } catch (e) { 
+                console.error(e);
+                container.innerHTML = "Gagal memuat data."; 
             }
+        }
     
         function renderBelanjaCard(title, d) {
             const p = (d.persen * 100).toFixed(2);
             return `
-                <div class="mb-6">
+                <div class="mb-2">
                     <h3 class="font-semibold text-slate-700 mb-4">${title}</h3>
                     <div class="w-full bg-slate-200 rounded-full h-2.5 mb-4">
                         <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${p}%"></div>
@@ -124,47 +129,10 @@
                             <div>Pagu: <span class="font-bold text-blue-600">${d.pagu.toLocaleString()}</span></div>
                         </div>
                     </div>
-                    <!-- Tambahkan di sebelah card realisasi Anda -->
-                    <div class="card" id="topPerjadinCard">
-                      <h5>Top 5 Perjadin</h5>
-                      <table class="table">
-                        <thead>
-                          <tr>
-                            <th>No</th>
-                            <th>Pelaksana</th>
-                            <th>Total</th>
-                          </tr>
-                        </thead>
-                        <tbody id="topPerjadinBody">
-                          <!-- Data akan diisi via JS -->
-                        </tbody>
-                      </table>
-                    </div>
-                    
                 </div>
             `;
         }
-
-        function loadTopPerjadin() {
-          google.script.run.withSuccessHandler(function(data) {
-            var tbody = document.getElementById('topPerjadinBody');
-            tbody.innerHTML = '';
-            data.forEach(function(item, index) {
-              var icon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🎖️';
-              tbody.innerHTML += `<tr>
-                <td>${icon}</td>
-                <td>${item[0]}</td>
-                <td>${item[1]}</td>
-              </tr>`;
-            });
-          }).getTopPerjadin();
-        }
-        
-        // Panggil fungsi saat page load
-        window.onload = function() {
-          loadTopPerjadin();
-        };
-        
+    
         function logout() {
             sessionStorage.clear();
             window.location.href = 'v3_index.html';
