@@ -87,59 +87,42 @@
         function renderPok() {
             const tbody = document.getElementById('pok-tbody');
             if (!window.rawPokData || window.rawPokData.length === 0) return;
-
-            // 1. Mencegah duplikat dengan Map
-            // Kita gunakan Map agar jika ada kode yang sama, hanya satu yang diambil (data terakhir)
+        
             const uniqueMap = new Map();
             window.rawPokData.forEach(item => {
                 uniqueMap.set(String(item.kode), item);
             });
             const uniqueData = Array.from(uniqueMap.values());
-
-            const keyword = (document.getElementById("searchPok")?.value || "")
-            .toLowerCase()
-            .trim();
-
-        const bidang = document.getElementById("filterBidang")?.value || "Semua";
-
-            // 2. Filter untuk tampilan (Root level = 12 karakter)
-            const filtered = uniqueData.filter(i => {
-
-            const kode = String(i.kode);
-            const uraian = String(i.uraian || "").toLowerCase();
         
-            // filter bidang (kolom I)
-            if (bidang !== "Semua") {
-                if ((i.bidang || "") !== bidang) return false;
-            }
+            const keyword = (document.getElementById("searchPok")?.value || "").toLowerCase().trim();
+            const bidang = document.getElementById("filterBidang")?.value || "Semua";
         
-            // search
-            if (keyword) {
-                const cocok =
-                    kode.toLowerCase().includes(keyword) ||
-                    uraian.includes(keyword);
-        
-                if (!cocok) return false;
-        
-                // jika sedang search tampilkan semua hasil
-                return true;
-            }
-        
-            // tampilan normal
-            if (kode.length === 12) return true;
-        
-            return Array.from(window.expandedCodes).some(p =>
-                kode.startsWith(p) && kode !== p
-            );
-        
-        });
-
-            tbody.innerHTML = filtered.map(i => {
+            // KITA TIDAK LAGI MENGGUNAKAN .filter() PADA TABEL SECARA KESELURUHAN
+            // Tapi kita tetap melakukan pengecekan apakah baris tersebut harus tampil (berdasarkan expand)
+            
+            tbody.innerHTML = uniqueData.map(i => {
                 const c = String(i.kode);
-                const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
-                const bg = c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white';
+                const uraian = String(i.uraian || "").toLowerCase();
                 
-                return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 ${bg} cursor-pointer" onclick="toggleExpand('${c}')">
+                // --- LOGIKA TAMPILKAN/SEMBUNYIKAN ---
+                // Jika sedang filter bidang, baris yang tidak sesuai bidang tetap disembunyikan
+                if (bidang !== "Semua" && (i.bidang || "") !== bidang) return '';
+                
+                // Logika Expand: Root (12 digit) selalu tampil, child tampil jika parent di expandedCodes
+                const isParent = c.length === 12;
+                const isChildVisible = Array.from(window.expandedCodes).some(p => c.startsWith(p) && c !== p);
+                
+                if (!isParent && !isChildVisible) return '';
+        
+                // --- LOGIKA HIGHLIGHT (EXCEL STYLE) ---
+                const isMatch = keyword && (c.toLowerCase().includes(keyword) || uraian.includes(keyword));
+                
+                // Jika match, beri warna kuning, jika tidak gunakan warna normal
+                const matchClass = isMatch ? 'bg-yellow-200' : (c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white');
+        
+                const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
+                
+                return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 ${matchClass} cursor-pointer" onclick="toggleExpand('${c}')">
                     <td class="p-3 font-mono text-xs font-bold">${c}</td>
                     <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
                     <td class="p-3 text-right">${Number(i.pagu||0).toLocaleString()}</td>
@@ -148,60 +131,45 @@
                     <td class="p-3 text-right">${Number(i.sisa||0).toLocaleString()}</td>
                     <td class="p-3 text-center">
                         ${c.length > 27 ? `
-                            ${c.length > 27 ? `
-                                <button
-                                    onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
-                                    class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">
-                                    Rekam
-                                </button>
-                                ` : ""}
+                            <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
+                                class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
                             <button class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
                         ` : ''}
                     </td>
                 </tr>`;
             }).join('');
         }
-
+        
         function searchPok() {
             const keyword = document.getElementById("searchPok").value.trim().toLowerCase();
             
+            // Reset jika kosong
             if (keyword === "") {
-                window.expandedCodes.clear();
-                renderPok();
+                window.searchResults = [];
+                window.selectedKode = "";
+                renderPok(); // Render ulang untuk menghilangkan highlight
                 return;
             }
         
-            // Cari semua item yang cocok
-            const matches = window.rawPokData.filter(r => 
+            // Cari semua item yang cocok di seluruh data
+            window.searchResults = window.rawPokData.filter(r => 
                 String(r.kode).toLowerCase().includes(keyword) || 
                 String(r.uraian).toLowerCase().includes(keyword)
             );
         
-            if (matches.length > 0) {
-                // Buka semua parent (kode 12 digit) dari hasil pencarian
-                window.expandedCodes.clear();
-                matches.forEach(m => {
-                    const code = String(m.kode);
-                    if (code.length > 12) {
-                        window.expandedCodes.add(code.substring(0, 12));
-                    } else {
-                        window.expandedCodes.add(code);
-                    }
-                });
+            if (window.searchResults.length > 0) {
+                window.selectedKode = window.searchResults[0].kode;
                 
-                // Simpan hasil untuk navigasi
-                window.searchResults = matches;
-                window.searchIndex = 0;
+                // Opsional: Buka parent dari hasil pertama agar terlihat
+                const parentCode = String(window.selectedKode).substring(0, 12);
+                window.expandedCodes.add(parentCode);
                 
-                renderPok();
-                
+                renderPok(); // Render ulang agar highlight muncul
+        
                 // Scroll ke hasil pertama
                 setTimeout(() => {
-                    const firstMatch = document.querySelector(`[onclick="toggleExpand('${matches[0].kode}')"]`) || 
-                                       document.querySelector(`tr[onclick*="${matches[0].kode}"]`);
-                    if (firstMatch) {
-                        firstMatch.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }
+                    const el = document.querySelector(`tr[data-kode="${window.selectedKode}"]`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
                 }, 100);
             }
         }
