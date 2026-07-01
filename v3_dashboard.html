@@ -139,7 +139,7 @@
                 const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
                 const bg = c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white';
                 
-                return `<tr class="border-b hover:bg-slate-100 ${bg} cursor-pointer" onclick="toggleExpand('${c}')">
+                return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 ${bg} cursor-pointer" onclick="toggleExpand('${c}')">
                     <td class="p-3 font-mono text-xs font-bold">${c}</td>
                     <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
                     <td class="p-3 text-right">${Number(i.pagu||0).toLocaleString()}</td>
@@ -162,44 +162,48 @@
             }).join('');
         }
 
-        function searchPok(){
-        
-            const keyword = document
-                .getElementById("searchPok")
-                .value
-                .trim()
-                .toLowerCase();
-        
-            if(keyword===""){
-                window.searchResults=[];
-                window.searchIndex=-1;
-                window.selectedKode="";
+        function searchPok() {
+            const keyword = document.getElementById("searchPok").value.trim().toLowerCase();
+            
+            if (keyword === "") {
+                window.expandedCodes.clear();
                 renderPok();
                 return;
             }
         
-            const uniqueMap = new Map();
+            // Cari semua item yang cocok
+            const matches = window.rawPokData.filter(r => 
+                String(r.kode).toLowerCase().includes(keyword) || 
+                String(r.uraian).toLowerCase().includes(keyword)
+            );
         
-            window.rawPokData.forEach(r=>{
-                uniqueMap.set(String(r.kode),r);
-            });
-        
-            const data=[...uniqueMap.values()];
-        
-            window.searchResults=data.filter(r=>{
-        
-                return String(r.kode).toLowerCase().includes(keyword)
-                    || String(r.uraian).toLowerCase().includes(keyword);
-        
-            });
-        
-            if(window.searchResults.length===0){
-                return;
+            if (matches.length > 0) {
+                // Buka semua parent (kode 12 digit) dari hasil pencarian
+                window.expandedCodes.clear();
+                matches.forEach(m => {
+                    const code = String(m.kode);
+                    if (code.length > 12) {
+                        window.expandedCodes.add(code.substring(0, 12));
+                    } else {
+                        window.expandedCodes.add(code);
+                    }
+                });
+                
+                // Simpan hasil untuk navigasi
+                window.searchResults = matches;
+                window.searchIndex = 0;
+                
+                renderPok();
+                
+                // Scroll ke hasil pertama
+                setTimeout(() => {
+                    const firstMatch = document.querySelector(`[onclick="toggleExpand('${matches[0].kode}')"]`) || 
+                                       document.querySelector(`tr[onclick*="${matches[0].kode}"]`);
+                    if (firstMatch) {
+                        firstMatch.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                }, 100);
             }
-        
-            window.searchIndex=0;
-        
-            gotoSearchResult();
         }
 
         function gotoSearchResult(){
