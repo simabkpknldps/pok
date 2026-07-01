@@ -16,36 +16,21 @@
             </h1>
         </div>
         <nav class="p-4 space-y-2 flex-grow">
-            <button onclick="navigate('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition">
-                <i class="fa-solid fa-gauge mr-3"></i> Dashboard
-            </button>
-            <button onclick="navigate('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition">
-                <i class="fa-solid fa-folder-open mr-3"></i> POK
-            </button>
-            <button onclick="navigate('kegiatan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition">
-                <i class="fa-solid fa-list-check mr-3"></i> Daftar Kegiatan
-            </button>
-            <button onclick="navigate('perjadin')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition">
-                <i class="fa-solid fa-wallet mr-3"></i> Perjadinku
-            </button>
-            <button onclick="navigate('kalender')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition">
-                <i class="fa-regular fa-calendar mr-3"></i> Kalender
-            </button>
+            <button onclick="navigate('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-gauge mr-3"></i> Dashboard</button>
+            <button onclick="navigate('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-folder-open mr-3"></i> POK</button>
+            <button onclick="navigate('kegiatan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-list-check mr-3"></i> Daftar Kegiatan</button>
+            <button onclick="navigate('perjadin')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-wallet mr-3"></i> Perjadinku</button>
+            <button onclick="navigate('kalender')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-regular fa-calendar mr-3"></i> Kalender</button>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
             <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
-            <div class="flex items-center gap-6">
-                <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm">
-                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
-                </button>
-            </div>
+            <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
         </header>
 
-        <div id="app" class="flex-1 p-8 overflow-y-auto">
-        </div>
+        <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
     </main>
 
     <script>
@@ -59,6 +44,13 @@
             }
         }
     
+        function getProgressColor(p) {
+            if (p < 30) return 'bg-red-500';
+            if (p < 70) return 'bg-orange-500';
+            if (p < 90) return 'bg-yellow-400';
+            return 'bg-green-500';
+        }
+
         async function renderDashboardPage(container) {
             container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
             try {
@@ -70,37 +62,38 @@
                 
                 container.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                            ${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}
-                        </div>
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                            ${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}
-                        </div>
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                            ${renderMPCard('Maksimum Pencairan PNBP', data.mp)}
-                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                             <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
                             <div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">
-                                ${data.kegiatanHariIni && data.kegiatanHariIni.length > 0 ? data.kegiatanHariIni.map(item => `
-                                    <div class="border-b pb-2">
-                                        <div class="text-sm font-semibold text-slate-700">${item.uraian}</div>
-                                        <div class="text-[10px] text-slate-500 mt-1">
-                                            <span class="block"><i class="fa-solid fa-user mr-1"></i>${item.pelaksana}</span>
-                                            <span class="block"><i class="fa-solid fa-location-dot mr-1"></i>${item.tujuan}</span>
-                                        </div>
-                                    </div>
-                                `).join('') : '<p class="text-slate-400 italic text-xs">Tidak ada kegiatan</p>'}
+                                ${data.kegiatanHariIni.map(item => `
+                                    <div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>
+                                `).join('')}
                             </div>
                         </div>
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                            ${renderTopPerjadin(data.topPerjadin)}
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            ${Object.entries(data.seksi).map(([nama, val]) => {
+                                const p = (val * 100).toFixed(0);
+                                return `
+                                    <div>
+                                        <div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div>
+                                        <div class="w-full bg-slate-100 rounded-full h-2"><div class="${getProgressColor(p)} h-2 rounded-full" style="width: ${p}%"></div></div>
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
             } catch (e) { container.innerHTML = `<p class="text-red-500">Gagal memuat data.</p>`; }
         }
-    
+
         function renderBelanjaCard(title, d, color) {
             const p = (d.persen * 100).toFixed(2);
             return `
@@ -108,10 +101,7 @@
                     <h3 class="font-semibold text-slate-700 mb-2">${title}</h3>
                     <div class="text-2xl font-bold text-${color}-600 mb-2">${p}%</div>
                     <div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-${color}-600 h-2 rounded-full" style="width: ${p}%"></div></div>
-                    <div class="text-[11px] text-slate-500 space-y-0.5">
-                        <div>Realisasi: ${d.realisasi.toLocaleString()}</div>
-                        <div class="font-bold text-slate-700">Sisa: ${d.sisa.toLocaleString()}</div>
-                    </div>
+                    <div class="text-[11px] text-slate-500 space-y-0.5"><div>Realisasi: ${d.realisasi.toLocaleString()}</div><div class="font-bold text-slate-700">Sisa: ${d.sisa.toLocaleString()}</div></div>
                 </div>
             `;
         }
@@ -123,40 +113,20 @@
                     <h3 class="font-semibold text-slate-700 mb-2">${title}</h3>
                     <div class="text-2xl font-bold text-emerald-600 mb-2">${p}%</div>
                     <div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-emerald-500 h-2 rounded-full" style="width: ${p}%"></div></div>
-                    <div class="text-[11px] text-slate-500 space-y-0.5">
-                        <div>Realisasi MP: ${d.realisasi.toLocaleString()}</div>
-                        <div class="font-bold text-slate-700">Sisa MP: ${d.sisa.toLocaleString()}</div>
-                    </div>
+                    <div class="text-[11px] text-slate-500 space-y-0.5"><div>Realisasi MP: ${d.realisasi.toLocaleString()}</div><div class="font-bold text-slate-700">Sisa MP: ${d.sisa.toLocaleString()}</div></div>
                 </div>
             `;
         }
 
         function renderTopPerjadin(topList) {
-            const top3 = topList.slice(0, 3);
-            return `
-                <div class="mb-2">
-                    <h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3>
-                    <div class="space-y-3">
-                        ${top3.map((item, index) => `
-                            <div class="flex items-center justify-between">
-                                <div class="text-xs font-normal text-slate-600">${index + 1}. ${item[0]}</div>
-                                <div class="text-xs font-bold text-sky-600">${item[1]}x</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
+            return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${topList.slice(0, 3).map((item, index) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${index + 1}. ${item[0]}</div><div class="text-xs font-bold text-sky-600">${item[1]}x</div></div>`).join('')}</div>`;
         }
     
         function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
-    
-        document.addEventListener("DOMContentLoaded", () => {
-            navigate('dashboard');
-        });
+        document.addEventListener("DOMContentLoaded", () => navigate('dashboard'));
     </script>
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </body>
