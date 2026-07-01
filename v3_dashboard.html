@@ -49,6 +49,19 @@
             document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
             if (page === 'dashboard') renderDashboardPage(document.getElementById('app'));
             else document.getElementById('app').innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
+
+            if (page === 'pok') {
+                window.location.href = 'v3_pok.html';
+                return;
+            }
+            
+            document.getElementById('page-title').innerText = page.charAt(0).toUpperCase() + page.slice(1);
+            
+            if (page === 'dashboard') {
+                renderDashboardPage(document.getElementById('app'));
+            } else {
+                document.getElementById('app').innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
+            }
         }
 
         async function fetchDashboardData() {
