@@ -40,26 +40,23 @@
             const container = document.getElementById('app');
             const title = document.getElementById('page-title');
             
-            // Update Judul
             title.innerText = page.charAt(0).toUpperCase() + page.slice(1);
-            
-            // Tampilkan loading
             container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
         
             if (page === 'dashboard') {
                 renderDashboardPage(container);
             } else {
                 try {
-                    // Mengambil konten dari file v3_[page].html
                     const response = await fetch(`v3_${page}.html`);
-                    if (response.ok) {
-                        const html = await response.text();
-                        container.innerHTML = html;
-                    } else {
-                        container.innerHTML = `<p class="text-red-500">Halaman tidak ditemukan.</p>`;
+                    const html = await response.text();
+                    container.innerHTML = html;
+                    
+                    // PANGGIL FUNGSI INI SETELAH HTML MASUK
+                    if (page === 'pok' && typeof loadPokData === 'function') {
+                        loadPokData();
                     }
-                } catch (error) {
-                    container.innerHTML = `<p class="text-red-500">Terjadi kesalahan saat memuat halaman.</p>`;
+                } catch (e) {
+                    container.innerHTML = `<p class="text-red-500">Error memuat halaman.</p>`;
                 }
             }
         }
