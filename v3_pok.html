@@ -1,31 +1,65 @@
 <!-- v3_pok.html -->
-<div class="space-y-6">
-    <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-slate-800">Daftar POK</h1>
-        <button class="bg-sky-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-sky-700">
-            <i class="fa-solid fa-plus mr-2"></i>Tambah POK
-        </button>
-    </div>
-    
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-        <!-- Contoh Tabel -->
-        <table class="w-full text-sm text-left">
-            <thead class="text-xs text-slate-500 uppercase border-b">
+<div class="space-y-4">
+    <h2 class="text-xl font-bold text-slate-800">Daftar POK</h2>
+    <div id="pok-container" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
                 <tr>
-                    <th class="py-3">Kode</th>
-                    <th class="py-3">Nama Program</th>
-                    <th class="py-3">Pagu</th>
-                    <th class="py-3">Aksi</th>
+                    <th class="p-4 text-left">Kode</th>
+                    <th class="p-4 text-left">Uraian</th>
+                    <th class="p-4 text-right">Pagu</th>
+                    <th class="p-4 text-right">Realisasi</th>
+                    <th class="p-4 text-right">Sisa</th>
+                    <th class="p-4 text-center">Aksi</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
-                <tr>
-                    <td class="py-4">023.01.01</td>
-                    <td class="py-4">Program Dukungan Manajemen</td>
-                    <td class="py-4">Rp 1.000.000.000</td>
-                    <td class="py-4"><button class="text-sky-600 hover:underline">Detail</button></td>
-                </tr>
+            <tbody id="pok-tbody">
+                <!-- Data akan dimuat lewat JS -->
             </tbody>
         </table>
     </div>
 </div>
+
+<script>
+async function loadPokData() {
+    const tbody = document.getElementById('pok-tbody');
+    const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getPOKData' }) });
+    const data = await res.json();
+
+    // Tampilkan hanya kode dengan panjang 12 (Root level)
+    const render = (items, parentCode = null) => {
+        return items
+            .filter(i => parentCode ? i.kode.startsWith(parentCode) && i.kode !== parentCode : i.kode.length === 12)
+            .map(i => {
+                const isPNBP = i.sumber === 'PNBP';
+                const rowColor = isPNBP ? 'bg-pink-50' : 'bg-blue-50';
+                const hasChildren = items.some(child => child.kode.startsWith(i.kode) && child.kode !== i.kode);
+                
+                return `
+                    <tr class="border-b cursor-pointer hover:bg-slate-100 ${i.kode.length > 27 ? rowColor : ''}" onclick="toggleRow('${i.kode}')">
+                        <td class="p-3 font-mono">${i.kode}</td>
+                        <td class="p-3">${i.uraian}</td>
+                        <td class="p-3 text-right">${i.pagu.toLocaleString()}</td>
+                        <td class="p-3 text-right">${i.realisasi.toLocaleString()}</td>
+                        <td class="p-3 text-right">${i.sisa.toLocaleString()}</td>
+                        <td class="p-3 text-center">
+                            ${i.kode.length > 27 ? `
+                                <button class="bg-sky-500 text-white px-2 py-1 rounded text-xs">Rekam</button>
+                                <button class="bg-sky-500 text-white px-2 py-1 rounded text-xs">Detil</button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+    };
+
+    tbody.innerHTML = render(data);
+}
+
+function toggleRow(code) {
+    // Implementasi logika expand/collapse di sini
+    console.log("Klik pada:", code);
+}
+
+loadPokData();
+</script>
