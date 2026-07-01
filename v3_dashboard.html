@@ -422,6 +422,13 @@
                     btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan';
                 }
             }
+
+        function formatRibuan(angka) {
+            // Hapus karakter selain angka
+            let v = angka.replace(/\D/g, "");
+            // Tambahkan format ribuan
+            return v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
                             
             </script>
 
@@ -493,6 +500,7 @@
                 Estimasi Biaya
             </label>
             <input id="estimasiBiaya" oninput="cekKecukupanDana()"
+            onkeyup="this.value = formatRibuan(this.value)"
             class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 transition">
         </div>
         
