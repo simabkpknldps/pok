@@ -278,11 +278,20 @@
             fetchLokasiData();
         }
 
-        function closeRekamModal(){
+        function closeRekamModal() {
+            // 1. Sembunyikan modal
+            document.getElementById("rekamModal").classList.replace("flex", "hidden");
         
-        document.getElementById("rekamModal").classList.add("hidden");
-        document.getElementById("rekamModal").classList.remove("flex");
-        
+            // 2. Kosongkan textbox yang diperlukan
+            document.getElementById("estimasiBiaya").value = "";
+            document.getElementById("inputTujuan").value = "";
+            // Jika Anda ingin mengosongkan juga uraian kegiatan (No ST/ND):
+            // document.getElementById("uraianKegiatan").value = ""; 
+            
+            // 3. Reset status dana ke kondisi awal
+            const statusEl = document.getElementById("statusDana");
+            statusEl.value = "Dana Tersedia";
+            statusEl.className = "w-full rounded-xl border border-slate-300 px-4 py-2.5 transition";
         }
 
         function generateIdUsulan(){
