@@ -108,7 +108,10 @@
                     <h3 class="font-semibold text-slate-700 mb-2">${title}</h3>
                     <div class="text-2xl font-bold text-${color}-600 mb-2">${p}%</div>
                     <div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-${color}-600 h-2 rounded-full" style="width: ${p}%"></div></div>
-                    <div class="text-[12px] text-slate-500">Realisasi: ${d.realisasi.toLocaleString()}</div>
+                    <div class="text-[11px] text-slate-500 space-y-0.5">
+                        <div>Realisasi: ${d.realisasi.toLocaleString()}</div>
+                        <div class="font-bold text-slate-700">Sisa: ${d.sisa.toLocaleString()}</div>
+                    </div>
                 </div>
             `;
         }
@@ -120,7 +123,10 @@
                     <h3 class="font-semibold text-slate-700 mb-2">${title}</h3>
                     <div class="text-2xl font-bold text-emerald-600 mb-2">${p}%</div>
                     <div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-emerald-500 h-2 rounded-full" style="width: ${p}%"></div></div>
-                    <div class="text-[12px] text-slate-500">Realisasi MP: ${d.realisasi.toLocaleString()}</div>
+                    <div class="text-[11px] text-slate-500 space-y-0.5">
+                        <div>Realisasi MP: ${d.realisasi.toLocaleString()}</div>
+                        <div class="font-bold text-slate-700">Sisa MP: ${d.sisa.toLocaleString()}</div>
+                    </div>
                 </div>
             `;
         }
@@ -134,14 +140,14 @@
                         ${top3.map((item, index) => `
                             <div class="flex items-center justify-between">
                                 <div class="text-xs font-normal text-slate-600">${index + 1}. ${item[0]}</div>
-                                <div class="text-xs font-normal text-sky-600">${item[1]}x</div>
+                                <div class="text-xs font-bold text-sky-600">${item[1]}x</div>
                             </div>
                         `).join('')}
                     </div>
                 </div>
             `;
         }
-        
+    
         function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
     
         document.addEventListener("DOMContentLoaded", () => {
