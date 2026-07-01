@@ -37,9 +37,6 @@
         let dashboardDataCache = null;
         window.rawPokData = [];
         window.expandedCodes = new Set();
-        window.searchResults = [];
-        window.searchIndex = -1;
-        window.selectedKode = "";
 
         async function navigate(page) {
             const container = document.getElementById('app');
@@ -51,531 +48,118 @@
             } else if (page === 'pok') {
                 container.innerHTML = `
                 <div class="space-y-4">
-
-                <div class="flex flex-col md:flex-row gap-3">
-            
-                    <input
-                        type="text"
-                        id="searchPok"
-                        placeholder="Cari kode atau uraian..."
-                        class="flex-1 border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                        oninput="searchPok()">
-            
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <input type="text" id="searchPok" placeholder="Cari kode atau uraian..." class="flex-1 border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none" oninput="searchPok()">
+                    </div>
                 </div>
-            
-                
-            </div>
-                   <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><div class="overflow-y-auto max-h-[80vh]">
-                        <table class="w-full text-sm"><thead><tr><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Kode</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Uraian</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Pagu</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Blokir</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Realisasi</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Sisa</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Aksi</th></tr></thead><tbody id="pok-tbody"><tr><td colspan="6" class="p-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</td></tr></tbody></table></div></div></div>`;
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><div class="overflow-y-auto max-h-[80vh]">
+                    <table class="w-full text-sm"><thead><tr><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Kode</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Uraian</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Pagu</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Blokir</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Realisasi</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Sisa</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Aksi</th></tr></thead><tbody id="pok-tbody"><tr><td colspan="7" class="p-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</td></tr></tbody></table></div></div></div>`;
                 loadPokData();
             } else {
                 container.innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
             }
         }
 
-        // --- LOGIKA POK ---
         async function loadPokData() {
             try {
                 const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getPOKData' }) });
                 window.rawPokData = await res.json();
                 renderPok();
-            } catch (e) {
-                document.getElementById('pok-tbody').innerHTML = `<tr><td colspan="7" class="text-red-500 p-4 text-center">Gagal memuat data.</td></tr>`;
-            }
+            } catch (e) { document.getElementById('pok-tbody').innerHTML = `<tr><td colspan="7" class="text-red-500 p-4 text-center">Gagal memuat data.</td></tr>`; }
         }
 
         function renderPok() {
             const tbody = document.getElementById('pok-tbody');
-            if (!window.rawPokData || window.rawPokData.length === 0) return;
-        
-            const uniqueMap = new Map();
-            window.rawPokData.forEach(item => {
-                uniqueMap.set(String(item.kode), item);
-            });
-            const uniqueData = Array.from(uniqueMap.values());
-        
-            const keyword = (document.getElementById("searchPok")?.value || "").toLowerCase().trim();
-            const bidang = document.getElementById("filterBidang")?.value || "Semua";
-        
-            // KITA TIDAK LAGI MENGGUNAKAN .filter() PADA TABEL SECARA KESELURUHAN
-            // Tapi kita tetap melakukan pengecekan apakah baris tersebut harus tampil (berdasarkan expand)
-            
-            tbody.innerHTML = uniqueData.map(i => {
+            const keyword = document.getElementById("searchPok")?.value.toLowerCase().trim();
+            tbody.innerHTML = window.rawPokData.map((i, idx) => {
                 const c = String(i.kode);
-                const uraian = String(i.uraian || "").toLowerCase();
-                
-                // --- LOGIKA TAMPILKAN/SEMBUNYIKAN ---
-                // Jika sedang filter bidang, baris yang tidak sesuai bidang tetap disembunyikan
-                if (bidang !== "Semua" && (i.bidang || "") !== bidang) return '';
-                
-                // Logika Expand: Root (12 digit) selalu tampil, child tampil jika parent di expandedCodes
-                const isParent = c.length === 12;
-                const isChildVisible = Array.from(window.expandedCodes).some(p => c.startsWith(p) && c !== p);
-                
-                if (!isParent && !isChildVisible) return '';
-        
-                // --- LOGIKA HIGHLIGHT (EXCEL STYLE) ---
-                const isMatch = keyword && (c.toLowerCase().includes(keyword) || uraian.includes(keyword));
-                
-                // Jika match, beri warna kuning, jika tidak gunakan warna normal
-                const matchClass = isMatch ? 'bg-yellow-200' : (c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white');
-        
-                const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
-                
+                const isMatch = keyword && (c.toLowerCase().includes(keyword) || String(i.uraian).toLowerCase().includes(keyword));
+                const matchClass = isMatch ? 'bg-yellow-200' : 'bg-white';
                 return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 ${matchClass} cursor-pointer" onclick="toggleExpand('${c}')">
                     <td class="p-3 font-mono text-xs font-bold">${c}</td>
-                    <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
+                    <td class="p-3 font-medium">${i.uraian}</td>
                     <td class="p-3 text-right">${Number(i.pagu||0).toLocaleString()}</td>
                     <td class="p-3 text-right">${Number(i.blokir||0).toLocaleString()}</td>
                     <td class="p-3 text-right">${Number(i.realisasi||0).toLocaleString()}</td>
                     <td class="p-3 text-right">${Number(i.sisa||0).toLocaleString()}</td>
                     <td class="p-3 text-center">
-                        ${c.length > 27 ? `
-                            <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
-                                class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
-                            <button class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
-                        ` : ''}
+                        ${c.length > 27 ? `<button onclick="event.stopPropagation();openRekamModal(${idx})" class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700">Rekam</button>` : ''}
                     </td>
                 </tr>`;
             }).join('');
         }
-        
-        function searchPok() {
-            const keyword = document.getElementById("searchPok").value.trim().toLowerCase();
-            
-            // Reset jika kosong
-            if (keyword === "") {
-                window.searchResults = [];
-                window.selectedKode = "";
-                renderPok(); // Render ulang untuk menghilangkan highlight
-                return;
-            }
-        
-            // Cari semua item yang cocok di seluruh data
-            window.searchResults = window.rawPokData.filter(r => 
-                String(r.kode).toLowerCase().includes(keyword) || 
-                String(r.uraian).toLowerCase().includes(keyword)
-            );
-        
-            if (window.searchResults.length > 0) {
-                window.selectedKode = window.searchResults[0].kode;
-                
-                // Opsional: Buka parent dari hasil pertama agar terlihat
-                const parentCode = String(window.selectedKode).substring(0, 12);
-                window.expandedCodes.add(parentCode);
-                
-                renderPok(); // Render ulang agar highlight muncul
-        
-                // Scroll ke hasil pertama
-                setTimeout(() => {
-                    const el = document.querySelector(`tr[data-kode="${window.selectedKode}"]`);
-                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-                }, 100);
-            }
-        }
-
-        function gotoSearchResult(){
-        
-            const item=window.searchResults[window.searchIndex];
-        
-            if(!item) return;
-        
-            const kode=String(item.kode);
-        
-            window.selectedKode=kode;
-        
-            // buka parent 12 digit
-            if(kode.length>12){
-        
-                window.expandedCodes.clear();
-                window.expandedCodes.add(kode.substring(0,12));
-        
-            }
-        
-            renderPok();
-        
-            setTimeout(()=>{
-        
-                document
-                    .querySelector(`[data-kode="${kode}"]`)
-                    ?.scrollIntoView({
-                        behavior:"smooth",
-                        block:"center"
-                    });
-        
-            },50);
-        
-        }
-        
-        function toggleExpand(code) {
-
-            // Hanya parent (12 digit) yang bisa expand/collapse
-            if (String(code).length !== 12) {
-                return;
-            }
-        
-            if (window.expandedCodes.has(code)) {
-                // klik parent yang sama -> tutup
-                window.expandedCodes.clear();
-            } else {
-                // tutup parent lain lalu buka parent ini
-                window.expandedCodes.clear();
-                window.expandedCodes.add(code);
-            }
-        
-            renderPok();
-        }
-
-        // --- FUNGSI DASHBOARD ---
-        async function fetchDashboardData() {
-            try {
-                const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getDashboardData' }) });
-                const data = await res.json();
-                dashboardDataCache = data;
-                return data;
-            } catch (e) { return null; }
-        }
-
-        async function renderDashboardPage(container, isRefresh = false) {
-            if (!isRefresh) container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
-            const data = dashboardDataCache || await fetchDashboardData();
-            if (!data) return;
-            container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6"><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col"><h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3><div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">${data.kegiatanHariIni.map(item => `<div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>`).join('')}</div></div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div></div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">${Object.entries(data.seksi).map(([nama, val]) => { const p = (val * 100).toFixed(2); return `<div><div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${p<30?'bg-red-500':p<70?'bg-orange-500':p<90?'bg-yellow-400':'bg-green-500'} h-2 rounded-full" style="width: ${p}%"></div></div></div>`; }).join('')}</div></div>`;
-            initCharts(data);
-        }
-
-        function initCharts(data) {
-            const labels = data.grafikPerjadin.map(d => d.bulan);
-            new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels, datasets: [{ label: 'Rupiah', data: data.grafikPerjadin.map(d => d.rupiah), borderColor: '#0284c7', tension: 0.3 }] } });
-            new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels, datasets: [{ label: 'Frekuensi', data: data.grafikPerjadin.map(d => d.frekuensi), backgroundColor: '#0ea5e9' }] } });
-        }
-
-        function renderBelanjaCard(t, d, c) { const p = (d.persen * 100).toFixed(2); return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${t}</h3><div class="text-2xl font-bold text-${c}-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-${c}-600 h-2 rounded-full" style="width: ${p}%"></div></div><div class="text-[11px] text-slate-500">Realisasi: ${d.realisasi.toLocaleString()}<br><span class="font-bold text-slate-700">Sisa: ${d.sisa.toLocaleString()}</span></div></div>`; }
-        function renderMPCard(t, d) { const p = (d.persen * 100).toFixed(2); return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${t}</h3><div class="text-2xl font-bold text-emerald-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-emerald-500 h-2 rounded-full" style="width: ${p}%"></div></div><div class="text-[11px] text-slate-500">Realisasi MP: ${d.realisasi.toLocaleString()}<br><span class="font-bold text-slate-700">Sisa MP: ${d.sisa.toLocaleString()}</span></div></div>`; }
-        function renderTopPerjadin(l) { return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${idx + 1}. ${i[0]}</div><div class="text-xs font-bold text-sky-600">${i[1]}x</div></div>`).join('')}</div>`; }
-        function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
-
-       function openRekamModal(idx){
-            const data = window.rawPokData[idx];
-            
-            document.getElementById("rekamModal").classList.remove("hidden");
-            document.getElementById("rekamModal").classList.add("flex");
-            
-            // ID Usulan random
-            document.getElementById("idUsulan").value = generateIdUsulan();
-            document.getElementById("mak").value = data.kode;
-            document.getElementById("uraianMak").value = data.uraian;
-            document.getElementById("pagu").value = Number(data.pagu).toLocaleString();
-            document.getElementById("blokir").value = Number(data.blokir).toLocaleString();
-            document.getElementById("realisasi").value = Number(data.realisasi).toLocaleString();
-            document.getElementById("sisa").value = Number(data.sisa).toLocaleString();
-            
-            document.getElementById("statusDana").value = Number(data.sisa) > 0 ? "Dana Tersedia" : "Dana Tidak Cukup";
-            
-            // Panggil fetch data
-            fetchLokasiData();
-        }
-
-        function closeRekamModal(){
-        
-        document.getElementById("rekamModal").classList.add("hidden");
-        document.getElementById("rekamModal").classList.remove("flex");
-        
-        }
-
-        function generateIdUsulan(){
-
-        const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        
-        let id="";
-        
-        for(let i=0;i<10;i++){
-        
-        id+=chars.charAt(Math.floor(Math.random()*chars.length));
-        
-        }
-        
-        return id;
-        
-        }
-
-        document.addEventListener("DOMContentLoaded", () => navigate('dashboard'));
-        
-        const status=document.getElementById("statusDana");
-        
-        if(Number(data.sisa)>=estimasi){
-        
-            status.className="rounded-xl bg-green-50 text-green-700 border border-green-200 px-4 py-2.5 font-semibold";
-            status.innerHTML='<i class="fa fa-circle-check mr-2"></i>Dana Tersedia';
-        
-        }else{
-        
-            status.className="rounded-xl bg-red-50 text-red-700 border border-red-200 px-4 py-2.5 font-semibold";
-            status.innerHTML='<i class="fa fa-circle-xmark mr-2"></i>Dana Tidak Cukup';
-        
-        }
 
         async function fetchLokasiData() {
             const datalist = document.getElementById('listTujuan');
-            
-            // Jika data sudah pernah dimuat, jangan load ulang
             if (datalist && datalist.children.length > 0) return;
-        
             const baseUrl = sessionStorage.getItem('realUrl');
-            if (!baseUrl) {
-                console.error("URL tidak ditemukan di sessionStorage");
-                return;
-            }
-        
             try {
                 const response = await fetch(`${baseUrl}?action=loadLokasi`);
                 const data = await response.json();
-                
-                if (data.error) {
-                    console.error("Error dari API:", data.error);
-                    return;
-                }
-        
-                // Mengisi datalist
-                if (datalist) {
-                    datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
-                    console.log("Data lokasi berhasil dimuat:", data.length, "item");
-                }
-            } catch (e) {
-                console.error("Gagal memuat data lokasi:", e);
+                if (Array.isArray(data)) datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        function cekKecukupanDana() {
+            const sisa = parseFloat(document.getElementById("sisa").value.replace(/,/g, '')) || 0;
+            const estimasi = parseFloat(document.getElementById("estimasiBiaya").value.replace(/,/g, '')) || 0;
+            const statusEl = document.getElementById("statusDana");
+            if (estimasi > sisa) {
+                statusEl.value = "Dana Tidak Cukup";
+                statusEl.className = "w-full rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-2.5 font-bold transition";
+            } else {
+                statusEl.value = "Dana Tersedia";
+                statusEl.className = "w-full rounded-xl border border-green-200 bg-green-50 text-green-700 px-4 py-2.5 font-bold transition";
             }
         }
-        
+
+        function openRekamModal(idx) {
+            const data = window.rawPokData[idx];
+            document.getElementById("rekamModal").classList.replace("hidden", "flex");
+            document.getElementById("idUsulan").value = generateIdUsulan();
+            document.getElementById("mak").value = data.kode;
+            document.getElementById("uraianMak").value = data.uraian;
+            document.getElementById("sisa").value = Number(data.sisa).toLocaleString();
+            document.getElementById("estimasiBiaya").value = "";
+            cekKecukupanDana();
+            fetchLokasiData();
+        }
+
+        function closeRekamModal() { document.getElementById("rekamModal").classList.replace("flex", "hidden"); }
+        function generateIdUsulan() { return Math.random().toString(36).substring(2, 12).toUpperCase(); }
+        function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
+        document.addEventListener("DOMContentLoaded", () => navigate('dashboard'));
     </script>
 
-        <div id="rekamModal"
-        class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
-        
-        <div class="bg-white rounded-2xl shadow-2xl w-[980px] max-w-[96vw] overflow-hidden animate-[fade_.2s_ease]">
-        
-        <div class="bg-sky-600 text-white px-6 py-4 flex justify-between items-center">
-
-        <div>
-                <h2 class="text-xl font-bold">
-                    <i class="fa-solid fa-pen-to-square mr-2"></i>
-                    Rekam Kegiatan
-                </h2>
-                
+    <!-- Modal Rekam -->
+    <div id="rekamModal" class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-[980px] max-w-[96vw] overflow-hidden">
+            <div class="bg-sky-600 text-white px-6 py-4 flex justify-between items-center">
+                <h2 class="text-xl font-bold"><i class="fa-solid fa-pen-to-square mr-2"></i> Rekam Kegiatan</h2>
+                <button onclick="closeRekamModal()" class="w-9 h-9 rounded-full hover:bg-sky-700 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-        
-            <button
-                onclick="closeRekamModal()"
-                class="w-9 h-9 rounded-full hover:bg-sky-700 transition">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-        
+            <div class="grid grid-cols-2 gap-8 p-6">
+                <div class="space-y-3">
+                    <div><label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">ID Usulan</label><input id="idUsulan" class="w-full rounded-xl border border-slate-300 px-4 py-2.5"></div>
+                    <div><label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Estimasi Biaya</label><input id="estimasiBiaya" oninput="cekKecukupanDana()" class="w-full rounded-xl border border-slate-300 px-4 py-2.5"></div>
+                    <div><label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Status Kecukupan Dana</label><input readonly id="statusDana" class="w-full rounded-xl border border-slate-300 px-4 py-2.5"></div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Tujuan</label>
+                        <input list="listTujuan" id="inputTujuan" class="w-full rounded-xl border border-slate-300 px-4 py-2.5">
+                        <datalist id="listTujuan"></datalist>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div><label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">MAK</label><input readonly id="mak" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-slate-50"></div>
+                    <div><label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Uraian MAK</label><input readonly id="uraianMak" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-slate-50"></div>
+                    <div><label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Sisa</label><input readonly id="sisa" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-slate-50"></div>
+                </div>
+            </div>
+            <div class="bg-slate-50 border-t px-6 py-4 flex justify-end gap-3">
+                <button onclick="closeRekamModal()" class="px-6 py-2.5 rounded-xl border border-slate-300">Batal</button>
+                <button class="bg-sky-600 text-white px-6 py-2.5 rounded-xl">Simpan</button>
+            </div>
         </div>
-        
-        <div class="grid grid-cols-2 gap-8 p-6">
-        
-        <div class="space-y-3">
-        
-        <div>
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            ID Usulan
-        </label>
-        <input id="idUsulan"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            No ST/ND / Uraian Kegiatan
-        </label>
-        <input class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Tgl ST/ND
-        </label>
-        <input type="date"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Estimasi Biaya
-        </label>
-        <input class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Status Kecukupan Dana
-        </label>
-        <input readonly id="statusDana"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <!-- Ganti bagian Tujuan lama dengan kode ini -->
-        <div>
-            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-                Tujuan
-            </label>
-            <input list="listTujuan" id="inputTujuan" 
-                   class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
-            <datalist id="listTujuan"></datalist>
-        </div>
-        
-        </div>
-        
-        <div class="space-y-3">
-        
-        <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            MAK
-        </label>
-        <input readonly id="mak"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-        
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Uraian MAK
-        </label>
-        <input readonly id="uraianMak"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Pagu
-        </label>
-        <input readonly id="pagu"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-       
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Blokir
-        </label>
-        <input readonly id="blokir"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Realisasi
-        </label>
-        <input readonly id="realisasi"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Sisa
-        </label>
-        <input readonly id="sisa"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
-        </div>
-        
-        </div>
-        
-        </div>
-        
-        <div class="bg-slate-50 border-t px-6 py-4 flex justify-end gap-3">
-
-        <button
-        onclick="closeRekamModal()"
-        class="px-6 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100">
-        <i class="fa-solid fa-right-from-bracket mr-2"></i>
-        Batal
-        </button>
-        
-        <button
-        class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-xl shadow">
-        <i class="fa-solid fa-floppy-disk mr-2"></i>
-        Simpan
-        </button>
-        
-        </div>
-        
-        </div>
-        
-        </div>
-    
+    </div>
 </body>
 </html>
