@@ -454,17 +454,16 @@
             async function openDetilModal(mak) {
                 document.getElementById("detilModal").classList.replace("hidden", "flex");
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
-                const tbody = document.getElementById("detil-tbody");
-                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center">Memuat data...</td></tr>';
                 
                 try {
-                    // Pastikan realUrl benar
-                    const url = sessionStorage.getItem('realUrl');
-                    const res = await fetch(`${url}?action=getDetil&mak=${mak}`);
+                    const res = await fetch(sessionStorage.getItem('realUrl'), {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'getDetil', mak: mak }) // Kirim sebagai body
+                    });
                     window.detilKegiatanData = await res.json();
                     renderDetilTable(window.detilKegiatanData);
                 } catch (e) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-red-500 text-center">Gagal memuat data</td></tr>';
+                    console.error("Gagal load:", e);
                 }
             }
         
