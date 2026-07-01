@@ -380,34 +380,50 @@
         }
 
         async function simpanData() {
-            const payload = {
-                action: 'simpanKegiatan',
-                idKegiatan: document.getElementById("idUsulan").value,
-                mak: document.getElementById("mak").value,
-                uraian: document.getElementById("uraianKegiatan").value, // Pastikan ID ini ada di input Anda
-                tujuan: document.getElementById("inputTujuan").value,
-                tglSt: document.getElementById("tglSt").value,
-                estimasi: document.getElementById("estimasiBiaya").value.replace(/,/g, ''),
-                userLogin: "User Login", // Ganti dengan data dari sessionStorage Anda
-                tglRekam: new Date().toISOString().split('T')[0]
-            };
-        
-            try {
-                const response = await fetch(sessionStorage.getItem('realUrl'), {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                
-                if (result.status === "success") {
-                    alert("Data berhasil disimpan!");
-                    closeRekamModal();
+                // Ambil elemen
+                const idKegiatan = document.getElementById("idUsulan").value;
+                const mak = document.getElementById("mak").value;
+                const uraian = document.getElementById("uraianKegiatan").value;
+                const tujuan = document.getElementById("inputTujuan").value;
+                const tglSt = document.getElementById("tglSt").value;
+                const estimasi = document.getElementById("estimasiBiaya").value.replace(/,/g, '');
+            
+                // Validasi sederhana
+                if (!uraian || !estimasi) {
+                    alert("Mohon lengkapi Uraian Kegiatan dan Estimasi Biaya!");
+                    return;
                 }
-            } catch (e) {
-                alert("Gagal menyimpan data.");
+            
+                const payload = {
+                    action: 'simpanKegiatan',
+                    idKegiatan: idKegiatan,
+                    mak: mak,
+                    uraian: uraian,
+                    tujuan: tujuan,
+                    tglSt: tglSt,
+                    estimasi: estimasi,
+                    userLogin: sessionStorage.getItem('userEmail') || "Guest", // Mengambil user dari session
+                    tglRekam: new Date().toISOString().split('T')[0]
+                };
+            
+                console.log("Mengirim data:", payload); // Cek di Console (F12) apakah data sudah benar
+            
+                try {
+                    const response = await fetch(sessionStorage.getItem('realUrl'), {
+                        method: 'POST',
+                        mode: 'no-cors', // Penting untuk GAS
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    alert("Data berhasil dikirim ke server!");
+                    closeRekamModal();
+                } catch (e) {
+                    console.error(e);
+                    alert("Gagal menyimpan data. Cek Console F12.");
+                }
             }
-        }
-                
+                            
             </script>
 
         <div id="rekamModal"
@@ -452,32 +468,17 @@
         </div>
         
         <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            No ST/ND / Uraian Kegiatan
-        </label>
-        <input class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                No ST/ND / Uraian Kegiatan
+            </label>
+            <input id="uraianKegiatan" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 ...">
         </div>
         
         <div>
-        
-        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
-            Tgl ST/ND
-        </label>
-        <input type="date"
-        class="w-full rounded-xl border border-slate-300
-        px-4 py-2.5
-        focus:outline-none
-        focus:ring-2
-        focus:ring-sky-500
-        focus:border-sky-500
-        transition">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                Tgl ST/ND
+            </label>
+            <input type="date" id="tglSt" class="w-full rounded-xl ...">
         </div>
         
         <!-- Tambahkan id="estimasiBiaya" dan oninput="cekKecukupanDana()" -->
