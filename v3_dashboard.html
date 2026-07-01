@@ -76,19 +76,9 @@
                 container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
                 try {
                     const res = await fetch(sessionStorage.getItem('realUrl'), {
-                            method: 'POST',
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                action: "getDashboardData"
-                            }),
-                            redirect: "follow"
-                        });
-                        
-                        const data = await res.json();
-                        
-                        console.log(data);
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'getDashboardData' })
+                    });
                     const data = await res.json();
                     
                     container.innerHTML = `
