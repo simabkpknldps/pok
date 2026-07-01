@@ -54,15 +54,16 @@
                     container.innerHTML = html;
                     
                     // JEDA SINGKAT untuk memastikan DOM siap, lalu panggil fungsi
-                    if (page === 'pok') {
-                        setTimeout(() => {
-                            if (typeof window.loadPokData === 'function') {
-                                window.loadPokData();
-                            } else {
-                                console.error("Fungsi loadPokData belum terdaftar di window!");
-                            }
-                        }, 100);
-                    }
+                    // Ganti blok if (page === 'pok') di fungsi navigate dengan ini:
+                        if (page === 'pok') {
+                            const checkExist = setInterval(function() {
+                                if (typeof window.loadPokData !== 'undefined') {
+                                    clearInterval(checkExist);
+                                    window.loadPokData();
+                                    console.log("Fungsi berhasil dipanggil setelah menunggu!");
+                                }
+                            }, 50); // Mengecek setiap 50ms sampai fungsi tersedia
+                        }
                 } catch (e) {
                     container.innerHTML = `<p class="text-red-500">Error memuat halaman.</p>`;
                 }
