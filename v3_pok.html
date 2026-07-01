@@ -28,28 +28,42 @@
     window.expandedCodes = window.expandedCodes || new Set();
 
     window.loadPokData = async function() {
-        const tbody = document.getElementById('pok-tbody');
-        //const url = sessionStorage.getItem('realUrl');
-        const url = "https://script.google.com/macros/s/AKfycbxhclFUTLCSzjQHK-W-dyZgF3dFeF5SaJEk6JvdhMU_6HA9Bs_avFb9G25gPrWT1XxXxA/exec";
+            const tbody = document.getElementById('pok-tbody');
+            const url = sessionStorage.getItem('realUrl');
         
-        if (!url) {
-            console.error("URL API tidak ditemukan di sessionStorage.");
-            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Error: URL API tidak ditemukan.</td></tr>`;
-            return;
-        }
-
-        try {
-            const res = await fetch(url, { 
-                method: 'POST', 
-                body: JSON.stringify({ action: 'getPOKData' }) 
-            });
-            window.rawPokData = await res.json();
-            window.renderPok();
-        } catch (e) {
-            console.error("Fetch error:", e);
-            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Gagal mengambil data dari server.</td></tr>`;
-        }
-    };
+            if (!url) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">URL TIDAK DITEMUKAN DI SESSION STORAGE!</td></tr>`;
+                return;
+            }
+        
+            try {
+                const res = await fetch(url, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ action: 'getPOKData' }) 
+                });
+                
+                // Cek apakah response sukses
+                if (!res.ok) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">HTTP ERROR: ${res.status}</td></tr>`;
+                    return;
+                }
+        
+                const data = await res.json();
+                
+                // Log data ke console untuk melihat isinya
+                console.log("Data diterima dari GAS:", data);
+        
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center">Data kosong (Array kosong).</td></tr>`;
+                } else {
+                    window.rawPokData = data;
+                    window.renderPok();
+                }
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">ERROR: ${e.message}</td></tr>`;
+            }
+        };
 
     window.renderPok = function() {
         const tbody = document.getElementById('pok-tbody');
