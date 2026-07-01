@@ -1,3 +1,4 @@
+<!-- v3_pok.html -->
 <div class="space-y-4">
     <h2 class="text-xl font-bold text-slate-800">Daftar POK</h2>
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -20,7 +21,6 @@
 </div>
 
 <script>
-// Variabel global untuk menyimpan data
 window.rawPokData = [];
 window.expandedCodes = new Set();
 
@@ -32,7 +32,7 @@ window.loadPokData = async function() {
             body: JSON.stringify({ action: 'getPOKData' }) 
         });
         window.rawPokData = await res.json();
-        renderPok();
+        window.renderPok();
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Gagal mengambil data.</td></tr>`;
     }
@@ -40,9 +40,8 @@ window.loadPokData = async function() {
 
 window.renderPok = function() {
     const tbody = document.getElementById('pok-tbody');
-    if (!window.rawPokData.length) return;
+    if (!window.rawPokData || window.rawPokData.length === 0) return;
 
-    // Filter: tampilkan root (len 12) atau anak dari yang di-expand
     const filtered = window.rawPokData.filter(i => {
         if (String(i.kode).length === 12) return true;
         return Array.from(window.expandedCodes).some(parent => String(i.kode).startsWith(parent) && i.kode !== parent);
@@ -54,12 +53,12 @@ window.renderPok = function() {
         const hasChildren = window.rawPokData.some(child => String(child.kode).startsWith(i.kode) && child.kode !== i.kode);
         
         return `
-            <tr class="border-b hover:bg-slate-100 ${bgClass} transition-colors cursor-pointer" onclick="toggleExpand('${i.kode}')">
+            <tr class="border-b hover:bg-slate-100 ${bgClass} transition-colors cursor-pointer" onclick="window.toggleExpand('${i.kode}')">
                 <td class="p-3 font-mono text-xs font-bold">${i.kode}</td>
                 <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(i.kode) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
-                <td class="p-3 text-right">${Number(i.pagu).toLocaleString()}</td>
-                <td class="p-3 text-right">${Number(i.realisasi).toLocaleString()}</td>
-                <td class="p-3 text-right">${Number(i.sisa).toLocaleString()}</td>
+                <td class="p-3 text-right">${Number(i.pagu || 0).toLocaleString()}</td>
+                <td class="p-3 text-right">${Number(i.realisasi || 0).toLocaleString()}</td>
+                <td class="p-3 text-right">${Number(i.sisa || 0).toLocaleString()}</td>
                 <td class="p-3 text-center">
                     ${String(i.kode).length > 27 ? `
                         <button class="bg-sky-500 text-white px-2 py-1 rounded text-[10px] mr-1">Rekam</button>
