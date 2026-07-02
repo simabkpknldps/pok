@@ -220,21 +220,25 @@ function drawWatermark(img, dateObj, loc, address) {
 
 /* ============ PROSES FOTO MASUK ============ */
 
-async function handleFile(id, file) {
-
+/* ============ PROSES FOTO MASUK ============ */
+async function handleFile(id, file, isCamera) {
     if (!file) return;
 
     const infoEl = document.getElementById("info_" + id);
     if (infoEl) infoEl.textContent = "Memproses foto...";
 
     try {
-
         const rawDataUrl = await readFileAsDataURL(file);
         const img = await loadImage(rawDataUrl);
-        const loc = await getLocation();
-
+        
+        let loc = null;
         let address = null;
-        if (loc) address = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
+
+        // Geotagging HANYA jika tombol Kamera (isCamera = true)
+        if (isCamera) {
+            loc = await getLocation();
+            if (loc) address = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
+        }
 
         const now = new Date();
         const finalDataUrl = drawWatermark(img, now, loc, address);
@@ -245,15 +249,17 @@ async function handleFile(id, file) {
         if (previewEl) previewEl.src = finalDataUrl;
 
         if (infoEl) {
-            infoEl.textContent = now.toLocaleString("id-ID") + (loc ? " • " + (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : " • lokasi tidak tersedia");
+            let infoText = now.toLocaleString("id-ID");
+            if (isCamera && loc) {
+                infoText += " • " + (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`);
+            }
+            infoEl.textContent = infoText;
         }
 
         const saveBtn = document.getElementById("save_" + id);
         if (saveBtn) saveBtn.style.display = "block";
 
         simpanFotoKeStorage(id, finalDataUrl, now.toISOString(), loc, address);
-
-        // otomatis coba simpan ke galeri/unduhan perangkat
         simpanKeGaleri(finalDataUrl, id);
 
     } catch (err) {
@@ -262,15 +268,22 @@ async function handleFile(id, file) {
     }
 }
 
-function registerFileInput(inputId, fotoId) {
+// Update cara mendaftarkan input
+function registerFileInput(inputId, fotoId, isCamera) {
     const el = document.getElementById(inputId);
     if (!el) return;
     el.addEventListener("change", function (e) {
         const file = e.target.files[0];
-        handleFile(fotoId, file);
+        handleFile(fotoId, file, isCamera);
         e.target.value = "";
     });
 }
+
+// Registrasi berdasarkan jenis tombol
+SEMUA_ID.forEach(id => {
+    registerFileInput(id + "_cam", id, true);  // Kamera = true (pake lokasi)
+    registerFileInput(id + "_up", id, false);  // Upload = false (tanpa lokasi)
+});
 
 SEMUA_ID.forEach(id => {
     registerFileInput(id + "_cam", id);
@@ -300,19 +313,7 @@ function todayStr() {
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
-function cekExpired() {
-    const savedDate = localStorage.getItem(STORAGE_DATE_KEY);
-    const today = todayStr();
 
-    if (savedDate !== today) {
-        Object.keys(localStorage).forEach(k => {
-            if (k.startsWith(STORAGE_PREFIX)) localStorage.removeItem(k);
-        });
-        localStorage.setItem(STORAGE_DATE_KEY, today);
-        return true;
-    }
-    return false;
-}
 
 function simpanFotoKeStorage(id, dataUrl, iso, loc, address) {
     try {
