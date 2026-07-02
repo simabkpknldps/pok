@@ -174,18 +174,27 @@ function getLocation() {
 
 async function reverseGeocode(lat, lon) {
     try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`
+        );
         const data = await res.json();
-        return data.display_name || null;
+        return {
+            address: data.display_name || null,
+            lat,
+            lon
+        };
     } catch (e) {
-        return null;
+        return {
+            address: null,
+            lat,
+            lon
+        };
     }
 }
 
 /* ============ WATERMARK / GEOTAG (dengan downscale, biar hemat storage) ============ */
 
-function drawWatermark(img, dateObj, loc, address) {
-
+function drawWatermark(img, dateObj, locInfo) {
     const maxDim = 1000;
     let w = img.width, h = img.height;
 
@@ -203,7 +212,14 @@ function drawWatermark(img, dateObj, loc, address) {
     ctx.drawImage(img, 0, 0, w, h);
 
     const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
-    const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
+
+    let lokasiText;
+    if (locInfo) {
+        const coords = `${locInfo.lat.toFixed(5)}, ${locInfo.lon.toFixed(5)}`;
+        lokasiText = locInfo.address ? `${locInfo.address} (${coords})` : coords;
+    } else {
+        lokasiText = "Lokasi tidak tersedia";
+    }
 
     const barH = Math.max(38, h * 0.11);
 
@@ -218,6 +234,7 @@ function drawWatermark(img, dateObj, loc, address) {
 
     return canvas.toDataURL("image/jpeg", 0.6);
 }
+
 
 /* ============ PROSES FOTO MASUK ============ */
 
