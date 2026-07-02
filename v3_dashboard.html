@@ -54,7 +54,8 @@
             title.innerText = page.charAt(0).toUpperCase() + page.slice(1);
             
             if (page === 'dashboard') {
-                renderDashboardPage(container);
+                dashboardDataCache = null;
+                await renderDashboardPage(container, true);
             } else if (page === 'pok') {
                 container.innerHTML = `
                 <div class="space-y-4">
@@ -543,7 +544,7 @@
                 renderDetilTable(window.detilKegiatanData.filter(i => i.uraian.toLowerCase().includes(keyword)));
             }
         
-            </script>
+        </script>
 
         <div id="rekamModal"
         class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
