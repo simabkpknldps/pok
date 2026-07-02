@@ -455,29 +455,25 @@
                 document.getElementById("detilModal").classList.replace("hidden", "flex");
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
                 
-                // Tampilkan loading
-                document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
-            
                 try {
                     const res = await fetch(sessionStorage.getItem('realUrl'), {
                         method: 'POST',
-                        // Tambahkan header ini agar GAS bisa mendeteksi JSON dengan benar
-                        headers: {
-                            'Content-Type': 'text/plain;charset=utf-8', 
-                        },
-                        body: JSON.stringify({ 
-                            action: 'getDetil', 
-                            mak: mak 
-                        })
+                        // Sangat penting: jangan sertakan header Content-Type jika muncul error CORS
+                        body: JSON.stringify({ action: 'getDetil', mak: mak })
                     });
                     
-                    const data = await res.json();
-                    console.log("Data yang diterima dari server:", data);
-                    window.detilKegiatanData = data;
-                    renderDetilTable(window.detilKegiatanData);
+                    const response = await res.json();
+                    
+                    // Logika agar tidak error jika data bukan array
+                    if (Array.isArray(response)) {
+                        window.detilKegiatanData = response;
+                        renderDetilTable(window.detilKegiatanData);
+                    } else {
+                        console.error("Server mengembalikan error:", response);
+                        alert("Error: " + (response.message || "Data tidak ditemukan"));
+                    }
                 } catch (e) {
-                    console.error("Gagal load:", e);
-                    document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Error: ${e.message}</td></tr>`;
+                    console.error("Fetch gagal:", e);
                 }
             }
         
