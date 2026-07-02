@@ -3,111 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dokumentasi Kegiatan</title>
+    <title>Upload Dokumentasi</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg); padding: 20px; color: var(--text); }
-        .container { max-width: 600px; margin: auto; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .card { background: white; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; background: #eee; display: block; }
-        .btn-action { width: 100%; padding: 8px; margin-top: 8px; border: none; border-radius: 6px; background: var(--primary); color: white; cursor: pointer; font-size: 12px; }
+        * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+        body { margin: 0; background: #f2f2f2; }
+        .container { max-width: 1000px; margin: auto; padding: 20px; }
+        h2 { text-align: center; }
+        .tabs { display: flex; margin-bottom: 20px; gap: 10px; }
+        .tabs button { flex: 1; padding: 15px; border: none; cursor: pointer; font-size: 16px; border-radius: 8px; background: #ddd; }
+        .tabs button.active { background: #007bff; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tabs button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: white; cursor: pointer; }
-        .tabs button.active { background: var(--primary); color: white; border: none; }
+        .rapat-form { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,.1); margin-bottom: 20px; }
+        .rapat-form label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #333; }
+        .rapat-form input[type=text], .rapat-form input[type=date] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 12px; font-size: 14px; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .card { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,.1); }
+        .card h3 { text-align: center; margin-top: 0; }
+        .card img { width: 100%; height: 250px; object-fit: contain; border: 1px solid #ccc; margin-top: 10px; background: #fafafa; }
+        .hidden-file { display: none; }
+        .foto-actions { display: flex; gap: 8px; }
+        .btn-foto { flex: 1; padding: 10px 6px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; background: #007bff; color: white; }
+        .btn-foto.btn-upload { background: #6c757d; }
+        .btn-foto:hover { opacity: .9; }
+        .foto-info { margin-top: 6px; font-size: 11px; color: #555; min-height: 14px; word-break: break-word; }
+        .foto-save { display: block; width: 100%; margin-top: 8px; padding: 6px; font-size: 12px; border: 1px solid #28a745; color: #28a745; background: white; border-radius: 6px; cursor: pointer; }
+        .foto-save:hover { background: #28a745; color: white; }
+        .download { width: 100%; margin-top: 25px; padding: 15px; font-size: 18px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .download:hover { background: #218838; }
+        @media(max-width: 768px) { .grid { grid-template-columns: 1fr; } .card img { height: 220px; } .tabs { flex-direction: column; } }
     </style>
 </head>
 <body>
     <div class="container">
+        <h2>Upload Dokumentasi</h2>
         <div class="tabs">
-            <button class="active" onclick="showTab('perjadin', this)">Perjadin</button>
-            <button onclick="showTab('rapat', this)">Rapat</button>
+            <button class="active" onclick="openTab('perjadin', this)">📷 Foto Perjadin</button>
+            <button onclick="openTab('rapat', this)">👥 Foto Rapat</button>
         </div>
+
         <div id="perjadin" class="tab-content active">
-            <div class="grid" id="grid-perjadin"></div>
-            <button class="btn-action" style="background:#059669; padding:15px; margin-top:20px;" onclick="buatPDF('perjadin')">Download PDF Perjadin</button>
+            <div class="grid">
+                <!-- Template Card -->
+                <script>
+                    function createCard(id, title) {
+                        return `
+                            <div class="card">
+                                <h3>${title}</h3>
+                                <div class="foto-actions">
+                                    <input type="file" id="${id}_cam" class="hidden-file" accept="image/*" capture="environment">
+                                    <input type="file" id="${id}_up" class="hidden-file" accept="image/*">
+                                    <button type="button" class="btn-foto" onclick="document.getElementById('${id}_cam').click()">📷 Ambil Foto</button>
+                                    <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('${id}_up').click()">🖼️ Upload Foto</button>
+                                </div>
+                                <img id="prev_${id}">
+                                <div class="foto-info" id="info_${id}"></div>
+                                <button type="button" class="foto-save" id="save_${id}" style="display:none" onclick="simpanKeGaleri(foto['${id}'],'${id}')">💾 Simpan ke Galeri</button>
+                            </div>
+                        `;
+                    }
+                    document.write(`
+                        ${createCard('perjadin_start', 'Start Foto')}
+                        ${createCard('perjadin_in', 'In Foto')}
+                        ${createCard('perjadin_out', 'Out Foto')}
+                        ${createCard('perjadin_end', 'End Foto')}
+                    `);
+                </script>
+            </div>
+            <button class="download" onclick="buatPDF('perjadin','Dokumentasi Perjadin')">Download PDF Perjadin</button>
         </div>
+
         <div id="rapat" class="tab-content">
-            <div class="grid" id="grid-rapat"></div>
-            <button class="btn-action" style="background:#059669; padding:15px; margin-top:20px;" onclick="buatPDF('rapat')">Download PDF Rapat</button>
+            <div class="rapat-form">
+                <label for="uraianRapat">Uraian Rapat</label>
+                <input type="text" id="uraianRapat" placeholder="Contoh: Rapat koordinasi anggaran triwulan II">
+                <label for="tglRapat">Tanggal Rapat</label>
+                <input type="date" id="tglRapat">
+            </div>
+            <div class="grid">
+                <script>
+                    document.write(`
+                        ${createCard('rapat_start', 'Foto 1')}
+                        ${createCard('rapat_in', 'Foto 2')}
+                        ${createCard('rapat_out', 'Foto 3')}
+                        ${createCard('rapat_end', 'Foto 4')}
+                    `);
+                </script>
+            </div>
+            <button class="download" onclick="buatPDF('rapat','Dokumentasi Rapat')">Download PDF Rapat</button>
         </div>
     </div>
 
     <script>
-        const fotoData = {}; // Simpan base64 di sini
-        
-        const items = [
-            { id: 'perjadin_start', title: 'Start' }, { id: 'perjadin_in', title: 'In' },
-            { id: 'perjadin_out', title: 'Out' }, { id: 'perjadin_end', title: 'End' },
-            { id: 'rapat_start', title: 'Foto 1' }, { id: 'rapat_in', title: 'Foto 2' },
-            { id: 'rapat_out', title: 'Foto 3' }, { id: 'rapat_end', title: 'Foto 4' }
-        ];
+        const foto = {};
+        const SEMUA_ID = ["perjadin_start", "perjadin_in", "perjadin_out", "perjadin_end", "rapat_start", "rapat_in", "rapat_out", "rapat_end"];
+        const STORAGE_PREFIX = "dokfoto_";
+        const STORAGE_DATE_KEY = "dokfoto_tanggal";
 
-        items.forEach(item => {
-            const grid = item.id.includes('perjadin') ? document.getElementById('grid-perjadin') : document.getElementById('grid-rapat');
-            grid.innerHTML += `
-                <div class="card">
-                    <h3>${item.title}</h3>
-                    <img id="img_${item.id}" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=">
-                    <input type="file" id="up_${item.id}" style="display:none" accept="image/*" capture="environment">
-                    <button class="btn-action" onclick="document.getElementById('up_${item.id}').click()">📷 Foto</button>
-                </div>
-            `;
-            document.getElementById('up_' + item.id).onchange = (e) => processFoto(item.id, e.target.files[0]);
-        });
-
-        function showTab(id, btn) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            btn.classList.add('active');
+        function openTab(tab, btn) {
+            document.querySelectorAll(".tab-content").forEach(e => e.classList.remove("active"));
+            document.querySelectorAll(".tabs button").forEach(e => e.classList.remove("active"));
+            document.getElementById(tab).classList.add("active");
+            btn.classList.add("active");
         }
 
-        async function processFoto(id, file) {
-            const imgEl = document.getElementById('img_' + id);
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.src = URL.createObjectURL(file);
-            await img.decode();
-            
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        function getLocation() {
+            return new Promise(resolve => {
+                if (!navigator.geolocation) { resolve(null); return; }
+                navigator.geolocation.getCurrentPosition(
+                    pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+                    () => resolve(null),
+                    { enableHighAccuracy: true, timeout: 8000 }
+                );
+            });
+        }
+
+        async function reverseGeocode(lat, lon) {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
+                const data = await res.json();
+                return data.display_name || null;
+            } catch (e) { return null; }
+        }
+
+        function drawWatermark(img, dateObj, loc, address) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
             canvas.width = img.width;
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
 
-            // Geotagging
-            try {
-                const pos = await new Promise((res) => navigator.geolocation.getCurrentPosition(res, () => res(null)));
-                const info = pos ? `Lat: ${pos.coords.latitude.toFixed(4)}, Lon: ${pos.coords.longitude.toFixed(4)}` : "No GPS";
-                ctx.fillStyle = "rgba(0,0,0,0.5)";
-                ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-                ctx.fillStyle = "white";
-                ctx.font = "40px Arial";
-                ctx.fillText(new Date().toLocaleString(), 20, canvas.height - 60);
-                ctx.fillText(info, 20, canvas.height - 20);
-            } catch(e) {}
+            const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
+            const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
 
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            fotoData[id] = dataUrl;
-            imgEl.src = dataUrl; // Update UI langsung
+            const barH = Math.max(80, canvas.height * 0.1);
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fillRect(0, canvas.height - barH, canvas.width, barH);
+            ctx.fillStyle = "#fff";
+            ctx.font = `${Math.max(24, barH * 0.4)}px Arial`;
+            ctx.textBaseline = "middle";
+            ctx.fillText(tglText, 20, canvas.height - barH * 0.7);
+            ctx.fillText(lokasiText, 20, canvas.height - barH * 0.3);
+
+            return canvas.toDataURL("image/jpeg", 0.8);
         }
 
-        async function buatPDF(prefix) {
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const ids = items.filter(i => i.id.startsWith(prefix)).map(i => i.id);
-            
-            ids.forEach((id, i) => {
-                if(!fotoData[id]) return;
-                const x = (i % 2 === 0) ? 15 : 110;
-                const y = 20 + (Math.floor(i / 2) * 90);
-                pdf.addImage(fotoData[id], 'JPEG', x, y, 85, 85);
+        async function handleFile(id, file) {
+            if (!file) return;
+            const infoEl = document.getElementById("info_" + id);
+            infoEl.textContent = "Memproses...";
+            try {
+                const rawDataUrl = await readFileAsDataURL(file);
+                const img = await loadImage(rawDataUrl);
+                const loc = await getLocation();
+                let address = loc ? await reverseGeocode(loc.lat, loc.lon).catch(() => null) : null;
+                const finalDataUrl = drawWatermark(img, new Date(), loc, address);
+                foto[id] = finalDataUrl;
+                document.getElementById("prev_" + id).src = finalDataUrl;
+                infoEl.textContent = "Foto siap.";
+                document.getElementById("save_" + id).style.display = "block";
+                simpanFotoKeStorage(id, finalDataUrl, new Date().toISOString(), loc, address);
+            } catch (err) { infoEl.textContent = "Gagal memproses."; }
+        }
+
+        SEMUA_ID.forEach(id => {
+            const camInput = document.getElementById(id + "_cam");
+            const upInput = document.getElementById(id + "_up");
+            if (camInput) camInput.addEventListener("change", e => handleFile(id, e.target.files[0]));
+            if (upInput) upInput.addEventListener("change", e => handleFile(id, e.target.files[0]));
+        });
+
+        function simpanKeGaleri(dataUrl, id) {
+            const a = document.createElement("a");
+            a.href = dataUrl;
+            a.download = `doc_${id}_${Date.now()}.jpg`;
+            a.click();
+        }
+
+        function simpanFotoKeStorage(id, dataUrl, iso, loc, address) {
+            localStorage.setItem(STORAGE_PREFIX + "foto_" + id, JSON.stringify({ dataUrl, iso, loc, address }));
+        }
+
+        function muatFotoDariStorage() {
+            SEMUA_ID.forEach(id => {
+                const raw = localStorage.getItem(STORAGE_PREFIX + "foto_" + id);
+                if (!raw) return;
+                const data = JSON.parse(raw);
+                foto[id] = data.dataUrl;
+                document.getElementById("prev_" + id).src = data.dataUrl;
+                document.getElementById("save_" + id).style.display = "block";
             });
-            pdf.save(prefix + '.pdf');
+        }
+        muatFotoDariStorage();
+
+        async function buatPDF(prefix, judul) {
+            const ids = [prefix + "_start", prefix + "_in", prefix + "_out", prefix + "_end"];
+            for (let id of ids) if (!foto[id]) { alert("Foto belum lengkap!"); return; }
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF("p", "mm", "a4");
+            pdf.setFontSize(20);
+            pdf.text(judul, 105, 15, { align: "center" });
+
+            const positions = [
+                { x: 15, y: 30 }, { x: 110, y: 30 },
+                { x: 15, y: 120 }, { x: 110, y: 120 }
+            ];
+
+            ids.forEach((id, index) => {
+                const pos = positions[index];
+                pdf.addImage(foto[id], "JPEG", pos.x, pos.y, 85, 85);
+            });
+
+            pdf.save(judul + ".pdf");
         }
     </script>
 </body>
