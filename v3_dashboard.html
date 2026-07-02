@@ -498,8 +498,6 @@
                 }
             
                 tbody.innerHTML = data.map(i => {
-                    // 1. Format Tanggal (yyyy-MM-dd)
-                    // Kita gunakan Date object untuk memastikan formatnya benar
                     let tglFormatted = '-';
                     if (i.tglSt) {
                         const d = new Date(i.tglSt);
@@ -509,38 +507,30 @@
                     }
             
                     // 2. Warna Status
-                    const statusColors = {
-                        "Rekam Data": "bg-pink-100 text-pink-700",
-                        "Terlaksana": "bg-slate-200 text-slate-700",
-                        "LPT": "bg-yellow-100 text-yellow-700",
-                        "Terbayar": "bg-green-100 text-green-700",
-                        "Selesai": "bg-blue-100 text-blue-700"
-                    };
-                    const statusClass = statusColors[i.status] || "bg-gray-100";
+                    const sClass = i.status === 'Rekam Data' ? 'bg-pink-100 text-pink-700' :
+                       i.status === 'Terlaksana' ? 'bg-slate-200 text-slate-700' :
+                       i.status === 'LPT' ? 'bg-yellow-100 text-yellow-700' :
+                       i.status === 'Terbayar' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+                    
+                    //const statusClass = statusColors[i.status] || "bg-gray-100";
             
                     return `
-                        <tr class="border-b flex w-full items-center hover:bg-slate-50">
-                            <td class="p-3 w-[25%] text-xs whitespace-normal break-words">${i.uraian || '-'}</td>
-                            <td class="p-3 w-[12%] text-xs truncate">${i.pelaksana || '-'}</td>
-                            <td class="p-3 w-[20%] text-xs truncate">${i.tujuan || '-'}</td>
-                            <td class="p-3 w-[10%] text-xs">${i.tglSt ? new Date(i.tglSt).toISOString().split('T')[0] : '-'}</td>
-                            <td class="p-3 w-[13%] text-xs text-right">${Number(i.estimasi || 0).toLocaleString()}</td>
-                            <td class="p-3 w-[12%] flex justify-center">
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    i.status === 'Rekam Data' ? 'bg-pink-100 text-pink-700' :
-                                    i.status === 'Terlaksana' ? 'bg-slate-200 text-slate-700' :
-                                    i.status === 'LPT' ? 'bg-yellow-100 text-yellow-700' :
-                                    i.status === 'Terbayar' ? 'bg-green-100 text-green-700' :
-                                    'bg-blue-100 text-blue-700'
-                                }">${i.status || '-'}</span>
-                            </td>
-                            <td class="p-3 w-[8%] flex justify-center gap-2">
+                        <div class="flex p-3 border-b items-center hover:bg-slate-50 text-xs">
+                            <div class="w-[30%] pr-2 whitespace-normal break-words">${i.uraian || '-'}</div>
+                            <div class="w-[12%] truncate">${i.pelaksana || '-'}</div>
+                            <div class="w-[18%] truncate pr-2">${i.tujuan || '-'}</div>
+                            <div class="w-[10%]">${i.tglSt ? new Date(i.tglSt).toISOString().split('T')[0] : '-'}</div>
+                            <div class="w-[12%] text-right pr-2">${Number(i.estimasi || 0).toLocaleString()}</div>
+                            <div class="w-[10%] flex justify-center">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${sClass}">${i.status || '-'}</span>
+                            </div>
+                            <div class="w-[8%] flex justify-center gap-2">
                                 ${(i.status === 'Rekam Data' || i.status === 'Terlaksana') ? 
-                                    `<button title="Pelaksana" onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600 hover:text-sky-800"><i class="fa-solid fa-user-check"></i></button>` : ''}
+                                    `<button onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600"><i class="fa-solid fa-user-check"></i></button>` : ''}
                                 ${i.status === 'Rekam Data' ? 
-                                    `<button title="Hapus" onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>` : ''}
-                            </td>
-                        </tr>
+                                    `<button onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
                     `;
                 }).join('');
             }
@@ -780,15 +770,18 @@
             <div class="p-6">
                 <input type="text" id="cariDetil" oninput="filterDetil()" placeholder="Cari uraian / nomor ST..." class="w-full border p-2 rounded-xl mb-4">
                 <table class="w-full text-sm table-fixed"> <thead class="bg-slate-100 block w-full">
-                    <tr class="flex w-full">
-                        <th class="p-3 w-[25%] text-left">Uraian/Nomor ST</th>
-                        <th class="p-3 w-[12%] text-left">Pelaksana</th>
-                        <th class="p-3 w-[20%] text-left">Tujuan</th>
-                        <th class="p-3 w-[10%] text-left">Tgl</th>
-                        <th class="p-3 w-[13%] text-right">Jumlah</th>
-                        <th class="p-3 w-[12%] text-center">Status</th>
-                        <th class="p-3 w-[8%] text-center">Aksi</th>
-                    </tr>
+                    <div class="w-full text-sm">
+                        <div class="flex bg-slate-100 p-3 font-bold text-slate-700 border-b items-center text-xs">
+                            <div class="w-[30%]">Uraian/ST</div>
+                            <div class="w-[12%]">Pelaksana</div>
+                            <div class="w-[18%]">Tujuan</div>
+                            <div class="w-[10%]">Tgl</div>
+                            <div class="w-[12%] text-right">Jumlah</div>
+                            <div class="w-[10%] text-center">Status</div>
+                            <div class="w-[8%] text-center">Aksi</div>
+                        </div>
+                        <div id="detil-tbody" class="max-h-[60vh] overflow-y-auto"></div>
+                    </div>
                 </thead>
                 <tbody id="detil-tbody" class="block w-full"></tbody>
             </table>
