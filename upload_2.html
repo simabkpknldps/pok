@@ -3,98 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dokumentasi Modern</title>
+    <title>Dokumentasi Kegiatan</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
-        * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
-        body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
-        .container { max-width: 800px; margin: auto; }
-        h2 { text-align: center; color: var(--text); margin-bottom: 2rem; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 2rem; background: #e2e8f0; padding: 5px; border-radius: 12px; }
-        .tabs button { flex: 1; padding: 12px; border: none; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s; }
-        .tabs button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); padding: 20px; color: var(--text); }
+        .container { max-width: 600px; margin: auto; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .card { background: white; padding: 10px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; background: #eee; display: block; }
+        .btn-action { width: 100%; padding: 8px; margin-top: 8px; border: none; border-radius: 6px; background: var(--primary); color: white; cursor: pointer; font-size: 12px; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .card { background: var(--card); padding: 16px; border-radius: 16px; border: 1px solid #e2e8f0; }
-        .card h3 { font-size: 0.9rem; margin: 0 0 10px 0; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-        .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; background: #f1f5f9; }
-        .btn-foto { width: 100%; padding: 10px; border: none; border-radius: 8px; background: var(--primary); color: white; margin-top: 10px; cursor: pointer; font-weight: 500; }
-        .download { width: 100%; padding: 16px; margin-top: 2rem; border: none; border-radius: 12px; background: #0f172a; color: white; font-weight: 700; cursor: pointer; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tabs button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: white; cursor: pointer; }
+        .tabs button.active { background: var(--primary); color: white; border: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>📷 Dokumentasi Kegiatan</h2>
         <div class="tabs">
-            <button class="active" onclick="openTab('perjadin', this)">Perjadin</button>
-            <button onclick="openTab('rapat', this)">Rapat</button>
+            <button class="active" onclick="showTab('perjadin', this)">Perjadin</button>
+            <button onclick="showTab('rapat', this)">Rapat</button>
         </div>
-        
         <div id="perjadin" class="tab-content active">
             <div class="grid" id="grid-perjadin"></div>
-            <button class="download" onclick="buatPDF('perjadin', 'Dokumentasi_Perjadin')">Download PDF Perjadin</button>
+            <button class="btn-action" style="background:#059669; padding:15px; margin-top:20px;" onclick="buatPDF('perjadin')">Download PDF Perjadin</button>
         </div>
-        
         <div id="rapat" class="tab-content">
             <div class="grid" id="grid-rapat"></div>
-            <button class="download" onclick="buatPDF('rapat', 'Dokumentasi_Rapat')">Download PDF Rapat</button>
+            <button class="btn-action" style="background:#059669; padding:15px; margin-top:20px;" onclick="buatPDF('rapat')">Download PDF Rapat</button>
         </div>
     </div>
 
     <script>
-        const foto = {};
-        const config = [
+        const fotoData = {}; // Simpan base64 di sini
+        
+        const items = [
             { id: 'perjadin_start', title: 'Start' }, { id: 'perjadin_in', title: 'In' },
             { id: 'perjadin_out', title: 'Out' }, { id: 'perjadin_end', title: 'End' },
             { id: 'rapat_start', title: 'Foto 1' }, { id: 'rapat_in', title: 'Foto 2' },
             { id: 'rapat_out', title: 'Foto 3' }, { id: 'rapat_end', title: 'Foto 4' }
         ];
 
-        // Setup UI
-        config.forEach(item => {
-            const container = item.id.includes('perjadin') ? document.getElementById('grid-perjadin') : document.getElementById('rapat').querySelector('.grid');
-            container.innerHTML += `
+        items.forEach(item => {
+            const grid = item.id.includes('perjadin') ? document.getElementById('grid-perjadin') : document.getElementById('grid-rapat');
+            grid.innerHTML += `
                 <div class="card">
                     <h3>${item.title}</h3>
-                    <img id="prev_${item.id}">
-                    <input type="file" id="inp_${item.id}" class="hidden" style="display:none" accept="image/*">
-                    <button class="btn-foto" onclick="document.getElementById('inp_${item.id}').click()">Pilih Foto</button>
+                    <img id="img_${item.id}" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=">
+                    <input type="file" id="up_${item.id}" style="display:none" accept="image/*" capture="environment">
+                    <button class="btn-action" onclick="document.getElementById('up_${item.id}').click()">📷 Foto</button>
                 </div>
             `;
-            document.getElementById('inp_' + item.id).onchange = (e) => {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    foto[item.id] = ev.target.result;
-                    document.getElementById('prev_' + item.id).src = ev.target.result;
-                };
-                reader.readAsDataURL(e.target.files[0]);
-            };
+            document.getElementById('up_' + item.id).onchange = (e) => processFoto(item.id, e.target.files[0]);
         });
 
-        function openTab(t, b) {
+        function showTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(t).classList.add('active');
-            b.classList.add('active');
+            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            btn.classList.add('active');
         }
 
-        async function buatPDF(prefix, name) {
+        async function processFoto(id, file) {
+            const imgEl = document.getElementById('img_' + id);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await img.decode();
+            
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            // Geotagging
+            try {
+                const pos = await new Promise((res) => navigator.geolocation.getCurrentPosition(res, () => res(null)));
+                const info = pos ? `Lat: ${pos.coords.latitude.toFixed(4)}, Lon: ${pos.coords.longitude.toFixed(4)}` : "No GPS";
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+                ctx.fillStyle = "white";
+                ctx.font = "40px Arial";
+                ctx.fillText(new Date().toLocaleString(), 20, canvas.height - 60);
+                ctx.fillText(info, 20, canvas.height - 20);
+            } catch(e) {}
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            fotoData[id] = dataUrl;
+            imgEl.src = dataUrl; // Update UI langsung
+        }
+
+        async function buatPDF(prefix) {
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
-            const ids = [prefix+'_start', prefix+'_in', prefix+'_out', prefix+'_end'];
+            const ids = items.filter(i => i.id.startsWith(prefix)).map(i => i.id);
             
-            pdf.setFontSize(20);
-            pdf.text(name.replace('_', ' '), 105, 20, { align: 'center' });
-
-            const startY = 40;
             ids.forEach((id, i) => {
-                const x = (i % 2 === 0) ? 20 : 115;
-                const y = startY + Math.floor(i / 2) * 85;
-                if(foto[id]) pdf.addImage(foto[id], 'JPEG', x, y, 75, 75);
+                if(!fotoData[id]) return;
+                const x = (i % 2 === 0) ? 15 : 110;
+                const y = 20 + (Math.floor(i / 2) * 90);
+                pdf.addImage(fotoData[id], 'JPEG', x, y, 85, 85);
             });
-            pdf.save(name + '.pdf');
+            pdf.save(prefix + '.pdf');
         }
     </script>
 </body>
