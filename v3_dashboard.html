@@ -54,31 +54,21 @@
             title.innerText = page.charAt(0).toUpperCase() + page.slice(1);
             
             if (page === 'dashboard') {
-                dashboardDataCache = null;
-                renderDashboardPage(container, true);
-            }
-            else if (page === 'pok') {
+                // 1. Tampilkan spinner segera di UI
                 container.innerHTML = `
-                <div class="space-y-4">
-
-                <div class="flex flex-col md:flex-row gap-3">
-            
-                    <input
-                        type="text"
-                        id="searchPok"
-                        placeholder="Cari kode atau uraian..."
-                        class="flex-1 border border-slate-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                        oninput="searchPok()">
-            
-                </div>
-            
+                    <div class="flex justify-center items-center h-64">
+                        <i class="fa-solid fa-spinner fa-spin text-4xl text-sky-500"></i>
+                    </div>
+                `;
                 
-            </div>
-                   <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><div class="overflow-y-auto max-h-[80vh]">
-                        <table class="w-full text-sm"><thead><tr><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Kode</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Uraian</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Pagu</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Blokir</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Realisasi</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Sisa</th><th class="sticky top-0 z-30 bg-slate-50 border-b p-4">Aksi</th></tr></thead><tbody id="pok-tbody"><tr><td colspan="6" class="p-8 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</td></tr></tbody></table></div></div></div>`;
-                loadPokData();
-            } else {
-                container.innerHTML = `<h1 class="text-2xl font-bold">Halaman ${page}</h1>`;
+                // 2. Reset cache
+                dashboardDataCache = null;
+                
+                // 3. Panggil fungsi render
+                await renderDashboardPage(container, true);
+            } 
+            else if (page === 'pok') {
+                // ... (kode POK kamu sebelumnya)
             }
         }
 
@@ -246,10 +236,48 @@
         }
 
         async function renderDashboardPage(container, isRefresh = false) {
-            if (!isRefresh) container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
-            const data = dashboardDataCache || await fetchDashboardData();
-            if (!data) return;
-            container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6"><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col"><h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3><div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">${data.kegiatanHariIni.map(item => `<div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>`).join('')}</div></div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div></div><div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">${Object.entries(data.seksi).map(([nama, val]) => { const p = (val * 100).toFixed(2); return `<div><div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${p<30?'bg-red-500':p<70?'bg-orange-500':p<90?'bg-yellow-400':'bg-green-500'} h-2 rounded-full" style="width: ${p}%"></div></div></div>`; }).join('')}</div></div>`;
+            // Tampilkan spinner hanya jika cache belum ada atau sedang direfresh paksa
+            if (!dashboardDataCache || isRefresh) {
+                container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
+            }
+        
+            // Ambil data (pakai cache jika ada dan bukan refresh, jika tidak fetch baru)
+            const data = (isRefresh || !dashboardDataCache) ? await fetchDashboardData() : dashboardDataCache;
+            
+            if (!data) {
+                container.innerHTML = `<div class="text-center text-red-500 mt-10">Gagal memuat data dashboard.</div>`;
+                return;
+            }
+        
+            // Render konten dashboard
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                        <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
+                        <div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">
+                            ${data.kegiatanHariIni.map(item => `<div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>`).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        ${Object.entries(data.seksi).map(([nama, val]) => { 
+                            const p = (val * 100).toFixed(2); 
+                            return `<div><div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${p<30?'bg-red-500':p<70?'bg-orange-500':p<90?'bg-yellow-400':'bg-green-500'} h-2 rounded-full" style="width: ${p}%"></div></div></div>`; 
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+            
             initCharts(data);
         }
 
