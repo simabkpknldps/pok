@@ -10,6 +10,12 @@
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* Tambahkan ini di bagian <style> */
+        #detil-tbody { display: block; max-height: 40vh; overflow-y: auto; }
+        #detil-tbody tr { display: table; width: 100%; table-layout: fixed; }
+        #detil-thead { display: table; width: 100%; table-layout: fixed; }
+        
     </style>
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
@@ -33,13 +39,788 @@
         <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
     </main>
 
-    <!-- Modal-modal khusus halaman (mis. rekamModal, detilModal) disuntikkan
-         otomatis oleh page module masing-masing (lihat js/pages/pok.js) -->
+    <script>
+        let dashboardDataCache = null;
+        window.rawPokData = [];
+        window.expandedCodes = new Set();
+        window.searchResults = [];
+        window.searchIndex = -1;
+        window.selectedKode = "";
+        window.detilKegiatanData = []; // Menyimpan data detil sementara
 
-    <!-- Toast Container: dipakai bareng oleh semua halaman -->
-    <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
+        async function navigate(page) {
+            const container = document.getElementById('app');
+            const title = document.getElementById('page-title');
+            title.innerText = page.charAt(0).toUpperCase() + page.slice(1);
+            
+            if (page === 'dashboard') {
+                // 1. Tampilkan spinner segera di UI
+                container.innerHTML = `
+                    <div class="flex justify-center items-center h-64">
+                        <i class="fa-solid fa-spinner fa-spin text-4xl text-sky-500"></i>
+                    </div>
+                `;
+                
+                // 2. Reset cache
+                dashboardDataCache = null;
+                
+                // 3. Panggil fungsi render
+                await renderDashboardPage(container, true);
+            } 
+            else if (page === 'pok') {
+                // ... (kode POK kamu sebelumnya)
+            }
+        }
 
-    <!-- Titik masuk aplikasi. type="module" wajib supaya import/export & dynamic import() bisa jalan -->
-    <script type="module" src="js/app.js"></script>
+        // --- LOGIKA POK ---
+        async function loadPokData() {
+            try {
+                const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getPOKData' }) });
+                window.rawPokData = await res.json();
+                renderPok();
+            } catch (e) {
+                document.getElementById('pok-tbody').innerHTML = `<tr><td colspan="7" class="text-red-500 p-4 text-center">Gagal memuat data.</td></tr>`;
+            }
+        }
+
+        function renderPok() {
+            const tbody = document.getElementById('pok-tbody');
+            if (!window.rawPokData || window.rawPokData.length === 0) return;
+        
+            const uniqueMap = new Map();
+            window.rawPokData.forEach(item => {
+                uniqueMap.set(String(item.kode), item);
+            });
+            const uniqueData = Array.from(uniqueMap.values());
+        
+            const keyword = (document.getElementById("searchPok")?.value || "").toLowerCase().trim();
+            const bidang = document.getElementById("filterBidang")?.value || "Semua";
+        
+            // KITA TIDAK LAGI MENGGUNAKAN .filter() PADA TABEL SECARA KESELURUHAN
+            // Tapi kita tetap melakukan pengecekan apakah baris tersebut harus tampil (berdasarkan expand)
+            
+            tbody.innerHTML = uniqueData.map(i => {
+                const c = String(i.kode);
+                const uraian = String(i.uraian || "").toLowerCase();
+                
+                // --- LOGIKA TAMPILKAN/SEMBUNYIKAN ---
+                // Jika sedang filter bidang, baris yang tidak sesuai bidang tetap disembunyikan
+                if (bidang !== "Semua" && (i.bidang || "") !== bidang) return '';
+                
+                // Logika Expand: Root (12 digit) selalu tampil, child tampil jika parent di expandedCodes
+                const isParent = c.length === 12;
+                const isChildVisible = Array.from(window.expandedCodes).some(p => c.startsWith(p) && c !== p);
+                
+                if (!isParent && !isChildVisible) return '';
+        
+                // --- LOGIKA HIGHLIGHT (EXCEL STYLE) ---
+                const isMatch = keyword && (c.toLowerCase().includes(keyword) || uraian.includes(keyword));
+                
+                // Jika match, beri warna kuning, jika tidak gunakan warna normal
+                const matchClass = isMatch ? 'bg-yellow-200' : (c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white');
+        
+                const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
+                
+                return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 ${matchClass} cursor-pointer" onclick="toggleExpand('${c}')">
+                    <td class="p-3 font-mono text-xs font-bold">${c}</td>
+                    <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
+                    <td class="p-3 text-right">${Number(i.pagu||0).toLocaleString()}</td>
+                    <td class="p-3 text-right">${Number(i.blokir||0).toLocaleString()}</td>
+                    <td class="p-3 text-right">${Number(i.realisasi||0).toLocaleString()}</td>
+                    <td class="p-3 text-right">${Number(i.sisa||0).toLocaleString()}</td>
+                    <td class="p-3 text-center">
+                        ${c.length > 27 ? `
+                            <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
+                                class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
+                            <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
+                        ` : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function searchPok() {
+            const keyword = document.getElementById("searchPok").value.trim().toLowerCase();
+            
+            // Reset jika kosong
+            if (keyword === "") {
+                window.searchResults = [];
+                window.selectedKode = "";
+                renderPok(); // Render ulang untuk menghilangkan highlight
+                return;
+            }
+        
+            // Cari semua item yang cocok di seluruh data
+            window.searchResults = window.rawPokData.filter(r => 
+                String(r.kode).toLowerCase().includes(keyword) || 
+                String(r.uraian).toLowerCase().includes(keyword)
+            );
+        
+            if (window.searchResults.length > 0) {
+                window.selectedKode = window.searchResults[0].kode;
+                
+                // Opsional: Buka parent dari hasil pertama agar terlihat
+                const parentCode = String(window.selectedKode).substring(0, 12);
+                window.expandedCodes.add(parentCode);
+                
+                renderPok(); // Render ulang agar highlight muncul
+        
+                // Scroll ke hasil pertama
+                setTimeout(() => {
+                    const el = document.querySelector(`tr[data-kode="${window.selectedKode}"]`);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 100);
+            }
+        }
+
+        function gotoSearchResult(){
+        
+            const item=window.searchResults[window.searchIndex];
+        
+            if(!item) return;
+        
+            const kode=String(item.kode);
+        
+            window.selectedKode=kode;
+        
+            // buka parent 12 digit
+            if(kode.length>12){
+        
+                window.expandedCodes.clear();
+                window.expandedCodes.add(kode.substring(0,12));
+        
+            }
+        
+            renderPok();
+        
+            setTimeout(()=>{
+        
+                document
+                    .querySelector(`[data-kode="${kode}"]`)
+                    ?.scrollIntoView({
+                        behavior:"smooth",
+                        block:"center"
+                    });
+        
+            },50);
+        
+        }
+        
+        function toggleExpand(code) {
+
+            // Hanya parent (12 digit) yang bisa expand/collapse
+            if (String(code).length !== 12) {
+                return;
+            }
+        
+            if (window.expandedCodes.has(code)) {
+                // klik parent yang sama -> tutup
+                window.expandedCodes.clear();
+            } else {
+                // tutup parent lain lalu buka parent ini
+                window.expandedCodes.clear();
+                window.expandedCodes.add(code);
+            }
+        
+            renderPok();
+        }
+
+        // --- FUNGSI DASHBOARD ---
+        async function fetchDashboardData() {
+            try {
+                const res = await fetch(sessionStorage.getItem('realUrl'), { method: 'POST', body: JSON.stringify({ action: 'getDashboardData' }) });
+                const data = await res.json();
+                dashboardDataCache = data;
+                return data;
+            } catch (e) { return null; }
+        }
+
+        async function renderDashboardPage(container, isRefresh = false) {
+            // Tampilkan spinner hanya jika cache belum ada atau sedang direfresh paksa
+            if (!dashboardDataCache || isRefresh) {
+                container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
+            }
+        
+            // Ambil data (pakai cache jika ada dan bukan refresh, jika tidak fetch baru)
+            const data = (isRefresh || !dashboardDataCache) ? await fetchDashboardData() : dashboardDataCache;
+            
+            if (!data) {
+                container.innerHTML = `<div class="text-center text-red-500 mt-10">Gagal memuat data dashboard.</div>`;
+                return;
+            }
+        
+            // Render konten dashboard
+            container.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                        <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
+                        <div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">
+                            ${data.kegiatanHariIni.map(item => `<div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>`).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        ${Object.entries(data.seksi).map(([nama, val]) => { 
+                            const p = (val * 100).toFixed(2); 
+                            return `<div><div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${p<30?'bg-red-500':p<70?'bg-orange-500':p<90?'bg-yellow-400':'bg-green-500'} h-2 rounded-full" style="width: ${p}%"></div></div></div>`; 
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+            
+            initCharts(data);
+        }
+
+        function initCharts(data) {
+            const labels = data.grafikPerjadin.map(d => d.bulan);
+            new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels, datasets: [{ label: 'Rupiah', data: data.grafikPerjadin.map(d => d.rupiah), borderColor: '#0284c7', tension: 0.3 }] } });
+            new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels, datasets: [{ label: 'Frekuensi', data: data.grafikPerjadin.map(d => d.frekuensi), backgroundColor: '#0ea5e9' }] } });
+        }
+
+        function renderBelanjaCard(t, d, c) { const p = (d.persen * 100).toFixed(2); return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${t}</h3><div class="text-2xl font-bold text-${c}-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-${c}-600 h-2 rounded-full" style="width: ${p}%"></div></div><div class="text-[11px] text-slate-500">Realisasi: ${d.realisasi.toLocaleString()}<br><span class="font-bold text-slate-700">Sisa: ${d.sisa.toLocaleString()}</span></div></div>`; }
+        function renderMPCard(t, d) { const p = (d.persen * 100).toFixed(2); return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${t}</h3><div class="text-2xl font-bold text-emerald-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-emerald-500 h-2 rounded-full" style="width: ${p}%"></div></div><div class="text-[11px] text-slate-500">Realisasi MP: ${d.realisasi.toLocaleString()}<br><span class="font-bold text-slate-700">Sisa MP: ${d.sisa.toLocaleString()}</span></div></div>`; }
+        function renderTopPerjadin(l) { return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${idx + 1}. ${i[0]}</div><div class="text-xs font-bold text-sky-600">${i[1]}x</div></div>`).join('')}</div>`; }
+        function logout() { sessionStorage.clear(); window.location.href = 'v3_index.html'; }
+
+       function openRekamModal(idx){
+            const data = window.rawPokData[idx];
+            
+            document.getElementById("rekamModal").classList.remove("hidden");
+            document.getElementById("rekamModal").classList.add("flex");
+            
+            // ID Usulan random
+            document.getElementById("idUsulan").value = generateIdUsulan();
+            document.getElementById("mak").value = data.kode;
+            document.getElementById("uraianMak").value = data.uraian;
+            document.getElementById("pagu").value = Number(data.pagu).toLocaleString();
+            document.getElementById("blokir").value = Number(data.blokir).toLocaleString();
+            document.getElementById("realisasi").value = Number(data.realisasi).toLocaleString();
+            document.getElementById("sisa").value = Number(data.sisa).toLocaleString();
+    
+            // Reset estimasi dan status
+            document.getElementById("estimasiBiaya").value = "";
+            document.getElementById("statusDana").value = "Dana Tersedia";
+            document.getElementById("statusDana").className = "w-full rounded-xl border border-slate-300 px-4 py-2.5 transition";
+            
+            fetchLokasiData();
+        }
+
+        function closeRekamModal() {
+            // 1. Sembunyikan modal
+            document.getElementById("rekamModal").classList.replace("flex", "hidden");
+        
+            // 2. Kosongkan textbox yang diperlukan
+            document.getElementById("uraianKegiatan").value = "";
+            document.getElementById("estimasiBiaya").value = "";
+            document.getElementById("inputTujuan").value = "";
+            // Jika Anda ingin mengosongkan juga uraian kegiatan (No ST/ND):
+            // document.getElementById("uraianKegiatan").value = ""; 
+            
+            // 3. Reset status dana ke kondisi awal
+            const statusEl = document.getElementById("statusDana");
+            statusEl.value = "Dana Tersedia";
+            statusEl.className = "w-full rounded-xl border border-slate-300 px-4 py-2.5 transition";
+        }
+
+        function generateIdUsulan(){
+
+        const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        
+        let id="";
+        
+        for(let i=0;i<10;i++){
+        
+        id+=chars.charAt(Math.floor(Math.random()*chars.length));
+        
+        }
+        
+        return id;
+        
+        }
+
+        document.addEventListener("DOMContentLoaded", () => navigate('dashboard'));
+        
+        const status=document.getElementById("statusDana");
+        
+        if(Number(data.sisa)>=estimasi){
+        
+            status.className="rounded-xl bg-green-50 text-green-700 border border-green-200 px-4 py-2.5 font-semibold";
+            status.innerHTML='<i class="fa fa-circle-check mr-2"></i>Dana Tersedia';
+        
+        }else{
+        
+            status.className="rounded-xl bg-red-50 text-red-700 border border-red-200 px-4 py-2.5 font-semibold";
+            status.innerHTML='<i class="fa fa-circle-xmark mr-2"></i>Dana Tidak Cukup';
+        
+        }
+
+        async function fetchLokasiData() {
+            const datalist = document.getElementById('listTujuan');
+            
+            // Jika data sudah pernah dimuat, jangan load ulang
+            if (datalist && datalist.children.length > 0) return;
+        
+            const baseUrl = sessionStorage.getItem('realUrl');
+            if (!baseUrl) {
+                console.error("URL tidak ditemukan di sessionStorage");
+                return;
+            }
+        
+            try {
+                const response = await fetch(`${baseUrl}?action=loadLokasi`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error("Error dari API:", data.error);
+                    return;
+                }
+        
+                // Mengisi datalist
+                if (datalist) {
+                    datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
+                    console.log("Data lokasi berhasil dimuat:", data.length, "item");
+                }
+            } catch (e) {
+                console.error("Gagal memuat data lokasi:", e);
+            }
+        }
+
+
+        function cekKecukupanDana() {
+            // Ambil nilai sisa dan estimasi
+            const sisaStr = document.getElementById("sisa").value.replace(/,/g, ''); // Hapus koma pemisah ribuan
+            const estimasiStr = document.getElementById("estimasiBiaya").value.replace(/,/g, '');
+            
+            const sisa = parseFloat(sisaStr) || 0;
+            const estimasi = parseFloat(estimasiStr) || 0;
+            const statusEl = document.getElementById("statusDana");
+        
+            if (estimasi > sisa) {
+                statusEl.value = "Dana Tidak Cukup";
+                statusEl.className = "w-full rounded-xl border border-red-300 bg-red-50 text-red-700 px-4 py-2.5 font-bold transition";
+            } else if (estimasi === 0) {
+                statusEl.value = "Dana Tersedia";
+                statusEl.className = "w-full rounded-xl border border-slate-300 px-4 py-2.5 transition";
+            } else {
+                statusEl.value = "Dana Tersedia";
+                statusEl.className = "w-full rounded-xl border border-green-300 bg-green-50 text-green-700 px-4 py-2.5 font-bold transition";
+            }
+        }
+
+        async function simpanData() {
+                const btn = document.getElementById("btnSimpan");
+                
+                // Perbaikan: Mengambil dari key 'nama' sesuai dengan saat login
+                const namaUser = sessionStorage.getItem('nama') || "Guest";
+                //const rawEstimasi = document.getElementById("estimasiBiaya").value.replace(/\./g, '');
+                const scrollPos = document.querySelector('.overflow-y-auto')?.scrollTop;
+            
+                const payload = {
+                    action: 'simpanKegiatan',
+                    idKegiatan: document.getElementById("idUsulan").value,
+                    mak: document.getElementById("mak").value,
+                    uraian: document.getElementById("uraianKegiatan").value,
+                    tujuan: document.getElementById("inputTujuan").value,
+                    tglSt: document.getElementById("tglSt").value,
+                    estimasi: document.getElementById("estimasiBiaya").value.replace(/\./g, ''),
+                    userLogin: namaUser, // Sekarang akan berisi nama dari session
+                    tglRekam: new Date().toISOString().split('T')[0]
+                };
+        
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menyimpan...';
+        
+                try {
+                    const res = await fetch(sessionStorage.getItem('realUrl'), { 
+                        method: 'POST', 
+                        body: JSON.stringify(payload) 
+                    });
+                    
+                    const result = await res.json();
+                    
+                    if (result.status === "success") {
+                        //alert("Data berhasil disimpan oleh " + namaUser);
+                        closeRekamModal();
+                        showToast("Simpan kegiatan berhasil!"); // <--- Panggil Toast
+                        // Refresh POK tanpa pindah halaman
+                           await loadPokData();
+                        // Kembalikan posisi scroll
+                        setTimeout(() => {
+                            document.querySelector('.overflow-y-auto').scrollTop = scrollPos;
+                        }, 100);
+                        
+                    } else {
+                        alert("Gagal: " + result.message);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Error koneksi ke server.");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan';
+                }
+            }
+
+            function formatRibuan(angka) {
+                // Hapus karakter selain angka
+                let v = angka.replace(/\D/g, "");
+                // Tambahkan format ribuan
+                return v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            }
+    
+            function showToast(message) {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = "bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center animate-in slide-in-from-right-10";
+                toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
+                container.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000); // Hilang setelah 3 detik
+            }
+
+            async function openDetilModal(mak) {
+                document.getElementById("detilModal").classList.replace("hidden", "flex");
+                document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
+            
+                const url = sessionStorage.getItem('realUrl');
+                const tbody = document.getElementById("detil-tbody");
+                tbody.innerHTML = `
+                    <div class="flex justify-center items-center p-4 w-full">
+                        <span class="text-gray-500">Memuat...</span>
+                    </div>
+                `;
+            
+                try {
+                    const res = await fetch(`${url}?action=getDetil&mak=${encodeURIComponent(mak)}`);
+                    const result = await res.json();
+            
+                    if (Array.isArray(result)) {
+                        window.detilKegiatanData = result;
+                        renderDetilTable(result);
+                    } else {
+                        console.error("Respon Error:", result);
+                        tbody.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${result.message || 'Data tidak ditemukan'}</div>`;
+                    }
+                } catch (e) {
+                    console.error("Fetch Error:", e);
+                    tbody.innerHTML = `<div class="p-4 text-center text-red-500">Gagal koneksi. Cek Console F12.</div>`;
+                }
+            }
+
+
+        
+            function renderDetilTable(data) {
+                const tbody = document.getElementById("detil-tbody");
+                
+               if (!Array.isArray(data) || data.length === 0) {
+                    tbody.innerHTML = `
+                        <div class="flex justify-center items-center p-4 w-full">
+                            <span class="text-red-500">Tidak ada data.</span>
+                        </div>
+                    `;
+                    return;
+                }
+            
+                tbody.innerHTML = data.map(i => {
+                    let tglFormatted = '-';
+                    if (i.tglSt) {
+                        const d = new Date(i.tglSt);
+                        if (!isNaN(d.getTime())) {
+                            tglFormatted = d.toISOString().split('T')[0]; // Menghasilkan yyyy-mm-dd
+                        }
+                    }
+                    
+                    // 2. Warna Status
+                    const sClass = i.status === 'Rekam Data' ? 'bg-pink-100 text-pink-700' :
+                       i.status === 'Terlaksana' ? 'bg-slate-200 text-slate-700' :
+                       i.status === 'LPT' ? 'bg-yellow-100 text-yellow-700' :
+                       i.status === 'Terbayar' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+                    
+                    //const statusClass = statusColors[i.status] || "bg-gray-100";
+            
+                    return `
+                        <div class="flex p-3 border-b items-center hover:bg-slate-50 text-xs">
+                            <div class="w-[30%] pr-2 whitespace-normal break-words">${i.uraian || '-'}</div>
+                            <div class="w-[12%] truncate pr-2 whitespace-normal break-words">${i.pelaksana_kegiatan || 'Belum Ada'}</div>
+                            <div class="w-[18%] truncate pr-2">${i.tujuan || '-'}</div>
+                            <div class="w-[10%]">${i.tglSt ? new Date(i.tglSt).toISOString().split('T')[0] : '-'}</div>
+                            <div class="w-[12%] text-right pr-2">${Number(i.estimasi || 0).toLocaleString()}</div>
+                            <div class="w-[10%] flex justify-center">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${sClass}">${i.status || '-'}</span>
+                            </div>
+                            <div class="w-[8%] flex justify-center gap-2">
+                                ${(i.status === 'Rekam Data' || i.status === 'Terlaksana') ? 
+                                    `<button onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600"><i class="fa-solid fa-user-check"></i></button>` : ''}
+                                ${i.status === 'Rekam Data' ? 
+                                    `<button onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        
+            function filterDetil() {
+                const keyword = document.getElementById("cariDetil").value.toLowerCase();
+                renderDetilTable(window.detilKegiatanData.filter(i => i.uraian.toLowerCase().includes(keyword)));
+            }
+        
+        </script>
+
+        <div id="rekamModal"
+        class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
+        
+        <div class="bg-white rounded-2xl shadow-2xl w-[980px] max-w-[96vw] overflow-hidden animate-[fade_.2s_ease]">
+        
+        <div class="bg-sky-600 text-white px-6 py-4 flex justify-between items-center">
+
+        <div>
+                <h2 class="text-xl font-bold">
+                    <i class="fa-solid fa-pen-to-square mr-2"></i>
+                    Rekam Kegiatan
+                </h2>
+                
+            </div>
+        
+            <button
+                onclick="closeRekamModal()"
+                class="w-9 h-9 rounded-full hover:bg-sky-700 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        
+        </div>
+        
+        <div class="grid grid-cols-2 gap-8 p-6">
+        
+        <div class="space-y-3">
+        
+        <div>
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            ID Usulan
+        </label>
+        <input readonly id="idUsulan"
+        class="w-full rounded-xl border border-slate-300
+        px-4 py-2.5
+        focus:outline-none
+        focus:ring-2
+        focus:ring-sky-500
+        focus:border-sky-500
+        transition">
+        </div>
+        
+        <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                No ST/ND / Uraian Kegiatan
+            </label>
+            <input id="uraianKegiatan" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 ...">
+        </div>
+        
+        <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                Tgl ST/ND
+            </label>
+            <input type="date" id="tglSt" 
+            class="w-full rounded-xl border border-slate-300
+            px-4 py-2.5
+            focus:outline-none
+            focus:ring-2
+            focus:ring-sky-500
+            focus:border-sky-500
+            transition"">
+        </div>
+        
+        <!-- Tambahkan id="estimasiBiaya" dan oninput="cekKecukupanDana()" -->
+        <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                Estimasi Biaya
+            </label>
+            <input id="estimasiBiaya" oninput="cekKecukupanDana()"
+            onkeyup="this.value = formatRibuan(this.value)"
+            class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 transition">
+        </div>
+        
+        <div>
+        
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Status Kecukupan Dana
+        </label>
+        <input readonly id="statusDana"
+        class="w-full rounded-xl border border-slate-300
+        px-4 py-2.5
+        focus:outline-none
+        focus:ring-2
+        focus:ring-sky-500
+        focus:border-sky-500
+        transition">
+        </div>
+        
+        <!-- Ganti bagian Tujuan lama dengan kode ini -->
+        <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                Tujuan
+            </label>
+            <input list="listTujuan" id="inputTujuan" 
+                   class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
+            <datalist id="listTujuan"></datalist>
+        </div>
+        
+        </div>
+        
+        <div class="space-y-3">
+        
+        <div>
+        
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            MAK
+        </label>
+        <input readonly id="mak"
+        class="w-full rounded-xl border border-slate-300
+        px-4 py-2.5
+        focus:outline-none
+        focus:ring-2
+        focus:ring-sky-500
+        focus:border-sky-500
+        transition">
+        </div>
+        
+        <div>
+        
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Uraian MAK
+        </label>
+        <input readonly id="uraianMak"
+        class="w-full rounded-xl border border-slate-300
+        px-4 py-2.5
+        focus:outline-none
+        focus:ring-2
+        focus:ring-sky-500
+        focus:border-sky-500
+        transition">
+        </div>
+        
+        <div>
+        
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Pagu
+        </label>
+        <input readonly id="pagu"
+        class="w-full rounded-xl border border-slate-300
+        px-4 py-2.5
+        focus:outline-none
+        focus:ring-2
+        focus:ring-sky-500
+        focus:border-sky-500
+        transition">
+        </div>
+        
+        <div>
+       
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Blokir
+        </label>
+        <input readonly id="blokir"
+        class="w-full rounded-xl border border-slate-300
+        px-4 py-2.5
+        focus:outline-none
+        focus:ring-2
+        focus:ring-sky-500
+        focus:border-sky-500
+        transition">
+        </div>
+        
+        <div>
+        
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Realisasi
+        </label>
+        <input readonly id="realisasi"
+        class="w-full rounded-xl border border-slate-300
+        px-4 py-2.5
+        focus:outline-none
+        focus:ring-2
+        focus:ring-sky-500
+        focus:border-sky-500
+        transition">
+        </div>
+        
+        <div>
+        
+        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            Sisa
+        </label>
+        <input readonly id="sisa"
+        class="w-full rounded-xl border border-slate-300
+        px-4 py-2.5
+        focus:outline-none
+        focus:ring-2
+        focus:ring-sky-500
+        focus:border-sky-500
+        transition">
+        </div>
+        
+        </div>
+        
+        </div>
+        
+        <div class="bg-slate-50 border-t px-6 py-4 flex justify-end gap-3">
+
+        <button
+        onclick="closeRekamModal()"
+        class="px-6 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100">
+        <i class="fa-solid fa-right-from-bracket mr-2"></i>
+        Batal
+        </button>
+        
+        <!-- Cari bagian ini di HTML Anda dan tambahkan ID -->
+        <button id="btnSimpan" onclick="simpanData()" class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-xl shadow">
+            <i class="fa-solid fa-floppy-disk mr-2"></i> Simpan
+        </button>
+        
+        </div>
+        
+        </div>
+        
+        </div>
+
+        <!-- Toast Container -->
+        <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
+
+        <div id="detilModal" class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-[980px] max-w-[96vw] overflow-hidden">
+            <div class="bg-slate-700 text-white px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold" id="detilTitle">Detil Kegiatan</h2>
+                <button onclick="document.getElementById('detilModal').classList.replace('flex', 'hidden')" class="hover:text-red-300"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <input type="text" id="cariDetil" oninput="filterDetil()" placeholder="Cari uraian / nomor ST..." class="w-full border p-2 rounded-xl mb-4">
+                <table class="w-full text-sm table-fixed"> <thead class="bg-slate-100 block w-full">
+                    <div class="w-full text-sm">
+                        <div class="flex bg-slate-100 p-3 font-bold text-slate-700 border-b items-center text-xs">
+                            <div class="w-[30%]">Uraian/ST</div>
+                            <div class="w-[12%]">Pelaksana</div>
+                            <div class="w-[18%]">Tujuan</div>
+                            <div class="w-[10%]">Tgl</div>
+                            <div class="w-[12%] text-right">Jumlah</div>
+                            <div class="w-[10%] text-center">Status</div>
+                            <div class="w-[8%] text-center">Aksi</div>
+                        </div>
+                        <div id="detil-tbody" class="max-h-[60vh] overflow-y-auto"></div>
+                    </div>
+                </thead>
+                <tbody id="detil-tbody" class="block w-full"></tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+    
 </body>
 </html>
