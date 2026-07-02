@@ -65,9 +65,8 @@
 </head>
 <body>
     <div class="container">
-        <h2>Dokumentasi Kegiatan</h2>
-        <p3>KPKNL Denpasar</p3>
-
+        <h2>Dokumentasi Kegiatan KPKNL Denpasar</h2>
+        
         <div class="tabs">
             <button class="active" onclick="openTab('perjadin', this)">Perjadin</button>
             <button onclick="openTab('rapat', this)">Rapat</button>
@@ -213,24 +212,28 @@ function drawWatermark(img, dateObj, locInfo) {
 
     const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
 
-    let lokasiText;
+    let alamatText = "Alamat tidak tersedia";
+    let koordinatText = "";
     if (locInfo) {
-        const coords = `${locInfo.lat.toFixed(5)}, ${locInfo.lon.toFixed(5)}`;
-        lokasiText = locInfo.address ? `${locInfo.address} (${coords})` : coords;
-    } else {
-        lokasiText = "Lokasi tidak tersedia";
+        if (locInfo.address) alamatText = locInfo.address;
+        koordinatText = `${locInfo.lat.toFixed(5)}, ${locInfo.lon.toFixed(5)}`;
     }
 
-    const barH = Math.max(38, h * 0.11);
+    const barH = Math.max(50, h * 0.15);
 
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.fillRect(0, h - barH, w, barH);
 
     ctx.fillStyle = "#fff";
-    ctx.font = `${Math.max(11, barH * 0.27)}px Arial`;
+    ctx.font = `${Math.max(12, barH * 0.25)}px Arial`;
     ctx.textBaseline = "middle";
-    ctx.fillText(tglText, 8, h - barH * 0.68);
-    ctx.fillText(lokasiText, 8, h - barH * 0.28, w - 16);
+
+    // Waktu & tanggal
+    ctx.fillText(tglText, 8, h - barH * 0.75, w - 16);
+    // Alamat
+    ctx.fillText(alamatText, 8, h - barH * 0.45, w - 16);
+    // Koordinat
+    ctx.fillText(koordinatText, 8, h - barH * 0.15, w - 16);
 
     return canvas.toDataURL("image/jpeg", 0.6);
 }
