@@ -461,16 +461,15 @@
                 document.getElementById("detilModal").classList.replace("hidden", "flex");
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
                 
-                // GANTI URL DI BAWAH INI DENGAN URL ASLI ANDA
-                //const URL_GAS = "https://script.google.com/macros/s/AKfycbzLO1fVUfqOqwBGfbGbTNIMi_0vDkcFuBp2R3SvE3KanfMSBOtAtbJaphxO2QBggtjq8g/exec"; 
                 const url = sessionStorage.getItem('realUrl');
                 
                 const tbody = document.getElementById("detil-tbody");
                 tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
-            
+                
                 try {
                     const res = await fetch(url, {
                         method: 'POST',
+                        headers: { "Content-Type": "application/json" },   // ✅ tambahkan header ini
                         body: JSON.stringify({ action: 'getDetil', mak: mak })
                     });
                     
@@ -488,6 +487,7 @@
                     tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal koneksi. Cek Console F12.</td></tr>`;
                 }
             }
+
         
             function renderDetilTable(data) {
                 const tbody = document.getElementById("detil-tbody");
