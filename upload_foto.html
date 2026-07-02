@@ -66,7 +66,7 @@
 <body>
     <div class="container">
         <h2>Dokumentasi Kegiatan KPKNL Denpasar</h2>
-        
+
         <div class="tabs">
             <button class="active" onclick="openTab('perjadin', this)">Perjadin</button>
             <button onclick="openTab('rapat', this)">Rapat</button>
@@ -173,27 +173,18 @@ function getLocation() {
 
 async function reverseGeocode(lat, lon) {
     try {
-        const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`
-        );
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
         const data = await res.json();
-        return {
-            address: data.display_name || null,
-            lat,
-            lon
-        };
+        return data.display_name || null;
     } catch (e) {
-        return {
-            address: null,
-            lat,
-            lon
-        };
+        return null;
     }
 }
 
 /* ============ WATERMARK / GEOTAG (dengan downscale, biar hemat storage) ============ */
 
-function drawWatermark(img, dateObj, locInfo) {
+function drawWatermark(img, dateObj, loc, address) {
+
     const maxDim = 1000;
     let w = img.width, h = img.height;
 
@@ -211,36 +202,26 @@ function drawWatermark(img, dateObj, locInfo) {
     ctx.drawImage(img, 0, 0, w, h);
 
     const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
+    const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
 
-    let alamatText = "Alamat tidak tersedia";
-    let koordinatText = "";
-    if (locInfo) {
-        if (locInfo.address) alamatText = locInfo.address;
-        koordinatText = `${locInfo.lat.toFixed(5)}, ${locInfo.lon.toFixed(5)}`;
-    }
-
-    const barH = Math.max(50, h * 0.15);
+    const barH = Math.max(38, h * 0.11);
 
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.fillRect(0, h - barH, w, barH);
 
     ctx.fillStyle = "#fff";
-    ctx.font = `${Math.max(12, barH * 0.25)}px Arial`;
+    ctx.font = `${Math.max(11, barH * 0.27)}px Arial`;
     ctx.textBaseline = "middle";
-
-    // Waktu & tanggal
-    ctx.fillText(tglText, 8, h - barH * 0.75, w - 16);
-    // Alamat
-    ctx.fillText(alamatText, 8, h - barH * 0.45, w - 16);
-    // Koordinat
-    ctx.fillText(koordinatText, 8, h - barH * 0.15, w - 16);
+    ctx.fillText(tglText, 8, h - barH * 0.68);
+    ctx.fillText(lokasiText, 8, h - barH * 0.28, w - 16);
 
     return canvas.toDataURL("image/jpeg", 0.6);
 }
 
 /* ============ PROSES FOTO MASUK ============ */
 
-async function handleFile(id, file) {
+/* ============ PROSES FOTO MASUK ============ */
+async function handleFile(id, file, isCamera) {
     if (!file) return;
 
     const infoEl = document.getElementById("info_" + id);
@@ -249,13 +230,18 @@ async function handleFile(id, file) {
     try {
         const rawDataUrl = await readFileAsDataURL(file);
         const img = await loadImage(rawDataUrl);
-        const loc = await getLocation();
+        
+        let loc = null;
+        let address = null;
 
-        let locInfo = null;
-        if (loc) locInfo = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
+        // Geotagging HANYA jika tombol Kamera (isCamera = true)
+        if (isCamera) {
+            loc = await getLocation();
+            if (loc) address = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
+        }
 
         const now = new Date();
-        const finalDataUrl = drawWatermark(img, now, locInfo);
+        const finalDataUrl = drawWatermark(img, now, loc, address);
 
         foto[id] = finalDataUrl;
 
@@ -263,17 +249,17 @@ async function handleFile(id, file) {
         if (previewEl) previewEl.src = finalDataUrl;
 
         if (infoEl) {
-            const alamat = locInfo?.address || "Alamat tidak tersedia";
-            const koordinat = locInfo ? `${locInfo.lat.toFixed(5)}, ${locInfo.lon.toFixed(5)}` : "";
-            infoEl.textContent = `${now.toLocaleString("id-ID")} • ${alamat} • ${koordinat}`;
+            let infoText = now.toLocaleString("id-ID");
+            if (isCamera && loc) {
+                infoText += " • " + (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`);
+            }
+            infoEl.textContent = infoText;
         }
 
         const saveBtn = document.getElementById("save_" + id);
         if (saveBtn) saveBtn.style.display = "block";
 
-        simpanFotoKeStorage(id, finalDataUrl, now.toISOString(), locInfo);
-
-        // otomatis simpan ke galeri
+        simpanFotoKeStorage(id, finalDataUrl, now.toISOString(), loc, address);
         simpanKeGaleri(finalDataUrl, id);
 
     } catch (err) {
@@ -281,6 +267,28 @@ async function handleFile(id, file) {
         if (infoEl) infoEl.textContent = "Gagal memproses foto.";
     }
 }
+
+// Update cara mendaftarkan input
+function registerFileInput(inputId, fotoId, isCamera) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    el.addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        handleFile(fotoId, file, isCamera);
+        e.target.value = "";
+    });
+}
+
+// Registrasi berdasarkan jenis tombol
+SEMUA_ID.forEach(id => {
+    registerFileInput(id + "_cam", id, true);  // Kamera = true (pake lokasi)
+    registerFileInput(id + "_up", id, false);  // Upload = false (tanpa lokasi)
+});
+
+SEMUA_ID.forEach(id => {
+    registerFileInput(id + "_cam", id);
+    registerFileInput(id + "_up", id);
+});
 
 /* ============ SIMPAN KE GALERI (DOWNLOAD) ============ */
 
@@ -298,18 +306,27 @@ function simpanKeGaleri(dataUrl, id) {
     }
 }
 
-/* ============ PERSISTENSI localStorage (tanpa expired) ============ */
+/* ============ PERSISTENSI localStorage (expired ganti hari) ============ */
 
-function simpanFotoKeStorage(id, dataUrl, iso, locInfo) {
+function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+
+
+function simpanFotoKeStorage(id, dataUrl, iso, loc, address) {
     try {
-        localStorage.setItem(STORAGE_PREFIX + "foto_" + id, JSON.stringify({ dataUrl, iso, locInfo }));
+        localStorage.setItem(STORAGE_PREFIX + "foto_" + id, JSON.stringify({ dataUrl, iso, loc, address }));
     } catch (e) {
-        console.warn("Gagal simpan ke localStorage:", e);
+        console.warn("Gagal simpan ke localStorage (mungkin penuh):", e);
     }
 }
 
 function muatFotoDariStorage() {
+
     SEMUA_ID.forEach(id => {
+
         const raw = localStorage.getItem(STORAGE_PREFIX + "foto_" + id);
         if (!raw) return;
 
@@ -326,17 +343,28 @@ function muatFotoDariStorage() {
 
             if (infoEl) {
                 const d = new Date(data.iso);
-                const alamat = data.locInfo?.address || "Alamat tidak tersedia";
-                const koordinat = data.locInfo ? `${data.locInfo.lat.toFixed(5)}, ${data.locInfo.lon.toFixed(5)}` : "";
-                infoEl.textContent = `${d.toLocaleString("id-ID")} • ${alamat} • ${koordinat}`;
+                infoEl.textContent = d.toLocaleString("id-ID") + (data.loc ? " • " + (data.address || `${data.loc.lat.toFixed(5)}, ${data.loc.lon.toFixed(5)}`) : "");
             }
         } catch (e) {}
     });
+
+    const uraian = localStorage.getItem(STORAGE_PREFIX + "uraianRapat");
+    const tgl = localStorage.getItem(STORAGE_PREFIX + "tglRapat");
+
+    if (uraian) document.getElementById("uraianRapat").value = uraian;
+    if (tgl) document.getElementById("tglRapat").value = tgl;
 }
 
-// Jalankan saat halaman dibuka
-muatFotoDariStorage();
+document.getElementById("uraianRapat").addEventListener("input", e => {
+    localStorage.setItem(STORAGE_PREFIX + "uraianRapat", e.target.value);
+});
+document.getElementById("tglRapat").addEventListener("input", e => {
+    localStorage.setItem(STORAGE_PREFIX + "tglRapat", e.target.value);
+});
 
+// Jalankan saat halaman dibuka / dibuka lagi
+cekExpired();
+muatFotoDariStorage();
 
 /* ============ PDF ============ */
 
