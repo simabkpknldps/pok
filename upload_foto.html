@@ -3,351 +3,434 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Upload Dokumentasi</title>
-
+<title>Dokumentasi Modern</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 <style>
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --secondary: #64748b;
+        --success: #16a34a;
+        --success-dark: #15803d;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #1e293b;
+        --border: #e2e8f0;
+    }
 
-*{
-    box-sizing:border-box;
-    font-family:Arial,Helvetica,sans-serif;
-}
+    * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
 
-body{
-    margin:0;
-    background:#f2f2f2;
-}
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
 
-.container{
-    max-width:1000px;
-    margin:auto;
-    padding:20px;
-}
+    .container { max-width: 800px; margin: auto; }
 
-h2{
-    text-align:center;
-}
+    h2 { text-align: center; margin-bottom: 2rem; }
 
-.tabs{
-    display:flex;
-    margin-bottom:20px;
-    gap:10px;
-}
+    .tabs { display: flex; gap: 10px; margin-bottom: 1.5rem; background: #e2e8f0; padding: 5px; border-radius: 12px; }
+    .tabs button { flex: 1; padding: 12px; border: none; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s; background: transparent; color: var(--secondary); }
+    .tabs button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-.tabs button{
-    flex:1;
-    padding:15px;
-    border:none;
-    cursor:pointer;
-    font-size:16px;
-    border-radius:8px;
-    background:#ddd;
-}
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-.tabs button.active{
-    background:#007bff;
-    color:white;
-}
+    .rapat-form { background: var(--card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
+    .rapat-form label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--secondary); margin-bottom: 6px; }
+    .rapat-form input[type=text],
+    .rapat-form input[type=date] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: var(--bg); }
+    .rapat-form input:last-child { margin-bottom: 0; }
 
-.tab-content{
-    display:none;
-}
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-.tab-content.active{
-    display:block;
-}
+    .card { background: var(--card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
+    .card h3 { font-size: 0.9rem; margin: 0 0 10px 0; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; background: #f1f5f9; display: block; }
 
-.grid{
+    .hidden-file { display: none; }
 
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:20px;
+    .foto-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-foto { flex: 1; padding: 10px 6px; border: none; border-radius: 8px; background: var(--primary); color: white; cursor: pointer; font-weight: 500; font-size: 0.8rem; transition: 0.2s; }
+    .btn-foto:hover { background: var(--primary-dark); }
+    .btn-foto.btn-upload { background: var(--secondary); }
+    .btn-foto.btn-upload:hover { background: #475569; }
 
-}
+    .foto-info { margin-top: 8px; font-size: 0.7rem; color: var(--secondary); min-height: 14px; word-break: break-word; line-height: 1.4; }
 
-.card{
+    .foto-save { display: block; width: 100%; margin-top: 8px; padding: 8px; font-size: 0.75rem; font-weight: 500; border: 1px solid var(--success); color: var(--success); background: white; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    .foto-save:hover { background: var(--success); color: white; }
 
-    background:white;
-    border-radius:10px;
-    padding:15px;
-    box-shadow:0 0 10px rgba(0,0,0,.1);
-
-}
-
-.card h3{
-    text-align:center;
-}
-
-.card img{
-
-    width:100%;
-    height:250px;
-    object-fit:contain;
-    border:1px solid #ccc;
-    margin-top:10px;
-
-}
-
-input[type=file]{
-    width:100%;
-}
-
-.download{
-
-    width:100%;
-    margin-top:25px;
-    padding:15px;
-    font-size:18px;
-    background:#28a745;
-    color:white;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-
-}
-
-.download:hover{
-
-    background:#218838;
-
-}
-
-/* HP */
-
-@media(max-width:768px){
-
-.grid{
-
-grid-template-columns:1fr;
-
-}
-
-.card img{
-
-height:220px;
-
-}
-
-.tabs{
-
-flex-direction:column;
-
-}
-
-}
-
+    .download { width: 100%; padding: 16px; margin-top: 1.5rem; border: none; border-radius: 12px; background: #0f172a; color: white; font-weight: 700; cursor: pointer; font-size: 1rem; }
+    .download:hover { background: #1e293b; }
 </style>
-
 </head>
 <body>
+    <div class="container">
+        <h2>📷 Dokumentasi Kegiatan</h2>
 
-<div class="container">
+        <div class="tabs">
+            <button class="active" onclick="openTab('perjadin', this)">Perjadin</button>
+            <button onclick="openTab('rapat', this)">Rapat</button>
+        </div>
 
-<h2>Upload Dokumentasi</h2>
+        <div id="perjadin" class="tab-content active">
+            <div class="grid" id="grid-perjadin"></div>
+            <button class="download" onclick="buatPDF('perjadin', 'Dokumentasi Perjadin')">Download PDF Perjadin</button>
+        </div>
 
-<div class="tabs">
-
-<button class="active" onclick="openTab('perjadin',this)">📷 Foto Perjadin</button>
-
-<button onclick="openTab('rapat',this)">👥 Foto Rapat</button>
-
-</div>
-
-<!-- ================= PERJADIN ================= -->
-
-<div id="perjadin" class="tab-content active">
-
-<div class="grid">
-
-<div class="card">
-<h3>Start Foto</h3>
-<input type="file" id="perjadin_start" accept="image/*" capture="environment">
-<img id="prev_perjadin_start">
-</div>
-
-<div class="card">
-<h3>In Foto</h3>
-<input type="file" id="perjadin_in" accept="image/*" capture="environment">
-<img id="prev_perjadin_in">
-</div>
-
-<div class="card">
-<h3>Out Foto</h3>
-<input type="file" id="perjadin_out" accept="image/*" capture="environment">
-<img id="prev_perjadin_out">
-</div>
-
-<div class="card">
-<h3>End Foto</h3>
-<input type="file" id="perjadin_end" accept="image/*" capture="environment">
-<img id="prev_perjadin_end">
-</div>
-
-</div>
-
-<button class="download" onclick="buatPDF('perjadin','Dokumentasi Perjadin')">
-
-Download PDF Perjadin
-
-</button>
-
-</div>
-
-<!-- ================= RAPAT ================= -->
-
-<div id="rapat" class="tab-content">
-
-<div class="grid">
-
-<div class="card">
-<h3>Start Foto</h3>
-<input type="file" id="rapat_start" accept="image/*" capture="environment">
-<img id="prev_rapat_start">
-</div>
-
-<div class="card">
-<h3>In Foto</h3>
-<input type="file" id="rapat_in" accept="image/*" capture="environment">
-<img id="prev_rapat_in">
-</div>
-
-<div class="card">
-<h3>Out Foto</h3>
-<input type="file" id="rapat_out" accept="image/*" capture="environment">
-<img id="prev_rapat_out">
-</div>
-
-<div class="card">
-<h3>End Foto</h3>
-<input type="file" id="rapat_end" accept="image/*" capture="environment">
-<img id="prev_rapat_end">
-</div>
-
-</div>
-
-<button class="download" onclick="buatPDF('rapat','Dokumentasi Rapat')">
-
-Download PDF Rapat
-
-</button>
-
-</div>
-
-</div>
+        <div id="rapat" class="tab-content">
+            <div class="rapat-form">
+                <label for="uraianRapat">Uraian Rapat</label>
+                <input type="text" id="uraianRapat" placeholder="Contoh: Rapat koordinasi anggaran triwulan II">
+                <label for="tglRapat">Tanggal Rapat</label>
+                <input type="date" id="tglRapat">
+            </div>
+            <div class="grid" id="grid-rapat"></div>
+            <button class="download" onclick="buatPDF('rapat', 'Dokumentasi Rapat')">Download PDF Rapat</button>
+        </div>
+    </div>
 
 <script>
 
-const foto={};
+const foto = {};
 
-function openTab(tab,btn){
-
-document.querySelectorAll(".tab-content").forEach(e=>e.classList.remove("active"));
-
-document.querySelectorAll(".tabs button").forEach(e=>e.classList.remove("active"));
-
-document.getElementById(tab).classList.add("active");
-
-btn.classList.add("active");
-
-}
-
-function register(id){
-
-document.getElementById(id).addEventListener("change",function(e){
-
-const file=e.target.files[0];
-
-if(!file)return;
-
-const reader=new FileReader();
-
-reader.onload=function(ev){
-
-document.getElementById("prev_"+id).src=ev.target.result;
-
-foto[id]=ev.target.result;
-
-}
-
-reader.readAsDataURL(file);
-
-});
-
-}
-
-[
-"perjadin_start",
-"perjadin_in",
-"perjadin_out",
-"perjadin_end",
-"rapat_start",
-"rapat_in",
-"rapat_out",
-"rapat_end"
-].forEach(register);
-
-async function buatPDF(prefix,judul){
-
-const ids=[
-prefix+"_start",
-prefix+"_in",
-prefix+"_out",
-prefix+"_end"
+const CONFIG = [
+    { id: 'perjadin_start', title: 'Start Foto', tab: 'perjadin' },
+    { id: 'perjadin_in',    title: 'In Foto',    tab: 'perjadin' },
+    { id: 'perjadin_out',   title: 'Out Foto',   tab: 'perjadin' },
+    { id: 'perjadin_end',   title: 'End Foto',   tab: 'perjadin' },
+    { id: 'rapat_start',    title: 'Foto 1',     tab: 'rapat'    },
+    { id: 'rapat_in',       title: 'Foto 2',     tab: 'rapat'    },
+    { id: 'rapat_out',      title: 'Foto 3',     tab: 'rapat'    },
+    { id: 'rapat_end',      title: 'Foto 4',     tab: 'rapat'    }
 ];
 
-for(let i of ids){
+const SEMUA_ID = CONFIG.map(c => c.id);
+const STORAGE_PREFIX = "dokfoto_";
+const STORAGE_DATE_KEY = "dokfoto_tanggal";
 
-if(!foto[i]){
+/* ============ BANGUN KARTU (pengganti document.write) ============ */
 
-alert("Semua foto harus diupload.");
-
-return;
-
+function cardHTML(id, title) {
+    return `
+        <div class="card">
+            <h3>${title}</h3>
+            <img id="prev_${id}" alt="">
+            <div class="foto-actions">
+                <input type="file" id="${id}_cam" class="hidden-file" accept="image/*" capture="environment">
+                <input type="file" id="${id}_up" class="hidden-file" accept="image/*">
+                <button type="button" class="btn-foto" onclick="document.getElementById('${id}_cam').click()">📷 Ambil Foto</button>
+                <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('${id}_up').click()">🖼️ Upload</button>
+            </div>
+            <div class="foto-info" id="info_${id}"></div>
+            <button type="button" class="foto-save" id="save_${id}" style="display:none" onclick="simpanKeGaleri(foto['${id}'],'${id}')">💾 Simpan ke Galeri</button>
+        </div>
+    `;
 }
 
+CONFIG.forEach(item => {
+    document.getElementById('grid-' + item.tab).insertAdjacentHTML('beforeend', cardHTML(item.id, item.title));
+});
+
+/* ============ TAB ============ */
+
+function openTab(tab, btn) {
+    document.querySelectorAll(".tab-content").forEach(e => e.classList.remove("active"));
+    document.querySelectorAll(".tabs button").forEach(e => e.classList.remove("active"));
+    document.getElementById(tab).classList.add("active");
+    btn.classList.add("active");
 }
 
-const {jsPDF}=window.jspdf;
+/* ============ HELPER ASYNC ============ */
 
-const pdf=new jsPDF("p","mm","a4");
-
-pdf.setFontSize(18);
-
-pdf.text(judul,105,15,{align:"center"});
-
-const w=80;
-
-const h=60;
-
-const x1=15;
-
-const x2=115;
-
-const y1=30;
-
-const y2=120;
-
-pdf.setFontSize(12);
-
-pdf.text("START",x1,y1-5);
-pdf.addImage(foto[prefix+"_start"],"JPEG",x1,y1,w,h);
-
-pdf.text("IN",x2,y1-5);
-pdf.addImage(foto[prefix+"_in"],"JPEG",x2,y1,w,h);
-
-pdf.text("OUT",x1,y2-5);
-pdf.addImage(foto[prefix+"_out"],"JPEG",x1,y2,w,h);
-
-pdf.text("END",x2,y2-5);
-pdf.addImage(foto[prefix+"_end"],"JPEG",x2,y2,w,h);
-
-pdf.save(judul+".pdf");
-
+function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
 }
 
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+function getLocation() {
+    return new Promise(resolve => {
+        if (!navigator.geolocation) { resolve(null); return; }
+        navigator.geolocation.getCurrentPosition(
+            pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+            () => resolve(null),
+            { enableHighAccuracy: true, timeout: 8000 }
+        );
+    });
+}
+
+async function reverseGeocode(lat, lon) {
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
+        const data = await res.json();
+        return data.display_name || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/* ============ WATERMARK / GEOTAG (dengan downscale, biar hemat storage) ============ */
+
+function drawWatermark(img, dateObj, loc, address) {
+
+    const maxDim = 1000;
+    let w = img.width, h = img.height;
+
+    if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
+    const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
+
+    const barH = Math.max(38, h * 0.11);
+
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(0, h - barH, w, barH);
+
+    ctx.fillStyle = "#fff";
+    ctx.font = `${Math.max(11, barH * 0.27)}px Arial`;
+    ctx.textBaseline = "middle";
+    ctx.fillText(tglText, 8, h - barH * 0.68);
+    ctx.fillText(lokasiText, 8, h - barH * 0.28, w - 16);
+
+    return canvas.toDataURL("image/jpeg", 0.6);
+}
+
+/* ============ PROSES FOTO MASUK ============ */
+
+async function handleFile(id, file) {
+
+    if (!file) return;
+
+    const infoEl = document.getElementById("info_" + id);
+    if (infoEl) infoEl.textContent = "Memproses foto...";
+
+    try {
+
+        const rawDataUrl = await readFileAsDataURL(file);
+        const img = await loadImage(rawDataUrl);
+        const loc = await getLocation();
+
+        let address = null;
+        if (loc) address = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
+
+        const now = new Date();
+        const finalDataUrl = drawWatermark(img, now, loc, address);
+
+        foto[id] = finalDataUrl;
+
+        const previewEl = document.getElementById("prev_" + id);
+        if (previewEl) previewEl.src = finalDataUrl;
+
+        if (infoEl) {
+            infoEl.textContent = now.toLocaleString("id-ID") + (loc ? " • " + (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : " • lokasi tidak tersedia");
+        }
+
+        const saveBtn = document.getElementById("save_" + id);
+        if (saveBtn) saveBtn.style.display = "block";
+
+        simpanFotoKeStorage(id, finalDataUrl, now.toISOString(), loc, address);
+
+        // otomatis coba simpan ke galeri/unduhan perangkat
+        simpanKeGaleri(finalDataUrl, id);
+
+    } catch (err) {
+        console.error(err);
+        if (infoEl) infoEl.textContent = "Gagal memproses foto.";
+    }
+}
+
+function registerFileInput(inputId, fotoId) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    el.addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        handleFile(fotoId, file);
+        e.target.value = "";
+    });
+}
+
+SEMUA_ID.forEach(id => {
+    registerFileInput(id + "_cam", id);
+    registerFileInput(id + "_up", id);
+});
+
+/* ============ SIMPAN KE GALERI (DOWNLOAD) ============ */
+
+function simpanKeGaleri(dataUrl, id) {
+    if (!dataUrl) return;
+    try {
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = "dokumentasi_" + id + "_" + Date.now() + ".jpg";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } catch (e) {
+        console.warn("Gagal auto-simpan ke galeri, gunakan tombol simpan manual.", e);
+    }
+}
+
+/* ============ PERSISTENSI localStorage (expired ganti hari) ============ */
+
+function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function cekExpired() {
+    const savedDate = localStorage.getItem(STORAGE_DATE_KEY);
+    const today = todayStr();
+
+    if (savedDate !== today) {
+        Object.keys(localStorage).forEach(k => {
+            if (k.startsWith(STORAGE_PREFIX)) localStorage.removeItem(k);
+        });
+        localStorage.setItem(STORAGE_DATE_KEY, today);
+        return true;
+    }
+    return false;
+}
+
+function simpanFotoKeStorage(id, dataUrl, iso, loc, address) {
+    try {
+        localStorage.setItem(STORAGE_PREFIX + "foto_" + id, JSON.stringify({ dataUrl, iso, loc, address }));
+    } catch (e) {
+        console.warn("Gagal simpan ke localStorage (mungkin penuh):", e);
+    }
+}
+
+function muatFotoDariStorage() {
+
+    SEMUA_ID.forEach(id => {
+
+        const raw = localStorage.getItem(STORAGE_PREFIX + "foto_" + id);
+        if (!raw) return;
+
+        try {
+            const data = JSON.parse(raw);
+            foto[id] = data.dataUrl;
+
+            const previewEl = document.getElementById("prev_" + id);
+            const infoEl = document.getElementById("info_" + id);
+            const saveBtn = document.getElementById("save_" + id);
+
+            if (previewEl) previewEl.src = data.dataUrl;
+            if (saveBtn) saveBtn.style.display = "block";
+
+            if (infoEl) {
+                const d = new Date(data.iso);
+                infoEl.textContent = d.toLocaleString("id-ID") + (data.loc ? " • " + (data.address || `${data.loc.lat.toFixed(5)}, ${data.loc.lon.toFixed(5)}`) : "");
+            }
+        } catch (e) {}
+    });
+
+    const uraian = localStorage.getItem(STORAGE_PREFIX + "uraianRapat");
+    const tgl = localStorage.getItem(STORAGE_PREFIX + "tglRapat");
+
+    if (uraian) document.getElementById("uraianRapat").value = uraian;
+    if (tgl) document.getElementById("tglRapat").value = tgl;
+}
+
+document.getElementById("uraianRapat").addEventListener("input", e => {
+    localStorage.setItem(STORAGE_PREFIX + "uraianRapat", e.target.value);
+});
+document.getElementById("tglRapat").addEventListener("input", e => {
+    localStorage.setItem(STORAGE_PREFIX + "tglRapat", e.target.value);
+});
+
+// Jalankan saat halaman dibuka / dibuka lagi
+cekExpired();
+muatFotoDariStorage();
+
+/* ============ PDF ============ */
+
+/* ============ PDF ============ */
+
+async function buatPDF(prefix, judul) {
+
+    const ids = [prefix + "_start", prefix + "_in", prefix + "_out", prefix + "_end"];
+
+    for (let id of ids) {
+        if (!foto[id]) {
+            alert("Semua foto harus diupload.");
+            return;
+        }
+    }
+
+    if (prefix === "rapat") {
+        const uraian = document.getElementById("uraianRapat").value.trim();
+        const tgl = document.getElementById("tglRapat").value;
+        if (!uraian || !tgl) {
+            alert("Uraian rapat dan tanggal rapat wajib diisi.");
+            return;
+        }
+    }
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    pdf.setFontSize(18);
+    pdf.text(judul, 105, 15, { align: "center" });
+
+    let yOffset = 0;
+
+    if (prefix === "rapat") {
+        const uraian = document.getElementById("uraianRapat").value.trim();
+        const rawTgl = document.getElementById("tglRapat").value; // Format yyyy-mm-dd
+        
+        // Konversi format tanggal ke dd-MM-yyyy
+        const dateParts = rawTgl.split('-');
+        const formattedTgl = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+        
+        pdf.setFontSize(11);
+        pdf.text("Uraian: " + uraian, 15, 23);
+        pdf.text("Tanggal: " + formattedTgl, 15, 29);
+        yOffset = 10;
+    }
+
+    const positions = [
+        { x: 15, y: 30 + yOffset }, { x: 110, y: 30 + yOffset },
+        { x: 15, y: 120 + yOffset }, { x: 110, y: 120 + yOffset }
+    ];
+
+    pdf.setFontSize(12);
+    
+    // Logika Label Dinamis
+    const labels = (prefix === "rapat") 
+        ? ["Foto 1", "Foto 2", "Foto 3", "Foto 4"] 
+        : ["START", "IN", "OUT", "END"];
+
+    ids.forEach((id, i) => {
+        const pos = positions[i];
+        pdf.text(labels[i], pos.x, pos.y - 5);
+        // Menggunakan dimensi 85x85 agar proporsional
+        pdf.addImage(foto[id], "JPEG", pos.x, pos.y, 85, 85);
+    });
+
+    pdf.save(judul + ".pdf");
+}
 </script>
-
 </body>
 </html>
