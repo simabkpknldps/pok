@@ -18,6 +18,7 @@
         --border: #e2e8f0;
     }
 
+    
     * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
 
     body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
@@ -368,6 +369,8 @@ muatFotoDariStorage();
 
 /* ============ PDF ============ */
 
+/* ============ PDF ============ */
+
 async function buatPDF(prefix, judul) {
 
     const ids = [prefix + "_start", prefix + "_in", prefix + "_out", prefix + "_end"];
@@ -407,15 +410,19 @@ async function buatPDF(prefix, judul) {
         pdf.setFontSize(11);
         pdf.text("Uraian: " + uraian, 15, 23);
         pdf.text("Tanggal: " + formattedTgl, 15, 29);
-        yOffset = 10;
+        yOffset = 15; // Ditingkatkan agar tidak menabrak label foto
+    } else {
+        yOffset = 5;
     }
 
+    // Posisi gambar 85x85
     const positions = [
-        { x: 15, y: 30 + yOffset }, { x: 110, y: 30 + yOffset },
-        { x: 15, y: 120 + yOffset }, { x: 110, y: 120 + yOffset }
+        { x: 15, y: 35 + yOffset }, { x: 110, y: 35 + yOffset },
+        { x: 15, y: 130 + yOffset }, { x: 110, y: 130 + yOffset }
     ];
 
-    pdf.setFontSize(12);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
     
     // Logika Label Dinamis
     const labels = (prefix === "rapat") 
@@ -424,8 +431,8 @@ async function buatPDF(prefix, judul) {
 
     ids.forEach((id, i) => {
         const pos = positions[i];
+        // Pastikan label digambar SEBELUM gambar agar tidak tertutup
         pdf.text(labels[i], pos.x, pos.y - 5);
-        // Menggunakan dimensi 85x85 agar proporsional
         pdf.addImage(foto[id], "JPEG", pos.x, pos.y, 85, 85);
     });
 
