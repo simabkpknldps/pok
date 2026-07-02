@@ -461,6 +461,8 @@
                         // Sangat penting: jangan sertakan header Content-Type jika muncul error CORS
                         body: JSON.stringify({ action: 'getDetil', mak: mak })
                     });
+
+                    console.log("Status :", res.status);
                     
                     const response = await res.json();
                     
