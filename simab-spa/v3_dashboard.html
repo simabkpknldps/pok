@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiMAB - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
+
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
+        <div class="p-6 border-b border-slate-100"><h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB</h1></div>
+        <nav class="p-4 space-y-2 flex-grow">
+            <button onclick="navigate('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-gauge mr-3"></i> Dashboard</button>
+            <button onclick="navigate('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-folder-open mr-3"></i> POK</button>
+            <button onclick="navigate('kegiatan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-list-check mr-3"></i> Daftar Kegiatan</button>
+            <button onclick="navigate('perjadin')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-wallet mr-3"></i> Perjadinku</button>
+            <button onclick="navigate('kalender')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-regular fa-calendar mr-3"></i> Kalender</button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
+            <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
+            <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
+        </header>
+        <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
+    </main>
+
+    <!-- Modal-modal khusus halaman (mis. rekamModal, detilModal) disuntikkan
+         otomatis oleh page module masing-masing (lihat js/pages/pok.js) -->
+
+    <!-- Toast Container: dipakai bareng oleh semua halaman -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
+
+    <!-- Titik masuk aplikasi. type="module" wajib supaya import/export & dynamic import() bisa jalan -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
