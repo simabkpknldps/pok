@@ -454,28 +454,29 @@
             async function openDetilModal(mak) {
                 document.getElementById("detilModal").classList.replace("hidden", "flex");
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
+                const tbody = document.getElementById("detil-tbody");
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat data...</td></tr>`;
                 
                 try {
                     const res = await fetch(sessionStorage.getItem('realUrl'), {
                         method: 'POST',
-                        // Sangat penting: jangan sertakan header Content-Type jika muncul error CORS
+                        // Kita kirim sebagai string JSON, server GAS akan mem-parse nya
                         body: JSON.stringify({ action: 'getDetil', mak: mak })
                     });
-
-                    console.log("Status :", res.status);
                     
-                    const response = await res.json();
+                    const result = await res.json();
                     
-                    // Logika agar tidak error jika data bukan array
-                    if (Array.isArray(response)) {
-                        window.detilKegiatanData = response;
-                        renderDetilTable(window.detilKegiatanData);
+                    // Pengecekan apakah hasil adalah array
+                    if (Array.isArray(result)) {
+                        window.detilKegiatanData = result;
+                        renderDetilTable(result);
                     } else {
-                        console.error("Server mengembalikan error:", response);
-                        alert("Error: " + (response.message || "Data tidak ditemukan"));
+                        console.error("Respon Server:", result);
+                        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Error: ${result.message || 'Data tidak ditemukan'}</td></tr>`;
                     }
                 } catch (e) {
-                    console.error("Fetch gagal:", e);
+                    console.error("Fetch Error:", e);
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal terhubung ke server.</td></tr>`;
                 }
             }
         
