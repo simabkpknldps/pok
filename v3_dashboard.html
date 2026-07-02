@@ -456,13 +456,14 @@
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
                 
                 // GANTI URL DI BAWAH INI DENGAN URL ASLI ANDA
-                const URL_GAS = "https://script.google.com/macros/s/AKfycbzLO1fVUfqOqwBGfbGbTNIMi_0vDkcFuBp2R3SvE3KanfMSBOtAtbJaphxO2QBggtjq8g/exec"; 
+                //const URL_GAS = "https://script.google.com/macros/s/AKfycbzLO1fVUfqOqwBGfbGbTNIMi_0vDkcFuBp2R3SvE3KanfMSBOtAtbJaphxO2QBggtjq8g/exec"; 
+                const url = sessionStorage.getItem('realUrl');
                 
                 const tbody = document.getElementById("detil-tbody");
                 tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
             
                 try {
-                    const res = await fetch(URL_GAS, {
+                    const res = await fetch(url, {
                         method: 'POST',
                         body: JSON.stringify({ action: 'getDetil', mak: mak })
                     });
@@ -485,31 +486,60 @@
             function renderDetilTable(data) {
                 const tbody = document.getElementById("detil-tbody");
                 
-                // Cek apakah data benar-benar array
                 if (!Array.isArray(data)) {
-                    console.error("Data bukan array:", data);
-                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Data tidak ditemukan atau format salah.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Data tidak ditemukan.</td></tr>`;
                     return;
                 }
             
-                if (data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Data kosong.</td></tr>`;
-                    return;
-                }
+                tbody.innerHTML = data.map(i => {
+                    // 1. Format Tanggal (yyyy-MM-dd)
+                    // Kita gunakan Date object untuk memastikan formatnya benar
+                    let tglFormatted = '-';
+                    if (i.tglSt) {
+                        const d = new Date(i.tglSt);
+                        if (!isNaN(d.getTime())) {
+                            tglFormatted = d.toISOString().split('T')[0]; // Menghasilkan yyyy-mm-dd
+                        }
+                    }
             
-                tbody.innerHTML = data.map(i => `
-                    <tr class="border-b">
-                        <td class="p-3">${i.uraian || '-'}</td>
-                        <td class="p-3">${i.userLogin || '-'}</td>
-                        <td class="p-3">${i.tujuan || '-'}</td>
-                        <td class="p-3">${i.tglSt || '-'}</td>
-                        <td class="p-3">${Number(i.estimasi || 0).toLocaleString()}</td>
-                        <td class="p-3">${i.status || '-'}</td>
-                        <td class="p-3">
-                            ${i.status === 'Rekam Data' ? `<button onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}
-                        </td>
-                    </tr>
-                `).join('');
+                    // 2. Warna Status
+                    const statusColors = {
+                        "Rekam Data": "bg-pink-100 text-pink-700",
+                        "Terlaksana": "bg-slate-200 text-slate-700",
+                        "LPT": "bg-yellow-100 text-yellow-700",
+                        "Terbayar": "bg-green-100 text-green-700",
+                        "Selesai": "bg-blue-100 text-blue-700"
+                    };
+                    const statusClass = statusColors[i.status] || "bg-gray-100";
+            
+                    return `
+                        <tr class="border-b">
+                            <td class="p-3">${i.uraian || '-'}</td>
+                            <td class="p-3">${i.userLogin || '-'}</td>
+                            <td class="p-3">${i.tujuan || '-'}</td>
+                            <td class="p-3">${tglFormatted}</td>
+                            <td class="p-3">${Number(i.estimasi || 0).toLocaleString()}</td>
+                            <td class="p-3">
+                                <span class="px-2 py-1 rounded-full text-[10px] font-bold ${statusClass}">
+                                    ${i.status || '-'}
+                                </span>
+                            </td>
+                            <td class="p-3 space-x-2">
+                                <!-- Tombol Pelaksana Tugas: Muncul jika Rekam Data atau Terlaksana -->
+                                ${(i.status === 'Rekam Data' || i.status === 'Terlaksana') ? 
+                                    `<button title="Pelaksana Tugas" onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600">
+                                        <i class="fa-solid fa-user-check"></i>
+                                     </button>` : ''}
+                                
+                                <!-- Tombol Hapus: Muncul hanya saat Rekam Data -->
+                                ${i.status === 'Rekam Data' ? 
+                                    `<button title="Hapus" onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500">
+                                        <i class="fa-solid fa-trash"></i>
+                                     </button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             }
         
             function filterDetil() {
