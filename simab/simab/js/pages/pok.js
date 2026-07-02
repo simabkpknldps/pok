@@ -17,14 +17,24 @@ async function initPokPage() {
 }
 
 async function loadPokData() {
+    const tbody = document.getElementById('pok-tbody');
     try {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+        
         const data = await apiPost({ action: 'getPOKData' });
+        
+        if (!data || !Array.isArray(data)) {
+            throw new Error('Format data tidak valid');
+        }
+        
         window.rawPokData = data;
         renderPok();
     } catch (e) {
-        console.error(e);
-        const tbody = document.getElementById('pok-tbody');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-red-500 p-4 text-center">Gagal memuat data.</td></tr>`;
+        console.error('Error loading POK data:', e);
+        const errorMsg = e.name === 'AbortError' 
+            ? 'Timeout: Server tidak merespons (>30 detik)'
+            : e.message || 'Gagal memuat data';
+        tbody.innerHTML = `<tr><td colspan="7" class="text-red-500 p-4 text-center">❌ ${errorMsg}</td></tr>`;
     }
 }
 
@@ -138,6 +148,34 @@ function toggleExpand(code) {
     renderPok();
 }
 
+function toggleExpandAll() {
+    const btn = document.getElementById("toggleExpandBtn");
+    
+    if (window.expandedCodes.size === 0) {
+        // Expand all - tambah semua parent codes (12 digit)
+        const uniqueMap = new Map();
+        window.rawPokData.forEach(item => {
+            uniqueMap.set(String(item.kode), item);
+        });
+        const uniqueData = Array.from(uniqueMap.values());
+        
+        uniqueData.forEach(item => {
+            const code = String(item.kode);
+            if (code.length === 12) {
+                window.expandedCodes.add(code);
+            }
+        });
+        
+        btn.innerHTML = '<i class="fa-solid fa-compress"></i> Collapse All';
+    } else {
+        // Collapse all
+        window.expandedCodes.clear();
+        btn.innerHTML = '<i class="fa-solid fa-expand"></i> Expand All';
+    }
+    
+    renderPok();
+}
+
 function openRekamModal(idx) {
     const data = window.rawPokData[idx];
 
@@ -183,9 +221,14 @@ async function fetchLokasiData() {
         }
         if (datalist) {
             datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
+            console.log("Data lokasi berhasil dimuat:", data.length, "item");
         }
     } catch (e) {
         console.error("Gagal memuat data lokasi:", e);
+        const errorMsg = e.name === 'AbortError' 
+            ? 'Timeout saat load lokasi (>30 detik)'
+            : e.message || 'Gagal memuat data lokasi';
+        console.warn(`⚠️ ${errorMsg}`);
     }
 }
 
@@ -254,10 +297,10 @@ async function simpanData() {
 
 async function openDetilModal(mak) {
     document.getElementById("detilModal").classList.replace("hidden", "flex");
-    document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
+    document.getElementById("detilTitle").innerHTML = `<i class="fa-solid fa-list-check"></i> Detil MAK: ${mak}`;
 
     const tbody = document.getElementById("detil-tbody");
-    tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><span class="text-gray-500">Memuat...</span></div>`;
+    tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><i class="fa-solid fa-spinner fa-spin mr-2 text-sky-600"></i><span class="text-slate-500">Memuat...</span></div>`;
 
     try {
         const result = await apiGet('getDetil', { mak });
@@ -267,11 +310,14 @@ async function openDetilModal(mak) {
             renderDetilTable(result);
         } else {
             console.error("Respon Error:", result);
-            tbody.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${result.message || 'Data tidak ditemukan'}</div>`;
+            tbody.innerHTML = `<div class="p-4 text-center text-red-500">❌ ${result.message || 'Data tidak ditemukan'}</div>`;
         }
     } catch (e) {
         console.error("Fetch Error:", e);
-        tbody.innerHTML = `<div class="p-4 text-center text-red-500">Gagal koneksi. Cek Console F12.</div>`;
+        const errorMsg = e.name === 'AbortError' 
+            ? 'Timeout: Server tidak merespons (>30 detik)'
+            : e.message || 'Gagal koneksi ke server';
+        tbody.innerHTML = `<div class="p-4 text-center text-red-500">❌ ${errorMsg}</div>`;
     }
 }
 
@@ -300,10 +346,11 @@ function renderDetilTable(data) {
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${sClass}">${i.status || '-'}</span>
                 </div>
                 <div class="w-[8%] flex justify-center gap-2">
-                    ${(i.status === 'Rekam Data' || i.status === 'Terlaksana') ?
-                        `<button onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600"><i class="fa-solid fa-user-check"></i></button>` : ''}
-                    ${i.status === 'Rekam Data' ?
-                        `<button onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}
+                    ${i.status === 'Rekam Data' ? `
+                        <button onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600 hover:text-sky-800 font-bold" title="Update Pelaksana">
+                            <i class="fa-solid fa-users"></i>
+                        </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -315,15 +362,207 @@ function filterDetil() {
     renderDetilTable(window.detilKegiatanData.filter(i => (i.uraian || '').toLowerCase().includes(keyword)));
 }
 
+// ========================================
+// PELAKSANA KEGIATAN MODAL FUNCTIONS
+// ========================================
+
+window.pelaksanaTableData = []; // Store tabel pelaksana
+window.pelaksanaCurrentData = {}; // Store data kegiatan yang dibuka
+
+async function openPelaksanaModal(idKegiatan) {
+    // Cari data di detilKegiatanData berdasarkan idKegiatan
+    const data = window.detilKegiatanData.find(d => d.idKegiatan === idKegiatan);
+    if (!data) {
+        alert("Data kegiatan tidak ditemukan");
+        return;
+    }
+
+    // Simpan data saat ini
+    window.pelaksanaCurrentData = data;
+    window.pelaksanaTableData = []; // Reset tabel
+
+    // Tampilkan modal
+    document.getElementById("pelaksanaModal").classList.replace("hidden", "flex");
+
+    // Populate form fields (readonly)
+    document.getElementById("pelaksanaKodeKegiatan").innerText = data.idKegiatan;
+    document.getElementById("pelaksanaMak").value = data.mak || '';
+    document.getElementById("pelaksanaUraian").value = data.uraian || '';
+    document.getElementById("pelaksanaTujuan").value = data.tujuan || '';
+    document.getElementById("pelaksanaUser").value = data.userLogin || sessionStorage.getItem('nama') || '';
+    document.getElementById("pelaksanaTglSt").value = data.tglSt ? new Date(data.tglSt).toISOString().split('T')[0] : '';
+
+    // Clear input & render tabel
+    document.getElementById("inputPelaksana").value = '';
+    renderPelaksanaTable();
+
+    // Load ref pegawai untuk datalist
+    await loadRefPegawai();
+}
+
+function closePelaksanaModal() {
+    document.getElementById("pelaksanaModal").classList.replace("flex", "hidden");
+    window.pelaksanaTableData = [];
+    window.pelaksanaCurrentData = {};
+}
+
+async function loadRefPegawai() {
+    try {
+        const datalist = document.getElementById('listPelaksana');
+        if (!datalist) return;
+
+        const data = await apiGet('loadRefPegawai');
+
+        if (Array.isArray(data)) {
+            datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
+            console.log("Ref pegawai dimuat:", data.length, "orang");
+        } else if (data.error) {
+            console.error("API Error:", data.error);
+        }
+    } catch (e) {
+        console.error("Gagal load ref pegawai:", e);
+    }
+}
+
+function submitPelaksana() {
+    const input = document.getElementById("inputPelaksana");
+    const nama = input.value.trim();
+
+    if (!nama) {
+        alert("Nama pelaksana harus diisi");
+        return;
+    }
+
+    // Tambah ke tabel data
+    window.pelaksanaTableData.push({
+        nama: nama,
+        tglMulai: '',
+        tglSelesai: '',
+        jumlah: ''
+    });
+
+    // Clear input & render
+    input.value = '';
+    renderPelaksanaTable();
+}
+
+function renderPelaksanaTable() {
+    const tbody = document.getElementById("pelaksanaTableBody");
+
+    if (window.pelaksanaTableData.length === 0) {
+        tbody.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">Belum ada data pelaksana</div>`;
+        return;
+    }
+
+    tbody.innerHTML = window.pelaksanaTableData.map((row, idx) => `
+        <div class="flex p-3 border-b items-center hover:bg-slate-50 text-xs">
+            <div class="w-[30%] font-medium">${row.nama}</div>
+            <div class="w-[20%]">
+                <input type="date" value="${row.tglMulai}" 
+                       onchange="updatePelaksanaField(${idx}, 'tglMulai', this.value)"
+                       class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+            </div>
+            <div class="w-[20%]">
+                <input type="date" value="${row.tglSelesai}" 
+                       onchange="updatePelaksanaField(${idx}, 'tglSelesai', this.value)"
+                       class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+            </div>
+            <div class="w-[15%]">
+                <input type="number" value="${row.jumlah}" placeholder="0"
+                       onchange="updatePelaksanaField(${idx}, 'jumlah', this.value)"
+                       class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+            </div>
+            <div class="w-[15%] text-center">
+                <button onclick="deletePelaksanaRow(${idx})" class="text-red-600 hover:text-red-800">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updatePelaksanaField(idx, field, value) {
+    if (window.pelaksanaTableData[idx]) {
+        window.pelaksanaTableData[idx][field] = value;
+    }
+}
+
+function deletePelaksanaRow(idx) {
+    window.pelaksanaTableData.splice(idx, 1);
+    renderPelaksanaTable();
+}
+
+async function simpanPelaksana() {
+    if (window.pelaksanaTableData.length === 0) {
+        alert("Tambahkan minimal 1 pelaksana");
+        return;
+    }
+
+    const btn = document.getElementById("btnSimpanPelaksana");
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menyimpan...';
+
+    try {
+        // Simpan scroll position POK
+        const appContainer = document.getElementById('app');
+        const scrollPos = appContainer ? appContainer.scrollTop : 0;
+
+        const payload = {
+            action: 'updatePelaksanaKegiatan',
+            idKegiatanLama: window.pelaksanaCurrentData.idKegiatan,
+            mak: window.pelaksanaCurrentData.mak,
+            uraian: window.pelaksanaCurrentData.uraian,
+            tujuan: window.pelaksanaCurrentData.tujuan,
+            tglSt: window.pelaksanaCurrentData.tglSt,
+            userLogin: sessionStorage.getItem('nama') || "Guest",
+            pelaksanaData: window.pelaksanaTableData
+        };
+
+        const result = await apiPost(payload);
+
+        if (result.status === "success") {
+            // Close modals (silent, no toast)
+            closePelaksanaModal();
+            document.getElementById("detilModal").classList.replace("flex", "hidden");
+            
+            // Refresh POK data & restore scroll position
+            await loadPokData();
+            
+            // Restore scroll position
+            setTimeout(() => {
+                if (appContainer) {
+                    appContainer.scrollTop = scrollPos;
+                }
+            }, 50);
+        } else {
+            alert("Gagal: " + result.message);
+        }
+    } catch (e) {
+        console.error("Save Error:", e);
+        alert("Error koneksi: " + (e.message || "Tidak diketahui"));
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan';
+    }
+}
+
 window.initPokPage = initPokPage;
 window.loadPokData = loadPokData;
 window.renderPok = renderPok;
 window.searchPok = searchPok;
 window.gotoSearchResult = gotoSearchResult;
 window.toggleExpand = toggleExpand;
+window.toggleExpandAll = toggleExpandAll;
 window.openRekamModal = openRekamModal;
 window.closeRekamModal = closeRekamModal;
 window.cekKecukupanDana = cekKecukupanDana;
 window.simpanData = simpanData;
 window.openDetilModal = openDetilModal;
 window.filterDetil = filterDetil;
+window.openPelaksanaModal = openPelaksanaModal;
+window.closePelaksanaModal = closePelaksanaModal;
+window.loadRefPegawai = loadRefPegawai;
+window.submitPelaksana = submitPelaksana;
+window.updatePelaksanaField = updatePelaksanaField;
+window.deletePelaksanaRow = deletePelaksanaRow;
+window.simpanPelaksana = simpanPelaksana;
