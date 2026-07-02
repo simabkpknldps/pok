@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload Dokumentasi Foto</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{
+    font-family:Arial,Helvetica,sans-serif;
+    background:#f4f4f4;
+    padding:30px;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+    background:white;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,.15);
+}
+
+h2{
+    text-align:center;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:25px;
+    margin-top:25px;
+}
+
+.card{
+    border:1px solid #ddd;
+    padding:15px;
+    border-radius:10px;
+    background:#fafafa;
+}
+
+.card h3{
+    text-align:center;
+}
+
+.card img{
+    width:100%;
+    height:250px;
+    object-fit:contain;
+    border:1px solid #ccc;
+    margin-top:10px;
+    background:white;
+}
+
+button{
+    width:100%;
+    padding:15px;
+    margin-top:30px;
+    background:#007bff;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-size:18px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#0056b3;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<h2>Upload Dokumentasi Foto</h2>
+
+<div class="grid">
+
+<div class="card">
+<h3>Start Foto</h3>
+<input type="file" id="start" accept="image/*">
+<img id="prev_start">
+</div>
+
+<div class="card">
+<h3>In Foto</h3>
+<input type="file" id="in" accept="image/*">
+<img id="prev_in">
+</div>
+
+<div class="card">
+<h3>Out Foto</h3>
+<input type="file" id="out" accept="image/*">
+<img id="prev_out">
+</div>
+
+<div class="card">
+<h3>End Foto</h3>
+<input type="file" id="end" accept="image/*">
+<img id="prev_end">
+</div>
+
+</div>
+
+<button onclick="buatPDF()">Submit & Download PDF</button>
+
+</div>
+
+<script>
+
+const dataFoto={};
+
+function preview(id){
+
+document.getElementById(id).addEventListener("change",function(e){
+
+const file=e.target.files[0];
+if(!file)return;
+
+const reader=new FileReader();
+
+reader.onload=function(ev){
+
+document.getElementById("prev_"+id).src=ev.target.result;
+dataFoto[id]=ev.target.result;
+
+}
+
+reader.readAsDataURL(file);
+
+});
+
+}
+
+preview("start");
+preview("in");
+preview("out");
+preview("end");
+
+async function buatPDF(){
+
+if(!dataFoto.start || !dataFoto.in || !dataFoto.out || !dataFoto.end){
+
+alert("Semua foto harus diupload.");
+return;
+
+}
+
+const {jsPDF}=window.jspdf;
+
+const pdf=new jsPDF("p","mm","a4");
+
+pdf.setFontSize(18);
+pdf.text("Dokumentasi Foto",105,15,{align:"center"});
+
+const w=80;
+const h=60;
+
+const x1=15;
+const x2=115;
+
+const y1=30;
+const y2=120;
+
+pdf.setFontSize(12);
+
+pdf.text("START",x1,y1-4);
+pdf.addImage(dataFoto.start,"JPEG",x1,y1,w,h);
+
+pdf.text("IN",x2,y1-4);
+pdf.addImage(dataFoto.in,"JPEG",x2,y1,w,h);
+
+pdf.text("OUT",x1,y2-4);
+pdf.addImage(dataFoto.out,"JPEG",x1,y2,w,h);
+
+pdf.text("END",x2,y2-4);
+pdf.addImage(dataFoto.end,"JPEG",x2,y2,w,h);
+
+pdf.save("Dokumentasi_Foto.pdf");
+
+}
+
+</script>
+
+</body>
+</html>
