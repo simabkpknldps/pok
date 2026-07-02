@@ -455,21 +455,28 @@
                 document.getElementById("detilModal").classList.replace("hidden", "flex");
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
                 
-                // Tampilkan indikator loading di dalam tabel
-                document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</td></tr>`;
+                // Tampilkan loading
+                document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
             
                 try {
-                    const baseUrl = sessionStorage.getItem('realUrl');
-                    // Jika API Anda mengharapkan parameter di URL, gunakan ini:
-                    const res = await fetch(`${baseUrl}?action=getDetil&mak=${encodeURIComponent(mak)}`);
+                    const res = await fetch(sessionStorage.getItem('realUrl'), {
+                        method: 'POST',
+                        // Tambahkan header ini agar GAS bisa mendeteksi JSON dengan benar
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8', 
+                        },
+                        body: JSON.stringify({ 
+                            action: 'getDetil', 
+                            mak: mak 
+                        })
+                    });
                     
-                    if (!res.ok) throw new Error('Gagal terhubung ke server');
-                    
-                    window.detilKegiatanData = await res.json();
+                    const data = await res.json();
+                    window.detilKegiatanData = data;
                     renderDetilTable(window.detilKegiatanData);
                 } catch (e) {
                     console.error("Gagal load:", e);
-                    document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal memuat data.</td></tr>`;
+                    document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Error: ${e.message}</td></tr>`;
                 }
             }
         
