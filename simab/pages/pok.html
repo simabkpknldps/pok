@@ -1,0 +1,211 @@
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="flex flex-col md:flex-row gap-3 mb-4 items-center">
+        <input type="text" id="searchPok" oninput="searchPok()" placeholder="Cari kode / uraian..."
+               class="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+        <button id="toggleExpandBtn" onclick="toggleExpandAll()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap flex items-center gap-2">
+            <i class="fa-solid fa-expand"></i> Expand All
+        </button>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-100 text-slate-600 text-xs uppercase">
+                <tr>
+                    <th class="p-3 text-left">Kode</th>
+                    <th class="p-3 text-left">Uraian</th>
+                    <th class="p-3 text-right">Pagu</th>
+                    <th class="p-3 text-right">Blokir</th>
+                    <th class="p-3 text-right">Realisasi</th>
+                    <th class="p-3 text-right">Sisa</th>
+                    <th class="p-3 text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="pok-tbody">
+                <tr><td colspan="7" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Rekam Kegiatan -->
+<div id="rekamModal" class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-[980px] max-w-[96vw] overflow-hidden animate-[fade_.2s_ease]">
+        <div class="bg-sky-600 text-white px-6 py-4 flex justify-between items-center">
+            <div>
+                <h2 class="text-xl font-bold"><i class="fa-solid fa-pen-to-square mr-2"></i>Rekam Kegiatan</h2>
+            </div>
+            <button onclick="closeRekamModal()" class="w-9 h-9 rounded-full hover:bg-sky-700 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 p-6">
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">ID Usulan</label>
+                    <input readonly id="idUsulan" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">No ST/ND / Uraian Kegiatan</label>
+                    <input id="uraianKegiatan" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Tgl ST/ND</label>
+                    <input type="date" id="tglSt" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Estimasi Biaya</label>
+                    <input id="estimasiBiaya" oninput="cekKecukupanDana()" onkeyup="this.value = formatRibuan(this.value)"
+                           class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:ring-2 focus:ring-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Status Kecukupan Dana</label>
+                    <input readonly id="statusDana" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Tujuan</label>
+                    <input list="listTujuan" id="inputTujuan" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 transition">
+                    <datalist id="listTujuan"></datalist>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">MAK</label>
+                    <input readonly id="mak" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Uraian MAK</label>
+                    <input readonly id="uraianMak" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Pagu</label>
+                    <input readonly id="pagu" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Blokir</label>
+                    <input readonly id="blokir" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Realisasi</label>
+                    <input readonly id="realisasi" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Sisa</label>
+                    <input readonly id="sisa" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-50 border-t px-6 py-4 flex justify-end gap-3">
+            <button onclick="closeRekamModal()" class="px-6 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100">
+                <i class="fa-solid fa-right-from-bracket mr-2"></i>Batal
+            </button>
+            <button id="btnSimpan" onclick="simpanData()" class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-xl shadow">
+                <i class="fa-solid fa-floppy-disk mr-2"></i> Simpan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detil Kegiatan -->
+<div id="detilModal" class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-[980px] max-w-[96vw] overflow-hidden">
+        <div class="bg-slate-700 text-white px-6 py-4 flex justify-between items-center">
+            <h2 class="text-lg font-bold flex items-center gap-2" id="detilTitle"><i class="fa-solid fa-list-check"></i> Detil Kegiatan</h2>
+            <button onclick="document.getElementById('detilModal').classList.replace('flex', 'hidden')" class="hover:text-red-300">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <input type="text" id="cariDetil" oninput="filterDetil()" placeholder="Cari uraian / nomor ST..." class="w-full border p-2 rounded-xl mb-4">
+            <div class="w-full text-sm">
+                <div class="flex bg-slate-100 p-3 font-bold text-slate-700 border-b items-center text-xs">
+                    <div class="w-[30%]">Uraian/ST</div>
+                    <div class="w-[12%]">Pelaksana</div>
+                    <div class="w-[18%]">Tujuan</div>
+                    <div class="w-[10%]">Tgl</div>
+                    <div class="w-[12%] text-right">Jumlah</div>
+                    <div class="w-[10%] text-center">Status</div>
+                    <div class="w-[8%] text-center">Aksi</div>
+                </div>
+                <div id="detil-tbody" class="max-h-[60vh] overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Pelaksana Kegiatan -->
+<div id="pelaksanaModal" class="fixed inset-0 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm z-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-[980px] max-w-[96vw] overflow-hidden animate-[fade_.2s_ease]">
+        <div class="bg-slate-700 text-white px-6 py-4 flex justify-between items-center">
+            <h2 class="text-xl font-bold"><i class="fa-solid fa-users mr-2"></i>Pelaksana Kegiatan #<span id="pelaksanaKodeKegiatan"></span></h2>
+            <button onclick="closePelaksanaModal()" class="w-9 h-9 rounded-full hover:bg-slate-800 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Data Kegiatan (Read-only) -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">MAK</label>
+                    <input readonly id="pelaksanaMak" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Uraian</label>
+                    <input readonly id="pelaksanaUraian" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Tujuan</label>
+                    <input readonly id="pelaksanaTujuan" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">User</label>
+                    <input readonly id="pelaksanaUser" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Tgl ST/ND</label>
+                    <input readonly id="pelaksanaTglSt" type="date" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-slate-50">
+                </div>
+            </div>
+
+            <!-- Input Pelaksana -->
+            <div class="border-t pt-4">
+                <div class="flex gap-3 items-end">
+                    <div class="flex-1">
+                        <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Pelaksana</label>
+                        <input list="listPelaksana" id="inputPelaksana" placeholder="Ketik nama pelaksana..."
+                               class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <datalist id="listPelaksana"></datalist>
+                    </div>
+                    <button onclick="submitPelaksana()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-plus mr-1"></i> Submit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabel Pelaksana -->
+            <div class="border rounded-xl overflow-hidden">
+                <div class="bg-slate-100 p-3 font-bold text-slate-700 text-xs flex border-b">
+                    <div class="w-[30%]">Nama</div>
+                    <div class="w-[20%]">Tgl Mulai</div>
+                    <div class="w-[20%]">Tgl Selesai</div>
+                    <div class="w-[15%]">Jumlah</div>
+                    <div class="w-[15%] text-center">Aksi</div>
+                </div>
+                <div id="pelaksanaTableBody" class="max-h-[40vh] overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div class="bg-slate-50 border-t px-6 py-4 flex justify-end gap-3">
+            <button onclick="closePelaksanaModal()" class="px-6 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100">
+                <i class="fa-solid fa-times mr-2"></i> Batal
+            </button>
+            <button id="btnSimpanPelaksana" onclick="simpanPelaksana()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl shadow">
+                <i class="fa-solid fa-floppy-disk mr-2"></i> Simpan
+            </button>
+        </div>
+    </div>
+</div>
