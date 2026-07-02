@@ -1,3 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dokumentasi KPKNL Denpasar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --secondary: #64748b;
+        --success: #16a34a;
+        --success-dark: #15803d;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #1e293b;
+        --border: #e2e8f0;
+    }
+
+    
+    * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
+
+    .container { max-width: 800px; margin: auto; }
+
+    h2 { text-align: center; margin-bottom: 2rem; }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 1.5rem; background: #e2e8f0; padding: 5px; border-radius: 12px; }
+    .tabs button { flex: 1; padding: 12px; border: none; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s; background: transparent; color: var(--secondary); }
+    .tabs button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .rapat-form { background: var(--card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
+    .rapat-form label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--secondary); margin-bottom: 6px; }
+    .rapat-form input[type=text],
+    .rapat-form input[type=date] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: var(--bg); }
+    .rapat-form input:last-child { margin-bottom: 0; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .card { background: var(--card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
+    .card h3 { font-size: 0.9rem; margin: 0 0 10px 0; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; background: #f1f5f9; display: block; }
+
+    .hidden-file { display: none; }
+
+    .foto-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-foto { flex: 1; padding: 10px 6px; border: none; border-radius: 8px; background: var(--primary); color: white; cursor: pointer; font-weight: 500; font-size: 0.8rem; transition: 0.2s; }
+    .btn-foto:hover { background: var(--primary-dark); }
+    .btn-foto.btn-upload { background: var(--secondary); }
+    .btn-foto.btn-upload:hover { background: #475569; }
+
+    .foto-info { margin-top: 8px; font-size: 0.7rem; color: var(--secondary); min-height: 14px; word-break: break-word; line-height: 1.4; }
+
+    .foto-save { display: block; width: 100%; margin-top: 8px; padding: 8px; font-size: 0.75rem; font-weight: 500; border: 1px solid var(--success); color: var(--success); background: white; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    .foto-save:hover { background: var(--success); color: white; }
+
+    .download { width: 100%; padding: 16px; margin-top: 1.5rem; border: none; border-radius: 12px; background: #0f172a; color: white; font-weight: 700; cursor: pointer; font-size: 1rem; }
+    .download:hover { background: #1e293b; }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h2>Dokumentasi Kegiatan KPKNL Denpasar</h2>
+        
+        <div class="tabs">
+            <button class="active" onclick="openTab('perjadin', this)">Perjadin</button>
+            <button onclick="openTab('rapat', this)">Rapat</button>
+        </div>
+
+        <div id="perjadin" class="tab-content active">
+            <div class="grid" id="grid-perjadin"></div>
+            <button class="download" onclick="buatPDF('perjadin', 'Dokumentasi Perjadin')">Download PDF Perjadin</button>
+        </div>
+
+        <div id="rapat" class="tab-content">
+            <div class="rapat-form">
+                <label for="uraianRapat">Uraian Rapat</label>
+                <input type="text" id="uraianRapat" placeholder="Contoh: Rapat koordinasi anggaran triwulan II">
+                <label for="tglRapat">Tanggal Rapat</label>
+                <input type="date" id="tglRapat">
+            </div>
+            <div class="grid" id="grid-rapat"></div>
+            <button class="download" onclick="buatPDF('rapat', 'Dokumentasi Rapat')">Download PDF Rapat</button>
+        </div>
+    </div>
+
+<script>
+
+const foto = {};
+
+const CONFIG = [
+    { id: 'perjadin_start', title: 'Start Foto', tab: 'perjadin' },
+    { id: 'perjadin_in',    title: 'In Foto',    tab: 'perjadin' },
+    { id: 'perjadin_out',   title: 'Out Foto',   tab: 'perjadin' },
+    { id: 'perjadin_end',   title: 'End Foto',   tab: 'perjadin' },
+    { id: 'rapat_start',    title: 'Foto 1',     tab: 'rapat'    },
+    { id: 'rapat_in',       title: 'Foto 2',     tab: 'rapat'    },
+    { id: 'rapat_out',      title: 'Foto 3',     tab: 'rapat'    },
+    { id: 'rapat_end',      title: 'Foto 4',     tab: 'rapat'    }
+];
+
+const SEMUA_ID = CONFIG.map(c => c.id);
+const STORAGE_PREFIX = "dokfoto_";
+const STORAGE_DATE_KEY = "dokfoto_tanggal";
+
+/* ============ BANGUN KARTU (pengganti document.write) ============ */
+
+function cardHTML(id, title) {
+    return `
+        <div class="card">
+            <h3>${title}</h3>
+            <img id="prev_${id}" alt="">
+            <div class="foto-actions">
+                <input type="file" id="${id}_cam" class="hidden-file" accept="image/*" capture="environment">
+                <input type="file" id="${id}_up" class="hidden-file" accept="image/*">
+                <button type="button" class="btn-foto" onclick="document.getElementById('${id}_cam').click()">📷 Ambil Foto</button>
+                <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('${id}_up').click()">🖼️ Upload</button>
+            </div>
+            <div class="foto-info" id="info_${id}"></div>
+            <button type="button" class="foto-save" id="save_${id}" style="display:none" onclick="simpanKeGaleri(foto['${id}'],'${id}')">💾 Simpan ke Galeri</button>
+        </div>
+    `;
+}
+
+CONFIG.forEach(item => {
+    document.getElementById('grid-' + item.tab).insertAdjacentHTML('beforeend', cardHTML(item.id, item.title));
+});
+
+/* ============ TAB ============ */
+
+function openTab(tab, btn) {
+    document.querySelectorAll(".tab-content").forEach(e => e.classList.remove("active"));
+    document.querySelectorAll(".tabs button").forEach(e => e.classList.remove("active"));
+    document.getElementById(tab).classList.add("active");
+    btn.classList.add("active");
+}
+
 /* ============ HELPER ASYNC ============ */
 
 function readFileAsDataURL(file) {
@@ -194,3 +336,81 @@ function muatFotoDariStorage() {
 
 // Jalankan saat halaman dibuka
 muatFotoDariStorage();
+
+
+/* ============ PDF ============ */
+
+/* ============ PDF ============ */
+
+/* ============ PDF ============ */
+
+async function buatPDF(prefix, judul) {
+
+    const ids = [prefix + "_start", prefix + "_in", prefix + "_out", prefix + "_end"];
+
+    for (let id of ids) {
+        if (!foto[id]) {
+            alert("Semua foto harus diupload.");
+            return;
+        }
+    }
+
+    if (prefix === "rapat") {
+        const uraian = document.getElementById("uraianRapat").value.trim();
+        const tgl = document.getElementById("tglRapat").value;
+        if (!uraian || !tgl) {
+            alert("Uraian rapat dan tanggal rapat wajib diisi.");
+            return;
+        }
+    }
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    pdf.setFontSize(18);
+    pdf.text(judul, 105, 15, { align: "center" });
+
+    let yOffset = 0;
+
+    if (prefix === "rapat") {
+        const uraian = document.getElementById("uraianRapat").value.trim();
+        const rawTgl = document.getElementById("tglRapat").value; // Format yyyy-mm-dd
+        
+        // Konversi format tanggal ke dd-MM-yyyy
+        const dateParts = rawTgl.split('-');
+        const formattedTgl = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+        
+        pdf.setFontSize(11);
+        pdf.text("Uraian: " + uraian, 15, 23);
+        pdf.text("Tanggal: " + formattedTgl, 15, 29);
+        yOffset = 15; // Ditingkatkan agar tidak menabrak label foto
+    } else {
+        yOffset = 5;
+    }
+
+    // Posisi gambar 85x85
+    const positions = [
+        { x: 15, y: 35 + yOffset }, { x: 110, y: 35 + yOffset },
+        { x: 15, y: 130 + yOffset }, { x: 110, y: 130 + yOffset }
+    ];
+
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    
+    // Logika Label Dinamis
+    const labels = (prefix === "rapat") 
+        ? ["Foto 1", "Foto 2", "Foto 3", "Foto 4"] 
+        : ["START", "IN", "OUT", "END"];
+
+    ids.forEach((id, i) => {
+        const pos = positions[i];
+        // Pastikan label digambar SEBELUM gambar agar tidak tertutup
+        pdf.text(labels[i], pos.x, pos.y - 5);
+        pdf.addImage(foto[id], "JPEG", pos.x, pos.y, 85, 85);
+    });
+
+    pdf.save(judul + ".pdf");
+}
+</script>
+</body>
+</html>
