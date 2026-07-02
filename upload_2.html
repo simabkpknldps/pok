@@ -366,6 +366,8 @@ muatFotoDariStorage();
 
 /* ============ PDF ============ */
 
+/* ============ PDF ============ */
+
 async function buatPDF(prefix, judul) {
 
     const ids = [prefix + "_start", prefix + "_in", prefix + "_out", prefix + "_end"];
@@ -396,10 +398,15 @@ async function buatPDF(prefix, judul) {
 
     if (prefix === "rapat") {
         const uraian = document.getElementById("uraianRapat").value.trim();
-        const tgl = document.getElementById("tglRapat").value;
+        const rawTgl = document.getElementById("tglRapat").value; // Format yyyy-mm-dd
+        
+        // Konversi format tanggal ke dd-MM-yyyy
+        const dateParts = rawTgl.split('-');
+        const formattedTgl = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+        
         pdf.setFontSize(11);
         pdf.text("Uraian: " + uraian, 15, 23);
-        pdf.text("Tanggal: " + tgl, 15, 29);
+        pdf.text("Tanggal: " + formattedTgl, 15, 29);
         yOffset = 10;
     }
 
@@ -409,17 +416,21 @@ async function buatPDF(prefix, judul) {
     ];
 
     pdf.setFontSize(12);
-    const labels = ["START", "IN", "OUT", "END"];
+    
+    // Logika Label Dinamis
+    const labels = (prefix === "rapat") 
+        ? ["Foto 1", "Foto 2", "Foto 3", "Foto 4"] 
+        : ["START", "IN", "OUT", "END"];
 
     ids.forEach((id, i) => {
         const pos = positions[i];
         pdf.text(labels[i], pos.x, pos.y - 5);
+        // Menggunakan dimensi 85x85 agar proporsional
         pdf.addImage(foto[id], "JPEG", pos.x, pos.y, 85, 85);
     });
 
     pdf.save(judul + ".pdf");
 }
-
 </script>
 </body>
 </html>
