@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Upload Dokumentasi</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    margin:0;
+    background:#f2f2f2;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+    padding:20px;
+}
+
+h2{
+    text-align:center;
+}
+
+.tabs{
+    display:flex;
+    margin-bottom:20px;
+    gap:10px;
+}
+
+.tabs button{
+    flex:1;
+    padding:15px;
+    border:none;
+    cursor:pointer;
+    font-size:16px;
+    border-radius:8px;
+    background:#ddd;
+}
+
+.tabs button.active{
+    background:#007bff;
+    color:white;
+}
+
+.tab-content{
+    display:none;
+}
+
+.tab-content.active{
+    display:block;
+}
+
+.rapat-form{
+
+    background:white;
+    border-radius:10px;
+    padding:15px;
+    box-shadow:0 0 10px rgba(0,0,0,.1);
+    margin-bottom:20px;
+
+}
+
+.rapat-form label{
+
+    display:block;
+    font-size:13px;
+    font-weight:bold;
+    margin-bottom:5px;
+    color:#333;
+
+}
+
+.rapat-form input[type=text],
+.rapat-form input[type=date]{
+
+    width:100%;
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    margin-bottom:12px;
+    font-size:14px;
+
+}
+
+.grid{
+
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:20px;
+
+}
+
+.card{
+
+    background:white;
+    border-radius:10px;
+    padding:15px;
+    box-shadow:0 0 10px rgba(0,0,0,.1);
+
+}
+
+.card h3{
+    text-align:center;
+}
+
+.card img{
+
+    width:100%;
+    height:250px;
+    object-fit:contain;
+    border:1px solid #ccc;
+    margin-top:10px;
+    background:#fafafa;
+
+}
+
+.hidden-file{
+    display:none;
+}
+
+.foto-actions{
+    display:flex;
+    gap:8px;
+}
+
+.btn-foto{
+    flex:1;
+    padding:10px 6px;
+    border:none;
+    border-radius:6px;
+    font-size:13px;
+    cursor:pointer;
+    background:#007bff;
+    color:white;
+}
+
+.btn-foto.btn-upload{
+    background:#6c757d;
+}
+
+.btn-foto:hover{
+    opacity:.9;
+}
+
+.foto-info{
+    margin-top:6px;
+    font-size:11px;
+    color:#555;
+    min-height:14px;
+    word-break:break-word;
+}
+
+.foto-save{
+    display:block;
+    width:100%;
+    margin-top:8px;
+    padding:6px;
+    font-size:12px;
+    border:1px solid #28a745;
+    color:#28a745;
+    background:white;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.foto-save:hover{
+    background:#28a745;
+    color:white;
+}
+
+.download{
+
+    width:100%;
+    margin-top:25px;
+    padding:15px;
+    font-size:18px;
+    background:#28a745;
+    color:white;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+
+}
+
+.download:hover{
+
+    background:#218838;
+
+}
+
+/* HP */
+
+@media(max-width:768px){
+
+.grid{
+
+grid-template-columns:1fr;
+
+}
+
+.card img{
+
+height:220px;
+
+}
+
+.tabs{
+
+flex-direction:column;
+
+}
+
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<h2>Upload Dokumentasi</h2>
+
+<div class="tabs">
+
+<button class="active" onclick="openTab('perjadin',this)">📷 Foto Perjadin</button>
+
+<button onclick="openTab('rapat',this)">👥 Foto Rapat</button>
+
+</div>
+
+<!-- ================= PERJADIN ================= -->
+
+<div id="perjadin" class="tab-content active">
+
+<div class="grid">
+
+<div class="card">
+<h3>Start Foto</h3>
+<div class="foto-actions">
+    <input type="file" id="perjadin_start_cam" class="hidden-file" accept="image/*" capture="environment">
+    <input type="file" id="perjadin_start_up" class="hidden-file" accept="image/*">
+    <button type="button" class="btn-foto" onclick="document.getElementById('perjadin_start_cam').click()">📷 Ambil Foto</button>
+    <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('perjadin_start_up').click()">🖼️ Upload Foto</button>
+</div>
+<img id="prev_perjadin_start">
+<div class="foto-info" id="info_perjadin_start"></div>
+<button type="button" class="foto-save" id="save_perjadin_start" style="display:none" onclick="simpanKeGaleri(foto['perjadin_start'],'perjadin_start')">💾 Simpan ke Galeri</button>
+</div>
+
+<div class="card">
+<h3>In Foto</h3>
+<div class="foto-actions">
+    <input type="file" id="perjadin_in_cam" class="hidden-file" accept="image/*" capture="environment">
+    <input type="file" id="perjadin_in_up" class="hidden-file" accept="image/*">
+    <button type="button" class="btn-foto" onclick="document.getElementById('perjadin_in_cam').click()">📷 Ambil Foto</button>
+    <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('perjadin_in_up').click()">🖼️ Upload Foto</button>
+</div>
+<img id="prev_perjadin_in">
+<div class="foto-info" id="info_perjadin_in"></div>
+<button type="button" class="foto-save" id="save_perjadin_in" style="display:none" onclick="simpanKeGaleri(foto['perjadin_in'],'perjadin_in')">💾 Simpan ke Galeri</button>
+</div>
+
+<div class="card">
+<h3>Out Foto</h3>
+<div class="foto-actions">
+    <input type="file" id="perjadin_out_cam" class="hidden-file" accept="image/*" capture="environment">
+    <input type="file" id="perjadin_out_up" class="hidden-file" accept="image/*">
+    <button type="button" class="btn-foto" onclick="document.getElementById('perjadin_out_cam').click()">📷 Ambil Foto</button>
+    <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('perjadin_out_up').click()">🖼️ Upload Foto</button>
+</div>
+<img id="prev_perjadin_out">
+<div class="foto-info" id="info_perjadin_out"></div>
+<button type="button" class="foto-save" id="save_perjadin_out" style="display:none" onclick="simpanKeGaleri(foto['perjadin_out'],'perjadin_out')">💾 Simpan ke Galeri</button>
+</div>
+
+<div class="card">
+<h3>End Foto</h3>
+<div class="foto-actions">
+    <input type="file" id="perjadin_end_cam" class="hidden-file" accept="image/*" capture="environment">
+    <input type="file" id="perjadin_end_up" class="hidden-file" accept="image/*">
+    <button type="button" class="btn-foto" onclick="document.getElementById('perjadin_end_cam').click()">📷 Ambil Foto</button>
+    <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('perjadin_end_up').click()">🖼️ Upload Foto</button>
+</div>
+<img id="prev_perjadin_end">
+<div class="foto-info" id="info_perjadin_end"></div>
+<button type="button" class="foto-save" id="save_perjadin_end" style="display:none" onclick="simpanKeGaleri(foto['perjadin_end'],'perjadin_end')">💾 Simpan ke Galeri</button>
+</div>
+
+</div>
+
+<button class="download" onclick="buatPDF('perjadin','Dokumentasi Perjadin')">
+
+Download PDF Perjadin
+
+</button>
+
+</div>
+
+<!-- ================= RAPAT ================= -->
+
+<div id="rapat" class="tab-content">
+
+<div class="rapat-form">
+    <label for="uraianRapat">Uraian Rapat</label>
+    <input type="text" id="uraianRapat" placeholder="Contoh: Rapat koordinasi anggaran triwulan II">
+
+    <label for="tglRapat">Tanggal Rapat</label>
+    <input type="date" id="tglRapat">
+</div>
+
+<div class="grid">
+
+<div class="card">
+<h3>Start Foto</h3>
+<input type="file" id="rapat_start" accept="image/*" capture="environment">
+<img id="prev_rapat_start">
+<div class="foto-info" id="info_rapat_start"></div>
+<button type="button" class="foto-save" id="save_rapat_start" style="display:none" onclick="simpanKeGaleri(foto['rapat_start'],'rapat_start')">💾 Simpan ke Galeri</button>
+</div>
+
+<div class="card">
+<h3>In Foto</h3>
+<input type="file" id="rapat_in" accept="image/*" capture="environment">
+<img id="prev_rapat_in">
+<div class="foto-info" id="info_rapat_in"></div>
+<button type="button" class="foto-save" id="save_rapat_in" style="display:none" onclick="simpanKeGaleri(foto['rapat_in'],'rapat_in')">💾 Simpan ke Galeri</button>
+</div>
+
+<div class="card">
+<h3>Out Foto</h3>
+<input type="file" id="rapat_out" accept="image/*" capture="environment">
+<img id="prev_rapat_out">
+<div class="foto-info" id="info_rapat_out"></div>
+<button type="button" class="foto-save" id="save_rapat_out" style="display:none" onclick="simpanKeGaleri(foto['rapat_out'],'rapat_out')">💾 Simpan ke Galeri</button>
+</div>
+
+<div class="card">
+<h3>End Foto</h3>
+<input type="file" id="rapat_end" accept="image/*" capture="environment">
+<img id="prev_rapat_end">
+<div class="foto-info" id="info_rapat_end"></div>
+<button type="button" class="foto-save" id="save_rapat_end" style="display:none" onclick="simpanKeGaleri(foto['rapat_end'],'rapat_end')">💾 Simpan ke Galeri</button>
+</div>
+
+</div>
+
+<button class="download" onclick="buatPDF('rapat','Dokumentasi Rapat')">
+
+Download PDF Rapat
+
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+const foto={};
+
+const SEMUA_ID=[
+"perjadin_start","perjadin_in","perjadin_out","perjadin_end",
+"rapat_start","rapat_in","rapat_out","rapat_end"
+];
+
+const STORAGE_PREFIX="dokfoto_";
+const STORAGE_DATE_KEY="dokfoto_tanggal";
+
+/* ============ TAB ============ */
+
+function openTab(tab,btn){
+
+document.querySelectorAll(".tab-content").forEach(e=>e.classList.remove("active"));
+
+document.querySelectorAll(".tabs button").forEach(e=>e.classList.remove("active"));
+
+document.getElementById(tab).classList.add("active");
+
+btn.classList.add("active");
+
+}
+
+/* ============ HELPER ASYNC ============ */
+
+function readFileAsDataURL(file){
+    return new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=e=>resolve(e.target.result);
+        reader.onerror=reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function loadImage(src){
+    return new Promise((resolve,reject)=>{
+        const img=new Image();
+        img.onload=()=>resolve(img);
+        img.onerror=reject;
+        img.src=src;
+    });
+}
+
+function getLocation(){
+    return new Promise(resolve=>{
+        if(!navigator.geolocation){
+            resolve(null);
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            pos=>resolve({lat:pos.coords.latitude,lon:pos.coords.longitude}),
+            ()=>resolve(null),
+            {enableHighAccuracy:true,timeout:8000}
+        );
+    });
+}
+
+async function reverseGeocode(lat,lon){
+    try{
+        const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
+        const data=await res.json();
+        return data.display_name||null;
+    }catch(e){
+        return null;
+    }
+}
+
+/* ============ WATERMARK / GEOTAG ============ */
+
+function drawWatermark(img,dateObj,loc,address){
+
+    const maxDim=1000;
+    let w=img.width,h=img.height;
+
+    if(w>maxDim||h>maxDim){
+        const scale=maxDim/Math.max(w,h);
+        w=Math.round(w*scale);
+        h=Math.round(h*scale);
+    }
+
+    const canvas=document.createElement("canvas");
+    canvas.width=w;
+    canvas.height=h;
+
+    const ctx=canvas.getContext("2d");
+    ctx.drawImage(img,0,0,w,h);
+
+    const tglText=dateObj.toLocaleString("id-ID",{dateStyle:"medium",timeStyle:"medium"});
+    const lokasiText=loc?(address||`${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`):"Lokasi tidak tersedia";
+
+    const barH=Math.max(38,h*0.11);
+
+    ctx.fillStyle="rgba(0,0,0,0.55)";
+    ctx.fillRect(0,h-barH,w,barH);
+
+    ctx.fillStyle="#fff";
+    ctx.font=`${Math.max(11,barH*0.27)}px Arial`;
+    ctx.textBaseline="middle";
+    ctx.fillText(tglText,8,h-barH*0.68);
+    ctx.fillText(lokasiText,8,h-barH*0.28,w-16);
+
+    return canvas.toDataURL("image/jpeg",0.6);
+}
+
+/* ============ PROSES FOTO MASUK ============ */
+
+async function handleFile(id,file){
+
+    if(!file)return;
+
+    const infoEl=document.getElementById("info_"+id);
+    if(infoEl)infoEl.textContent="Memproses foto...";
+
+    try{
+
+        const rawDataUrl=await readFileAsDataURL(file);
+        const img=await loadImage(rawDataUrl);
+        const loc=await getLocation();
+
+        let address=null;
+        if(loc){
+            address=await reverseGeocode(loc.lat,loc.lon).catch(()=>null);
+        }
+
+        const now=new Date();
+        const finalDataUrl=drawWatermark(img,now,loc,address);
+
+        foto[id]=finalDataUrl;
+
+        const previewEl=document.getElementById("prev_"+id);
+        if(previewEl)previewEl.src=finalDataUrl;
+
+        if(infoEl){
+            infoEl.textContent=now.toLocaleString("id-ID")+(loc?" • "+(address||`${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`):" • lokasi tidak tersedia");
+        }
+
+        const saveBtn=document.getElementById("save_"+id);
+        if(saveBtn)saveBtn.style.display="block";
+
+        simpanFotoKeStorage(id,finalDataUrl,now.toISOString(),loc,address);
+
+        // otomatis coba simpan ke galeri/unduhan perangkat
+        simpanKeGaleri(finalDataUrl,id);
+
+    }catch(err){
+        console.error(err);
+        if(infoEl)infoEl.textContent="Gagal memproses foto.";
+    }
+}
+
+function registerFileInput(inputId,fotoId){
+    const el=document.getElementById(inputId);
+    if(!el)return;
+    el.addEventListener("change",function(e){
+        const file=e.target.files[0];
+        handleFile(fotoId,file);
+        e.target.value="";
+    });
+}
+
+// Perjadin: 2 input per slot (kamera + galeri)
+["perjadin_start","perjadin_in","perjadin_out","perjadin_end"].forEach(id=>{
+    registerFileInput(id+"_cam",id);
+    registerFileInput(id+"_up",id);
+});
+
+// Rapat: 1 input per slot, seperti semula
+["rapat_start","rapat_in","rapat_out","rapat_end"].forEach(id=>{
+    registerFileInput(id,id);
+});
+
+/* ============ SIMPAN KE GALERI (DOWNLOAD) ============ */
+
+function simpanKeGaleri(dataUrl,id){
+    if(!dataUrl)return;
+    try{
+        const a=document.createElement("a");
+        a.href=dataUrl;
+        a.download="dokumentasi_"+id+"_"+Date.now()+".jpg";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }catch(e){
+        console.warn("Gagal auto-simpan ke galeri, gunakan tombol simpan manual.",e);
+    }
+}
+
+/* ============ PERSISTENSI localStorage (expired ganti hari) ============ */
+
+function todayStr(){
+    const d=new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function cekExpired(){
+    const savedDate=localStorage.getItem(STORAGE_DATE_KEY);
+    const today=todayStr();
+
+    if(savedDate!==today){
+        Object.keys(localStorage).forEach(k=>{
+            if(k.startsWith(STORAGE_PREFIX))localStorage.removeItem(k);
+        });
+        localStorage.setItem(STORAGE_DATE_KEY,today);
+        return true;
+    }
+    return false;
+}
+
+function simpanFotoKeStorage(id,dataUrl,iso,loc,address){
+    try{
+        localStorage.setItem(STORAGE_PREFIX+"foto_"+id,JSON.stringify({dataUrl,iso,loc,address}));
+    }catch(e){
+        console.warn("Gagal simpan ke localStorage (mungkin penuh):",e);
+    }
+}
+
+function muatFotoDariStorage(){
+
+    SEMUA_ID.forEach(id=>{
+
+        const raw=localStorage.getItem(STORAGE_PREFIX+"foto_"+id);
+        if(!raw)return;
+
+        try{
+            const data=JSON.parse(raw);
+            foto[id]=data.dataUrl;
+
+            const previewEl=document.getElementById("prev_"+id);
+            const infoEl=document.getElementById("info_"+id);
+            const saveBtn=document.getElementById("save_"+id);
+
+            if(previewEl)previewEl.src=data.dataUrl;
+            if(saveBtn)saveBtn.style.display="block";
+
+            if(infoEl){
+                const d=new Date(data.iso);
+                infoEl.textContent=d.toLocaleString("id-ID")+(data.loc?" • "+(data.address||`${data.loc.lat.toFixed(5)}, ${data.loc.lon.toFixed(5)}`):"");
+            }
+        }catch(e){}
+    });
+
+    const uraian=localStorage.getItem(STORAGE_PREFIX+"uraianRapat");
+    const tgl=localStorage.getItem(STORAGE_PREFIX+"tglRapat");
+
+    if(uraian)document.getElementById("uraianRapat").value=uraian;
+    if(tgl)document.getElementById("tglRapat").value=tgl;
+}
+
+document.getElementById("uraianRapat").addEventListener("input",e=>{
+    localStorage.setItem(STORAGE_PREFIX+"uraianRapat",e.target.value);
+});
+document.getElementById("tglRapat").addEventListener("input",e=>{
+    localStorage.setItem(STORAGE_PREFIX+"tglRapat",e.target.value);
+});
+
+// Jalankan saat halaman dibuka / dibuka lagi
+cekExpired();
+muatFotoDariStorage();
+
+/* ============ PDF ============ */
+
+async function buatPDF(prefix,judul){
+
+const ids=[
+prefix+"_start",
+prefix+"_in",
+prefix+"_out",
+prefix+"_end"
+];
+
+for(let i of ids){
+
+if(!foto[i]){
+
+alert("Semua foto harus diupload.");
+
+return;
+
+}
+
+}
+
+if(prefix==="rapat"){
+    const uraian=document.getElementById("uraianRapat").value.trim();
+    const tgl=document.getElementById("tglRapat").value;
+    if(!uraian||!tgl){
+        alert("Uraian rapat dan tanggal rapat wajib diisi.");
+        return;
+    }
+}
+
+const {jsPDF}=window.jspdf;
+
+const pdf=new jsPDF("p","mm","a4");
+
+pdf.setFontSize(18);
+
+pdf.text(judul,105,15,{align:"center"});
+
+let yOffset=0;
+
+if(prefix==="rapat"){
+    const uraian=document.getElementById("uraianRapat").value.trim();
+    const tgl=document.getElementById("tglRapat").value;
+    pdf.setFontSize(11);
+    pdf.text("Uraian: "+uraian,15,23);
+    pdf.text("Tanggal: "+tgl,15,29);
+    yOffset=10;
+}
+
+const w=80;
+
+const h=60;
+
+const x1=15;
+
+const x2=115;
+
+const y1=30+yOffset;
+
+const y2=120+yOffset;
+
+pdf.setFontSize(12);
+
+pdf.text("START",x1,y1-5);
+pdf.addImage(foto[prefix+"_start"],"JPEG",x1,y1,w,h);
+
+pdf.text("IN",x2,y1-5);
+pdf.addImage(foto[prefix+"_in"],"JPEG",x2,y1,w,h);
+
+pdf.text("OUT",x1,y2-5);
+pdf.addImage(foto[prefix+"_out"],"JPEG",x1,y2,w,h);
+
+pdf.text("END",x2,y2-5);
+pdf.addImage(foto[prefix+"_end"],"JPEG",x2,y2,w,h);
+
+pdf.save(judul+".pdf");
+
+}
+
+</script>
+
+</body>
+</html>
