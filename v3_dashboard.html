@@ -55,8 +55,9 @@
             
             if (page === 'dashboard') {
                 dashboardDataCache = null;
-                await renderDashboardPage(container, true);
-            } else if (page === 'pok') {
+                renderDashboardPage(container, true);
+            }
+            else if (page === 'pok') {
                 container.innerHTML = `
                 <div class="space-y-4">
 
