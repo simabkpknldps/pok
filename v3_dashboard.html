@@ -456,7 +456,7 @@
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
                 
                 // Tampilkan loading
-                document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
+                document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center"><i class="fa-solid fa-spinner fa-spin">Memuat...</td></tr>`;
             
                 try {
                     const res = await fetch(sessionStorage.getItem('realUrl'), {
@@ -472,6 +472,7 @@
                     });
                     
                     const data = await res.json();
+                    console.log("Data yang diterima dari server:", data);
                     window.detilKegiatanData = data;
                     renderDetilTable(window.detilKegiatanData);
                 } catch (e) {
@@ -482,17 +483,29 @@
         
             function renderDetilTable(data) {
                 const tbody = document.getElementById("detil-tbody");
+                
+                // Cek apakah data benar-benar array
+                if (!Array.isArray(data)) {
+                    console.error("Data bukan array:", data);
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Data tidak ditemukan atau format salah.</td></tr>`;
+                    return;
+                }
+            
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Data kosong.</td></tr>`;
+                    return;
+                }
+            
                 tbody.innerHTML = data.map(i => `
                     <tr class="border-b">
-                        <td class="p-3">${i.uraian}</td>
-                        <td class="p-3">${i.userLogin}</td>
-                        <td class="p-3">${i.tujuan}</td>
-                        <td class="p-3">${i.tglSt}</td>
-                        <td class="p-3">${Number(i.estimasi).toLocaleString()}</td>
-                        <td class="p-3">${i.status}</td>
-                        <td class="p-3 space-x-2">
-                            <button title="Pilih" class="text-sky-600"><i class="fa-solid fa-user-check"></i></button>
-                            ${i.status === 'Rekam Data' ? `<button title="Hapus" onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        <td class="p-3">${i.uraian || '-'}</td>
+                        <td class="p-3">${i.userLogin || '-'}</td>
+                        <td class="p-3">${i.tujuan || '-'}</td>
+                        <td class="p-3">${i.tglSt || '-'}</td>
+                        <td class="p-3">${Number(i.estimasi || 0).toLocaleString()}</td>
+                        <td class="p-3">${i.status || '-'}</td>
+                        <td class="p-3">
+                            ${i.status === 'Rekam Data' ? `<button onclick="hapusKegiatan('${i.idKegiatan}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>` : ''}
                         </td>
                     </tr>
                 `).join('');
