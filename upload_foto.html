@@ -61,6 +61,12 @@
 
     .download { width: 100%; padding: 16px; margin-top: 1.5rem; border: none; border-radius: 12px; background: #0f172a; color: white; font-weight: 700; cursor: pointer; font-size: 1rem; }
     .download:hover { background: #1e293b; }
+
+    .btn-reset { 
+        width: 100%; padding: 12px; margin-top: 10px; border: 1px solid #ef4444; 
+        background: white; color: #ef4444; border-radius: 12px; cursor: pointer; font-weight: 600; 
+    }
+    .btn-reset:hover { background: #ef4444; color: white; }
 </style>
 </head>
 <body>
@@ -75,6 +81,7 @@
         <div id="perjadin" class="tab-content active">
             <div class="grid" id="grid-perjadin"></div>
             <button class="download" onclick="buatPDF('perjadin', 'Dokumentasi Perjadin')">Download PDF Perjadin</button>
+            <button class="btn-reset" onclick="resetData()">Reset</button>
         </div>
 
         <div id="rapat" class="tab-content">
@@ -86,6 +93,7 @@
             </div>
             <div class="grid" id="grid-rapat"></div>
             <button class="download" onclick="buatPDF('rapat', 'Dokumentasi Rapat')">Download PDF Rapat</button>
+            <button class="btn-reset" onclick="resetData()">Reset</button>
         </div>
     </div>
 
@@ -294,25 +302,6 @@ function simpanKeGaleri(dataUrl, id) {
 
 /* ============ PERSISTENSI localStorage (expired ganti hari) ============ */
 
-function todayStr() {
-    const d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-}
-
-    /*
-function cekExpired() {
-    const savedDate = localStorage.getItem(STORAGE_DATE_KEY);
-    const today = todayStr();
-
-    if (savedDate !== today) {
-        Object.keys(localStorage).forEach(k => {
-            if (k.startsWith(STORAGE_PREFIX)) localStorage.removeItem(k);
-        });
-        localStorage.setItem(STORAGE_DATE_KEY, today);
-        return true;
-    }
-    return false;
-}*/
 
 function simpanFotoKeStorage(id, dataUrl, iso, loc, address) {
     try {
@@ -323,9 +312,7 @@ function simpanFotoKeStorage(id, dataUrl, iso, loc, address) {
 }
 
 function muatFotoDariStorage() {
-
     SEMUA_ID.forEach(id => {
-
         const raw = localStorage.getItem(STORAGE_PREFIX + "foto_" + id);
         if (!raw) return;
 
@@ -340,31 +327,41 @@ function muatFotoDariStorage() {
             if (previewEl) previewEl.src = data.dataUrl;
             if (saveBtn) saveBtn.style.display = "block";
 
-            if (infoEl) {
+            // Menampilkan informasi jika ada
+            if (infoEl && data.iso) {
                 const d = new Date(data.iso);
-                infoEl.textContent = d.toLocaleString("id-ID") + (data.loc ? " • " + (data.address || `${data.loc.lat.toFixed(5)}, ${data.loc.lon.toFixed(5)}`) : "");
+                const locInfo = (data.loc ? " • " + (data.address || `${data.loc.lat.toFixed(5)}, ${data.loc.lon.toFixed(5)}`) : "");
+                infoEl.textContent = d.toLocaleString("id-ID") + locInfo;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("Gagal memuat foto:", e);
+        }
     });
 
+    // Memuat input teks
     const uraian = localStorage.getItem(STORAGE_PREFIX + "uraianRapat");
     const tgl = localStorage.getItem(STORAGE_PREFIX + "tglRapat");
 
-    if (uraian) document.getElementById("uraianRapat").value = uraian;
-    if (tgl) document.getElementById("tglRapat").value = tgl;
+    if (uraian !== null) document.getElementById("uraianRapat").value = uraian;
+    if (tgl !== null) document.getElementById("tglRapat").value = tgl;
 }
 
-document.getElementById("uraianRapat").addEventListener("input", e => {
-    localStorage.setItem(STORAGE_PREFIX + "uraianRapat", e.target.value);
-});
-document.getElementById("tglRapat").addEventListener("input", e => {
-    localStorage.setItem(STORAGE_PREFIX + "tglRapat", e.target.value);
-});
-
-// Jalankan saat halaman dibuka / dibuka lagi
-cekExpired();
+// Panggil fungsi ini sekali saat halaman dimuat
 muatFotoDariStorage();
 
+function resetData() {
+    if (confirm("Apakah Anda yakin ingin menghapus semua foto dan data yang tersimpan?")) {
+        // Hapus data spesifik aplikasi dari localStorage
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith("dokfoto_") || key.startsWith("dokuraian") || key.startsWith("doktgl")) {
+                localStorage.removeItem(key);
+            }
+        });
+        // Refresh halaman
+        location.reload();
+    }
+}
+    
 /* ============ PDF ============ */
 
 /* ============ PDF ============ */
