@@ -460,21 +460,15 @@
             async function openDetilModal(mak) {
                 document.getElementById("detilModal").classList.replace("hidden", "flex");
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
-                
+            
                 const url = sessionStorage.getItem('realUrl');
-                
                 const tbody = document.getElementById("detil-tbody");
                 tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
-                
+            
                 try {
-                    const res = await fetch(url, {
-                        method: 'POST',
-                        headers: { "Content-Type": "application/json" },   // ✅ tambahkan header ini
-                        body: JSON.stringify({ action: 'getDetil', mak: mak })
-                    });
-                    
+                    const res = await fetch(`${url}?action=getDetil&mak=${encodeURIComponent(mak)}`);
                     const result = await res.json();
-                    
+            
                     if (Array.isArray(result)) {
                         window.detilKegiatanData = result;
                         renderDetilTable(result);
@@ -487,6 +481,7 @@
                     tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal koneksi. Cek Console F12.</td></tr>`;
                 }
             }
+
 
         
             function renderDetilTable(data) {
