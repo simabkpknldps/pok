@@ -3,42 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Upload Dokumentasi Foto</title>
+
+<title>Upload Dokumentasi</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{
+
+*{
+    box-sizing:border-box;
     font-family:Arial,Helvetica,sans-serif;
-    background:#f4f4f4;
-    padding:30px;
+}
+
+body{
+    margin:0;
+    background:#f2f2f2;
 }
 
 .container{
     max-width:1000px;
     margin:auto;
-    background:white;
-    padding:25px;
-    border-radius:10px;
-    box-shadow:0 0 10px rgba(0,0,0,.15);
+    padding:20px;
 }
 
 h2{
     text-align:center;
 }
 
+.tabs{
+    display:flex;
+    margin-bottom:20px;
+    gap:10px;
+}
+
+.tabs button{
+    flex:1;
+    padding:15px;
+    border:none;
+    cursor:pointer;
+    font-size:16px;
+    border-radius:8px;
+    background:#ddd;
+}
+
+.tabs button.active{
+    background:#007bff;
+    color:white;
+}
+
+.tab-content{
+    display:none;
+}
+
+.tab-content.active{
+    display:block;
+}
+
 .grid{
+
     display:grid;
     grid-template-columns:repeat(2,1fr);
-    gap:25px;
-    margin-top:25px;
+    gap:20px;
+
 }
 
 .card{
-    border:1px solid #ddd;
-    padding:15px;
+
+    background:white;
     border-radius:10px;
-    background:#fafafa;
+    padding:15px;
+    box-shadow:0 0 10px rgba(0,0,0,.1);
+
 }
 
 .card h3{
@@ -46,29 +81,63 @@ h2{
 }
 
 .card img{
+
     width:100%;
     height:250px;
     object-fit:contain;
     border:1px solid #ccc;
     margin-top:10px;
-    background:white;
+
 }
 
-button{
+input[type=file]{
     width:100%;
+}
+
+.download{
+
+    width:100%;
+    margin-top:25px;
     padding:15px;
-    margin-top:30px;
-    background:#007bff;
+    font-size:18px;
+    background:#28a745;
     color:white;
     border:none;
     border-radius:8px;
-    font-size:18px;
     cursor:pointer;
+
 }
 
-button:hover{
-    background:#0056b3;
+.download:hover{
+
+    background:#218838;
+
 }
+
+/* HP */
+
+@media(max-width:768px){
+
+.grid{
+
+grid-template-columns:1fr;
+
+}
+
+.card img{
+
+height:220px;
+
+}
+
+.tabs{
+
+flex-direction:column;
+
+}
+
+}
+
 </style>
 
 </head>
@@ -76,49 +145,120 @@ button:hover{
 
 <div class="container">
 
-<h2>Upload Dokumentasi Foto</h2>
+<h2>Upload Dokumentasi</h2>
+
+<div class="tabs">
+
+<button class="active" onclick="openTab('perjadin',this)">📷 Foto Perjadin</button>
+
+<button onclick="openTab('rapat',this)">👥 Foto Rapat</button>
+
+</div>
+
+<!-- ================= PERJADIN ================= -->
+
+<div id="perjadin" class="tab-content active">
 
 <div class="grid">
 
 <div class="card">
 <h3>Start Foto</h3>
-<input type="file" id="start" accept="image/*">
-<img id="prev_start">
+<input type="file" id="perjadin_start" accept="image/*" capture="environment">
+<img id="prev_perjadin_start">
 </div>
 
 <div class="card">
 <h3>In Foto</h3>
-<input type="file" id="in" accept="image/*">
-<img id="prev_in">
+<input type="file" id="perjadin_in" accept="image/*" capture="environment">
+<img id="prev_perjadin_in">
 </div>
 
 <div class="card">
 <h3>Out Foto</h3>
-<input type="file" id="out" accept="image/*">
-<img id="prev_out">
+<input type="file" id="perjadin_out" accept="image/*" capture="environment">
+<img id="prev_perjadin_out">
 </div>
 
 <div class="card">
 <h3>End Foto</h3>
-<input type="file" id="end" accept="image/*">
-<img id="prev_end">
+<input type="file" id="perjadin_end" accept="image/*" capture="environment">
+<img id="prev_perjadin_end">
 </div>
 
 </div>
 
-<button onclick="buatPDF()">Submit & Download PDF</button>
+<button class="download" onclick="buatPDF('perjadin','Dokumentasi Perjadin')">
+
+Download PDF Perjadin
+
+</button>
+
+</div>
+
+<!-- ================= RAPAT ================= -->
+
+<div id="rapat" class="tab-content">
+
+<div class="grid">
+
+<div class="card">
+<h3>Start Foto</h3>
+<input type="file" id="rapat_start" accept="image/*" capture="environment">
+<img id="prev_rapat_start">
+</div>
+
+<div class="card">
+<h3>In Foto</h3>
+<input type="file" id="rapat_in" accept="image/*" capture="environment">
+<img id="prev_rapat_in">
+</div>
+
+<div class="card">
+<h3>Out Foto</h3>
+<input type="file" id="rapat_out" accept="image/*" capture="environment">
+<img id="prev_rapat_out">
+</div>
+
+<div class="card">
+<h3>End Foto</h3>
+<input type="file" id="rapat_end" accept="image/*" capture="environment">
+<img id="prev_rapat_end">
+</div>
+
+</div>
+
+<button class="download" onclick="buatPDF('rapat','Dokumentasi Rapat')">
+
+Download PDF Rapat
+
+</button>
+
+</div>
 
 </div>
 
 <script>
 
-const dataFoto={};
+const foto={};
 
-function preview(id){
+function openTab(tab,btn){
+
+document.querySelectorAll(".tab-content").forEach(e=>e.classList.remove("active"));
+
+document.querySelectorAll(".tabs button").forEach(e=>e.classList.remove("active"));
+
+document.getElementById(tab).classList.add("active");
+
+btn.classList.add("active");
+
+}
+
+function register(id){
 
 document.getElementById(id).addEventListener("change",function(e){
 
 const file=e.target.files[0];
+
 if(!file)return;
 
 const reader=new FileReader();
@@ -126,7 +266,8 @@ const reader=new FileReader();
 reader.onload=function(ev){
 
 document.getElementById("prev_"+id).src=ev.target.result;
-dataFoto[id]=ev.target.result;
+
+foto[id]=ev.target.result;
 
 }
 
@@ -136,17 +277,35 @@ reader.readAsDataURL(file);
 
 }
 
-preview("start");
-preview("in");
-preview("out");
-preview("end");
+[
+"perjadin_start",
+"perjadin_in",
+"perjadin_out",
+"perjadin_end",
+"rapat_start",
+"rapat_in",
+"rapat_out",
+"rapat_end"
+].forEach(register);
 
-async function buatPDF(){
+async function buatPDF(prefix,judul){
 
-if(!dataFoto.start || !dataFoto.in || !dataFoto.out || !dataFoto.end){
+const ids=[
+prefix+"_start",
+prefix+"_in",
+prefix+"_out",
+prefix+"_end"
+];
+
+for(let i of ids){
+
+if(!foto[i]){
 
 alert("Semua foto harus diupload.");
+
 return;
+
+}
 
 }
 
@@ -155,32 +314,36 @@ const {jsPDF}=window.jspdf;
 const pdf=new jsPDF("p","mm","a4");
 
 pdf.setFontSize(18);
-pdf.text("Dokumentasi Foto",105,15,{align:"center"});
+
+pdf.text(judul,105,15,{align:"center"});
 
 const w=80;
+
 const h=60;
 
 const x1=15;
+
 const x2=115;
 
 const y1=30;
+
 const y2=120;
 
 pdf.setFontSize(12);
 
-pdf.text("START",x1,y1-4);
-pdf.addImage(dataFoto.start,"JPEG",x1,y1,w,h);
+pdf.text("START",x1,y1-5);
+pdf.addImage(foto[prefix+"_start"],"JPEG",x1,y1,w,h);
 
-pdf.text("IN",x2,y1-4);
-pdf.addImage(dataFoto.in,"JPEG",x2,y1,w,h);
+pdf.text("IN",x2,y1-5);
+pdf.addImage(foto[prefix+"_in"],"JPEG",x2,y1,w,h);
 
-pdf.text("OUT",x1,y2-4);
-pdf.addImage(dataFoto.out,"JPEG",x1,y2,w,h);
+pdf.text("OUT",x1,y2-5);
+pdf.addImage(foto[prefix+"_out"],"JPEG",x1,y2,w,h);
 
-pdf.text("END",x2,y2-4);
-pdf.addImage(dataFoto.end,"JPEG",x2,y2,w,h);
+pdf.text("END",x2,y2-5);
+pdf.addImage(foto[prefix+"_end"],"JPEG",x2,y2,w,h);
 
-pdf.save("Dokumentasi_Foto.pdf");
+pdf.save(judul+".pdf");
 
 }
 
