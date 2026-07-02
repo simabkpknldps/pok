@@ -505,7 +505,7 @@
                             tglFormatted = d.toISOString().split('T')[0]; // Menghasilkan yyyy-mm-dd
                         }
                     }
-            
+                    
                     // 2. Warna Status
                     const sClass = i.status === 'Rekam Data' ? 'bg-pink-100 text-pink-700' :
                        i.status === 'Terlaksana' ? 'bg-slate-200 text-slate-700' :
@@ -517,9 +517,7 @@
                     return `
                         <div class="flex p-3 border-b items-center hover:bg-slate-50 text-xs">
                             <div class="w-[30%] pr-2 whitespace-normal break-words">${i.uraian || '-'}</div>
-                            <div class="w-[12%] truncate pr-2">
-                                ${(i.pelaksana && i.pelaksana !== "-" && i.pelaksana !== "") ? i.pelaksana : '<span class="text-slate-400 italic text-[10px]">Belum ada</span>'}
-                            </div>
+                            <div class="w-[12%] truncate pr-2">${i.pelaksana || ''}</div>
                             <div class="w-[18%] truncate pr-2">${i.tujuan || '-'}</div>
                             <div class="w-[10%]">${i.tglSt ? new Date(i.tglSt).toISOString().split('T')[0] : '-'}</div>
                             <div class="w-[12%] text-right pr-2">${Number(i.estimasi || 0).toLocaleString()}</div>
