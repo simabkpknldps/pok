@@ -456,7 +456,7 @@
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
                 
                 // Tampilkan loading
-                document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center"><i class="fa-solid fa-spinner fa-spin">Memuat...</td></tr>`;
+                document.getElementById("detil-tbody").innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
             
                 try {
                     const res = await fetch(sessionStorage.getItem('realUrl'), {
