@@ -463,7 +463,11 @@
             
                 const url = sessionStorage.getItem('realUrl');
                 const tbody = document.getElementById("detil-tbody");
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
+                tbody.innerHTML = `
+                    <div class="flex justify-center items-center p-4 w-full">
+                        <span class="text-gray-500">Memuat...</span>
+                    </div>
+                `;
             
                 try {
                     const res = await fetch(`${url}?action=getDetil&mak=${encodeURIComponent(mak)}`);
@@ -474,11 +478,11 @@
                         renderDetilTable(result);
                     } else {
                         console.error("Respon Error:", result);
-                        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Error: ${result.message || 'Data tidak ditemukan'}</td></tr>`;
+                        tbody.innerHTML = `<div class="p-4 text-center text-red-500">Error: ${result.message || 'Data tidak ditemukan'}</div>`;
                     }
                 } catch (e) {
                     console.error("Fetch Error:", e);
-                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal koneksi. Cek Console F12.</td></tr>`;
+                    tbody.innerHTML = `<div class="p-4 text-center text-red-500">Gagal koneksi. Cek Console F12.</div>`;
                 }
             }
 
@@ -487,8 +491,8 @@
             function renderDetilTable(data) {
                 const tbody = document.getElementById("detil-tbody");
                 
-                if (!Array.isArray(data)) {
-                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Data tidak ditemukan.</td></tr>`;
+               if (!Array.isArray(data) || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Tidak ada data.</td></tr>`;
                     return;
                 }
             
