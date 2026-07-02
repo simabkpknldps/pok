@@ -775,14 +775,20 @@
             </div>
             <div class="p-6">
                 <input type="text" id="cariDetil" oninput="filterDetil()" placeholder="Cari uraian / nomor ST..." class="w-full border p-2 rounded-xl mb-4">
-                <div class="overflow-y-auto max-h-[60vh]">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-100">
-                            <tr><th class="p-3">Uraian/Nomor ST</th><th class="p-3">Pelaksana</th><th class="p-3">Tujuan</th><th class="p-3">Tgl</th><th class="p-3">Jumlah</th><th class="p-3">Status</th><th class="p-3">Aksi</th></tr>
-                        </thead>
-                        <tbody id="detil-tbody"></tbody>
-                    </table>
-                </div>
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-100 block">
+                        <tr class="flex w-full">
+                            <th class="p-3 w-1/3 text-left">Uraian/Nomor ST</th>
+                            <th class="p-3 w-24 text-left">Pelaksana</th>
+                            <th class="p-3 w-1/5 text-left">Tujuan</th>
+                            <th class="p-3 w-20 text-left">Tgl</th>
+                            <th class="p-3 w-24 text-right">Jumlah</th>
+                            <th class="p-3 w-28 text-left">Status</th>
+                            <th class="p-3 w-24 text-left">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detil-tbody" class="block"></tbody>
+                </table>
             </div>
         </div>
     </div>
