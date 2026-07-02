@@ -492,7 +492,11 @@
                 const tbody = document.getElementById("detil-tbody");
                 
                if (!Array.isArray(data) || data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Tidak ada data.</td></tr>`;
+                    tbody.innerHTML = `
+                        <div class="flex justify-center items-center p-4 w-full">
+                            <span class="text-red-500">Tidak ada data.</span>
+                        </div>
+                    `;
                     return;
                 }
             
