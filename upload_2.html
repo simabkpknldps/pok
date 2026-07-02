@@ -3,238 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Dokumentasi</title>
+    <title>Dokumentasi Modern</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
-        body { margin: 0; background: #f2f2f2; }
-        .container { max-width: 1000px; margin: auto; padding: 20px; }
-        h2 { text-align: center; }
-        .tabs { display: flex; margin-bottom: 20px; gap: 10px; }
-        .tabs button { flex: 1; padding: 15px; border: none; cursor: pointer; font-size: 16px; border-radius: 8px; background: #ddd; }
-        .tabs button.active { background: #007bff; color: white; }
+        :root { --primary: #2563eb; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
+        * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+        body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        h2 { text-align: center; color: var(--text); margin-bottom: 2rem; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 2rem; background: #e2e8f0; padding: 5px; border-radius: 12px; }
+        .tabs button { flex: 1; padding: 12px; border: none; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s; }
+        .tabs button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .rapat-form { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,.1); margin-bottom: 20px; }
-        .rapat-form label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #333; }
-        .rapat-form input[type=text], .rapat-form input[type=date] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 12px; font-size: 14px; }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-        .card { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,.1); }
-        .card h3 { text-align: center; margin-top: 0; }
-        .card img { width: 100%; height: 250px; object-fit: contain; border: 1px solid #ccc; margin-top: 10px; background: #fafafa; }
-        .hidden-file { display: none; }
-        .foto-actions { display: flex; gap: 8px; }
-        .btn-foto { flex: 1; padding: 10px 6px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; background: #007bff; color: white; }
-        .btn-foto.btn-upload { background: #6c757d; }
-        .btn-foto:hover { opacity: .9; }
-        .foto-info { margin-top: 6px; font-size: 11px; color: #555; min-height: 14px; word-break: break-word; }
-        .foto-save { display: block; width: 100%; margin-top: 8px; padding: 6px; font-size: 12px; border: 1px solid #28a745; color: #28a745; background: white; border-radius: 6px; cursor: pointer; }
-        .foto-save:hover { background: #28a745; color: white; }
-        .download { width: 100%; margin-top: 25px; padding: 15px; font-size: 18px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        .download:hover { background: #218838; }
-        @media(max-width: 768px) { .grid { grid-template-columns: 1fr; } .card img { height: 220px; } .tabs { flex-direction: column; } }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .card { background: var(--card); padding: 16px; border-radius: 16px; border: 1px solid #e2e8f0; }
+        .card h3 { font-size: 0.9rem; margin: 0 0 10px 0; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; background: #f1f5f9; }
+        .btn-foto { width: 100%; padding: 10px; border: none; border-radius: 8px; background: var(--primary); color: white; margin-top: 10px; cursor: pointer; font-weight: 500; }
+        .download { width: 100%; padding: 16px; margin-top: 2rem; border: none; border-radius: 12px; background: #0f172a; color: white; font-weight: 700; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Upload Dokumentasi</h2>
+        <h2>📷 Dokumentasi Kegiatan</h2>
         <div class="tabs">
-            <button class="active" onclick="openTab('perjadin', this)">📷 Foto Perjadin</button>
-            <button onclick="openTab('rapat', this)">👥 Foto Rapat</button>
+            <button class="active" onclick="openTab('perjadin', this)">Perjadin</button>
+            <button onclick="openTab('rapat', this)">Rapat</button>
         </div>
-
+        
         <div id="perjadin" class="tab-content active">
-            <div class="grid">
-                <!-- Template Card -->
-                <script>
-                    function createCard(id, title) {
-                        return `
-                            <div class="card">
-                                <h3>${title}</h3>
-                                <div class="foto-actions">
-                                    <input type="file" id="${id}_cam" class="hidden-file" accept="image/*" capture="environment">
-                                    <input type="file" id="${id}_up" class="hidden-file" accept="image/*">
-                                    <button type="button" class="btn-foto" onclick="document.getElementById('${id}_cam').click()">📷 Ambil Foto</button>
-                                    <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('${id}_up').click()">🖼️ Upload Foto</button>
-                                </div>
-                                <img id="prev_${id}">
-                                <div class="foto-info" id="info_${id}"></div>
-                                <button type="button" class="foto-save" id="save_${id}" style="display:none" onclick="simpanKeGaleri(foto['${id}'],'${id}')">💾 Simpan ke Galeri</button>
-                            </div>
-                        `;
-                    }
-                    document.write(`
-                        ${createCard('perjadin_start', 'Start Foto')}
-                        ${createCard('perjadin_in', 'In Foto')}
-                        ${createCard('perjadin_out', 'Out Foto')}
-                        ${createCard('perjadin_end', 'End Foto')}
-                    `);
-                </script>
-            </div>
-            <button class="download" onclick="buatPDF('perjadin','Dokumentasi Perjadin')">Download PDF Perjadin</button>
+            <div class="grid" id="grid-perjadin"></div>
+            <button class="download" onclick="buatPDF('perjadin', 'Dokumentasi_Perjadin')">Download PDF Perjadin</button>
         </div>
-
+        
         <div id="rapat" class="tab-content">
-            <div class="rapat-form">
-                <label for="uraianRapat">Uraian Rapat</label>
-                <input type="text" id="uraianRapat" placeholder="Contoh: Rapat koordinasi anggaran triwulan II">
-                <label for="tglRapat">Tanggal Rapat</label>
-                <input type="date" id="tglRapat">
-            </div>
-            <div class="grid">
-                <script>
-                    document.write(`
-                        ${createCard('rapat_start', 'Foto 1')}
-                        ${createCard('rapat_in', 'Foto 2')}
-                        ${createCard('rapat_out', 'Foto 3')}
-                        ${createCard('rapat_end', 'Foto 4')}
-                    `);
-                </script>
-            </div>
-            <button class="download" onclick="buatPDF('rapat','Dokumentasi Rapat')">Download PDF Rapat</button>
+            <div class="grid" id="grid-rapat"></div>
+            <button class="download" onclick="buatPDF('rapat', 'Dokumentasi_Rapat')">Download PDF Rapat</button>
         </div>
     </div>
 
     <script>
         const foto = {};
-        const SEMUA_ID = ["perjadin_start", "perjadin_in", "perjadin_out", "perjadin_end", "rapat_start", "rapat_in", "rapat_out", "rapat_end"];
-        const STORAGE_PREFIX = "dokfoto_";
-        const STORAGE_DATE_KEY = "dokfoto_tanggal";
+        const config = [
+            { id: 'perjadin_start', title: 'Start' }, { id: 'perjadin_in', title: 'In' },
+            { id: 'perjadin_out', title: 'Out' }, { id: 'perjadin_end', title: 'End' },
+            { id: 'rapat_start', title: 'Foto 1' }, { id: 'rapat_in', title: 'Foto 2' },
+            { id: 'rapat_out', title: 'Foto 3' }, { id: 'rapat_end', title: 'Foto 4' }
+        ];
 
-        function openTab(tab, btn) {
-            document.querySelectorAll(".tab-content").forEach(e => e.classList.remove("active"));
-            document.querySelectorAll(".tabs button").forEach(e => e.classList.remove("active"));
-            document.getElementById(tab).classList.add("active");
-            btn.classList.add("active");
-        }
-
-        function readFileAsDataURL(file) {
-            return new Promise((resolve, reject) => {
+        // Setup UI
+        config.forEach(item => {
+            const container = item.id.includes('perjadin') ? document.getElementById('grid-perjadin') : document.getElementById('rapat').querySelector('.grid');
+            container.innerHTML += `
+                <div class="card">
+                    <h3>${item.title}</h3>
+                    <img id="prev_${item.id}">
+                    <input type="file" id="inp_${item.id}" class="hidden" style="display:none" accept="image/*">
+                    <button class="btn-foto" onclick="document.getElementById('inp_${item.id}').click()">Pilih Foto</button>
+                </div>
+            `;
+            document.getElementById('inp_' + item.id).onchange = (e) => {
                 const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function loadImage(src) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = reject;
-                img.src = src;
-            });
-        }
-
-        function getLocation() {
-            return new Promise(resolve => {
-                if (!navigator.geolocation) { resolve(null); return; }
-                navigator.geolocation.getCurrentPosition(
-                    pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-                    () => resolve(null),
-                    { enableHighAccuracy: true, timeout: 8000 }
-                );
-            });
-        }
-
-        async function reverseGeocode(lat, lon) {
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
-                const data = await res.json();
-                return data.display_name || null;
-            } catch (e) { return null; }
-        }
-
-        function drawWatermark(img, dateObj, loc, address) {
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-
-            const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
-            const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
-
-            const barH = Math.max(80, canvas.height * 0.1);
-            ctx.fillStyle = "rgba(0,0,0,0.6)";
-            ctx.fillRect(0, canvas.height - barH, canvas.width, barH);
-            ctx.fillStyle = "#fff";
-            ctx.font = `${Math.max(24, barH * 0.4)}px Arial`;
-            ctx.textBaseline = "middle";
-            ctx.fillText(tglText, 20, canvas.height - barH * 0.7);
-            ctx.fillText(lokasiText, 20, canvas.height - barH * 0.3);
-
-            return canvas.toDataURL("image/jpeg", 0.8);
-        }
-
-        async function handleFile(id, file) {
-            if (!file) return;
-            const infoEl = document.getElementById("info_" + id);
-            infoEl.textContent = "Memproses...";
-            try {
-                const rawDataUrl = await readFileAsDataURL(file);
-                const img = await loadImage(rawDataUrl);
-                const loc = await getLocation();
-                let address = loc ? await reverseGeocode(loc.lat, loc.lon).catch(() => null) : null;
-                const finalDataUrl = drawWatermark(img, new Date(), loc, address);
-                foto[id] = finalDataUrl;
-                document.getElementById("prev_" + id).src = finalDataUrl;
-                infoEl.textContent = "Foto siap.";
-                document.getElementById("save_" + id).style.display = "block";
-                simpanFotoKeStorage(id, finalDataUrl, new Date().toISOString(), loc, address);
-            } catch (err) { infoEl.textContent = "Gagal memproses."; }
-        }
-
-        SEMUA_ID.forEach(id => {
-            const camInput = document.getElementById(id + "_cam");
-            const upInput = document.getElementById(id + "_up");
-            if (camInput) camInput.addEventListener("change", e => handleFile(id, e.target.files[0]));
-            if (upInput) upInput.addEventListener("change", e => handleFile(id, e.target.files[0]));
+                reader.onload = (ev) => {
+                    foto[item.id] = ev.target.result;
+                    document.getElementById('prev_' + item.id).src = ev.target.result;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            };
         });
 
-        function simpanKeGaleri(dataUrl, id) {
-            const a = document.createElement("a");
-            a.href = dataUrl;
-            a.download = `doc_${id}_${Date.now()}.jpg`;
-            a.click();
+        function openTab(t, b) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(t).classList.add('active');
+            b.classList.add('active');
         }
 
-        function simpanFotoKeStorage(id, dataUrl, iso, loc, address) {
-            localStorage.setItem(STORAGE_PREFIX + "foto_" + id, JSON.stringify({ dataUrl, iso, loc, address }));
-        }
-
-        function muatFotoDariStorage() {
-            SEMUA_ID.forEach(id => {
-                const raw = localStorage.getItem(STORAGE_PREFIX + "foto_" + id);
-                if (!raw) return;
-                const data = JSON.parse(raw);
-                foto[id] = data.dataUrl;
-                document.getElementById("prev_" + id).src = data.dataUrl;
-                document.getElementById("save_" + id).style.display = "block";
-            });
-        }
-        muatFotoDariStorage();
-
-        async function buatPDF(prefix, judul) {
-            const ids = [prefix + "_start", prefix + "_in", prefix + "_out", prefix + "_end"];
-            for (let id of ids) if (!foto[id]) { alert("Foto belum lengkap!"); return; }
-
+        async function buatPDF(prefix, name) {
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF("p", "mm", "a4");
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const ids = [prefix+'_start', prefix+'_in', prefix+'_out', prefix+'_end'];
+            
             pdf.setFontSize(20);
-            pdf.text(judul, 105, 15, { align: "center" });
+            pdf.text(name.replace('_', ' '), 105, 20, { align: 'center' });
 
-            const positions = [
-                { x: 15, y: 30 }, { x: 110, y: 30 },
-                { x: 15, y: 120 }, { x: 110, y: 120 }
-            ];
-
-            ids.forEach((id, index) => {
-                const pos = positions[index];
-                pdf.addImage(foto[id], "JPEG", pos.x, pos.y, 85, 85);
+            const startY = 40;
+            ids.forEach((id, i) => {
+                const x = (i % 2 === 0) ? 20 : 115;
+                const y = startY + Math.floor(i / 2) * 85;
+                if(foto[id]) pdf.addImage(foto[id], 'JPEG', x, y, 75, 75);
             });
-
-            pdf.save(judul + ".pdf");
+            pdf.save(name + '.pdf');
         }
     </script>
 </body>
