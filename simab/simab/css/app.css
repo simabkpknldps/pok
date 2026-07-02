@@ -1,0 +1,6 @@
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+#detil-tbody { display: block; max-height: 40vh; overflow-y: auto; }
+#detil-tbody tr { display: table; width: 100%; table-layout: fixed; }
+#detil-thead { display: table; width: 100%; table-layout: fixed; }
