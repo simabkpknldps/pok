@@ -454,24 +454,31 @@
             async function openDetilModal(mak) {
                 document.getElementById("detilModal").classList.replace("hidden", "flex");
                 document.getElementById("detilTitle").innerText = "Detil MAK: " + mak;
-                const tbody = document.getElementById("detil-tbody");
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat data...</td></tr>`;
-
-                const URL_BARU = "https://script.google.com/macros/s/AKfycbzLO1fVUfqOqwBGfbGbTNIMi_0vDkcFuBp2R3SvE3KanfMSBOtAtbJaphxO2QBggtjq8g/exec";
                 
+                // GANTI URL DI BAWAH INI DENGAN URL ASLI ANDA
+                const URL_GAS = "https://script.google.com/macros/s/AKfycbzLO1fVUfqOqwBGfbGbTNIMi_0vDkcFuBp2R3SvE3KanfMSBOtAtbJaphxO2QBggtjq8g/exec"; 
+                
+                const tbody = document.getElementById("detil-tbody");
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center">Memuat...</td></tr>`;
+            
                 try {
                     const res = await fetch(URL_GAS, {
                         method: 'POST',
-                        mode: 'no-cors', // <--- Coba gunakan ini jika fetch selalu gagal
                         body: JSON.stringify({ action: 'getDetil', mak: mak })
                     });
                     
-                    // PENTING: Jika menggunakan mode 'no-cors', Anda tidak bisa membaca res.json()
-                    // Kita gunakan logika ini:
-                    alert("Permintaan terkirim. Jika tidak muncul data, pastikan GAS Anda sudah dideploy dengan akses 'Anyone'.");
+                    const result = await res.json();
+                    
+                    if (Array.isArray(result)) {
+                        window.detilKegiatanData = result;
+                        renderDetilTable(result);
+                    } else {
+                        console.error("Respon Error:", result);
+                        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Error: ${result.message || 'Data tidak ditemukan'}</td></tr>`;
+                    }
                 } catch (e) {
-                    console.error("Error:", e);
-                    alert("Gagal koneksi: " + e.message);
+                    console.error("Fetch Error:", e);
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal koneksi. Cek Console F12.</td></tr>`;
                 }
             }
         
