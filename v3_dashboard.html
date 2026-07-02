@@ -460,22 +460,18 @@
                 const URL_BARU = "https://script.google.com/macros/s/AKfycbzLO1fVUfqOqwBGfbGbTNIMi_0vDkcFuBp2R3SvE3KanfMSBOtAtbJaphxO2QBggtjq8g/exec";
                 
                 try {
-                    const res = await fetch(URL_BARU, {
+                    const res = await fetch(URL_GAS, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        mode: 'no-cors', // <--- Coba gunakan ini jika fetch selalu gagal
                         body: JSON.stringify({ action: 'getDetil', mak: mak })
                     });
                     
-                    const result = await res.json();
-                    
-                    if (Array.isArray(result)) {
-                        window.detilKegiatanData = result;
-                        renderDetilTable(result);
-                    } else {
-                        alert("Error: " + (result.message || "Data tidak ditemukan"));
-                    }
+                    // PENTING: Jika menggunakan mode 'no-cors', Anda tidak bisa membaca res.json()
+                    // Kita gunakan logika ini:
+                    alert("Permintaan terkirim. Jika tidak muncul data, pastikan GAS Anda sudah dideploy dengan akses 'Anyone'.");
                 } catch (e) {
-                    alert("Gagal koneksi: " + e);
+                    console.error("Error:", e);
+                    alert("Gagal koneksi: " + e.message);
                 }
             }
         
