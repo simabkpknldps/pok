@@ -460,23 +460,21 @@
                 try {
                     const res = await fetch(sessionStorage.getItem('realUrl'), {
                         method: 'POST',
-                        // Kita kirim sebagai string JSON, server GAS akan mem-parse nya
                         body: JSON.stringify({ action: 'getDetil', mak: mak })
                     });
-                    
                     const result = await res.json();
                     
-                    // Pengecekan apakah hasil adalah array
+                    // Debugging
+                    console.log("Respon dari server:", result);
+                    
                     if (Array.isArray(result)) {
                         window.detilKegiatanData = result;
                         renderDetilTable(result);
                     } else {
-                        console.error("Respon Server:", result);
-                        tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Error: ${result.message || 'Data tidak ditemukan'}</td></tr>`;
+                        alert("Error dari server: " + (result.message || "Data tidak ditemukan"));
                     }
                 } catch (e) {
-                    console.error("Fetch Error:", e);
-                    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Gagal terhubung ke server.</td></tr>`;
+                    alert("Gagal koneksi: " + e);
                 }
             }
         
