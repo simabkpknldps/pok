@@ -4,3 +4,11 @@
 #detil-tbody { display: block; max-height: 40vh; overflow-y: auto; }
 #detil-tbody tr { display: table; width: 100%; table-layout: fixed; }
 #detil-thead { display: table; width: 100%; table-layout: fixed; }
+
+.pok-table-container { max-height: 60vh; overflow-y: auto; overflow-x: auto; }
+#pok-thead { position: sticky; top: 0; z-index: 10; background: #f1f5f9; }
+
+
+
+
+
