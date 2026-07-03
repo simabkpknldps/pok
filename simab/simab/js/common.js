@@ -40,7 +40,7 @@ function initializeUserName() {
 
 function openSettings() {
     showToast('Fitur settings sedang dikembangkan');
-    // TODO: Tambahkan modal atau halaman settings di sini
+    // TODO: Tambahkan modal atau halaman settings di sini oke nanti ditambahkan
 }
 
 // Initialize user name saat halaman dimuat
