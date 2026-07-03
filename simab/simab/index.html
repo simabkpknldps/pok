@@ -59,8 +59,9 @@
 
                 if (data.status === 'success') {
                     sessionStorage.setItem('nama', data.nama);
-                    sessionStorage.setItem('kantor', data.kantor);
+                    sessionStorage.setItem('nip', data.nip);
                     sessionStorage.setItem('realUrl', realUrl); // Simpan agar dashboard tahu URL-nya
+                    sessionStorage.setItem('admin', data.admin);
                     window.location.href = 'dashboard.html';
                 } else {
                     alert(data.message);
