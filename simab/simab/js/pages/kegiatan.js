@@ -20,7 +20,7 @@ let kgFirstLoad = true;
 
 async function initKegiatanPage() {
     const root = document.getElementById('kg-mainDataTable');
-    if (!root) return; // fragment belum ter-render
+    if (!root) return; // fragment belum ter-render coba
 
     // reset state setiap masuk halaman
     kgAllRows = [];
