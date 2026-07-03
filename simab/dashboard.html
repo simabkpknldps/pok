@@ -26,7 +26,13 @@
     <main class="flex-1 flex flex-col overflow-hidden">
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
             <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
-            <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
+            <div class="flex items-center gap-4">
+                <span id="user-name" class="text-slate-600 font-medium text-sm">
+                    <i class="fa-solid fa-user mr-2"></i><span id="nama-login">Guest</span>
+                </span>
+                <button onclick="openSettings()" class="text-slate-600 hover:text-sky-700 font-medium text-sm" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm" title="Logout"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
+            </div>
         </header>
         <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
     </main>

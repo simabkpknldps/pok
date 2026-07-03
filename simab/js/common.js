@@ -30,7 +30,25 @@ function generateIdUsulan() {
     return id;
 }
 
+function initializeUserName() {
+    const nama = sessionStorage.getItem('nama') || 'Guest';
+    const namaLoginElement = document.getElementById('nama-login');
+    if (namaLoginElement) {
+        namaLoginElement.textContent = nama;
+    }
+}
+
+function openSettings() {
+    showToast('Fitur settings sedang dikembangkan');
+    // TODO: Tambahkan modal atau halaman settings di sini
+}
+
+// Initialize user name saat halaman dimuat
+document.addEventListener('DOMContentLoaded', initializeUserName);
+
 window.logout = logout;
 window.showToast = showToast;
 window.formatRibuan = formatRibuan;
 window.generateIdUsulan = generateIdUsulan;
+window.initializeUserName = initializeUserName;
+window.openSettings = openSettings;
