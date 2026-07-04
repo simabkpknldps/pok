@@ -3,441 +3,504 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dokumentasi Modern</title>
+<title>Dokumentasi Perjadin</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-    :root {
-        --primary: #2563eb;
-        --primary-dark: #1d4ed8;
-        --secondary: #64748b;
-        --success: #16a34a;
-        --success-dark: #15803d;
-        --bg: #f8fafc;
-        --card: #ffffff;
-        --text: #1e293b;
-        --border: #e2e8f0;
-    }
-
-    
-    * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
-
-    body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
-
-    .container { max-width: 800px; margin: auto; }
-
-    h2 { text-align: center; margin-bottom: 2rem; }
-
-    .tabs { display: flex; gap: 10px; margin-bottom: 1.5rem; background: #e2e8f0; padding: 5px; border-radius: 12px; }
-    .tabs button { flex: 1; padding: 12px; border: none; cursor: pointer; border-radius: 8px; font-weight: 600; transition: 0.3s; background: transparent; color: var(--secondary); }
-    .tabs button.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    .rapat-form { background: var(--card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 16px; }
-    .rapat-form label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--secondary); margin-bottom: 6px; }
-    .rapat-form input[type=text],
-    .rapat-form input[type=date] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; font-size: 14px; background: var(--bg); }
-    .rapat-form input:last-child { margin-bottom: 0; }
-
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
-    .card { background: var(--card); padding: 16px; border-radius: 16px; border: 1px solid var(--border); }
-    .card h3 { font-size: 0.9rem; margin: 0 0 10px 0; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-    .card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px; background: #f1f5f9; display: block; }
-
-    .hidden-file { display: none; }
-
-    .foto-actions { display: flex; gap: 8px; margin-top: 10px; }
-    .btn-foto { flex: 1; padding: 10px 6px; border: none; border-radius: 8px; background: var(--primary); color: white; cursor: pointer; font-weight: 500; font-size: 0.8rem; transition: 0.2s; }
-    .btn-foto:hover { background: var(--primary-dark); }
-    .btn-foto.btn-upload { background: var(--secondary); }
-    .btn-foto.btn-upload:hover { background: #475569; }
-
-    .foto-info { margin-top: 8px; font-size: 0.7rem; color: var(--secondary); min-height: 14px; word-break: break-word; line-height: 1.4; }
-
-    .foto-save { display: block; width: 100%; margin-top: 8px; padding: 8px; font-size: 0.75rem; font-weight: 500; border: 1px solid var(--success); color: var(--success); background: white; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-    .foto-save:hover { background: var(--success); color: white; }
-
-    .download { width: 100%; padding: 16px; margin-top: 1.5rem; border: none; border-radius: 12px; background: #0f172a; color: white; font-weight: 700; cursor: pointer; font-size: 1rem; }
-    .download:hover { background: #1e293b; }
+  body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
 </style>
 </head>
-<body>
-    <div class="container">
-        <h2>📷 Dokumentasi Kegiatan</h2>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-        <div class="tabs">
-            <button class="active" onclick="openTab('perjadin', this)">Perjadin</button>
-            <button onclick="openTab('rapat', this)">Rapat</button>
-        </div>
+  <div class="max-w-xl mx-auto px-4 py-8 flex-1 w-full">
+    <h2 class="text-2xl font-extrabold text-center text-slate-900 mb-6">Dokumentasi Perjadin</h2>
 
-        <div id="perjadin" class="tab-content active">
-            <div class="grid" id="grid-perjadin"></div>
-            <button class="download" onclick="buatPDF('perjadin', 'Dokumentasi Perjadin')">Download PDF Perjadin</button>
-        </div>
+    <div id="sessionList" class="flex flex-col gap-4 mb-4"></div>
 
-        <div id="rapat" class="tab-content">
-            <div class="rapat-form">
-                <label for="uraianRapat">Uraian Rapat</label>
-                <input type="text" id="uraianRapat" placeholder="Contoh: Rapat koordinasi anggaran triwulan II">
-                <label for="tglRapat">Tanggal Rapat</label>
-                <input type="date" id="tglRapat">
-            </div>
-            <div class="grid" id="grid-rapat"></div>
-            <button class="download" onclick="buatPDF('rapat', 'Dokumentasi Rapat')">Download PDF Rapat</button>
-        </div>
+    <button type="button" id="btnTambahSesi" onclick="bukaPopupSesi()"
+      class="w-full py-3.5 rounded-2xl border-2 border-dashed border-indigo-400 text-indigo-600 font-bold bg-white hover:bg-indigo-50 transition mb-3">
+      Tambah Sesi
+    </button>
+
+    <div id="actionButtons" class="flex-col gap-3 mt-2" style="display:none">
+      <button type="button" onclick="buatPDF()"
+        class="w-full py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition">
+        Download PDF
+      </button>
+      <button type="button" onclick="resetData()"
+        class="w-full py-3.5 rounded-2xl border border-red-400 text-red-500 bg-white hover:bg-red-500 hover:text-white font-bold transition">
+        Reset
+      </button>
     </div>
 
-<script>
+    <!-- STATISTIK -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mt-8">
+      <div class="text-center font-extrabold text-slate-900 mb-4">Statistik</div>
 
-const foto = {};
-
-const CONFIG = [
-    { id: 'perjadin_start', title: 'Start Foto', tab: 'perjadin' },
-    { id: 'perjadin_in',    title: 'In Foto',    tab: 'perjadin' },
-    { id: 'perjadin_out',   title: 'Out Foto',   tab: 'perjadin' },
-    { id: 'perjadin_end',   title: 'End Foto',   tab: 'perjadin' },
-    { id: 'rapat_start',    title: 'Foto 1',     tab: 'rapat'    },
-    { id: 'rapat_in',       title: 'Foto 2',     tab: 'rapat'    },
-    { id: 'rapat_out',      title: 'Foto 3',     tab: 'rapat'    },
-    { id: 'rapat_end',      title: 'Foto 4',     tab: 'rapat'    }
-];
-
-const SEMUA_ID = CONFIG.map(c => c.id);
-const STORAGE_PREFIX = "dokfoto_";
-const STORAGE_DATE_KEY = "dokfoto_tanggal";
-
-/* ============ BANGUN KARTU (pengganti document.write) ============ */
-
-function cardHTML(id, title) {
-    return `
-        <div class="card">
-            <h3>${title}</h3>
-            <img id="prev_${id}" alt="">
-            <div class="foto-actions">
-                <input type="file" id="${id}_cam" class="hidden-file" accept="image/*" capture="environment">
-                <input type="file" id="${id}_up" class="hidden-file" accept="image/*">
-                <button type="button" class="btn-foto" onclick="document.getElementById('${id}_cam').click()">📷 Ambil Foto</button>
-                <button type="button" class="btn-foto btn-upload" onclick="document.getElementById('${id}_up').click()">🖼️ Upload</button>
-            </div>
-            <div class="foto-info" id="info_${id}"></div>
-            <button type="button" class="foto-save" id="save_${id}" style="display:none" onclick="simpanKeGaleri(foto['${id}'],'${id}')">💾 Simpan ke Galeri</button>
+      <div class="grid grid-cols-2 gap-4 text-center mb-4">
+        <div>
+          <div id="statKunjunganHariIni" class="text-xl font-extrabold text-slate-900">0</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Kunjungan</div>
         </div>
-    `;
-}
+        <div>
+          <div id="statSelesaiHariIni" class="text-xl font-extrabold text-slate-900">0</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Perjadin Selesai</div>
+        </div>
+        <div>
+          <div id="statKunjunganTotal" class="text-xl font-extrabold text-slate-900">0</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Total Kunjungan Halaman</div>
+        </div>
+        <div>
+          <div id="statSelesaiTotal" class="text-xl font-extrabold text-slate-900">0</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Total Perjadin Selesai</div>
+        </div>
+      </div>
 
-CONFIG.forEach(item => {
-    document.getElementById('grid-' + item.tab).insertAdjacentHTML('beforeend', cardHTML(item.id, item.title));
-});
+      <div class="border-t border-slate-100 pt-3">
+        <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold text-center mb-2">Kota Perjadin</div>
+        <div id="statKota" class="flex flex-wrap gap-2 justify-center"></div>
+      </div>
+    </div>
+  </div>
 
-/* ============ TAB ============ */
+  <!-- Modal Pilih Sesi -->
+  <div id="modalOverlay" class="fixed inset-0 bg-slate-900/50 items-center justify-center p-5 z-50" style="display:none">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-xl">
+      <h3 class="text-lg font-bold text-center text-slate-900 mb-4">Pilih Sesi</h3>
+      <div id="modalOptions" class="flex flex-col gap-2 mb-3"></div>
+      <button type="button" onclick="tutupPopupSesi()"
+        class="w-full py-2 text-slate-500 hover:text-slate-700 font-semibold transition">
+        Batal
+      </button>
+    </div>
+  </div>
 
-function openTab(tab, btn) {
-    document.querySelectorAll(".tab-content").forEach(e => e.classList.remove("active"));
-    document.querySelectorAll(".tabs button").forEach(e => e.classList.remove("active"));
-    document.getElementById(tab).classList.add("active");
-    btn.classList.add("active");
-}
+  <div id="loadingOverlay" class="fixed inset-0 bg-white/85 items-center justify-center z-[60] font-bold text-indigo-600" style="display:none">
+    Memproses foto...
+  </div>
 
-/* ============ HELPER ASYNC ============ */
+  <footer class="text-center text-xs text-slate-400 py-6 border-t border-slate-200 bg-white">
+    &copy; <span id="tahunFooter"></span> KPKNL Denpasar
+  </footer>
 
+<script>
+/* ============ STATE ============ */
+let sessions = []; // {uid, type, dataUrl, iso, loc, address, kota}
+const STORAGE_KEY = "dokfoto_perjadin_sessions";
+const STATS_KEY = "dokfoto_stats";       // array of {iso, kota} -> perjadin selesai
+const VISITS_KEY = "dokfoto_visits";     // array of iso -> kunjungan halaman
+const LABELS = { start: "Start", in: "In", out: "Out", end: "End" };
+
+document.getElementById("tahunFooter").textContent = new Date().getFullYear();
+
+/* ============ HELPER ASYNC (watermark & lokasi) ============ */
 function readFileAsDataURL(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
-
 function loadImage(src) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = src;
-    });
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 }
-
 function getLocation() {
-    return new Promise(resolve => {
-        if (!navigator.geolocation) { resolve(null); return; }
-        navigator.geolocation.getCurrentPosition(
-            pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-            () => resolve(null),
-            { enableHighAccuracy: true, timeout: 8000 }
-        );
-    });
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  });
 }
-
 async function reverseGeocode(lat, lon) {
-    try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
-        const data = await res.json();
-        return data.display_name || null;
-    } catch (e) {
-        return null;
-    }
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
+    const data = await res.json();
+    const addr = data.address || {};
+    const kota = addr.city || addr.town || addr.county || addr.state_district || addr.village || null;
+    return { display_name: data.display_name || null, kota };
+  } catch (e) {
+    return { display_name: null, kota: null };
+  }
 }
-
-/* ============ WATERMARK / GEOTAG (dengan downscale, biar hemat storage) ============ */
-
 function drawWatermark(img, dateObj, loc, address) {
+  const maxDim = 1000;
+  let w = img.width, h = img.height;
+  if (w > maxDim || h > maxDim) {
+    const scale = maxDim / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, w, h);
 
-    const maxDim = 1000;
-    let w = img.width, h = img.height;
-
-    if (w > maxDim || h > maxDim) {
-        const scale = maxDim / Math.max(w, h);
-        w = Math.round(w * scale);
-        h = Math.round(h * scale);
-    }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0, w, h);
-
-    const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
-    const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
-
-    const barH = Math.max(38, h * 0.11);
-
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(0, h - barH, w, barH);
-
-    ctx.fillStyle = "#fff";
-    ctx.font = `${Math.max(11, barH * 0.27)}px Arial`;
-    ctx.textBaseline = "middle";
-    ctx.fillText(tglText, 8, h - barH * 0.68);
-    ctx.fillText(lokasiText, 8, h - barH * 0.28, w - 16);
-
-    return canvas.toDataURL("image/jpeg", 0.6);
+  const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
+  const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
+  const barH = Math.max(38, h * 0.11);
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, h - barH, w, barH);
+  ctx.fillStyle = "#fff";
+  ctx.font = `${Math.max(11, barH * 0.27)}px Arial`;
+  ctx.textBaseline = "middle";
+  ctx.fillText(tglText, 8, h - barH * 0.68);
+  ctx.fillText(lokasiText, 8, h - barH * 0.28, w - 16);
+  return canvas.toDataURL("image/jpeg", 0.6);
 }
 
-/* ============ PROSES FOTO MASUK ============ */
+/* ============ PROSES FOTO (ambil lokasi + kota + watermark) ============ */
+async function prosesFoto(file) {
+  const rawDataUrl = await readFileAsDataURL(file);
+  const img = await loadImage(rawDataUrl);
+  const loc = await getLocation();
+  let address = null;
+  let kota = null;
+  if (loc) {
+    const geo = await reverseGeocode(loc.lat, loc.lon).catch(() => ({ display_name: null, kota: null }));
+    address = geo.display_name;
+    kota = geo.kota;
+  }
+  const now = new Date();
+  const finalDataUrl = drawWatermark(img, now, loc, address);
+  return { dataUrl: finalDataUrl, iso: now.toISOString(), loc, address, kota };
+}
 
-async function handleFile(id, file) {
+function tampilkanLoading(show) {
+  document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
+}
 
-    if (!file) return;
+/* ============ KAMERA (depan) ============ */
+function bukaKamera(onFile) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.setAttribute("capture", "user"); // kamera depan
+  input.style.display = "none";
+  document.body.appendChild(input);
+  input.addEventListener("change", e => {
+    const file = e.target.files[0];
+    document.body.removeChild(input);
+    if (file) onFile(file);
+  });
+  input.click();
+}
 
-    const infoEl = document.getElementById("info_" + id);
-    if (infoEl) infoEl.textContent = "Memproses foto...";
-
+/* ============ TAMBAH / RETAKE / HAPUS SESI ============ */
+function openCameraForNewSession(type) {
+  bukaKamera(async file => {
+    tampilkanLoading(true);
     try {
-
-        const rawDataUrl = await readFileAsDataURL(file);
-        const img = await loadImage(rawDataUrl);
-        const loc = await getLocation();
-
-        let address = null;
-        if (loc) address = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
-
-        const now = new Date();
-        const finalDataUrl = drawWatermark(img, now, loc, address);
-
-        foto[id] = finalDataUrl;
-
-        const previewEl = document.getElementById("prev_" + id);
-        if (previewEl) previewEl.src = finalDataUrl;
-
-        if (infoEl) {
-            infoEl.textContent = now.toLocaleString("id-ID") + (loc ? " • " + (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : " • lokasi tidak tersedia");
-        }
-
-        const saveBtn = document.getElementById("save_" + id);
-        if (saveBtn) saveBtn.style.display = "block";
-
-        simpanFotoKeStorage(id, finalDataUrl, now.toISOString(), loc, address);
-
-        // otomatis coba simpan ke galeri/unduhan perangkat
-        simpanKeGaleri(finalDataUrl, id);
-
+      const hasil = await prosesFoto(file);
+      const uid = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+      const sesi = { uid, type, ...hasil };
+      sessions.push(sesi);
+      simpanSessionsKeStorage();
+      renderSessions();
+      simpanKeGaleri(sesi.dataUrl, uid);
+      if (type === "end") {
+        catatPerjadinSelesai(sesi.kota);
+      }
     } catch (err) {
-        console.error(err);
-        if (infoEl) infoEl.textContent = "Gagal memproses foto.";
+      console.error(err);
+      alert("Gagal memproses foto, coba lagi.");
+    } finally {
+      tampilkanLoading(false);
     }
+  });
 }
 
-function registerFileInput(inputId, fotoId) {
-    const el = document.getElementById(inputId);
-    if (!el) return;
-    el.addEventListener("change", function (e) {
-        const file = e.target.files[0];
-        handleFile(fotoId, file);
-        e.target.value = "";
-    });
+function openCameraForRetake(uid) {
+  bukaKamera(async file => {
+    tampilkanLoading(true);
+    try {
+      const hasil = await prosesFoto(file);
+      const idx = sessions.findIndex(s => s.uid === uid);
+      if (idx === -1) return;
+      sessions[idx] = { ...sessions[idx], ...hasil };
+      simpanSessionsKeStorage();
+      renderSessions();
+      simpanKeGaleri(sessions[idx].dataUrl, uid);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memproses foto, coba lagi.");
+    } finally {
+      tampilkanLoading(false);
+    }
+  });
 }
 
-SEMUA_ID.forEach(id => {
-    registerFileInput(id + "_cam", id);
-    registerFileInput(id + "_up", id);
-});
+function hapusSesi(uid) {
+  if (!confirm("Hapus data sesi ini?")) return;
+  const idx = sessions.findIndex(s => s.uid === uid);
+  if (idx === -1) return;
+  sessions.splice(idx, 1);
+  simpanSessionsKeStorage();
+  renderSessions();
+}
+
+function simpanUlang(uid) {
+  const s = sessions.find(x => x.uid === uid);
+  if (s) simpanKeGaleri(s.dataUrl, uid);
+}
 
 /* ============ SIMPAN KE GALERI (DOWNLOAD) ============ */
-
 function simpanKeGaleri(dataUrl, id) {
-    if (!dataUrl) return;
-    try {
-        const a = document.createElement("a");
-        a.href = dataUrl;
-        a.download = "dokumentasi_" + id + "_" + Date.now() + ".jpg";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    } catch (e) {
-        console.warn("Gagal auto-simpan ke galeri, gunakan tombol simpan manual.", e);
+  if (!dataUrl) return;
+  try {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "dokumentasi_" + id + "_" + Date.now() + ".jpg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    console.warn("Gagal auto-simpan ke galeri, gunakan tombol simpan manual.", e);
+  }
+}
+
+/* ============ LOGIKA KETERSEDIAAN SESI ============ */
+function getAvailableTypes() {
+  const hasStart = sessions.some(s => s.type === "start");
+  const hasIn = sessions.some(s => s.type === "in");
+  const hasOut = sessions.some(s => s.type === "out");
+  const hasEnd = sessions.some(s => s.type === "end");
+  if (hasEnd) return [];
+  if (!hasStart) return ["start"];
+  const opts = ["in"];
+  if (hasIn) opts.push("out");
+  if (hasOut) opts.push("end");
+  return opts;
+}
+
+/* ============ MODAL PILIH SESI ============ */
+function bukaPopupSesi() {
+  const opts = getAvailableTypes();
+  if (opts.length === 0) return;
+  const box = document.getElementById("modalOptions");
+  box.innerHTML = opts.map(t =>
+    `<button type="button" onclick="pilihSesi('${t}')"
+      class="py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-200 font-semibold transition">
+      ${LABELS[t]}
+    </button>`
+  ).join("");
+  document.getElementById("modalOverlay").style.display = "flex";
+}
+function tutupPopupSesi() {
+  document.getElementById("modalOverlay").style.display = "none";
+}
+function pilihSesi(type) {
+  tutupPopupSesi();
+
+  // Validasi: End hanya boleh kalau sesi terakhir adalah Out
+  if (type === "end") {
+    const last = sessions[sessions.length - 1];
+    if (!last || last.type !== "out") {
+      alert("Anda harus Out terlebih dahulu");
+      return;
     }
+  }
+
+  openCameraForNewSession(type);
 }
 
-/* ============ PERSISTENSI localStorage (expired ganti hari) ============ */
-
-function todayStr() {
-    const d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+/* ============ RENDER SESI ============ */
+function cardHTML(s, label, isLast) {
+  const tgl = new Date(s.iso);
+  const tglStr = tgl.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  const jamStr = tgl.toLocaleTimeString("id-ID");
+  const lokasiStr = s.loc
+    ? `${s.address || "Alamat tidak diketahui"} (${s.loc.lat.toFixed(5)}, ${s.loc.lon.toFixed(5)})`
+    : "Lokasi tidak tersedia";
+  return `
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+      <div class="text-indigo-600 font-bold uppercase tracking-wide text-sm mb-3">${label}</div>
+      <img class="w-full aspect-square object-cover rounded-xl bg-slate-100 mb-3" src="${s.dataUrl}" alt="${label}">
+      <div class="flex flex-col gap-2 mb-3">
+        <button type="button" onclick="openCameraForRetake('${s.uid}')"
+          class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition">
+         Ambil Foto
+        </button>
+        <button type="button" onclick="simpanUlang('${s.uid}')"
+          class="w-full py-3 rounded-xl border border-emerald-500 text-emerald-600 bg-white hover:bg-emerald-500 hover:text-white font-semibold transition">
+          Simpan ke Galeri
+        </button>
+        ${isLast ? `<button type="button" onclick="hapusSesi('${s.uid}')"
+          class="w-full py-3 rounded-xl border border-red-400 text-red-500 bg-white hover:bg-red-500 hover:text-white font-semibold transition">
+          Hapus
+        </button>` : ""}
+      </div>
+      <div class="text-sm text-slate-700 mb-0.5">${tglStr} • ${jamStr}</div>
+      <div class="text-xs text-slate-500 leading-relaxed break-words">${lokasiStr}</div>
+    </div>
+  `;
 }
 
-function cekExpired() {
-    const savedDate = localStorage.getItem(STORAGE_DATE_KEY);
-    const today = todayStr();
-
-    if (savedDate !== today) {
-        Object.keys(localStorage).forEach(k => {
-            if (k.startsWith(STORAGE_PREFIX)) localStorage.removeItem(k);
-        });
-        localStorage.setItem(STORAGE_DATE_KEY, today);
-        return true;
-    }
-    return false;
+function renderSessions() {
+  const listEl = document.getElementById("sessionList");
+  listEl.innerHTML = "";
+  const counters = { start: 0, in: 0, out: 0, end: 0 };
+  sessions.forEach((s, idx) => {
+    counters[s.type]++;
+    const totalOfType = sessions.filter(x => x.type === s.type).length;
+    const label = totalOfType > 1 ? `${LABELS[s.type]} ${counters[s.type]}` : LABELS[s.type];
+    const isLast = idx === sessions.length - 1;
+    listEl.insertAdjacentHTML("beforeend", cardHTML(s, label, isLast));
+  });
+  document.getElementById("actionButtons").style.display = sessions.length > 0 ? "flex" : "none";
+  const hasEnd = sessions.some(s => s.type === "end");
+  document.getElementById("btnTambahSesi").style.display = hasEnd ? "none" : "block";
 }
 
-function simpanFotoKeStorage(id, dataUrl, iso, loc, address) {
-    try {
-        localStorage.setItem(STORAGE_PREFIX + "foto_" + id, JSON.stringify({ dataUrl, iso, loc, address }));
-    } catch (e) {
-        console.warn("Gagal simpan ke localStorage (mungkin penuh):", e);
-    }
+/* ============ STATISTIK (kunjungan halaman & perjadin selesai, permanen meski direset) ============ */
+function isHariIni(iso) {
+  return new Date(iso).toDateString() === new Date().toDateString();
 }
 
-function muatFotoDariStorage() {
-
-    SEMUA_ID.forEach(id => {
-
-        const raw = localStorage.getItem(STORAGE_PREFIX + "foto_" + id);
-        if (!raw) return;
-
-        try {
-            const data = JSON.parse(raw);
-            foto[id] = data.dataUrl;
-
-            const previewEl = document.getElementById("prev_" + id);
-            const infoEl = document.getElementById("info_" + id);
-            const saveBtn = document.getElementById("save_" + id);
-
-            if (previewEl) previewEl.src = data.dataUrl;
-            if (saveBtn) saveBtn.style.display = "block";
-
-            if (infoEl) {
-                const d = new Date(data.iso);
-                infoEl.textContent = d.toLocaleString("id-ID") + (data.loc ? " • " + (data.address || `${data.loc.lat.toFixed(5)}, ${data.loc.lon.toFixed(5)}`) : "");
-            }
-        } catch (e) {}
-    });
-
-    const uraian = localStorage.getItem(STORAGE_PREFIX + "uraianRapat");
-    const tgl = localStorage.getItem(STORAGE_PREFIX + "tglRapat");
-
-    if (uraian) document.getElementById("uraianRapat").value = uraian;
-    if (tgl) document.getElementById("tglRapat").value = tgl;
+function catatKunjungan() {
+  try {
+    const raw = localStorage.getItem(VISITS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    arr.push(new Date().toISOString());
+    localStorage.setItem(VISITS_KEY, JSON.stringify(arr));
+  } catch (e) {
+    console.warn("Gagal mencatat kunjungan:", e);
+  }
 }
 
-document.getElementById("uraianRapat").addEventListener("input", e => {
-    localStorage.setItem(STORAGE_PREFIX + "uraianRapat", e.target.value);
-});
-document.getElementById("tglRapat").addEventListener("input", e => {
-    localStorage.setItem(STORAGE_PREFIX + "tglRapat", e.target.value);
-});
+function catatPerjadinSelesai(kota) {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    arr.push({ iso: new Date().toISOString(), kota: kota || "Tidak diketahui" });
+    localStorage.setItem(STATS_KEY, JSON.stringify(arr));
+  } catch (e) {
+    console.warn("Gagal mencatat statistik perjadin:", e);
+  }
+  tampilkanStatistik();
+}
 
-// Jalankan saat halaman dibuka / dibuka lagi
-cekExpired();
-muatFotoDariStorage();
+function tampilkanStatistik() {
+  let kunjungan = [];
+  let selesai = [];
+  try { kunjungan = JSON.parse(localStorage.getItem(VISITS_KEY) || "[]"); } catch (e) { kunjungan = []; }
+  try { selesai = JSON.parse(localStorage.getItem(STATS_KEY) || "[]"); } catch (e) { selesai = []; }
+
+  document.getElementById("statKunjunganTotal").textContent = kunjungan.length;
+  document.getElementById("statKunjunganHariIni").textContent = kunjungan.filter(isHariIni).length;
+  document.getElementById("statSelesaiTotal").textContent = selesai.length;
+  document.getElementById("statSelesaiHariIni").textContent = selesai.filter(s => isHariIni(s.iso)).length;
+
+  const kotaCount = {};
+  selesai.forEach(s => {
+    const k = s.kota || "Tidak diketahui";
+    kotaCount[k] = (kotaCount[k] || 0) + 1;
+  });
+  const entries = Object.entries(kotaCount).sort((a, b) => b[1] - a[1]);
+  const kotaEl = document.getElementById("statKota");
+  kotaEl.innerHTML = entries.length
+    ? entries.map(([k, c]) => `<span class="rounded-full bg-slate-100 text-slate-600 px-3 py-1 text-xs font-medium">${k} (${c})</span>`).join("")
+    : `<span class="text-xs text-slate-400">Belum ada data</span>`;
+}
+
+/* ============ PERSISTENSI SESI AKTIF ============ */
+function simpanSessionsKeStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  } catch (e) {
+    console.warn("Gagal simpan ke localStorage (mungkin penuh):", e);
+  }
+}
+function muatSessionsDariStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) sessions = JSON.parse(raw);
+  } catch (e) {
+    console.error("Gagal memuat data tersimpan:", e);
+    sessions = [];
+  }
+}
+function resetData() {
+  if (confirm("Apakah Anda yakin ingin menghapus semua sesi dan foto yang tersimpan?")) {
+    localStorage.removeItem(STORAGE_KEY);
+    sessions = [];
+    renderSessions();
+  }
+}
 
 /* ============ PDF ============ */
+function buatPDF() {
+  if (sessions.length === 0) {
+    alert("Belum ada sesi/foto yang diambil.");
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pageWidth = 210, pageHeight = 297;
+  const marginX = 15;
+  let y = 20;
 
-/* ============ PDF ============ */
+  pdf.setFontSize(18);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Dokumentasi Perjadin", pageWidth / 2, y, { align: "center" });
+  y += 15;
 
-/* ============ PDF ============ */
+  const counters = { start: 0, in: 0, out: 0, end: 0 };
+  const imgSize = 45, rowHeight = 55;
 
-async function buatPDF(prefix, judul) {
+  sessions.forEach(s => {
+    counters[s.type]++;
+    const totalOfType = sessions.filter(x => x.type === s.type).length;
+    const label = totalOfType > 1 ? `${LABELS[s.type]} ${counters[s.type]}` : LABELS[s.type];
 
-    const ids = [prefix + "_start", prefix + "_in", prefix + "_out", prefix + "_end"];
-
-    for (let id of ids) {
-        if (!foto[id]) {
-            alert("Semua foto harus diupload.");
-            return;
-        }
+    if (y + rowHeight > pageHeight - 15) {
+      pdf.addPage();
+      y = 20;
     }
 
-    if (prefix === "rapat") {
-        const uraian = document.getElementById("uraianRapat").value.trim();
-        const tgl = document.getElementById("tglRapat").value;
-        if (!uraian || !tgl) {
-            alert("Uraian rapat dan tanggal rapat wajib diisi.");
-            return;
-        }
-    }
+    pdf.addImage(s.dataUrl, "JPEG", marginX, y, imgSize, imgSize);
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF("p", "mm", "a4");
-
-    pdf.setFontSize(18);
-    pdf.text(judul, 105, 15, { align: "center" });
-
-    let yOffset = 0;
-
-    if (prefix === "rapat") {
-        const uraian = document.getElementById("uraianRapat").value.trim();
-        const rawTgl = document.getElementById("tglRapat").value; // Format yyyy-mm-dd
-        
-        // Konversi format tanggal ke dd-MM-yyyy
-        const dateParts = rawTgl.split('-');
-        const formattedTgl = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-        
-        pdf.setFontSize(11);
-        pdf.text("Uraian: " + uraian, 15, 23);
-        pdf.text("Tanggal: " + formattedTgl, 15, 29);
-        yOffset = 15; // Ditingkatkan agar tidak menabrak label foto
-    } else {
-        yOffset = 5;
-    }
-
-    // Posisi gambar 85x85
-    const positions = [
-        { x: 15, y: 35 + yOffset }, { x: 110, y: 35 + yOffset },
-        { x: 15, y: 130 + yOffset }, { x: 110, y: 130 + yOffset }
-    ];
-
-    pdf.setFontSize(14);
+    const textX = marginX + imgSize + 8;
+    let textY = y + 8;
+    pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
-    
-    // Logika Label Dinamis
-    const labels = (prefix === "rapat") 
-        ? ["Foto 1", "Foto 2", "Foto 3", "Foto 4"] 
-        : ["START", "IN", "OUT", "END"];
+    pdf.text(label, textX, textY);
+    textY += 7;
 
-    ids.forEach((id, i) => {
-        const pos = positions[i];
-        // Pastikan label digambar SEBELUM gambar agar tidak tertutup
-        pdf.text(labels[i], pos.x, pos.y - 5);
-        pdf.addImage(foto[id], "JPEG", pos.x, pos.y, 85, 85);
-    });
+    pdf.setFontSize(10.5);
+    pdf.setFont("helvetica", "normal");
+    const tgl = new Date(s.iso);
+    const tglStr = tgl.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+    const jamStr = tgl.toLocaleTimeString("id-ID");
+    pdf.text(`${tglStr}  ${jamStr}`, textX, textY);
+    textY += 6;
 
-    pdf.save(judul + ".pdf");
+    const lokasiStr = s.loc
+      ? `${s.address || "Alamat tidak diketahui"} (${s.loc.lat.toFixed(5)}, ${s.loc.lon.toFixed(5)})`
+      : "Lokasi tidak tersedia";
+    const wrapped = pdf.splitTextToSize(lokasiStr, pageWidth - textX - marginX);
+    pdf.text(wrapped, textX, textY);
+
+    y += rowHeight;
+  });
+
+  pdf.save("Dokumentasi_Perjadin.pdf");
 }
+
+/* ============ INIT ============ */
+muatSessionsDariStorage();
+renderSessions();
+catatKunjungan();
+tampilkanStatistik();
 </script>
 </body>
 </html>
