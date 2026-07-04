@@ -25,10 +25,7 @@
     
     <div id="actionButtons" class="flex-col gap-3 mt-2" style="display:none">
       
-      <!button type="button" onclick="submitData()"
-        class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">
-        Submit
-      <!/button>
+    
       
       <button type="button" onclick="buatPDF()"
         class="w-full py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition">
@@ -294,15 +291,15 @@ function cardHTML(s, label, isLast) {
       <div class="flex flex-col gap-2 mb-3">
         <button type="button" onclick="openCameraForRetake('${s.uid}')"
           class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition">
-          📷 Ambil Foto
+         Ambil Foto
         </button>
         <button type="button" onclick="simpanUlang('${s.uid}')"
           class="w-full py-3 rounded-xl border border-emerald-500 text-emerald-600 bg-white hover:bg-emerald-500 hover:text-white font-semibold transition">
-          ⬇️ Simpan ke Galeri
+          Simpan ke Galeri
         </button>
         ${isLast ? `<button type="button" onclick="hapusSesi('${s.uid}')"
           class="w-full py-3 rounded-xl border border-red-400 text-red-500 bg-white hover:bg-red-500 hover:text-white font-semibold transition">
-          🗑️ Hapus
+          Hapus
         </button>` : ""}
       </div>
       <div class="text-sm text-slate-700 mb-0.5">${tglStr} • ${jamStr}</div>
