@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dokumentasi Perjadin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --secondary: #64748b;
+    --success: #16a34a;
+    --danger: #ef4444;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); padding: 20px; }
+  .container { max-width: 640px; margin: auto; }
+  h2 { text-align: center; margin-bottom: 1.5rem; }
+
+  #sessionList { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; }
+
+  .session-card {
+    display: flex; gap: 12px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 16px; padding: 12px;
+    align-items: flex-start;
+  }
+  .session-img {
+    width: 96px; height: 96px; object-fit: cover; border-radius: 10px;
+    background: #f1f5f9; flex-shrink: 0;
+  }
+  .session-info { flex: 1; min-width: 0; }
+  .session-label {
+    font-weight: 700; font-size: 1rem; color: var(--primary); margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .session-date { font-size: 0.8rem; color: var(--text); margin-bottom: 2px; }
+  .session-lokasi { font-size: 0.75rem; color: var(--secondary); line-height: 1.4; margin-bottom: 8px; word-break: break-word; }
+  .session-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg); cursor: pointer; font-size: 1rem; display: flex;
+    align-items: center; justify-content: center; transition: 0.2s;
+  }
+  .icon-btn:hover { background: #e2e8f0; }
+  .icon-btn-danger { border-color: var(--danger); }
+  .icon-btn-danger:hover { background: var(--danger); }
+
+  .btn-tambah {
+    width: 100%; padding: 14px; border: 2px dashed var(--primary); background: white;
+    color: var(--primary); border-radius: 14px; font-weight: 700; cursor: pointer;
+    font-size: 1rem; margin-bottom: 10px;
+  }
+  .btn-tambah:hover { background: #eff6ff; }
+
+  .action-buttons { display: none; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .btn-submit, .download, .btn-reset {
+    width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: 700;
+    cursor: pointer; font-size: 0.95rem;
+  }
+  .btn-submit { background: var(--success); color: white; }
+  .btn-submit:hover { background: #15803d; }
+  .download { background: #0f172a; color: white; }
+  .download:hover { background: #1e293b; }
+  .btn-reset { background: white; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-reset:hover { background: var(--danger); color: white; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(15,23,42,0.5);
+    display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .modal-box {
+    background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 320px;
+  }
+  .modal-box h3 { margin: 0 0 14px 0; text-align: center; }
+  .modal-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .modal-opt {
+    padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+    font-weight: 600; cursor: pointer; font-size: 0.95rem;
+  }
+  .modal-opt:hover { background: #e2e8f0; }
+  .modal-cancel {
+    width: 100%; padding: 10px; border: none; background: transparent; color: var(--secondary);
+    cursor: pointer; font-weight: 600;
+  }
+
+  .loading-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.85);
+    display: none; align-items: center; justify-content: center; z-index: 60;
+    font-weight: 700; color: var(--primary); font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>Dokumentasi Perjadin</h2>
+
+  <div id="sessionList"></div>
+
+  <button type="button" id="btnTambahSesi" class="btn-tambah" onclick="bukaPopupSesi()">➕ Tambah Sesi</button>
+
+  <div id="actionButtons" class="action-buttons">
+    <button type="button" class="btn-submit" onclick="submitData()">✅ Submit</button>
+    <button type="button" class="download" onclick="buatPDF()">⬇️ Download PDF</button>
+    <button type="button" class="btn-reset" onclick="resetData()">🗑️ Reset</button>
+  </div>
+</div>
+
+<!-- Modal Pilih Sesi -->
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Pilih Sesi</h3>
+    <div id="modalOptions" class="modal-options"></div>
+    <button type="button" class="modal-cancel" onclick="tutupPopupSesi()">Batal</button>
+  </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay">Memproses foto...</div>
+
+<script>
+/* ============ STATE ============ */
+let sessions = []; // {uid, type, dataUrl, iso, loc, address}
+const STORAGE_KEY = "dokfoto_perjadin_sessions";
+const LABELS = { start: "Start", in: "In", out: "Out", end: "End" };
+
+/* ============ HELPER ASYNC (watermark & lokasi, dari versi sebelumnya) ============ */
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+function getLocation() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  });
+}
+async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
+    const data = await res.json();
+    return data.display_name || null;
+  } catch (e) {
+    return null;
+  }
+}
+function drawWatermark(img, dateObj, loc, address) {
+  const maxDim = 1000;
+  let w = img.width, h = img.height;
+  if (w > maxDim || h > maxDim) {
+    const scale = maxDim / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, w, h);
+
+  const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
+  const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
+  const barH = Math.max(38, h * 0.11);
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, h - barH, w, barH);
+  ctx.fillStyle = "#fff";
+  ctx.font = `${Math.max(11, barH * 0.27)}px Arial`;
+  ctx.textBaseline = "middle";
+  ctx.fillText(tglText, 8, h - barH * 0.68);
+  ctx.fillText(lokasiText, 8, h - barH * 0.28, w - 16);
+  return canvas.toDataURL("image/jpeg", 0.6);
+}
+
+/* ============ PROSES FOTO (ambil lokasi + watermark) ============ */
+async function prosesFoto(file) {
+  const rawDataUrl = await readFileAsDataURL(file);
+  const img = await loadImage(rawDataUrl);
+  const loc = await getLocation();
+  let address = null;
+  if (loc) address = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
+  const now = new Date();
+  const finalDataUrl = drawWatermark(img, now, loc, address);
+  return { dataUrl: finalDataUrl, iso: now.toISOString(), loc, address };
+}
+
+function tampilkanLoading(show) {
+  document.getElementById("loadingOverlay").style.display = show ? "flex" : "none";
+}
+
+/* ============ KAMERA (depan) ============ */
+function bukaKamera(onFile) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.setAttribute("capture", "user"); // kamera depan
+  input.style.display = "none";
+  document.body.appendChild(input);
+  input.addEventListener("change", e => {
+    const file = e.target.files[0];
+    document.body.removeChild(input);
+    if (file) onFile(file);
+  });
+  input.click();
+}
+
+/* ============ TAMBAH / RETAKE / HAPUS SESI ============ */
+function openCameraForNewSession(type) {
+  bukaKamera(async file => {
+    tampilkanLoading(true);
+    try {
+      const hasil = await prosesFoto(file);
+      const uid = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+      const sesi = { uid, type, ...hasil };
+      sessions.push(sesi);
+      simpanSessionsKeStorage();
+      renderSessions();
+      simpanKeGaleri(sesi.dataUrl, uid);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memproses foto, coba lagi.");
+    } finally {
+      tampilkanLoading(false);
+    }
+  });
+}
+
+function openCameraForRetake(uid) {
+  bukaKamera(async file => {
+    tampilkanLoading(true);
+    try {
+      const hasil = await prosesFoto(file);
+      const idx = sessions.findIndex(s => s.uid === uid);
+      if (idx === -1) return;
+      sessions[idx] = { ...sessions[idx], ...hasil };
+      simpanSessionsKeStorage();
+      renderSessions();
+      simpanKeGaleri(sessions[idx].dataUrl, uid);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memproses foto, coba lagi.");
+    } finally {
+      tampilkanLoading(false);
+    }
+  });
+}
+
+function hapusSesi(uid) {
+  if (!confirm("Hapus data sesi ini?")) return;
+  const idx = sessions.findIndex(s => s.uid === uid);
+  if (idx === -1) return;
+  sessions.splice(idx, 1);
+  simpanSessionsKeStorage();
+  renderSessions();
+}
+
+function simpanUlang(uid) {
+  const s = sessions.find(x => x.uid === uid);
+  if (s) simpanKeGaleri(s.dataUrl, uid);
+}
+
+/* ============ SIMPAN KE GALERI (DOWNLOAD) ============ */
+function simpanKeGaleri(dataUrl, id) {
+  if (!dataUrl) return;
+  try {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "dokumentasi_" + id + "_" + Date.now() + ".jpg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    console.warn("Gagal auto-simpan ke galeri, gunakan tombol simpan manual.", e);
+  }
+}
+
+/* ============ LOGIKA KETERSEDIAAN SESI ============ */
+function getAvailableTypes() {
+  const hasStart = sessions.some(s => s.type === "start");
+  const hasIn = sessions.some(s => s.type === "in");
+  const hasOut = sessions.some(s => s.type === "out");
+  const hasEnd = sessions.some(s => s.type === "end");
+  if (hasEnd) return [];
+  if (!hasStart) return ["start"];
+  const opts = ["in"];
+  if (hasIn) opts.push("out");
+  if (hasOut) opts.push("end");
+  return opts;
+}
+
+/* ============ MODAL PILIH SESI ============ */
+function bukaPopupSesi() {
+  const opts = getAvailableTypes();
+  if (opts.length === 0) return;
+  const box = document.getElementById("modalOptions");
+  box.innerHTML = opts.map(t => `<button type="button" class="modal-opt" onclick="pilihSesi('${t}')">${LABELS[t]}</button>`).join("");
+  document.getElementById("modalOverlay").style.display = "flex";
+}
+function tutupPopupSesi() {
+  document.getElementById("modalOverlay").style.display = "none";
+}
+function pilihSesi(type) {
+  tutupPopupSesi();
+  openCameraForNewSession(type);
+}
+
+/* ============ RENDER ============ */
+function cardHTML(s, label, isLast) {
+  const tgl = new Date(s.iso);
+  const tglStr = tgl.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  const jamStr = tgl.toLocaleTimeString("id-ID");
+  const lokasiStr = s.loc
+    ? `${s.address || "Alamat tidak diketahui"} (${s.loc.lat.toFixed(5)}, ${s.loc.lon.toFixed(5)})`
+    : "Lokasi tidak tersedia";
+  return `
+    <div class="session-card">
+      <img class="session-img" src="${s.dataUrl}" alt="${label}">
+      <div class="session-info">
+        <div class="session-label">${label}</div>
+        <div class="session-date">${tglStr} • ${jamStr}</div>
+        <div class="session-lokasi">${lokasiStr}</div>
+        <div class="session-actions">
+          <button type="button" class="icon-btn" title="Ambil Foto" onclick="openCameraForRetake('${s.uid}')">📷</button>
+          <button type="button" class="icon-btn" title="Simpan ke Galeri" onclick="simpanUlang('${s.uid}')">⬇️</button>
+          ${isLast ? `<button type="button" class="icon-btn icon-btn-danger" title="Hapus" onclick="hapusSesi('${s.uid}')">🗑️</button>` : ""}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSessions() {
+  const listEl = document.getElementById("sessionList");
+  listEl.innerHTML = "";
+  const counters = { start: 0, in: 0, out: 0, end: 0 };
+  sessions.forEach((s, idx) => {
+    counters[s.type]++;
+    const totalOfType = sessions.filter(x => x.type === s.type).length;
+    const label = totalOfType > 1 ? `${LABELS[s.type]} ${counters[s.type]}` : LABELS[s.type];
+    const isLast = idx === sessions.length - 1;
+    listEl.insertAdjacentHTML("beforeend", cardHTML(s, label, isLast));
+  });
+  document.getElementById("actionButtons").style.display = sessions.length > 0 ? "flex" : "none";
+  const hasEnd = sessions.some(s => s.type === "end");
+  document.getElementById("btnTambahSesi").style.display = hasEnd ? "none" : "block";
+}
+
+/* ============ PERSISTENSI ============ */
+function simpanSessionsKeStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  } catch (e) {
+    console.warn("Gagal simpan ke localStorage (mungkin penuh):", e);
+  }
+}
+function muatSessionsDariStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) sessions = JSON.parse(raw);
+  } catch (e) {
+    console.error("Gagal memuat data tersimpan:", e);
+    sessions = [];
+  }
+}
+function resetData() {
+  if (confirm("Apakah Anda yakin ingin menghapus semua sesi dan foto yang tersimpan?")) {
+    localStorage.removeItem(STORAGE_KEY);
+    sessions = [];
+    renderSessions();
+  }
+}
+
+/* ============ SUBMIT (placeholder, sambungkan ke server/API sesuai kebutuhan) ============ */
+function submitData() {
+  const hasStart = sessions.some(s => s.type === "start");
+  const hasEnd = sessions.some(s => s.type === "end");
+  if (!hasStart || !hasEnd) {
+    alert("Sesi belum lengkap. Pastikan minimal ada sesi Start dan End sebelum submit.");
+    return;
+  }
+  alert("Data berhasil di-submit.");
+}
+
+/* ============ PDF ============ */
+function buatPDF() {
+  if (sessions.length === 0) {
+    alert("Belum ada sesi/foto yang diambil.");
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pageWidth = 210, pageHeight = 297;
+  const marginX = 15;
+  let y = 20;
+
+  pdf.setFontSize(18);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Dokumentasi Perjadin", pageWidth / 2, y, { align: "center" });
+  y += 15;
+
+  const counters = { start: 0, in: 0, out: 0, end: 0 };
+  const imgSize = 45, rowHeight = 55;
+
+  sessions.forEach(s => {
+    counters[s.type]++;
+    const totalOfType = sessions.filter(x => x.type === s.type).length;
+    const label = totalOfType > 1 ? `${LABELS[s.type]} ${counters[s.type]}` : LABELS[s.type];
+
+    if (y + rowHeight > pageHeight - 15) {
+      pdf.addPage();
+      y = 20;
+    }
+
+    pdf.addImage(s.dataUrl, "JPEG", marginX, y, imgSize, imgSize);
+
+    const textX = marginX + imgSize + 8;
+    let textY = y + 8;
+    pdf.setFontSize(13);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(label, textX, textY);
+    textY += 7;
+
+    pdf.setFontSize(10.5);
+    pdf.setFont("helvetica", "normal");
+    const tgl = new Date(s.iso);
+    const tglStr = tgl.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+    const jamStr = tgl.toLocaleTimeString("id-ID");
+    pdf.text(`${tglStr}  ${jamStr}`, textX, textY);
+    textY += 6;
+
+    const lokasiStr = s.loc
+      ? `${s.address || "Alamat tidak diketahui"} (${s.loc.lat.toFixed(5)}, ${s.loc.lon.toFixed(5)})`
+      : "Lokasi tidak tersedia";
+    const wrapped = pdf.splitTextToSize(lokasiStr, pageWidth - textX - marginX);
+    pdf.text(wrapped, textX, textY);
+
+    y += rowHeight;
+  });
+
+  pdf.save("Dokumentasi_Perjadin.pdf");
+}
+
+/* ============ INIT ============ */
+muatSessionsDariStorage();
+renderSessions();
+</script>
+</body>
+</html>
