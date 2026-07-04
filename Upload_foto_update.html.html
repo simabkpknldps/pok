@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dokumentasi Perjadin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+  .modal-overlay, .loading-overlay { display: none; }
+  .modal-overlay.open, .loading-overlay.open { display: flex; }
+  .action-buttons.open { display: flex; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <div class="max-w-xl mx-auto px-4 py-8 flex-1 w-full">
+    <h2 class="text-2xl font-extrabold text-center text-slate-900 mb-6">Dokumentasi Perjadin</h2>
+
+    <div id="sessionList" class="flex flex-col gap-4 mb-4"></div>
+
+    <button type="button" id="btnTambahSesi"
+      class="w-full py-3.5 rounded-2xl border-2 border-dashed border-indigo-400 text-indigo-600 font-bold bg-white hover:bg-indigo-50 transition mb-3">
+      ➕ Tambah Sesi
+    </button>
+
+    <div id="actionButtons" class="action-buttons flex-col gap-3 mt-2">
+      <button type="button" onclick="submitData()"
+        class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition">
+        ✅ Submit
+      </button>
+      <button type="button" onclick="buatPDF()"
+        class="w-full py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition">
+        ⬇️ Download PDF
+      </button>
+      <button type="button" onclick="resetData()"
+        class="w-full py-3.5 rounded-2xl border border-red-400 text-red-500 bg-white hover:bg-red-500 hover:text-white font-bold transition">
+        🗑️ Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Pilih Sesi -->
+  <div id="modalOverlay" class="modal-overlay fixed inset-0 bg-slate-900/50 items-center justify-center p-5 z-50">
+    <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-xl">
+      <h3 class="text-lg font-bold text-center text-slate-900 mb-4">Pilih Sesi</h3>
+      <div id="modalOptions" class="flex flex-col gap-2 mb-3"></div>
+      <button type="button" onclick="tutupPopupSesi()"
+        class="w-full py-2 text-slate-500 hover:text-slate-700 font-semibold transition">
+        Batal
+      </button>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay fixed inset-0 bg-white/85 items-center justify-center z-[60] font-bold text-indigo-600">
+    Memproses foto...
+  </div>
+
+  <footer class="text-center text-xs text-slate-400 py-6 border-t border-slate-200 bg-white">
+    &copy; <span id="tahunFooter"></span> KPKNL Denpasar
+  </footer>
+
+<script>
+/* ============ STATE ============ */
+let sessions = []; // {uid, type, dataUrl, iso, loc, address}
+const STORAGE_KEY = "dokfoto_perjadin_sessions";
+const LABELS = { start: "Start", in: "In", out: "Out", end: "End" };
+
+document.getElementById("tahunFooter").textContent = new Date().getFullYear();
+
+/* ============ HELPER ASYNC (watermark & lokasi) ============ */
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+function getLocation() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  });
+}
+async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
+    const data = await res.json();
+    return data.display_name || null;
+  } catch (e) {
+    return null;
+  }
+}
+function drawWatermark(img, dateObj, loc, address) {
+  const maxDim = 1000;
+  let w = img.width, h = img.height;
+  if (w > maxDim || h > maxDim) {
+    const scale = maxDim / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, w, h);
+
+  const tglText = dateObj.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "medium" });
+  const lokasiText = loc ? (address || `${loc.lat.toFixed(5)}, ${loc.lon.toFixed(5)}`) : "Lokasi tidak tersedia";
+  const barH = Math.max(38, h * 0.11);
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, h - barH, w, barH);
+  ctx.fillStyle = "#fff";
+  ctx.font = `${Math.max(11, barH * 0.27)}px Arial`;
+  ctx.textBaseline = "middle";
+  ctx.fillText(tglText, 8, h - barH * 0.68);
+  ctx.fillText(lokasiText, 8, h - barH * 0.28, w - 16);
+  return canvas.toDataURL("image/jpeg", 0.6);
+}
+
+/* ============ PROSES FOTO (ambil lokasi + watermark) ============ */
+async function prosesFoto(file) {
+  const rawDataUrl = await readFileAsDataURL(file);
+  const img = await loadImage(rawDataUrl);
+  const loc = await getLocation();
+  let address = null;
+  if (loc) address = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
+  const now = new Date();
+  const finalDataUrl = drawWatermark(img, now, loc, address);
+  return { dataUrl: finalDataUrl, iso: now.toISOString(), loc, address };
+}
+
+function tampilkanLoading(show) {
+  document.getElementById("loadingOverlay").classList.toggle("open", show);
+}
+
+/* ============ KAMERA (depan) ============ */
+function bukaKamera(onFile) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.setAttribute("capture", "user"); // kamera depan
+  input.style.display = "none";
+  document.body.appendChild(input);
+  input.addEventListener("change", e => {
+    const file = e.target.files[0];
+    document.body.removeChild(input);
+    if (file) onFile(file);
+  });
+  input.click();
+}
+
+/* ============ TAMBAH / RETAKE / HAPUS SESI ============ */
+function openCameraForNewSession(type) {
+  bukaKamera(async file => {
+    tampilkanLoading(true);
+    try {
+      const hasil = await prosesFoto(file);
+      const uid = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+      const sesi = { uid, type, ...hasil };
+      sessions.push(sesi);
+      simpanSessionsKeStorage();
+      renderSessions();
+      simpanKeGaleri(sesi.dataUrl, uid);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memproses foto, coba lagi.");
+    } finally {
+      tampilkanLoading(false);
+    }
+  });
+}
+
+function openCameraForRetake(uid) {
+  bukaKamera(async file => {
+    tampilkanLoading(true);
+    try {
+      const hasil = await prosesFoto(file);
+      const idx = sessions.findIndex(s => s.uid === uid);
+      if (idx === -1) return;
+      sessions[idx] = { ...sessions[idx], ...hasil };
+      simpanSessionsKeStorage();
+      renderSessions();
+      simpanKeGaleri(sessions[idx].dataUrl, uid);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memproses foto, coba lagi.");
+    } finally {
+      tampilkanLoading(false);
+    }
+  });
+}
+
+function hapusSesi(uid) {
+  if (!confirm("Hapus data sesi ini?")) return;
+  const idx = sessions.findIndex(s => s.uid === uid);
+  if (idx === -1) return;
+  sessions.splice(idx, 1);
+  simpanSessionsKeStorage();
+  renderSessions();
+}
+
+function simpanUlang(uid) {
+  const s = sessions.find(x => x.uid === uid);
+  if (s) simpanKeGaleri(s.dataUrl, uid);
+}
+
+/* ============ SIMPAN KE GALERI (DOWNLOAD) ============ */
+function simpanKeGaleri(dataUrl, id) {
+  if (!dataUrl) return;
+  try {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "dokumentasi_" + id + "_" + Date.now() + ".jpg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    console.warn("Gagal auto-simpan ke galeri, gunakan tombol simpan manual.", e);
+  }
+}
+
+/* ============ LOGIKA KETERSEDIAAN SESI ============ */
+function getAvailableTypes() {
+  const hasStart = sessions.some(s => s.type === "start");
+  const hasIn = sessions.some(s => s.type === "in");
+  const hasOut = sessions.some(s => s.type === "out");
+  const hasEnd = sessions.some(s => s.type === "end");
+  if (hasEnd) return [];
+  if (!hasStart) return ["start"];
+  const opts = ["in"];
+  if (hasIn) opts.push("out");
+  if (hasOut) opts.push("end");
+  return opts;
+}
+
+/* ============ MODAL PILIH SESI ============ */
+function bukaPopupSesi() {
+  const opts = getAvailableTypes();
+  if (opts.length === 0) return;
+  const box = document.getElementById("modalOptions");
+  box.innerHTML = opts.map(t =>
+    `<button type="button" onclick="pilihSesi('${t}')"
+      class="py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-200 font-semibold transition">
+      ${LABELS[t]}
+    </button>`
+  ).join("");
+  document.getElementById("modalOverlay").classList.add("open");
+}
+function tutupPopupSesi() {
+  document.getElementById("modalOverlay").classList.remove("open");
+}
+function pilihSesi(type) {
+  tutupPopupSesi();
+  openCameraForNewSession(type);
+}
+
+/* ============ RENDER ============ */
+function cardHTML(s, label, isLast) {
+  const tgl = new Date(s.iso);
+  const tglStr = tgl.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  const jamStr = tgl.toLocaleTimeString("id-ID");
+  const lokasiStr = s.loc
+    ? `${s.address || "Alamat tidak diketahui"} (${s.loc.lat.toFixed(5)}, ${s.loc.lon.toFixed(5)})`
+    : "Lokasi tidak tersedia";
+  return `
+    <div class="flex gap-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+      <img class="w-24 h-24 object-cover rounded-xl bg-slate-100 flex-shrink-0" src="${s.dataUrl}" alt="${label}">
+      <div class="flex-1 min-w-0">
+        <div class="text-indigo-600 font-bold uppercase tracking-wide text-sm mb-1">${label}</div>
+        <div class="text-sm text-slate-700 mb-0.5">${tglStr} • ${jamStr}</div>
+        <div class="text-xs text-slate-500 leading-relaxed mb-3 break-words">${lokasiStr}</div>
+        <div class="flex gap-2">
+          <button type="button" title="Ambil Foto" onclick="openCameraForRetake('${s.uid}')"
+            class="w-9 h-9 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-200 flex items-center justify-center text-base transition">📷</button>
+          <button type="button" title="Simpan ke Galeri" onclick="simpanUlang('${s.uid}')"
+            class="w-9 h-9 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-200 flex items-center justify-center text-base transition">⬇️</button>
+          ${isLast ? `<button type="button" title="Hapus" onclick="hapusSesi('${s.uid}')"
+            class="w-9 h-9 rounded-full border border-red-300 bg-slate-50 hover:bg-red-500 hover:text-white flex items-center justify-center text-base transition">🗑️</button>` : ""}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSessions() {
+  const listEl = document.getElementById("sessionList");
+  listEl.innerHTML = "";
+  const counters = { start: 0, in: 0, out: 0, end: 0 };
+  sessions.forEach((s, idx) => {
+    counters[s.type]++;
+    const totalOfType = sessions.filter(x => x.type === s.type).length;
+    const label = totalOfType > 1 ? `${LABELS[s.type]} ${counters[s.type]}` : LABELS[s.type];
+    const isLast = idx === sessions.length - 1;
+    listEl.insertAdjacentHTML("beforeend", cardHTML(s, label, isLast));
+  });
+  document.getElementById("actionButtons").classList.toggle("open", sessions.length > 0);
+  const hasEnd = sessions.some(s => s.type === "end");
+  document.getElementById("btnTambahSesi").style.display = hasEnd ? "none" : "block";
+}
+
+/* ============ PERSISTENSI ============ */
+function simpanSessionsKeStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  } catch (e) {
+    console.warn("Gagal simpan ke localStorage (mungkin penuh):", e);
+  }
+}
+function muatSessionsDariStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) sessions = JSON.parse(raw);
+  } catch (e) {
+    console.error("Gagal memuat data tersimpan:", e);
+    sessions = [];
+  }
+}
+function resetData() {
+  if (confirm("Apakah Anda yakin ingin menghapus semua sesi dan foto yang tersimpan?")) {
+    localStorage.removeItem(STORAGE_KEY);
+    sessions = [];
+    renderSessions();
+  }
+}
+
+/* ============ SUBMIT (placeholder, sambungkan ke server/API sesuai kebutuhan) ============ */
+function submitData() {
+  const hasStart = sessions.some(s => s.type === "start");
+  const hasEnd = sessions.some(s => s.type === "end");
+  if (!hasStart || !hasEnd) {
+    alert("Sesi belum lengkap. Pastikan minimal ada sesi Start dan End sebelum submit.");
+    return;
+  }
+  alert("Data berhasil di-submit.");
+}
+
+/* ============ PDF ============ */
+function buatPDF() {
+  if (sessions.length === 0) {
+    alert("Belum ada sesi/foto yang diambil.");
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pageWidth = 210, pageHeight = 297;
+  const marginX = 15;
+  let y = 20;
+
+  pdf.setFontSize(18);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Dokumentasi Perjadin", pageWidth / 2, y, { align: "center" });
+  y += 15;
+
+  const counters = { start: 0, in: 0, out: 0, end: 0 };
+  const imgSize = 45, rowHeight = 55;
+
+  sessions.forEach(s => {
+    counters[s.type]++;
+    const totalOfType = sessions.filter(x => x.type === s.type).length;
+    const label = totalOfType > 1 ? `${LABELS[s.type]} ${counters[s.type]}` : LABELS[s.type];
+
+    if (y + rowHeight > pageHeight - 15) {
+      pdf.addPage();
+      y = 20;
+    }
+
+    pdf.addImage(s.dataUrl, "JPEG", marginX, y, imgSize, imgSize);
+
+    const textX = marginX + imgSize + 8;
+    let textY = y + 8;
+    pdf.setFontSize(13);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(label, textX, textY);
+    textY += 7;
+
+    pdf.setFontSize(10.5);
+    pdf.setFont("helvetica", "normal");
+    const tgl = new Date(s.iso);
+    const tglStr = tgl.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+    const jamStr = tgl.toLocaleTimeString("id-ID");
+    pdf.text(`${tglStr}  ${jamStr}`, textX, textY);
+    textY += 6;
+
+    const lokasiStr = s.loc
+      ? `${s.address || "Alamat tidak diketahui"} (${s.loc.lat.toFixed(5)}, ${s.loc.lon.toFixed(5)})`
+      : "Lokasi tidak tersedia";
+    const wrapped = pdf.splitTextToSize(lokasiStr, pageWidth - textX - marginX);
+    pdf.text(wrapped, textX, textY);
+
+    y += rowHeight;
+  });
+
+  pdf.save("Dokumentasi_Perjadin.pdf");
+}
+
+/* ============ INIT ============ */
+muatSessionsDariStorage();
+renderSessions();
+</script>
+</body>
+</html>
