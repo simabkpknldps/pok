@@ -22,11 +22,7 @@
       Tambah Sesi
     </button>
 
-    
     <div id="actionButtons" class="flex-col gap-3 mt-2" style="display:none">
-      
-    
-      
       <button type="button" onclick="buatPDF()"
         class="w-full py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition">
         Download PDF
@@ -35,6 +31,30 @@
         class="w-full py-3.5 rounded-2xl border border-red-400 text-red-500 bg-white hover:bg-red-500 hover:text-white font-bold transition">
         Reset
       </button>
+    </div>
+
+    <!-- STATISTIK -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mt-8">
+      <div class="text-center font-extrabold text-slate-900 mb-4">Statistik</div>
+
+      <div class="grid grid-cols-2 gap-4 text-center mb-4">
+        <div>
+          <div id="statKunjunganHariIni" class="text-xl font-extrabold text-slate-900">0</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Kunjungan</div>
+        </div>
+        <div>
+          <div id="statSelesaiHariIni" class="text-xl font-extrabold text-slate-900">0</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Perjadin Selesai</div>
+        </div>
+        <div>
+          <div id="statKunjunganTotal" class="text-xl font-extrabold text-slate-900">0</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Total Kunjungan Halaman</div>
+        </div>
+        <div>
+          <div id="statSelesaiTotal" class="text-xl font-extrabold text-slate-900">0</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Total Perjadin Selesai</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -60,8 +80,10 @@
 
 <script>
 /* ============ STATE ============ */
-let sessions = []; // {uid, type, dataUrl, iso, loc, address}
+let sessions = []; // {uid, type, dataUrl, iso, loc, address, kota}
 const STORAGE_KEY = "dokfoto_perjadin_sessions";
+const STATS_KEY = "dokfoto_stats";       // array of {iso, kota} -> perjadin selesai
+const VISITS_KEY = "dokfoto_visits";     // array of iso -> kunjungan halaman
 const LABELS = { start: "Start", in: "In", out: "Out", end: "End" };
 
 document.getElementById("tahunFooter").textContent = new Date().getFullYear();
@@ -97,9 +119,11 @@ async function reverseGeocode(lat, lon) {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=16`);
     const data = await res.json();
-    return data.display_name || null;
+    const addr = data.address || {};
+    const kota = addr.city || addr.town || addr.county || addr.state_district || addr.village || null;
+    return { display_name: data.display_name || null, kota };
   } catch (e) {
-    return null;
+    return { display_name: null, kota: null };
   }
 }
 function drawWatermark(img, dateObj, loc, address) {
@@ -129,16 +153,21 @@ function drawWatermark(img, dateObj, loc, address) {
   return canvas.toDataURL("image/jpeg", 0.6);
 }
 
-/* ============ PROSES FOTO (ambil lokasi + watermark) ============ */
+/* ============ PROSES FOTO (ambil lokasi + kota + watermark) ============ */
 async function prosesFoto(file) {
   const rawDataUrl = await readFileAsDataURL(file);
   const img = await loadImage(rawDataUrl);
   const loc = await getLocation();
   let address = null;
-  if (loc) address = await reverseGeocode(loc.lat, loc.lon).catch(() => null);
+  let kota = null;
+  if (loc) {
+    const geo = await reverseGeocode(loc.lat, loc.lon).catch(() => ({ display_name: null, kota: null }));
+    address = geo.display_name;
+    kota = geo.kota;
+  }
   const now = new Date();
   const finalDataUrl = drawWatermark(img, now, loc, address);
-  return { dataUrl: finalDataUrl, iso: now.toISOString(), loc, address };
+  return { dataUrl: finalDataUrl, iso: now.toISOString(), loc, address, kota };
 }
 
 function tampilkanLoading(show) {
@@ -173,6 +202,9 @@ function openCameraForNewSession(type) {
       simpanSessionsKeStorage();
       renderSessions();
       simpanKeGaleri(sesi.dataUrl, uid);
+      if (type === "end") {
+        catatPerjadinSelesai(sesi.kota);
+      }
     } catch (err) {
       console.error(err);
       alert("Gagal memproses foto, coba lagi.");
@@ -276,7 +308,7 @@ function pilihSesi(type) {
   openCameraForNewSession(type);
 }
 
-/* ============ RENDER ============ */
+/* ============ RENDER SESI ============ */
 function cardHTML(s, label, isLast) {
   const tgl = new Date(s.iso);
   const tglStr = tgl.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
@@ -324,7 +356,47 @@ function renderSessions() {
   document.getElementById("btnTambahSesi").style.display = hasEnd ? "none" : "block";
 }
 
-/* ============ PERSISTENSI ============ */
+/* ============ STATISTIK (kunjungan halaman & perjadin selesai, permanen meski direset) ============ */
+function isHariIni(iso) {
+  return new Date(iso).toDateString() === new Date().toDateString();
+}
+
+function catatKunjungan() {
+  try {
+    const raw = localStorage.getItem(VISITS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    arr.push(new Date().toISOString());
+    localStorage.setItem(VISITS_KEY, JSON.stringify(arr));
+  } catch (e) {
+    console.warn("Gagal mencatat kunjungan:", e);
+  }
+}
+
+function catatPerjadinSelesai(kota) {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    arr.push({ iso: new Date().toISOString(), kota: kota || "Tidak diketahui" });
+    localStorage.setItem(STATS_KEY, JSON.stringify(arr));
+  } catch (e) {
+    console.warn("Gagal mencatat statistik perjadin:", e);
+  }
+  tampilkanStatistik();
+}
+
+function tampilkanStatistik() {
+  let kunjungan = [];
+  let selesai = [];
+  try { kunjungan = JSON.parse(localStorage.getItem(VISITS_KEY) || "[]"); } catch (e) { kunjungan = []; }
+  try { selesai = JSON.parse(localStorage.getItem(STATS_KEY) || "[]"); } catch (e) { selesai = []; }
+
+  document.getElementById("statKunjunganTotal").textContent = kunjungan.length;
+  document.getElementById("statKunjunganHariIni").textContent = kunjungan.filter(isHariIni).length;
+  document.getElementById("statSelesaiTotal").textContent = selesai.length;
+  document.getElementById("statSelesaiHariIni").textContent = selesai.filter(s => isHariIni(s.iso)).length;
+}
+
+/* ============ PERSISTENSI SESI AKTIF ============ */
 function simpanSessionsKeStorage() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
@@ -347,17 +419,6 @@ function resetData() {
     sessions = [];
     renderSessions();
   }
-}
-
-/* ============ SUBMIT (placeholder, sambungkan ke server/API sesuai kebutuhan) ============ */
-function submitData() {
-  const hasStart = sessions.some(s => s.type === "start");
-  const hasEnd = sessions.some(s => s.type === "end");
-  if (!hasStart || !hasEnd) {
-    alert("Sesi belum lengkap. Pastikan minimal ada sesi Start dan End sebelum submit.");
-    return;
-  }
-  alert("Data berhasil di-submit.");
 }
 
 /* ============ PDF ============ */
@@ -422,6 +483,8 @@ function buatPDF() {
 /* ============ INIT ============ */
 muatSessionsDariStorage();
 renderSessions();
+catatKunjungan();
+tampilkanStatistik();
 </script>
 </body>
 </html>
