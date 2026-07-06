@@ -13,7 +13,6 @@
  * - MODIFIKASI SESUAI PERMINTAAN: detail kegiatan tanggal yang diklik TIDAK
  *   lagi tampil di popup, melainkan di tabel pada card sebelah kanan kalender.
  *
- *
  * Struktur baris data dari backend (huruf kolom sheet Data_Kegiatan_2026):
  * A id, B mak, C uraian, D pelaksana, E tujuan, G tglMulai, P status
  */
