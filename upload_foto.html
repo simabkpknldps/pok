@@ -37,25 +37,20 @@
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mt-8">
       <div class="text-center font-extrabold text-slate-900 mb-4">Statistik</div>
 
-      <div class="grid grid-cols-2 gap-4 text-center mb-4">
+      <div class="grid grid-cols-3 gap-4 text-center mb-4">
         <div>
           <div id="statKunjunganHariIni" class="text-xl font-extrabold text-slate-900">0</div>
           <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Kunjungan Hari Ini</div>
         </div>
         <div>
-          <div id="statSelesaiHariIni" class="text-xl font-extrabold text-slate-900">0</div>
-          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Perjadin Selesai Hari Ini</div>
-        </div>
-        <div>
           <div id="statKunjunganTotal" class="text-xl font-extrabold text-slate-900">0</div>
-          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Total Kunjungan Halaman</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Total Kunjungan</div>
         </div>
         <div>
           <div id="statSelesaiTotal" class="text-xl font-extrabold text-slate-900">0</div>
           <div class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mt-0.5">Total Perjadin Selesai</div>
         </div>
       </div>
-      <div id="statSyncInfo" class="text-center text-[10px] text-slate-300 mt-1"></div>
     </div>
   </div>
 
@@ -99,7 +94,7 @@ document.getElementById("tahunFooter").textContent = new Date().getFullYear();
    GANTI nilai APPS_SCRIPT_URL di bawah dengan URL Web App hasil deploy
    (lihat panduan di file AppsScript_Code.gs / instruksi terpisah).
 */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykWJXcXZH5_vwELWC1LMoNQESokFlCeQg4qdaHkACP0QXAaEFd6KQ719QU-fLEcbNZ/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0iOmxwR1pOsVsq8n1McYuv5XBKGf-4X6yTNDhvNr00ExuegLZcWz4kSZKqP5jz3_o/exec";
 const STAT_CACHE_KEY = "dokfoto_stat_cache"; // cache lokal, cuma untuk tampilan saat offline
 
 function statCacheSimpan(data) {
@@ -108,14 +103,9 @@ function statCacheSimpan(data) {
 function statCacheBaca() {
   try { return JSON.parse(localStorage.getItem(STAT_CACHE_KEY) || "null"); } catch (e) { return null; }
 }
-function setSyncInfo(text) {
-  const el = document.getElementById("statSyncInfo");
-  if (el) el.textContent = text;
-}
 function tampilkanAngka(data) {
   document.getElementById("statKunjunganHariIni").textContent = data.kunjunganHariIni ?? 0;
   document.getElementById("statKunjunganTotal").textContent = data.kunjunganTotal ?? 0;
-  document.getElementById("statSelesaiHariIni").textContent = data.selesaiHariIni ?? 0;
   document.getElementById("statSelesaiTotal").textContent = data.selesaiTotal ?? 0;
 }
 
@@ -265,9 +255,6 @@ function openCameraForNewSession(type) {
       simpanSessionsKeStorage();
       renderSessions();
       simpanKeGaleri(sesi.dataUrl, uid);
-      if (type === "end") {
-        catatPerjadinSelesai(sesi.kota);
-      }
     } catch (err) {
       console.error(err);
       alert("Gagal memproses foto, coba lagi.");
@@ -425,30 +412,24 @@ function isHariIni(iso) {
 }
 
 async function catatKunjungan() {
-  setSyncInfo("Menyinkronkan...");
   const data = await postStatsSheet("visit");
   if (data) {
     statCacheSimpan(data);
     tampilkanAngka(data);
-    setSyncInfo("Tersinkron dengan Google Sheet");
   } else {
     const cached = statCacheBaca();
     if (cached) tampilkanAngka(cached);
-    setSyncInfo("Offline / belum terhubung ke Google Sheet (menampilkan data terakhir)");
   }
 }
 
-async function catatPerjadinSelesai(kota) {
-  setSyncInfo("Menyinkronkan...");
+async function catatPerjadinSelesai() {
   const data = await postStatsSheet("selesai");
   if (data) {
     statCacheSimpan(data);
     tampilkanAngka(data);
-    setSyncInfo("Tersinkron dengan Google Sheet");
   } else {
     const cached = statCacheBaca();
     if (cached) tampilkanAngka(cached);
-    setSyncInfo("Offline / belum terhubung ke Google Sheet (menampilkan data terakhir)");
   }
 }
 
@@ -457,11 +438,9 @@ async function tampilkanStatistik() {
   if (data) {
     statCacheSimpan(data);
     tampilkanAngka(data);
-    setSyncInfo("Tersinkron dengan Google Sheet");
   } else {
     const cached = statCacheBaca();
     if (cached) tampilkanAngka(cached);
-    setSyncInfo("Offline / belum terhubung ke Google Sheet (menampilkan data terakhir)");
   }
 }
 
@@ -496,6 +475,7 @@ function buatPDF() {
     alert("Belum ada sesi/foto yang diambil.");
     return;
   }
+  catatPerjadinSelesai(); // perjadin dianggap selesai saat PDF diunduh
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF("p", "mm", "a4");
   const pageWidth = 210, pageHeight = 297;
