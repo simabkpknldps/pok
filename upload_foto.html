@@ -99,7 +99,7 @@ document.getElementById("tahunFooter").textContent = new Date().getFullYear();
    GANTI nilai APPS_SCRIPT_URL di bawah dengan URL Web App hasil deploy
    (lihat panduan di file AppsScript_Code.gs / instruksi terpisah).
 */
-const APPS_SCRIPT_URL = "GANTI_DENGAN_URL_WEB_APP_APPS_SCRIPT";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyg01f9wGDeanHKj6Lh2_ZhlUlYw4ofSgIYPXPedmvikmRKnKFfPRMMsqjnXZzNnE-B/exec";
 const STAT_CACHE_KEY = "dokfoto_stat_cache"; // cache lokal, cuma untuk tampilan saat offline
 
 function statCacheSimpan(data) {
@@ -120,7 +120,7 @@ function tampilkanAngka(data) {
 }
 
 async function fetchStatsSheet() {
-  if (APPS_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbyg01f9wGDeanHKj6Lh2_ZhlUlYw4ofSgIYPXPedmvikmRKnKFfPRMMsqjnXZzNnE-B/exec")) return null;
+  if (APPS_SCRIPT_URL.includes("GANTI_DENGAN_URL")) return null;
   try {
     const res = await fetch(APPS_SCRIPT_URL, { method: "GET", cache: "no-store" });
     if (!res.ok) return null;
@@ -134,7 +134,7 @@ async function fetchStatsSheet() {
 }
 
 async function postStatsSheet(action) {
-  if (APPS_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbyg01f9wGDeanHKj6Lh2_ZhlUlYw4ofSgIYPXPedmvikmRKnKFfPRMMsqjnXZzNnE-B/exec")) return null;
+  if (APPS_SCRIPT_URL.includes("GANTI_DENGAN_URL")) return null;
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
