@@ -56,9 +56,6 @@
         </div>
       </div>
       <div id="statSyncInfo" class="text-center text-[10px] text-slate-300 mt-1"></div>
-      <div class="text-center mt-2">
-        <button type="button" onclick="setGithubToken()" class="text-[10px] text-slate-300 hover:text-slate-500 underline">Atur Token Sinkronisasi</button>
-      </div>
     </div>
   </div>
 
@@ -92,132 +89,66 @@ const LABELS = { start: "Start", in: "In", out: "Out", end: "End" };
 
 document.getElementById("tahunFooter").textContent = new Date().getFullYear();
 
-/* ============ SINKRONISASI STATISTIK KE GITHUB ============
-   Statistik (kunjungan halaman & perjadin selesai) disimpan di file
-   stats.json pada repo GitHub publik di bawah ini, supaya kalau dibuka
-   dari device/lokasi lain, angkanya tetap terload (bukan cuma dari
-   localStorage device itu sendiri).
+/* ============ STATISTIK VIA GOOGLE SHEET (Apps Script Web App) ============
+   Statistik (kunjungan halaman & perjadin selesai) disimpan langsung di
+   Google Sheet, lewat sebuah Apps Script Web App yang jadi jembatan.
+   Tidak butuh token apapun di sisi pengguna/browser -- script yang jalan
+   di server Google-lah yang punya izin baca/tulis ke Sheet (pakai akun
+   pemilik Sheet), halaman ini cuma memanggil satu URL publik.
 
-   - MEMBACA data: pakai raw.githubusercontent.com, PUBLIK, tidak butuh token.
-   - MENULIS data: WAJIB pakai GitHub Personal Access Token (PAT), karena
-     GitHub tidak mengizinkan menulis file tanpa autentikasi.
-
-   PENTING SOAL KEAMANAN:
-   Token TIDAK ditulis di kode ini. Token hanya diminta lewat prompt()
-   sekali di browser (via tombol "Atur Token Sinkronisasi") dan disimpan
-   di localStorage browser tersebut saja. Siapapun yang tidak mengatur
-   token di browsernya tetap bisa MEMBACA statistik, tapi tidak akan
-   mengirim tulisan ke GitHub (aman, tidak error, cuma tidak sinkron).
+   GANTI nilai APPS_SCRIPT_URL di bawah dengan URL Web App hasil deploy
+   (lihat panduan di file AppsScript_Code.gs / instruksi terpisah).
 */
-const GH_OWNER = "simabkpknldps";
-const GH_REPO = "pok";
-const GH_BRANCH = "main";
-const GH_PATH = "stats.json";
-const GH_TOKEN_KEY = "dokfoto_gh_token";
+const APPS_SCRIPT_URL = "GANTI_DENGAN_URL_WEB_APP_APPS_SCRIPT";
+const STAT_CACHE_KEY = "dokfoto_stat_cache"; // cache lokal, cuma untuk tampilan saat offline
 
-function getGithubToken() {
-  return localStorage.getItem(GH_TOKEN_KEY) || "";
+function statCacheSimpan(data) {
+  try { localStorage.setItem(STAT_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
 }
-function setGithubToken() {
-  const existing = getGithubToken();
-  const t = prompt(
-    "Masukkan GitHub Personal Access Token (scope 'Contents: Read and write' untuk repo simabkpknldps/pok).\n" +
-    "Token ini HANYA disimpan di browser ini, tidak dikirim ke mana pun selain GitHub.\n" +
-    "Kosongkan lalu OK untuk menghapus token yang tersimpan.",
-    existing
-  );
-  if (t === null) return;
-  if (t.trim() === "") {
-    localStorage.removeItem(GH_TOKEN_KEY);
-    alert("Token dihapus dari browser ini. Perangkat ini hanya akan membaca statistik, tidak mengirim update.");
-  } else {
-    localStorage.setItem(GH_TOKEN_KEY, t.trim());
-    alert("Token tersimpan di browser ini. Perangkat ini sekarang bisa mengirim update statistik ke GitHub.");
-  }
+function statCacheBaca() {
+  try { return JSON.parse(localStorage.getItem(STAT_CACHE_KEY) || "null"); } catch (e) { return null; }
 }
-
-async function fetchGithubStats() {
-  try {
-    const url = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${GH_PATH}?t=${Date.now()}`;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (e) {
-    console.warn("Gagal ambil statistik dari GitHub:", e);
-    return null;
-  }
-}
-
-async function getGithubFileSha() {
-  const token = getGithubToken();
-  if (!token) return null;
-  try {
-    const res = await fetch(
-      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}?ref=${GH_BRANCH}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.sha || null;
-  } catch (e) {
-    return null;
-  }
-}
-
-async function pushGithubStats(data) {
-  const token = getGithubToken();
-  if (!token) return false; // tidak ada token -> lewati, tidak dianggap error
-  try {
-    const sha = await getGithubFileSha();
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-    const body = {
-      message: "update stats " + new Date().toISOString(),
-      content,
-      branch: GH_BRANCH
-    };
-    if (sha) body.sha = sha;
-    const res = await fetch(
-      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      }
-    );
-    setSyncInfo(res.ok ? "Tersinkron ke GitHub" : "Gagal sinkron (cek token)");
-    return res.ok;
-  } catch (e) {
-    console.warn("Gagal push statistik ke GitHub:", e);
-    setSyncInfo("Gagal sinkron ke GitHub");
-    return false;
-  }
-}
-
 function setSyncInfo(text) {
   const el = document.getElementById("statSyncInfo");
   if (el) el.textContent = text;
 }
+function tampilkanAngka(data) {
+  document.getElementById("statKunjunganHariIni").textContent = data.kunjunganHariIni ?? 0;
+  document.getElementById("statKunjunganTotal").textContent = data.kunjunganTotal ?? 0;
+  document.getElementById("statSelesaiHariIni").textContent = data.selesaiHariIni ?? 0;
+  document.getElementById("statSelesaiTotal").textContent = data.selesaiTotal ?? 0;
+}
 
-function mergeVisits(arr) {
-  return Array.from(new Set(arr)).sort();
+async function fetchStatsSheet() {
+  if (APPS_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbyg01f9wGDeanHKj6Lh2_ZhlUlYw4ofSgIYPXPedmvikmRKnKFfPRMMsqjnXZzNnE-B/exec")) return null;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, { method: "GET", cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.error) { console.warn("Apps Script error:", data.error); return null; }
+    return data;
+  } catch (e) {
+    console.warn("Gagal ambil statistik dari Google Sheet:", e);
+    return null;
+  }
 }
-function mergeSelesai(arr) {
-  const seen = new Set();
-  const out = [];
-  arr.forEach(s => {
-    const key = s.iso + "|" + s.kota;
-    if (!seen.has(key)) { seen.add(key); out.push(s); }
-  });
-  return out.sort((a, b) => new Date(a.iso) - new Date(b.iso));
-}
-function bacaVisitsLokal() {
-  try { return JSON.parse(localStorage.getItem(VISITS_KEY) || "[]"); } catch (e) { return []; }
-}
-function bacaSelesaiLokal() {
-  try { return JSON.parse(localStorage.getItem(STATS_KEY) || "[]"); } catch (e) { return []; }
+
+async function postStatsSheet(action) {
+  if (APPS_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbyg01f9wGDeanHKj6Lh2_ZhlUlYw4ofSgIYPXPedmvikmRKnKFfPRMMsqjnXZzNnE-B/exec")) return null;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // hindari CORS preflight ke Apps Script
+      body: JSON.stringify({ action })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.error) { console.warn("Apps Script error:", data.error); return null; }
+    return data;
+  } catch (e) {
+    console.warn("Gagal update statistik ke Google Sheet:", e);
+    return null;
+  }
 }
 
 /* ============ HELPER ASYNC (watermark & lokasi) ============ */
@@ -495,67 +426,43 @@ function isHariIni(iso) {
 
 async function catatKunjungan() {
   setSyncInfo("Menyinkronkan...");
-  let visits = bacaVisitsLokal();
-  let selesai = bacaSelesaiLokal();
-
-  const remote = await fetchGithubStats();
-  if (remote) {
-    visits = mergeVisits([...(remote.visits || []), ...visits]);
-    selesai = mergeSelesai([...(remote.selesai || []), ...selesai]);
+  const data = await postStatsSheet("visit");
+  if (data) {
+    statCacheSimpan(data);
+    tampilkanAngka(data);
+    setSyncInfo("Tersinkron dengan Google Sheet");
+  } else {
+    const cached = statCacheBaca();
+    if (cached) tampilkanAngka(cached);
+    setSyncInfo("Offline / belum terhubung ke Google Sheet (menampilkan data terakhir)");
   }
-
-  visits.push(new Date().toISOString());
-
-  try {
-    localStorage.setItem(VISITS_KEY, JSON.stringify(visits));
-    localStorage.setItem(STATS_KEY, JSON.stringify(selesai));
-  } catch (e) {
-    console.warn("Gagal mencatat kunjungan:", e);
-  }
-
-  const ok = await pushGithubStats({ visits, selesai });
-  if (!ok && !getGithubToken()) setSyncInfo("Membaca dari GitHub (perangkat ini tidak mengirim update)");
 }
 
 async function catatPerjadinSelesai(kota) {
-  let visits = bacaVisitsLokal();
-  let selesai = bacaSelesaiLokal();
-
-  const remote = await fetchGithubStats();
-  if (remote) {
-    visits = mergeVisits([...(remote.visits || []), ...visits]);
-    selesai = mergeSelesai([...(remote.selesai || []), ...selesai]);
+  setSyncInfo("Menyinkronkan...");
+  const data = await postStatsSheet("selesai");
+  if (data) {
+    statCacheSimpan(data);
+    tampilkanAngka(data);
+    setSyncInfo("Tersinkron dengan Google Sheet");
+  } else {
+    const cached = statCacheBaca();
+    if (cached) tampilkanAngka(cached);
+    setSyncInfo("Offline / belum terhubung ke Google Sheet (menampilkan data terakhir)");
   }
-
-  selesai.push({ iso: new Date().toISOString(), kota: kota || "Tidak diketahui" });
-
-  try {
-    localStorage.setItem(VISITS_KEY, JSON.stringify(visits));
-    localStorage.setItem(STATS_KEY, JSON.stringify(selesai));
-  } catch (e) {
-    console.warn("Gagal mencatat statistik perjadin:", e);
-  }
-
-  await pushGithubStats({ visits, selesai });
-  tampilkanStatistik();
 }
 
 async function tampilkanStatistik() {
-  let visits = bacaVisitsLokal();
-  let selesai = bacaSelesaiLokal();
-
-  const remote = await fetchGithubStats();
-  if (remote) {
-    visits = mergeVisits([...(remote.visits || []), ...visits]);
-    selesai = mergeSelesai([...(remote.selesai || []), ...selesai]);
-  } else if (!getGithubToken()) {
-    setSyncInfo("Belum ada data di GitHub / offline (menampilkan data lokal)");
+  const data = await fetchStatsSheet();
+  if (data) {
+    statCacheSimpan(data);
+    tampilkanAngka(data);
+    setSyncInfo("Tersinkron dengan Google Sheet");
+  } else {
+    const cached = statCacheBaca();
+    if (cached) tampilkanAngka(cached);
+    setSyncInfo("Offline / belum terhubung ke Google Sheet (menampilkan data terakhir)");
   }
-
-  document.getElementById("statKunjunganTotal").textContent = visits.length;
-  document.getElementById("statKunjunganHariIni").textContent = visits.filter(isHariIni).length;
-  document.getElementById("statSelesaiTotal").textContent = selesai.length;
-  document.getElementById("statSelesaiHariIni").textContent = selesai.filter(s => isHariIni(s.iso)).length;
 }
 
 /* ============ PERSISTENSI SESI AKTIF ============ */
@@ -646,10 +553,7 @@ function buatPDF() {
 /* ============ INIT ============ */
 muatSessionsDariStorage();
 renderSessions();
-(async () => {
-  await catatKunjungan();
-  await tampilkanStatistik();
-})();
+catatKunjungan(); // otomatis menampilkan angka terbaru setelah sinkron
 </script>
 </body>
 </html>
