@@ -32,8 +32,10 @@ async function initKalenderPage() {
     klInitMonthYearDropdowns();
     klBindEvents();
 
+    klShowLoading(true);
     await klLoadCalendarData();
     klRenderCalendar();
+    klShowLoading(false);
 
     // hentikan auto-refresh sebelumnya (kalau user pindah-pindah halaman) sebelum bikin baru
     if (klAutoRefreshTimer) clearInterval(klAutoRefreshTimer);
@@ -48,6 +50,12 @@ async function initKalenderPage() {
         klRenderCalendar();
         if (klSelectedKey) klRenderDetailForKey(klSelectedKey);
     }, 60000);
+}
+
+function klShowLoading(show) {
+    const overlay = document.getElementById('kl-loadingOverlay');
+    if (!overlay) return;
+    overlay.classList.toggle('hidden', !show);
 }
 
 function klBindEvents() {
