@@ -11,9 +11,12 @@ let stChartInstance = null;
 
 async function initStatistikPage() {
     const btnRefresh = document.getElementById('st-btnRefresh');
-    if (btnRefresh) btnRefresh.onclick = stLoadData;
+    if (btnRefresh) btnRefresh.onclick = () => {
+        stLoadData();
+        stLoadPegawaiData();
+    };
 
-    await stLoadData();
+    await Promise.all([stLoadData(), stLoadPegawaiData()]);
 }
 
 async function stLoadData() {
@@ -101,3 +104,67 @@ function stRenderChart(labels, data) {
 }
 
 window.initStatistikPage = initStatistikPage;
+
+// ============================================
+// TABEL PROGRES PERJALANAN DINAS PER PEGAWAI
+// ============================================
+
+async function stLoadPegawaiData() {
+    const loadingEl = document.getElementById('st-pegawaiLoading');
+    const wrapperEl = document.getElementById('st-pegawaiTableWrapper');
+
+    if (!loadingEl || !wrapperEl) return; // halaman sudah berpindah
+
+    loadingEl.classList.remove('hidden');
+    loadingEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>';
+    wrapperEl.classList.add('hidden');
+
+    try {
+        const result = await apiPost({ action: 'getStatistikPegawaiData' });
+
+        if (result.status !== 'success') {
+            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data progres pegawai'}</span>`;
+            return;
+        }
+
+        stRenderPegawaiTable(result.rows || []);
+
+        loadingEl.classList.add('hidden');
+        wrapperEl.classList.remove('hidden');
+    } catch (e) {
+        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data progres pegawai'}</span>`;
+    }
+}
+
+function stBuildProgressCell(selesai, total) {
+    if (!total) {
+        return `<div class="flex justify-center text-slate-300 text-xs">-</div>`;
+    }
+    const persen = Math.round((selesai / total) * 100);
+    const warna = selesai === total ? 'bg-green-500' : 'bg-amber-400';
+    return `
+        <div class="flex flex-col items-center gap-1 w-24 mx-auto">
+            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full ${warna} rounded-full" style="width:${persen}%"></div>
+            </div>
+            <span class="text-[11px] text-slate-500">${selesai}/${total}</span>
+        </div>`;
+}
+
+function stRenderPegawaiTable(rows) {
+    const tbody = document.getElementById('st-pegawaiTableBody');
+    if (!tbody) return;
+
+    if (!rows || rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="14" class="text-center text-slate-400 py-6">Tidak ada data</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+        <tr class="border-t border-slate-100 hover:bg-slate-50">
+            <td class="p-2.5 font-medium text-slate-700 sticky left-0 bg-white whitespace-nowrap">${r.nama}</td>
+            ${r.bulan.map(b => `<td class="p-2.5">${stBuildProgressCell(b.selesai, b.total)}</td>`).join('')}
+            <td class="p-2.5 text-center font-semibold text-sky-700">${r.total}</td>
+        </tr>
+    `).join('');
+}
