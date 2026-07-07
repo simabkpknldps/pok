@@ -5,6 +5,8 @@
                 <h3 class="text-lg font-semibold text-slate-700">Progres Perjalanan Dinas per Pegawai</h3>
                 <p class="text-sm text-slate-500">Jumlah kegiatan (MAK 524111 / 524113) per bulan &amp; status penyelesaiannya. Diurutkan dari yang terbanyak.</p>
             </div>
+            <input id="st-searchNama" type="text" placeholder="Cari nama pegawai..."
+                class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-sky-500">
         </div>
 
         <div id="st-pegawaiLoading" class="flex justify-center items-center h-40">
@@ -12,11 +14,11 @@
         </div>
 
         <div id="st-pegawaiTableWrapper" class="hidden w-full overflow-x-auto border border-slate-200 rounded-xl">
-            <div class="min-w-[1100px] max-h-[60vh] overflow-y-auto">
+            <div class="min-w-[1200px] max-h-[60vh] overflow-y-auto">
                 <table class="w-full border-collapse text-[13px] table-fixed">
                     <thead class="bg-slate-100 sticky top-0 z-10">
                         <tr>
-                            <th class="p-2.5 text-left font-semibold sticky left-0 bg-slate-100 z-20 w-20">Nama</th>
+                            <th class="p-2.5 text-left font-semibold sticky left-0 bg-slate-100 z-20 w-40">Nama</th>
                             <th class="p-2.5 text-center font-semibold">Jan</th>
                             <th class="p-2.5 text-center font-semibold">Feb</th>
                             <th class="p-2.5 text-center font-semibold">Mar</th>
@@ -44,10 +46,6 @@
                 <h3 class="text-lg font-semibold text-slate-700">Statistik Kegiatan Perjalanan Dinas</h3>
                 <p class="text-sm text-slate-500">Berdasarkan tanggal pelaksanaan (tgl mulai), tahun 2026</p>
             </div>
-            <button id="st-btnRefresh"
-                class="flex items-center gap-2 px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-sm font-medium rounded-lg transition">
-                <i class="fa-solid fa-arrow-rotate-right"></i> Refresh
-            </button>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
