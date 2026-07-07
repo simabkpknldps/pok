@@ -143,7 +143,7 @@ function stBuildProgressCell(selesai, total) {
     const persen = Math.round((selesai / total) * 100);
     const warna = selesai === total ? 'bg-green-500' : 'bg-amber-400';
     return `
-        <div class="flex flex-col items-center gap-1 w-24 mx-auto">
+        <div class="flex flex-col items-center gap-1 w-full mx-auto">
             <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                 <div class="h-full ${warna} rounded-full" style="width:${persen}%"></div>
             </div>
@@ -162,9 +162,9 @@ function stRenderPegawaiTable(rows) {
 
     tbody.innerHTML = rows.map(r => `
         <tr class="border-t border-slate-100 hover:bg-slate-50">
-            <td class="p-2.5 font-medium text-slate-700 sticky left-0 bg-white whitespace-nowrap">${r.nama}</td>
+            <td class="p-2.5 font-medium text-slate-700 sticky left-0 bg-white break-words align-top">${r.nama}</td>
             ${r.bulan.map(b => `<td class="p-2.5">${stBuildProgressCell(b.selesai, b.total)}</td>`).join('')}
-            <td class="p-2.5 text-center font-semibold text-sky-700">${r.total}</td>
+            <td class="p-2.5 text-center font-semibold text-sky-700 align-top">${r.total}</td>
         </tr>
     `).join('');
 }
