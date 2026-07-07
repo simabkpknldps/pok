@@ -346,6 +346,9 @@ function renderDetilTable(data) {
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${sClass}">${i.status || '-'}</span>
                 </div>
                 <div class="w-[8%] flex justify-center gap-2">
+                    <button onclick="showDetilKegiatanInfo('${i.idKegiatan}')" class="text-slate-600 hover:text-slate-800" title="Detil">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
                     ${i.status === 'Rekam Data' ? `
                         <button onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600 hover:text-sky-800 font-bold" title="Update Pelaksana">
                             <i class="fa-solid fa-users"></i>
@@ -355,6 +358,60 @@ function renderDetilTable(data) {
             </div>
         `;
     }).join('');
+}
+
+function pokOpenOverlay(innerHtml, widthClass) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4';
+
+    const popup = document.createElement('div');
+    popup.className = `bg-white rounded-2xl shadow-xl w-full ${widthClass || 'max-w-md'} p-6 flex flex-col gap-3 max-h-[90vh] overflow-y-auto`;
+    popup.innerHTML = innerHtml;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+    return { overlay, popup };
+}
+
+function showDetilKegiatanInfo(idKegiatan) {
+    const data = window.detilKegiatanData.find(d => d.idKegiatan === idKegiatan);
+    if (!data) {
+        alert('Data detil tidak ditemukan.');
+        return;
+    }
+
+    const formatDate = (v) => {
+        if (!v) return '-';
+        const d = new Date(v);
+        if (isNaN(d.getTime())) return String(v);
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
+    const baris = (label, value) => `
+        <div class="flex justify-between items-start gap-4 py-2 border-b border-slate-100 text-sm">
+            <span class="text-slate-500 whitespace-nowrap">${label}</span>
+            <span class="font-medium text-slate-800 text-right break-words">${(value === undefined || value === null || value === '') ? '-' : value}</span>
+        </div>`;
+
+    const { overlay, popup } = pokOpenOverlay(`
+        <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Detil Kegiatan #${data.idKegiatan ?? ''}</h3>
+        <div class="flex flex-col">
+            ${baris('ID Kegiatan', data.idKegiatan)}
+            ${baris('MAK', data.mak)}
+            ${baris('Uraian / No ST', data.uraian)}
+            ${baris('Pelaksana Tugas', data.pelaksana_kegiatan)}
+            ${baris('Tujuan', data.tujuan)}
+            ${baris('Tgl ST', formatDate(data.tglSt))}
+            ${baris('Jumlah', 'Rp ' + Number(data.estimasi || 0).toLocaleString('id-ID'))}
+            ${baris('User', data.userLogin)}
+            ${baris('Status', data.status)}
+        </div>
+        <div class="flex justify-end mt-2">
+            <button id="pok-detilInfoClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button>
+        </div>
+    `, 'max-w-md');
+
+    popup.querySelector('#pok-detilInfoClose').onclick = () => overlay.remove();
 }
 
 function filterDetil() {
@@ -558,6 +615,7 @@ window.closeRekamModal = closeRekamModal;
 window.cekKecukupanDana = cekKecukupanDana;
 window.simpanData = simpanData;
 window.openDetilModal = openDetilModal;
+window.showDetilKegiatanInfo = showDetilKegiatanInfo;
 window.filterDetil = filterDetil;
 window.openPelaksanaModal = openPelaksanaModal;
 window.closePelaksanaModal = closePelaksanaModal;
