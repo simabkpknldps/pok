@@ -64,15 +64,19 @@ function stRenderChart(labels, data) {
     }
 
     stChartInstance = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: labels,
             datasets: [{
                 label: 'Jumlah Kegiatan',
                 data: data,
-                backgroundColor: '#0284c7',
-                borderRadius: 6,
-                maxBarThickness: 40
+                borderColor: '#0284c7',
+                backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#0284c7',
+                pointRadius: 4,
+                pointHoverRadius: 6
             }]
         },
         options: {
