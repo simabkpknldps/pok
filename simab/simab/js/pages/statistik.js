@@ -10,11 +10,11 @@
 let stChartInstance = null;
 
 async function initStatistikPage() {
-    const btnRefresh = document.getElementById('st-btnRefresh');
-    if (btnRefresh) btnRefresh.onclick = () => {
-        stLoadData();
-        stLoadPegawaiData();
-    };
+    const searchInput = document.getElementById('st-searchNama');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.oninput = () => stApplyPegawaiFilter();
+    }
 
     await Promise.all([stLoadData(), stLoadPegawaiData()]);
 }
@@ -109,6 +109,8 @@ window.initStatistikPage = initStatistikPage;
 // TABEL PROGRES PERJALANAN DINAS PER PEGAWAI
 // ============================================
 
+let stPegawaiRows = [];
+
 async function stLoadPegawaiData() {
     const loadingEl = document.getElementById('st-pegawaiLoading');
     const wrapperEl = document.getElementById('st-pegawaiTableWrapper');
@@ -127,13 +129,25 @@ async function stLoadPegawaiData() {
             return;
         }
 
-        stRenderPegawaiTable(result.rows || []);
+        stPegawaiRows = result.rows || [];
+        stApplyPegawaiFilter();
 
         loadingEl.classList.add('hidden');
         wrapperEl.classList.remove('hidden');
     } catch (e) {
         loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data progres pegawai'}</span>`;
     }
+}
+
+function stApplyPegawaiFilter() {
+    const searchInput = document.getElementById('st-searchNama');
+    const keyword = (searchInput?.value || '').trim().toLowerCase();
+
+    const filtered = keyword
+        ? stPegawaiRows.filter(r => String(r.nama || '').toLowerCase().includes(keyword))
+        : stPegawaiRows;
+
+    stRenderPegawaiTable(filtered);
 }
 
 function stBuildProgressCell(selesai, total) {
