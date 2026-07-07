@@ -144,7 +144,7 @@ function stBuildProgressCell(selesai, total) {
     const warna = selesai === total ? 'bg-green-500' : 'bg-amber-400';
     return `
         <div class="flex flex-col items-center gap-1 w-full mx-auto">
-            <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+            <div class="w-full h-2.5 bg-slate-300 rounded-full overflow-hidden">
                 <div class="h-full ${warna} rounded-full" style="width:${persen}%"></div>
             </div>
             <span class="text-[11px] text-slate-500">${selesai}/${total}</span>
