@@ -29,7 +29,7 @@ async function initStatistikPage() {
         tbody.dataset.dblclickBound = '1';
     }
 
-    await Promise.all([stLoadData(), stLoadPegawaiData()]);
+    await Promise.all([stLoadData(), stLoadPegawaiData(), stLoadBudgetData()]);
 }
 
 async function stLoadData() {
@@ -317,4 +317,108 @@ function stShowDetilKegiatanPopup(pegawaiIdx, bulanIdx, itemIdx) {
     `, 'max-w-md');
 
     popup.querySelector('#st-detilClose').onclick = () => overlay.remove();
+}
+
+// ============================================
+// CARD REALISASI ANGGARAN BULANAN (sheet: bulanan_2026)
+// ============================================
+
+async function stLoadBudgetData() {
+    const loadingEl = document.getElementById('st-budgetLoading');
+    const wrapperEl = document.getElementById('st-budgetTableWrapper');
+    const summaryEl = document.getElementById('st-budgetSummary');
+
+    if (!loadingEl || !wrapperEl) return; // halaman sudah berpindah
+
+    loadingEl.classList.remove('hidden');
+    loadingEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>';
+    wrapperEl.classList.add('hidden');
+    if (summaryEl) summaryEl.classList.add('hidden');
+
+    try {
+        const result = await apiPost({ action: 'getStatistikBulananData' });
+
+        if (result.status !== 'success' || !result.rows || result.rows.length === 0) {
+            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data realisasi anggaran'}</span>`;
+            return;
+        }
+
+        stRenderBudgetSummary(result.rows);
+        stRenderBudgetTable(result.rows);
+
+        loadingEl.classList.add('hidden');
+        wrapperEl.classList.remove('hidden');
+        if (summaryEl) summaryEl.classList.remove('hidden');
+    } catch (e) {
+        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data realisasi anggaran'}</span>`;
+    }
+}
+
+function stRupiah(v) {
+    return Number(v || 0).toLocaleString('id-ID');
+}
+
+function stRenderBudgetSummary(rows) {
+    const totalRow = rows[rows.length - 1]; // baris "Total" selalu paling bawah
+
+    document.getElementById('st-bTotalPagu').textContent = stRupiah(totalRow.pagu);
+    document.getElementById('st-bTotalBlokir').textContent = stRupiah(totalRow.blokir);
+    document.getElementById('st-bTotalRealisasi').textContent = stRupiah(totalRow.total.nilai);
+
+    const persen = totalRow.total.persen || 0;
+    document.getElementById('st-bPersenRealisasi').textContent = persen.toFixed(2) + '%';
+    document.getElementById('st-bPersenBar').style.width = Math.min(persen, 100) + '%';
+}
+
+function stBudgetCell(cell, highlight) {
+    const nilai = cell?.nilai || 0;
+    const persen = cell?.persen || 0;
+    return `
+        <td class="p-2 text-right whitespace-nowrap ${highlight ? 'bg-sky-50' : ''}">
+            <div class="font-medium text-slate-700">${stRupiah(nilai)}</div>
+            <div class="text-[10.5px] text-slate-400">${persen.toFixed(2)}%</div>
+        </td>`;
+}
+
+function stRenderBudgetRow(r) {
+    const isTotal = String(r.uraian || '').toLowerCase() === 'total';
+    const rowClass = isTotal
+        ? 'bg-slate-50 font-semibold border-t-2 border-slate-300'
+        : 'border-t border-slate-100 hover:bg-slate-50';
+    const stickyBg = isTotal ? 'bg-slate-50' : 'bg-white';
+
+    const label = r.jenis ? `${r.jenis} - ${r.uraian}` : r.uraian;
+
+    return `
+        <tr class="${rowClass}">
+            <td class="p-2.5 sticky left-0 ${stickyBg} font-medium text-slate-700 whitespace-nowrap">${label}</td>
+            <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.pagu)}</td>
+            <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.blokir)}</td>
+            ${stBudgetCell(r.bulan.jan)}
+            ${stBudgetCell(r.bulan.feb)}
+            ${stBudgetCell(r.bulan.mar)}
+            ${stBudgetCell(r.tw.twI, true)}
+            ${stBudgetCell(r.bulan.apr)}
+            ${stBudgetCell(r.bulan.mei)}
+            ${stBudgetCell(r.bulan.jun)}
+            ${stBudgetCell(r.tw.twII, true)}
+            ${stBudgetCell(r.bulan.jul)}
+            ${stBudgetCell(r.bulan.agu)}
+            ${stBudgetCell(r.bulan.sep)}
+            ${stBudgetCell(r.tw.twIII, true)}
+            ${stBudgetCell(r.bulan.okt)}
+            ${stBudgetCell(r.bulan.nov)}
+            ${stBudgetCell(r.bulan.des)}
+            ${stBudgetCell(r.tw.twIV, true)}
+            <td class="p-2.5 text-center whitespace-nowrap bg-sky-100">
+                <div class="font-semibold text-sky-800">${stRupiah(r.total.nilai)}</div>
+                <div class="text-[10.5px] text-sky-600">${(r.total.persen || 0).toFixed(2)}%</div>
+            </td>
+        </tr>`;
+}
+
+function stRenderBudgetTable(rows) {
+    const tbody = document.getElementById('st-budgetTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = rows.map(r => stRenderBudgetRow(r)).join('');
 }
