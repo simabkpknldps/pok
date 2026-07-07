@@ -70,4 +70,90 @@
             <canvas id="st-chartKegiatan"></canvas>
         </div>
     </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-700">Realisasi Anggaran Bulanan</h3>
+                <p class="text-sm text-slate-500">Belanja Barang (52) &amp; Belanja Modal (53) — Tahun 2026</p>
+            </div>
+        </div>
+
+        <div id="st-budgetSummary" class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 hidden">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Pagu</p>
+                <p id="st-bTotalPagu" class="text-xl font-bold text-slate-800 mt-1">0</p>
+            </div>
+            <div class="bg-red-50 border border-red-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-red-500 uppercase tracking-wide">Total Blokir</p>
+                <p id="st-bTotalBlokir" class="text-xl font-bold text-red-700 mt-1">0</p>
+            </div>
+            <div class="bg-sky-50 border border-sky-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-sky-600 uppercase tracking-wide">Total Realisasi</p>
+                <p id="st-bTotalRealisasi" class="text-xl font-bold text-sky-800 mt-1">0</p>
+            </div>
+            <div class="bg-green-50 border border-green-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-green-600 uppercase tracking-wide">% Realisasi</p>
+                <p id="st-bPersenRealisasi" class="text-xl font-bold text-green-800 mt-1">0%</p>
+                <div class="w-full h-2 bg-green-100 rounded-full overflow-hidden mt-2">
+                    <div id="st-bPersenBar" class="h-full bg-green-500 rounded-full" style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="st-budgetLoading" class="flex justify-center items-center h-40">
+            <i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>
+        </div>
+
+        <div id="st-budgetTableWrapper" class="hidden w-full overflow-x-auto border border-slate-200 rounded-xl">
+            <div class="min-w-[2000px]">
+                <table class="w-full border-collapse text-[12.5px]">
+                    <thead class="bg-slate-100">
+                        <tr>
+                            <th rowspan="2" class="p-2.5 text-left font-semibold sticky left-0 bg-slate-100 z-20 align-bottom whitespace-nowrap">Uraian</th>
+                            <th rowspan="2" class="p-2.5 text-right font-semibold align-bottom whitespace-nowrap">Pagu</th>
+                            <th rowspan="2" class="p-2.5 text-right font-semibold align-bottom whitespace-nowrap">Blokir</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Jan</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Feb</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Mar</th>
+                            <th class="p-2 text-center font-semibold bg-sky-100 whitespace-nowrap">TW I</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Apr</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Mei</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Jun</th>
+                            <th class="p-2 text-center font-semibold bg-sky-100 whitespace-nowrap">TW II</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Jul</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Agu</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Sep</th>
+                            <th class="p-2 text-center font-semibold bg-sky-100 whitespace-nowrap">TW III</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Okt</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Nov</th>
+                            <th class="p-2 text-center font-semibold whitespace-nowrap">Des</th>
+                            <th class="p-2 text-center font-semibold bg-sky-100 whitespace-nowrap">TW IV</th>
+                            <th rowspan="2" class="p-2.5 text-center font-semibold bg-sky-200 align-bottom whitespace-nowrap">Total</th>
+                        </tr>
+                        <tr class="text-[10px] text-slate-400 font-normal">
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center bg-sky-100">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center bg-sky-100">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center bg-sky-100">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center">Nilai / %</td>
+                            <td class="p-1 text-center bg-sky-100">Nilai / %</td>
+                        </tr>
+                    </thead>
+                    <tbody id="st-budgetTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">* Persentase dihitung terhadap Pagu setelah dikurangi Blokir.</p>
+    </div>
 </div>
