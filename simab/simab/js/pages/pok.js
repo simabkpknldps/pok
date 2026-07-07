@@ -405,6 +405,7 @@ function showDetilKegiatanInfo(idKegiatan) {
             ${baris('Jumlah', 'Rp ' + Number(data.estimasi || 0).toLocaleString('id-ID'))}
             ${baris('User', data.userLogin)}
             ${baris('Status', data.status)}
+            ${baris('Nomor SPM', data.nomorSPM)}
         </div>
         <div class="flex justify-end mt-2">
             <button id="pok-detilInfoClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button>
