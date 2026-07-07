@@ -16,6 +16,19 @@ async function initStatistikPage() {
         searchInput.oninput = () => stApplyPegawaiFilter();
     }
 
+    const tbody = document.getElementById('st-pegawaiTableBody');
+    if (tbody && !tbody.dataset.dblclickBound) {
+        tbody.addEventListener('dblclick', (e) => {
+            const td = e.target.closest('td[data-bulan-idx]');
+            if (!td) return;
+            const tr = td.closest('tr');
+            const pegawaiIdx = Number(tr.dataset.pegawaiIdx);
+            const bulanIdx = Number(td.dataset.bulanIdx);
+            stShowBulanListPopup(pegawaiIdx, bulanIdx);
+        });
+        tbody.dataset.dblclickBound = '1';
+    }
+
     await Promise.all([stLoadData(), stLoadPegawaiData()]);
 }
 
@@ -129,7 +142,7 @@ async function stLoadPegawaiData() {
             return;
         }
 
-        stPegawaiRows = result.rows || [];
+        stPegawaiRows = (result.rows || []).map((r, i) => ({ ...r, _idx: i }));
         stApplyPegawaiFilter();
 
         loadingEl.classList.add('hidden');
@@ -175,10 +188,133 @@ function stRenderPegawaiTable(rows) {
     }
 
     tbody.innerHTML = rows.map(r => `
-        <tr class="border-t border-slate-100 hover:bg-slate-50">
+        <tr class="border-t border-slate-100 hover:bg-slate-50" data-pegawai-idx="${r._idx}">
             <td class="p-2.5 font-medium text-slate-700 sticky left-0 bg-white break-words align-top">${r.nama}</td>
-            ${r.bulan.map(b => `<td class="p-2.5">${stBuildProgressCell(b.selesai, b.total)}</td>`).join('')}
+            ${r.bulan.map((b, bIdx) => `<td class="p-2.5 ${b.total ? 'cursor-pointer' : ''}" data-bulan-idx="${bIdx}" title="${b.total ? 'Klik dua kali untuk detail' : ''}">${stBuildProgressCell(b.selesai, b.total)}</td>`).join('')}
             <td class="p-2.5 text-center font-semibold text-sky-700 align-top">${r.total}</td>
         </tr>
     `).join('');
+}
+
+// ============================================
+// POPUP DAFTAR KEGIATAN PER BULAN (level 1)
+// ============================================
+
+const ST_BULAN_LABEL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+function stFormatDate(v) {
+    if (!v) return '-';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return String(v);
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function stStatusBadge(status) {
+    const map = {
+        'Selesai': 'bg-green-100 text-green-700',
+        'Terbayar': 'bg-sky-100 text-sky-700',
+        'LPT': 'bg-amber-100 text-amber-700'
+    };
+    const cls = map[status] || 'bg-slate-100 text-slate-600';
+    return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${cls}">${status || '-'}</span>`;
+}
+
+function stShowBulanListPopup(pegawaiIdx, bulanIdx) {
+    const pegawai = stPegawaiRows[pegawaiIdx];
+    if (!pegawai) return;
+
+    const bulanData = pegawai.bulan[bulanIdx];
+    if (!bulanData || !bulanData.rows || bulanData.rows.length === 0) return;
+
+    const itemsHtml = bulanData.rows.map((r, idx) => `
+        <tr class="border-t border-slate-100">
+            <td class="p-2 text-slate-700">${r.uraian || '-'}</td>
+            <td class="p-2 text-slate-700 whitespace-nowrap">${stFormatDate(r.tglMulai)}</td>
+            <td class="p-2 text-slate-700 text-right whitespace-nowrap">Rp ${Number(r.jumlah || 0).toLocaleString('id-ID')}</td>
+            <td class="p-2 text-center">${stStatusBadge(r.status)}</td>
+            <td class="p-2 text-center">
+                <button class="st-btn-aksi text-sky-600 hover:text-sky-800" data-pegawai-idx="${pegawaiIdx}" data-bulan-idx="${bulanIdx}" data-item-idx="${idx}" title="Detil">
+                    <i class="fa-solid fa-circle-info"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    const { overlay, popup } = window.commonOpenOverlay(`
+        <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Daftar Kegiatan</h3>
+        <p class="text-center text-sm text-slate-500 mb-2">${pegawai.nama} — ${ST_BULAN_LABEL[bulanIdx]}</p>
+        <div class="overflow-x-auto max-h-[55vh] overflow-y-auto border border-slate-200 rounded-xl">
+            <table class="w-full border-collapse text-[13px]">
+                <thead class="bg-slate-100 sticky top-0">
+                    <tr>
+                        <th class="p-2 text-left font-semibold">Nomor ST</th>
+                        <th class="p-2 text-left font-semibold">Tgl Mulai</th>
+                        <th class="p-2 text-right font-semibold">Jumlah</th>
+                        <th class="p-2 text-center font-semibold">Status</th>
+                        <th class="p-2 text-center font-semibold">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>${itemsHtml}</tbody>
+            </table>
+        </div>
+        <div class="flex justify-end mt-3">
+            <button id="st-bulanListClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button>
+        </div>
+    `, 'max-w-2xl');
+
+    popup.querySelector('#st-bulanListClose').onclick = () => overlay.remove();
+
+    popup.querySelectorAll('.st-btn-aksi').forEach(btn => {
+        btn.onclick = () => {
+            const pIdx = Number(btn.dataset.pegawaiIdx);
+            const bIdx = Number(btn.dataset.bulanIdx);
+            const iIdx = Number(btn.dataset.itemIdx);
+            stShowDetilKegiatanPopup(pIdx, bIdx, iIdx);
+        };
+    });
+}
+
+// ============================================
+// POPUP DETIL LENGKAP KEGIATAN (level 2)
+// ============================================
+
+function stShowDetilKegiatanPopup(pegawaiIdx, bulanIdx, itemIdx) {
+    const pegawai = stPegawaiRows[pegawaiIdx];
+    const data = pegawai?.bulan?.[bulanIdx]?.rows?.[itemIdx];
+    if (!data) {
+        alert('Data detil tidak ditemukan.');
+        return;
+    }
+
+    const baris = (label, value) => `
+        <div class="flex justify-between items-start gap-4 py-2 border-b border-slate-100 text-sm">
+            <span class="text-slate-500 whitespace-nowrap">${label}</span>
+            <span class="font-medium text-slate-800 text-right break-words">${(value === undefined || value === null || value === '') ? '-' : value}</span>
+        </div>`;
+
+    const { overlay, popup } = window.commonOpenOverlay(`
+        <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Detil Kegiatan #${data.idKegiatan ?? ''}</h3>
+        <div class="flex flex-col">
+            ${baris('ID Kegiatan', data.idKegiatan)}
+            ${baris('MAK', data.mak)}
+            ${baris('Uraian / No ST', data.uraian)}
+            ${baris('Pelaksana Tugas', data.pelaksana)}
+            ${baris('Tujuan', data.tujuan)}
+            ${baris('Tgl ST', stFormatDate(data.tglSt))}
+            ${baris('Tgl Mulai', stFormatDate(data.tglMulai))}
+            ${baris('Tgl Selesai', stFormatDate(data.tglSelesai))}
+            ${baris('Tgl LPT', stFormatDate(data.tglLPT))}
+            ${baris('Tgl Bayar', stFormatDate(data.tglBayar))}
+            ${baris('Jumlah', 'Rp ' + Number(data.jumlah || 0).toLocaleString('id-ID'))}
+            ${baris('User', data.userLogin)}
+            ${baris('Status', data.status)}
+            ${baris('Tgl SP2D', stFormatDate(data.tglSP2D))}
+            ${baris('Nomor SPM', data.nomorSPM)}
+        </div>
+        <div class="flex justify-end mt-2">
+            <button id="st-detilClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button>
+        </div>
+    `, 'max-w-md');
+
+    popup.querySelector('#st-detilClose').onclick = () => overlay.remove();
 }
