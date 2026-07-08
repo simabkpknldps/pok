@@ -156,4 +156,62 @@
         </div>
         <p class="text-xs text-slate-400 mt-3">* Persentase dihitung terhadap Pagu setelah dikurangi Blokir.</p>
     </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-700">Monitoring Maksimum Pencairan (MP)</h3>
+                <p class="text-sm text-slate-500">Realisasi bruto &amp; SP2D per tahap MP — Tahun 2026</p>
+            </div>
+        </div>
+
+        <div id="st-mpSummary" class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 hidden">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Pagu MP</p>
+                <p id="st-mpTotalPagu" class="text-xl font-bold text-slate-800 mt-1">0</p>
+            </div>
+            <div class="bg-sky-50 border border-sky-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-sky-600 uppercase tracking-wide">Realisasi SP2D</p>
+                <p id="st-mpTotalSP2D" class="text-xl font-bold text-sky-800 mt-1">0</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-amber-600 uppercase tracking-wide">Sisa SP2D</p>
+                <p id="st-mpTotalSisaSP2D" class="text-xl font-bold text-amber-800 mt-1">0</p>
+            </div>
+            <div class="bg-green-50 border border-green-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-green-600 uppercase tracking-wide">% SP2D</p>
+                <p id="st-mpPersenSP2D" class="text-xl font-bold text-green-800 mt-1">0%</p>
+                <div class="w-full h-2 bg-green-100 rounded-full overflow-hidden mt-2">
+                    <div id="st-mpPersenBar" class="h-full bg-green-500 rounded-full" style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="st-mpLoading" class="flex justify-center items-center h-40">
+            <i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>
+        </div>
+
+        <div id="st-mpTableWrapper" class="hidden w-full overflow-x-auto border border-slate-200 rounded-xl">
+            <div class="min-w-[1300px]">
+                <table class="w-full border-collapse text-[13px]">
+                    <thead class="bg-slate-100">
+                        <tr>
+                            <th class="p-2.5 text-center font-semibold whitespace-nowrap w-12">No</th>
+                            <th class="p-2.5 text-left font-semibold whitespace-nowrap">Uraian</th>
+                            <th class="p-2.5 text-left font-semibold whitespace-nowrap">Periode</th>
+                            <th class="p-2.5 text-center font-semibold whitespace-nowrap">Tgl MP</th>
+                            <th class="p-2.5 text-right font-semibold whitespace-nowrap">Pagu MP</th>
+                            <th class="p-2.5 text-right font-semibold whitespace-nowrap">Realisasi Bruto</th>
+                            <th class="p-2.5 text-right font-semibold whitespace-nowrap">Realisasi SP2D</th>
+                            <th class="p-2.5 text-right font-semibold whitespace-nowrap">Sisa Bruto</th>
+                            <th class="p-2.5 text-right font-semibold whitespace-nowrap">Sisa SP2D</th>
+                            <th class="p-2.5 text-center font-semibold whitespace-nowrap w-28">% Bruto</th>
+                            <th class="p-2.5 text-center font-semibold whitespace-nowrap w-28">% SP2D</th>
+                        </tr>
+                    </thead>
+                    <tbody id="st-mpTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
