@@ -70,7 +70,7 @@ function renderPok() {
 
     const uniqueMap = new Map();
     window.rawPokData.forEach(item => {
-        uniqueMap.set(String(item.kode), item);
+        uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
     });
     const uniqueData = Array.from(uniqueMap.values());
 
@@ -258,7 +258,7 @@ function toggleExpandAll() {
         // Expand all - tambah semua parent codes (12 digit) & buka semua grup Seksi
         const uniqueMap = new Map();
         window.rawPokData.forEach(item => {
-            uniqueMap.set(String(item.kode), item);
+            uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
         });
         const uniqueData = Array.from(uniqueMap.values());
         
