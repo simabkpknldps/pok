@@ -2,78 +2,6 @@
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div>
-                <h3 class="text-lg font-semibold text-slate-700">Progres Perjalanan Dinas per Pegawai</h3>
-                <p class="text-sm text-slate-500">Statistik perjalanan dinas per per pegawai dan per bulan.</p>
-            </div>
-            <input id="st-searchNama" type="text" placeholder="Cari nama pegawai..."
-                class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-sky-500">
-        </div>
-
-        <div id="st-pegawaiLoading" class="flex justify-center items-center h-40">
-            <i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>
-        </div>
-
-        <div id="st-pegawaiTableWrapper" class="hidden w-full overflow-x-auto border border-slate-200 rounded-xl">
-            <div class="min-w-[1200px] max-h-[60vh] overflow-y-auto">
-                <table class="w-full border-collapse text-[13px] table-fixed">
-                    <thead class="bg-slate-100 sticky top-0 z-10">
-                        <tr>
-                            <th class="p-2.5 text-left font-semibold sticky left-0 bg-slate-100 z-20 w-40">Nama</th>
-                            <th class="p-2.5 text-center font-semibold">Jan</th>
-                            <th class="p-2.5 text-center font-semibold">Feb</th>
-                            <th class="p-2.5 text-center font-semibold">Mar</th>
-                            <th class="p-2.5 text-center font-semibold">Apr</th>
-                            <th class="p-2.5 text-center font-semibold">Mei</th>
-                            <th class="p-2.5 text-center font-semibold">Jun</th>
-                            <th class="p-2.5 text-center font-semibold">Jul</th>
-                            <th class="p-2.5 text-center font-semibold">Agu</th>
-                            <th class="p-2.5 text-center font-semibold">Sep</th>
-                            <th class="p-2.5 text-center font-semibold">Okt</th>
-                            <th class="p-2.5 text-center font-semibold">Nov</th>
-                            <th class="p-2.5 text-center font-semibold">Des</th>
-                            <th class="p-2.5 text-center font-semibold w-16">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody id="st-pegawaiTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <div>
-                <h3 class="text-lg font-semibold text-slate-700">Statistik Kegiatan Perjalanan Dinas</h3>
-                <p class="text-sm text-slate-500">Data berdasarkan tanggal mulai pelaksaan</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div class="bg-sky-50 border border-sky-100 rounded-xl p-4">
-                <p class="text-xs font-medium text-sky-600 uppercase tracking-wide">Total Kegiatan</p>
-                <p id="st-totalKegiatan" class="text-2xl font-bold text-sky-800 mt-1">0</p>
-            </div>
-            <div class="bg-green-50 border border-green-100 rounded-xl p-4">
-                <p class="text-xs font-medium text-green-600 uppercase tracking-wide">Bulan Tertinggi</p>
-                <p id="st-bulanTertinggi" class="text-2xl font-bold text-green-800 mt-1">-</p>
-            </div>
-            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4">
-                <p class="text-xs font-medium text-amber-600 uppercase tracking-wide">Rata-rata / Bulan</p>
-                <p id="st-rataRata" class="text-2xl font-bold text-amber-800 mt-1">0</p>
-            </div>
-        </div>
-
-        <div id="st-loading" class="flex justify-center items-center h-64">
-            <i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>
-        </div>
-        <div id="st-chartWrapper" class="hidden" style="height: 380px;">
-            <canvas id="st-chartKegiatan"></canvas>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <div>
                 <h3 class="text-lg font-semibold text-slate-700">Realisasi Anggaran Bulanan</h3>
                 <p class="text-sm text-slate-500">Belanja Barang (52) &amp; Belanja Modal (53) — Tahun 2026</p>
             </div>
@@ -214,4 +142,76 @@
             </div>
         </div>
     </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-700">Progres Perjalanan Dinas per Pegawai</h3>
+                <p class="text-sm text-slate-500">Statistik perjalanan dinas per per pegawai dan per bulan.</p>
+            </div>
+            <input id="st-searchNama" type="text" placeholder="Cari nama pegawai..."
+                class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+
+        <div id="st-pegawaiLoading" class="flex justify-center items-center h-40">
+            <i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>
+        </div>
+
+        <div id="st-pegawaiTableWrapper" class="hidden w-full overflow-x-auto border border-slate-200 rounded-xl">
+            <div class="min-w-[1200px] max-h-[60vh] overflow-y-auto">
+                <table class="w-full border-collapse text-[13px] table-fixed">
+                    <thead class="bg-slate-100 sticky top-0 z-10">
+                        <tr>
+                            <th class="p-2.5 text-left font-semibold sticky left-0 bg-slate-100 z-20 w-40">Nama</th>
+                            <th class="p-2.5 text-center font-semibold">Jan</th>
+                            <th class="p-2.5 text-center font-semibold">Feb</th>
+                            <th class="p-2.5 text-center font-semibold">Mar</th>
+                            <th class="p-2.5 text-center font-semibold">Apr</th>
+                            <th class="p-2.5 text-center font-semibold">Mei</th>
+                            <th class="p-2.5 text-center font-semibold">Jun</th>
+                            <th class="p-2.5 text-center font-semibold">Jul</th>
+                            <th class="p-2.5 text-center font-semibold">Agu</th>
+                            <th class="p-2.5 text-center font-semibold">Sep</th>
+                            <th class="p-2.5 text-center font-semibold">Okt</th>
+                            <th class="p-2.5 text-center font-semibold">Nov</th>
+                            <th class="p-2.5 text-center font-semibold">Des</th>
+                            <th class="p-2.5 text-center font-semibold w-16">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="st-pegawaiTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-700">Statistik Kegiatan Perjalanan Dinas</h3>
+                <p class="text-sm text-slate-500">Data berdasarkan tanggal mulai pelaksaan</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-sky-50 border border-sky-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-sky-600 uppercase tracking-wide">Total Kegiatan</p>
+                <p id="st-totalKegiatan" class="text-2xl font-bold text-sky-800 mt-1">0</p>
+            </div>
+            <div class="bg-green-50 border border-green-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-green-600 uppercase tracking-wide">Bulan Tertinggi</p>
+                <p id="st-bulanTertinggi" class="text-2xl font-bold text-green-800 mt-1">-</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                <p class="text-xs font-medium text-amber-600 uppercase tracking-wide">Rata-rata / Bulan</p>
+                <p id="st-rataRata" class="text-2xl font-bold text-amber-800 mt-1">0</p>
+            </div>
+        </div>
+
+        <div id="st-loading" class="flex justify-center items-center h-64">
+            <i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>
+        </div>
+        <div id="st-chartWrapper" class="hidden" style="height: 380px;">
+            <canvas id="st-chartKegiatan"></canvas>
+        </div>
+    </div>
+
 </div>
