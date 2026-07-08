@@ -45,6 +45,27 @@ function initializeUserName() {
 const csInputClass = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500';
 const csLabelClass = 'text-sm font-medium text-slate-600';
 
+// Daftar Golongan/Pangkat PNS (format disamakan dengan data di sheet ref_pegawai: "Sebutan / Golongan.sub")
+const CS_DAFTAR_PANGKAT = [
+    'Juru Muda / I.a',
+    'Juru Muda Tk. I / I.b',
+    'Juru / I.c',
+    'Juru Tk. I / I.d',
+    'Pengatur Muda / II.a',
+    'Pengatur Muda Tk. I / II.b',
+    'Pengatur / II.c',
+    'Pengatur Tk. I / II.d',
+    'Penata Muda / III.a',
+    'Penata Muda Tk. I / III.b',
+    'Penata / III.c',
+    'Penata Tk. I / III.d',
+    'Pembina / IV.a',
+    'Pembina Tk. I / IV.b',
+    'Pembina Muda / IV.c',
+    'Pembina Madya / IV.d',
+    'Pembina Utama / IV.e'
+];
+
 function commonOpenOverlay(innerHtml, widthClass) {
     const overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4';
@@ -60,6 +81,17 @@ function commonOpenOverlay(innerHtml, widthClass) {
 
 function openSettings() {
     const nip = sessionStorage.getItem('nip') || '';
+    const nama = sessionStorage.getItem('nama') || '';
+    const jabatan = sessionStorage.getItem('jabatan') || '';
+    const pangkat = sessionStorage.getItem('pangkat') || '';
+    const kepeg = sessionStorage.getItem('kepeg') || '';
+
+    const pangkatOptions = CS_DAFTAR_PANGKAT.map(p =>
+        `<option value="${p}" ${p === pangkat ? 'selected' : ''}>${p}</option>`
+    ).join('');
+    // Kalau pangkat yang tersimpan tidak ada di daftar (data lama/tidak baku), tetap tampilkan sebagai opsi tersendiri
+    const pangkatExtraOption = (pangkat && !CS_DAFTAR_PANGKAT.includes(pangkat))
+        ? `<option value="${pangkat}" selected>${pangkat}</option>` : '';
 
     const { overlay, popup } = commonOpenOverlay(`
         <div class="flex items-center justify-between mb-1">
@@ -67,22 +99,32 @@ function openSettings() {
             <button id="cs-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="flex border-b border-slate-200 mb-2">
-            <button id="cs-tabBtnPassword" class="px-4 py-2 text-sm font-medium border-b-2 transition">Ganti Password</button>
+            <button id="cs-tabBtnProfil" class="px-4 py-2 text-sm font-medium border-b-2 transition">Profil</button>
             <button id="cs-tabBtnPejabat" class="px-4 py-2 text-sm font-medium border-b-2 transition">Pejabat</button>
+            <button id="cs-tabBtnPassword" class="px-4 py-2 text-sm font-medium border-b-2 transition">Ganti Password</button>
         </div>
 
-        <div id="cs-tabPassword" class="flex-col gap-3">
+        <div id="cs-tabProfil" class="flex-col gap-3">
+            <label class="${csLabelClass}">Nama</label>
+            <input id="cs-profilNama" type="text" value="${nama}" readonly class="${csInputClass} bg-slate-100">
             <label class="${csLabelClass}">NIP</label>
-            <input id="cs-nip" type="text" value="${nip}" ${nip ? 'readonly' : ''} class="${csInputClass} ${nip ? 'bg-slate-100' : ''}" placeholder="Masukkan NIP">
-            <label class="${csLabelClass}">Password Lama</label>
-            <input id="cs-pwLama" type="password" class="${csInputClass}">
-            <label class="${csLabelClass}">Password Baru</label>
-            <input id="cs-pwBaru" type="password" class="${csInputClass}">
-            <label class="${csLabelClass}">Konfirmasi Password Baru</label>
-            <input id="cs-pwKonfirmasi" type="password" class="${csInputClass}">
-            <div class="flex justify-end mt-2">
-                <button id="cs-btnSimpanPassword" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
-                    <i class="fa-solid fa-key mr-1"></i> Simpan Password
+            <input id="cs-profilNip" type="text" value="${nip}" readonly class="${csInputClass} bg-slate-100">
+            <label class="${csLabelClass}">Jabatan</label>
+            <input id="cs-profilJabatan" type="text" value="${jabatan}" readonly class="${csInputClass} bg-slate-100">
+            <label class="${csLabelClass}">Pangkat</label>
+            <select id="cs-profilPangkat" disabled class="${csInputClass} bg-slate-100">
+                <option value="">-- Pilih Pangkat --</option>
+                ${pangkatExtraOption}
+                ${pangkatOptions}
+            </select>
+            <label class="${csLabelClass}">Kepegawaian</label>
+            <input id="cs-profilKepeg" type="text" value="${kepeg}" readonly class="${csInputClass} bg-slate-100">
+            <div class="flex justify-end gap-2 mt-2">
+                <button id="cs-btnUbahProfil" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-pen-to-square mr-1"></i> Ubah
+                </button>
+                <button id="cs-btnSimpanProfil" class="hidden px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
                 </button>
             </div>
         </div>
@@ -110,32 +152,54 @@ function openSettings() {
                 </div>
             </div>
         </div>
+
+        <div id="cs-tabPassword" class="hidden flex-col gap-3">
+            <label class="${csLabelClass}">NIP</label>
+            <input id="cs-nip" type="text" value="${nip}" ${nip ? 'readonly' : ''} class="${csInputClass} ${nip ? 'bg-slate-100' : ''}" placeholder="Masukkan NIP">
+            <label class="${csLabelClass}">Password Lama</label>
+            <input id="cs-pwLama" type="password" class="${csInputClass}">
+            <label class="${csLabelClass}">Password Baru</label>
+            <input id="cs-pwBaru" type="password" class="${csInputClass}">
+            <label class="${csLabelClass}">Konfirmasi Password Baru</label>
+            <input id="cs-pwKonfirmasi" type="password" class="${csInputClass}">
+            <div class="flex justify-end mt-2">
+                <button id="cs-btnSimpanPassword" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-key mr-1"></i> Simpan Password
+                </button>
+            </div>
+        </div>
     `, 'max-w-md');
 
     popup.querySelector('#cs-closeBtn').onclick = () => overlay.remove();
 
     // ---- Tab switching ----
-    const tabBtnPassword = popup.querySelector('#cs-tabBtnPassword');
+    const tabBtnProfil = popup.querySelector('#cs-tabBtnProfil');
     const tabBtnPejabat = popup.querySelector('#cs-tabBtnPejabat');
-    const tabPassword = popup.querySelector('#cs-tabPassword');
+    const tabBtnPassword = popup.querySelector('#cs-tabBtnPassword');
+    const tabProfil = popup.querySelector('#cs-tabProfil');
     const tabPejabat = popup.querySelector('#cs-tabPejabat');
+    const tabPassword = popup.querySelector('#cs-tabPassword');
 
     function csActivateTab(tab) {
-        const isPassword = tab === 'password';
+        const tabs = { profil: [tabProfil, tabBtnProfil], pejabat: [tabPejabat, tabBtnPejabat], password: [tabPassword, tabBtnPassword] };
 
-        tabPassword.classList.toggle('hidden', !isPassword);
-        tabPassword.classList.toggle('flex', isPassword);
-        tabPejabat.classList.toggle('hidden', isPassword);
-        tabPejabat.classList.toggle('flex', !isPassword);
+        Object.keys(tabs).forEach(key => {
+            const [content, btn] = tabs[key];
+            const active = key === tab;
+            content.classList.toggle('hidden', !active);
+            content.classList.toggle('flex', active);
+            btn.className = `px-4 py-2 text-sm font-medium border-b-2 transition ${active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500'}`;
+        });
 
-        tabBtnPassword.className = `px-4 py-2 text-sm font-medium border-b-2 transition ${isPassword ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500'}`;
-        tabBtnPejabat.className = `px-4 py-2 text-sm font-medium border-b-2 transition ${!isPassword ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500'}`;
-
-        if (!isPassword) csLoadPejabatData(popup);
+        if (tab === 'pejabat') csLoadPejabatData(popup);
     }
 
-    tabBtnPassword.onclick = () => csActivateTab('password');
+    tabBtnProfil.onclick = () => csActivateTab('profil');
     tabBtnPejabat.onclick = () => csActivateTab('pejabat');
+    tabBtnPassword.onclick = () => csActivateTab('password');
+
+    // ---- Profil ----
+    csBindProfilButtons(popup);
 
     // ---- Ganti Password ----
     popup.querySelector('#cs-btnSimpanPassword').onclick = async function () {
@@ -184,7 +248,76 @@ function openSettings() {
     };
 
     // Tab awal
-    csActivateTab('password');
+    csActivateTab('profil');
+}
+
+function csBindProfilButtons(popup) {
+    const jabatanInput = popup.querySelector('#cs-profilJabatan');
+    const pangkatSelect = popup.querySelector('#cs-profilPangkat');
+    const kepegInput = popup.querySelector('#cs-profilKepeg');
+    const btnUbah = popup.querySelector('#cs-btnUbahProfil');
+    const btnSimpan = popup.querySelector('#cs-btnSimpanProfil');
+
+    btnUbah.onclick = function () {
+        jabatanInput.removeAttribute('readonly');
+        jabatanInput.classList.remove('bg-slate-100');
+        pangkatSelect.disabled = false;
+        pangkatSelect.classList.remove('bg-slate-100');
+        kepegInput.removeAttribute('readonly');
+        kepegInput.classList.remove('bg-slate-100');
+
+        btnUbah.classList.add('hidden');
+        btnSimpan.classList.remove('hidden');
+        jabatanInput.focus();
+    };
+
+    btnSimpan.onclick = async function () {
+        const btn = this;
+        const nip = sessionStorage.getItem('nip') || '';
+        const jabatan = jabatanInput.value.trim();
+        const pangkat = pangkatSelect.value;
+        const kepeg = kepegInput.value.trim();
+
+        if (!jabatan || !pangkat) {
+            alert('Jabatan dan Pangkat harus diisi!');
+            return;
+        }
+
+        btn.disabled = true;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+
+        try {
+            const result = await apiPost({
+                action: 'updateProfilData',
+                nip, jabatan, pangkat, kepeg
+            });
+            if (result.status === 'success') {
+                showToast('Profil berhasil diubah');
+
+                sessionStorage.setItem('jabatan', jabatan);
+                sessionStorage.setItem('pangkat', pangkat);
+                sessionStorage.setItem('kepeg', kepeg);
+
+                jabatanInput.setAttribute('readonly', 'readonly');
+                jabatanInput.classList.add('bg-slate-100');
+                pangkatSelect.disabled = true;
+                pangkatSelect.classList.add('bg-slate-100');
+                kepegInput.setAttribute('readonly', 'readonly');
+                kepegInput.classList.add('bg-slate-100');
+
+                btnSimpan.classList.add('hidden');
+                btnUbah.classList.remove('hidden');
+            } else {
+                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+            }
+        } catch (e) {
+            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    };
 }
 
 async function csLoadPejabatData(popup) {
