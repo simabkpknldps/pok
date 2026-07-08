@@ -117,6 +117,9 @@
                     sessionStorage.setItem('nip', data.nip);
                     sessionStorage.setItem('realUrl', realUrl); // Simpan agar dashboard tahu URL-nya
                     sessionStorage.setItem('admin', data.admin);
+                    sessionStorage.setItem('jabatan', data.jabatan);
+                    sessionStorage.setItem('pangkat', data.pangkat);
+                    sessionStorage.setItem('kepeg', data.kepeg);
                     window.location.href = 'dashboard.html';
                 } else {
                     showLoginError(data.message || 'NIP atau password salah.');
