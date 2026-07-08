@@ -2,34 +2,13 @@
     <div class="flex flex-col md:flex-row gap-3 mb-4 items-center">
         <input type="text" id="searchPok" oninput="searchPok()" placeholder="Cari kode / uraian..."
                class="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
-        <select id="filterBidang" onchange="renderPok()"
-               class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
-            <option value="Semua">Semua Seksi</option>
-        </select>
         <button id="toggleExpandBtn" onclick="toggleExpandAll()" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap flex items-center gap-2">
             <i class="fa-solid fa-expand"></i> Expand All
         </button>
     </div>
 
-    <div class="flex items-center gap-4 flex-wrap text-xs text-slate-500 mb-3 px-1">
-        <span class="font-medium text-slate-600">Legenda Seksi:</span>
-        <span id="pok-legendSeksi" class="flex items-center gap-2 flex-wrap"></span>
-    </div>
-
     <div class="pok-table-container border border-slate-200 rounded-xl overflow-hidden">
         <table class="w-full text-sm">
-            <thead id="pok-thead" class="text-slate-600 text-xs uppercase sticky top-0 z-10 shadow-sm">
-                <tr>
-                    <th class="p-3 text-left bg-slate-100">Kode</th>
-                    <th class="p-3 text-left bg-slate-100">Uraian</th>
-                    <th class="p-3 text-center bg-slate-100">Seksi</th>
-                    <th class="p-3 text-right bg-slate-100">Pagu</th>
-                    <th class="p-3 text-right bg-slate-100">Blokir</th>
-                    <th class="p-3 text-right bg-slate-100">Realisasi</th>
-                    <th class="p-3 text-right bg-slate-100">Sisa</th>
-                    <th class="p-3 text-center bg-slate-100">Aksi</th>
-                </tr>
-            </thead>
             <tbody id="pok-tbody">
                 <tr><td colspan="8" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>
             </tbody>
