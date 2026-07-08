@@ -4,6 +4,7 @@
 
 window.rawPokData = [];
 window.expandedCodes = new Set();
+window.expandedSeksi = new Set(); // Seksi (grup) yang sedang dibuka
 window.searchResults = [];
 window.searchIndex = -1;
 window.selectedKode = "";
@@ -24,27 +25,18 @@ function pokSeksiBadgeClass(seksi) {
     return POK_SEKSI_COLORS[seksi] || 'bg-slate-100 text-slate-600';
 }
 
-function populateSeksiFilter() {
-    const select = document.getElementById('filterBidang');
-    const legend = document.getElementById('pok-legendSeksi');
-    if (!select) return;
-
-    const currentValue = select.value || 'Semua';
-    const seksiList = Array.from(new Set(window.rawPokData.map(i => i.bidang).filter(Boolean))).sort();
-
-    select.innerHTML = `<option value="Semua">Semua Seksi</option>` +
-        seksiList.map(s => `<option value="${s}">${s}</option>`).join('');
-    select.value = seksiList.includes(currentValue) ? currentValue : 'Semua';
-
-    if (legend) {
-        legend.innerHTML = seksiList.map(s => `
-            <span class="px-2 py-0.5 rounded-full font-medium ${pokSeksiBadgeClass(s)}">${s}</span>
-        `).join('');
+function toggleSeksiGroup(seksi) {
+    if (window.expandedSeksi.has(seksi)) {
+        window.expandedSeksi.delete(seksi);
+    } else {
+        window.expandedSeksi.add(seksi);
     }
+    renderPok();
 }
 
 async function initPokPage() {
     window.expandedCodes = new Set();
+    window.expandedSeksi = new Set();
     window.searchResults = [];
     window.selectedKode = "";
     await loadPokData();
@@ -62,7 +54,6 @@ async function loadPokData() {
         }
         
         window.rawPokData = data;
-        populateSeksiFilter();
         renderPok();
     } catch (e) {
         console.error('Error loading POK data:', e);
@@ -84,13 +75,18 @@ function renderPok() {
     const uniqueData = Array.from(uniqueMap.values());
 
     const keyword = (document.getElementById("searchPok")?.value || "").toLowerCase().trim();
-    const bidang = document.getElementById("filterBidang")?.value || "Semua";
 
-    tbody.innerHTML = uniqueData.map(i => {
+    // Kelompokkan berdasarkan Seksi (kolom I), urutan sesuai kemunculan pertama di data
+    const groups = new Map(); // seksi -> array item
+    uniqueData.forEach(item => {
+        const seksi = item.bidang || 'Lainnya';
+        if (!groups.has(seksi)) groups.set(seksi, []);
+        groups.get(seksi).push(item);
+    });
+
+    const pokRenderRow = (i) => {
         const c = String(i.kode);
         const uraian = String(i.uraian || "").toLowerCase();
-
-        if (bidang !== "Semua" && (i.bidang || "") !== bidang) return '';
 
         const isParent = c.length === 12;
         const isLeaf = c.length > 27;
@@ -130,9 +126,6 @@ function renderPok() {
                 <span class="whitespace-normal break-words">${i.uraian}</span>
                 ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
             </td>
-            <td class="p-3 text-center">
-                ${i.bidang ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${pokSeksiBadgeClass(i.bidang)}">${i.bidang}</span>` : ''}
-            </td>
             <td class="p-3 text-right whitespace-nowrap">${pagu.toLocaleString('id-ID')}</td>
             <td class="p-3 text-right whitespace-nowrap">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
             <td class="p-3 text-right whitespace-nowrap">
@@ -145,6 +138,7 @@ function renderPok() {
                 ` : ''}
             </td>
             <td class="p-3 text-right whitespace-nowrap ${sisaClass}">${sisa.toLocaleString('id-ID')}</td>
+            <td class="p-3 text-center whitespace-nowrap text-slate-500">${i.sumber || '-'}</td>
             <td class="p-3 text-center whitespace-nowrap">
                 ${isLeaf ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
@@ -153,7 +147,41 @@ function renderPok() {
                 ` : ''}
             </td>
         </tr>`;
-    }).join('');
+    };
+
+    const groupHeaderRow = (seksi, count, isOpen) => `
+        <tr class="cursor-pointer select-none" onclick="toggleSeksiGroup('${seksi}')">
+            <td colspan="8" class="p-3 font-bold text-sm ${pokSeksiBadgeClass(seksi)}">
+                <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>
+                ${seksi}
+                <span class="ml-2 font-normal text-xs opacity-70">(${count} item)</span>
+            </td>
+        </tr>`;
+
+    const columnSubHeaderRow = () => `
+        <tr class="text-slate-500 text-[11px] uppercase">
+            <td class="p-2 text-left bg-slate-50 font-semibold">Kode</td>
+            <td class="p-2 text-left bg-slate-50 font-semibold">Uraian</td>
+            <td class="p-2 text-right bg-slate-50 font-semibold">Pagu</td>
+            <td class="p-2 text-right bg-slate-50 font-semibold">Blokir</td>
+            <td class="p-2 text-right bg-slate-50 font-semibold">Realisasi</td>
+            <td class="p-2 text-right bg-slate-50 font-semibold">Sisa</td>
+            <td class="p-2 text-center bg-slate-50 font-semibold">SD</td>
+            <td class="p-2 text-center bg-slate-50 font-semibold">Aksi</td>
+        </tr>`;
+
+    let html = '';
+    groups.forEach((items, seksi) => {
+        const isOpen = window.expandedSeksi.has(seksi);
+        html += groupHeaderRow(seksi, items.length, isOpen);
+
+        if (isOpen) {
+            html += columnSubHeaderRow();
+            html += items.map(i => pokRenderRow(i)).join('');
+        }
+    });
+
+    tbody.innerHTML = html;
 }
 
 function searchPok() {
@@ -176,6 +204,7 @@ function searchPok() {
 
         const parentCode = String(window.selectedKode).substring(0, 12);
         window.expandedCodes.add(parentCode);
+        window.expandedSeksi.add(window.searchResults[0].bidang || 'Lainnya'); // buka grup Seksi terkait
 
         renderPok();
 
@@ -197,6 +226,7 @@ function gotoSearchResult() {
         window.expandedCodes.clear();
         window.expandedCodes.add(kode.substring(0, 12));
     }
+    window.expandedSeksi.add(item.bidang || 'Lainnya'); // buka grup Seksi terkait
 
     renderPok();
 
@@ -223,7 +253,7 @@ function toggleExpandAll() {
     const btn = document.getElementById("toggleExpandBtn");
     
     if (window.expandedCodes.size === 0) {
-        // Expand all - tambah semua parent codes (12 digit)
+        // Expand all - tambah semua parent codes (12 digit) & buka semua grup Seksi
         const uniqueMap = new Map();
         window.rawPokData.forEach(item => {
             uniqueMap.set(String(item.kode), item);
@@ -235,12 +265,14 @@ function toggleExpandAll() {
             if (code.length === 12) {
                 window.expandedCodes.add(code);
             }
+            window.expandedSeksi.add(item.bidang || 'Lainnya');
         });
         
         btn.innerHTML = '<i class="fa-solid fa-compress"></i> Collapse All';
     } else {
         // Collapse all
         window.expandedCodes.clear();
+        window.expandedSeksi.clear();
         btn.innerHTML = '<i class="fa-solid fa-expand"></i> Expand All';
     }
     
@@ -676,6 +708,7 @@ async function simpanPelaksana() {
 }
 
 window.initPokPage = initPokPage;
+window.toggleSeksiGroup = toggleSeksiGroup;
 window.loadPokData = loadPokData;
 window.renderPok = renderPok;
 window.searchPok = searchPok;
