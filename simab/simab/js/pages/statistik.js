@@ -476,7 +476,7 @@ function stPercentBadge(persen) {
     const warna = p >= 90 ? 'bg-green-500' : (p >= 70 ? 'bg-sky-500' : 'bg-amber-400');
     return `
         <div class="flex flex-col items-center gap-1 w-full">
-            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="w-full h-2.5 bg-slate-300 rounded-full overflow-hidden">
                 <div class="h-full ${warna} rounded-full" style="width:${Math.min(p, 100)}%"></div>
             </div>
             <span class="text-[11px] text-slate-500">${p.toFixed(2)}%</span>
