@@ -68,10 +68,10 @@ const CS_DAFTAR_PANGKAT = [
 
 function commonOpenOverlay(innerHtml, widthClass) {
     const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4';
+    overlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4 overflow-x-hidden';
 
     const popup = document.createElement('div');
-    popup.className = `bg-white rounded-2xl shadow-xl w-full ${widthClass || 'max-w-md'} p-6 flex flex-col gap-3 max-h-[90vh] overflow-y-auto`;
+    popup.className = `bg-white rounded-2xl shadow-xl w-full ${widthClass || 'max-w-md'} p-6 flex flex-col gap-3 max-h-[90vh] overflow-y-auto overflow-x-hidden`;
     popup.innerHTML = innerHtml;
 
     overlay.appendChild(popup);
@@ -98,11 +98,11 @@ function openSettings() {
             <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-gear mr-2"></i>Pengaturan</h3>
             <button id="cs-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="flex border-b border-slate-200 mb-2">
-            <button id="cs-tabBtnProfil" class="px-4 py-2 text-sm font-medium border-b-2 transition">Profil</button>
-            <button id="cs-tabBtnPejabat" class="px-4 py-2 text-sm font-medium border-b-2 transition">Pejabat</button>
-            <button id="cs-tabBtnPassword" class="px-4 py-2 text-sm font-medium border-b-2 transition">Ganti Password</button>
-            <button id="cs-tabBtnTambahPegawai" class="px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap">Tambah Pegawai</button>
+        <div class="flex border-b border-slate-200 mb-2 overflow-x-auto">
+            <button id="cs-tabBtnProfil" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Profil</button>
+            <button id="cs-tabBtnPejabat" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Pejabat</button>
+            <button id="cs-tabBtnPassword" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Ganti Password</button>
+            <button id="cs-tabBtnTambahPegawai" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Tambah Pegawai</button>
         </div>
 
         <div id="cs-tabProfil" class="flex-col gap-3">
@@ -183,7 +183,10 @@ function openSettings() {
                 ${CS_DAFTAR_PANGKAT.map(p => `<option value="${p}">${p}</option>`).join('')}
             </select>
             <label class="${csLabelClass}">Kepegawaian</label>
-            <input id="cs-tpKepeg" type="text" placeholder="Kepegawaian" class="${csInputClass}">
+            <select id="cs-tpKepeg" class="${csInputClass}">
+                <option value="1">1 - PNS</option>
+                <option value="0">0 - PPNPN</option>
+            </select>
             <label class="${csLabelClass}">Admin</label>
             <select id="cs-tpAdmin" class="${csInputClass}">
                 <option value="0">0 - Bukan Admin</option>
@@ -195,7 +198,7 @@ function openSettings() {
                 </button>
             </div>
         </div>
-    `, 'max-w-md');
+    `, 'max-w-lg');
 
     popup.querySelector('#cs-closeBtn').onclick = () => overlay.remove();
 
@@ -222,7 +225,7 @@ function openSettings() {
             const active = key === tab;
             content.classList.toggle('hidden', !active);
             content.classList.toggle('flex', active);
-            btn.className = `px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap ${active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500'}`;
+            btn.className = `px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap ${active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500'}`;
         });
 
         if (tab === 'pejabat') csLoadPejabatData(popup);
@@ -266,7 +269,7 @@ function openSettings() {
                 popup.querySelector('#cs-tpNip').value = '';
                 popup.querySelector('#cs-tpJabatan').value = '';
                 popup.querySelector('#cs-tpPangkat').value = '';
-                popup.querySelector('#cs-tpKepeg').value = '';
+                popup.querySelector('#cs-tpKepeg').value = '1';
                 popup.querySelector('#cs-tpAdmin').value = '0';
             } else {
                 alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
