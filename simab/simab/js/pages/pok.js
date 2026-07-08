@@ -9,6 +9,40 @@ window.searchIndex = -1;
 window.selectedKode = "";
 window.detilKegiatanData = [];
 
+// Warna badge per Seksi (kolom I sheet pok_sumber_2026)
+const POK_SEKSI_COLORS = {
+    'PN': 'bg-sky-100 text-sky-700',
+    'HI': 'bg-purple-100 text-purple-700',
+    'KI': 'bg-amber-100 text-amber-700',
+    'Lelang': 'bg-rose-100 text-rose-700',
+    'Penilaian': 'bg-emerald-100 text-emerald-700',
+    'PKN': 'bg-indigo-100 text-indigo-700',
+    'Umum': 'bg-slate-200 text-slate-700'
+};
+
+function pokSeksiBadgeClass(seksi) {
+    return POK_SEKSI_COLORS[seksi] || 'bg-slate-100 text-slate-600';
+}
+
+function populateSeksiFilter() {
+    const select = document.getElementById('filterBidang');
+    const legend = document.getElementById('pok-legendSeksi');
+    if (!select) return;
+
+    const currentValue = select.value || 'Semua';
+    const seksiList = Array.from(new Set(window.rawPokData.map(i => i.bidang).filter(Boolean))).sort();
+
+    select.innerHTML = `<option value="Semua">Semua Seksi</option>` +
+        seksiList.map(s => `<option value="${s}">${s}</option>`).join('');
+    select.value = seksiList.includes(currentValue) ? currentValue : 'Semua';
+
+    if (legend) {
+        legend.innerHTML = seksiList.map(s => `
+            <span class="px-2 py-0.5 rounded-full font-medium ${pokSeksiBadgeClass(s)}">${s}</span>
+        `).join('');
+    }
+}
+
 async function initPokPage() {
     window.expandedCodes = new Set();
     window.searchResults = [];
@@ -19,7 +53,7 @@ async function initPokPage() {
 async function loadPokData() {
     const tbody = document.getElementById('pok-tbody');
     try {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
         
         const data = await apiPost({ action: 'getPOKData' });
         
@@ -28,13 +62,14 @@ async function loadPokData() {
         }
         
         window.rawPokData = data;
+        populateSeksiFilter();
         renderPok();
     } catch (e) {
         console.error('Error loading POK data:', e);
         const errorMsg = e.name === 'AbortError' 
             ? 'Timeout: Server tidak merespons (>30 detik)'
             : e.message || 'Gagal memuat data';
-        tbody.innerHTML = `<tr><td colspan="7" class="text-red-500 p-4 text-center">❌ ${errorMsg}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-red-500 p-4 text-center">❌ ${errorMsg}</td></tr>`;
     }
 }
 
@@ -58,24 +93,60 @@ function renderPok() {
         if (bidang !== "Semua" && (i.bidang || "") !== bidang) return '';
 
         const isParent = c.length === 12;
+        const isLeaf = c.length > 27;
         const isChildVisible = Array.from(window.expandedCodes).some(p => c.startsWith(p) && c !== p);
 
         if (!isParent && !isChildVisible) return '';
 
         const isMatch = keyword && (c.toLowerCase().includes(keyword) || uraian.includes(keyword));
-        const matchClass = isMatch ? 'bg-yellow-200' : (c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white');
+
+        // Level hierarki berdasarkan jumlah segmen kode (dipisah titik), untuk indentasi visual
+        const depth = c.split('.').length;
+        const indentPx = Math.min(depth - 1, 5) * 18;
+
+        let rowBg = 'bg-white';
+        if (isMatch) {
+            rowBg = 'bg-yellow-200';
+        } else if (isLeaf) {
+            rowBg = i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50';
+        } else if (depth <= 2) {
+            rowBg = 'bg-slate-50';
+        }
+
+        const textWeight = depth <= 2 ? 'font-bold text-slate-700' : (isLeaf ? 'font-normal text-slate-600' : 'font-semibold text-slate-700');
 
         const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
 
-        return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 ${matchClass} cursor-pointer" onclick="toggleExpand('${c}')">
-            <td class="p-3 font-mono text-xs font-bold">${c}</td>
-            <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
-            <td class="p-3 text-right">${Number(i.pagu || 0).toLocaleString()}</td>
-            <td class="p-3 text-right">${Number(i.blokir || 0).toLocaleString()}</td>
-            <td class="p-3 text-right">${Number(i.realisasi || 0).toLocaleString()}</td>
-            <td class="p-3 text-right">${Number(i.sisa || 0).toLocaleString()}</td>
+        const pagu = Number(i.pagu || 0);
+        const realisasi = Number(i.realisasi || 0);
+        const sisa = Number(i.sisa || 0);
+        const persenRealisasi = pagu > 0 ? Math.min((realisasi / pagu) * 100, 100) : 0;
+        const barColor = persenRealisasi >= 90 ? 'bg-green-500' : (persenRealisasi >= 50 ? 'bg-sky-500' : 'bg-amber-400');
+        const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
+
+        return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 transition ${rowBg} cursor-pointer" onclick="toggleExpand('${c}')">
+            <td class="p-3 font-mono text-xs text-slate-500 whitespace-nowrap">${c}</td>
+            <td class="p-3 ${textWeight}" style="padding-left:${12 + indentPx}px">
+                <span class="whitespace-normal break-words">${i.uraian}</span>
+                ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
+            </td>
             <td class="p-3 text-center">
-                ${c.length > 27 ? `
+                ${i.bidang ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${pokSeksiBadgeClass(i.bidang)}">${i.bidang}</span>` : ''}
+            </td>
+            <td class="p-3 text-right whitespace-nowrap">${pagu.toLocaleString('id-ID')}</td>
+            <td class="p-3 text-right whitespace-nowrap">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
+            <td class="p-3 text-right whitespace-nowrap">
+                <div>${realisasi.toLocaleString('id-ID')}</div>
+                ${pagu > 0 ? `
+                    <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
+                        <div class="h-full ${barColor} rounded-full" style="width:${persenRealisasi}%"></div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">${persenRealisasi.toFixed(1)}%</div>
+                ` : ''}
+            </td>
+            <td class="p-3 text-right whitespace-nowrap ${sisaClass}">${sisa.toLocaleString('id-ID')}</td>
+            <td class="p-3 text-center whitespace-nowrap">
+                ${isLeaf ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
                         class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
                     <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
