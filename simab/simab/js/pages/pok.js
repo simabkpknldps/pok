@@ -84,13 +84,17 @@ function renderPok() {
         groups.get(seksi).push(item);
     });
 
-    const pokRenderRow = (i) => {
+    const pokRenderRow = (i, seksi, groupItems) => {
         const c = String(i.kode);
         const uraian = String(i.uraian || "").toLowerCase();
 
         const isParent = c.length === 12;
         const isLeaf = c.length > 27;
-        const isChildVisible = Array.from(window.expandedCodes).some(p => c.startsWith(p) && c !== p);
+        const isChildVisible = Array.from(window.expandedCodes).some(k => {
+            if (!k.startsWith(seksi + '::')) return false;
+            const p = k.slice((seksi + '::').length);
+            return c.startsWith(p) && c !== p;
+        });
 
         if (!isParent && !isChildVisible) return '';
 
@@ -113,7 +117,8 @@ function renderPok() {
 
         const textWeight = depth <= 2 ? 'font-bold text-slate-700' : (isLeaf ? 'font-normal text-slate-600' : 'font-semibold text-slate-700');
 
-        const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
+        const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
+        const expandKey = seksi + '::' + c;
 
         const pagu = Number(i.pagu || 0);
         const realisasi = Number(i.realisasi || 0);
@@ -122,11 +127,11 @@ function renderPok() {
         const barColor = persenRealisasi >= 90 ? 'bg-green-500' : (persenRealisasi >= 50 ? 'bg-sky-500' : 'bg-amber-400');
         const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
 
-        return `<tr data-kode="${c}" class="border-b transition ${rowBg} cursor-pointer" onclick="toggleExpand('${c}')">
+        return `<tr data-kode="${c}" data-seksi="${seksi}" class="border-b transition ${rowBg} cursor-pointer" onclick="toggleExpand('${c}', '${seksi}')">
             <td class="p-3 font-mono text-xs text-slate-500 whitespace-nowrap">${c}</td>
             <td class="p-3 ${textWeight}" style="padding-left:${12 + indentPx}px">
                 <span class="whitespace-normal break-words">${i.uraian}</span>
-                ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
+                ${hasChildren ? (window.expandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
             </td>
             <td class="p-3 text-right whitespace-nowrap">${pagu.toLocaleString('id-ID')}</td>
             <td class="p-3 text-right whitespace-nowrap">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
@@ -179,7 +184,7 @@ function renderPok() {
 
         if (isOpen) {
             html += columnSubHeaderRow();
-            html += items.map(i => pokRenderRow(i)).join('');
+            html += items.map(i => pokRenderRow(i, seksi, items)).join('');
         }
     });
 
@@ -203,15 +208,16 @@ function searchPok() {
 
     if (window.searchResults.length > 0) {
         window.selectedKode = window.searchResults[0].kode;
+        const seksi = window.searchResults[0].bidang || 'Lainnya';
 
         const parentCode = String(window.selectedKode).substring(0, 12);
-        window.expandedCodes.add(parentCode);
-        window.expandedSeksi.add(window.searchResults[0].bidang || 'Lainnya'); // buka grup Seksi terkait
+        window.expandedCodes.add(seksi + '::' + parentCode);
+        window.expandedSeksi.add(seksi); // buka grup Seksi terkait
 
         renderPok();
 
         setTimeout(() => {
-            const el = document.querySelector(`tr[data-kode="${window.selectedKode}"]`);
+            const el = document.querySelector(`tr[data-kode="${window.selectedKode}"][data-seksi="${seksi}"]`);
             if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 100);
     }
@@ -222,30 +228,37 @@ function gotoSearchResult() {
     if (!item) return;
 
     const kode = String(item.kode);
+    const seksi = item.bidang || 'Lainnya';
     window.selectedKode = kode;
 
     if (kode.length > 12) {
         window.expandedCodes.clear();
-        window.expandedCodes.add(kode.substring(0, 12));
+        window.expandedCodes.add(seksi + '::' + kode.substring(0, 12));
     }
-    window.expandedSeksi.add(item.bidang || 'Lainnya'); // buka grup Seksi terkait
+    window.expandedSeksi.add(seksi); // buka grup Seksi terkait
 
     renderPok();
 
     setTimeout(() => {
-        document.querySelector(`[data-kode="${kode}"]`)
+        document.querySelector(`[data-kode="${kode}"][data-seksi="${seksi}"]`)
             ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 50);
 }
 
-function toggleExpand(code) {
+function toggleExpand(code, seksi) {
     if (String(code).length !== 12) return;
 
-    if (window.expandedCodes.has(code)) {
-        window.expandedCodes.clear();
-    } else {
-        window.expandedCodes.clear();
-        window.expandedCodes.add(code);
+    const key = seksi + '::' + code;
+    const wasOpen = window.expandedCodes.has(key);
+
+    // Accordion per Seksi: tutup dulu semua kode yang sedang terbuka di Seksi yang sama,
+    // supaya expand di satu Seksi tidak ikut membuka kode yang sama di Seksi lain.
+    Array.from(window.expandedCodes).forEach(k => {
+        if (k.startsWith(seksi + '::')) window.expandedCodes.delete(k);
+    });
+
+    if (!wasOpen) {
+        window.expandedCodes.add(key);
     }
 
     renderPok();
@@ -264,10 +277,11 @@ function toggleExpandAll() {
         
         uniqueData.forEach(item => {
             const code = String(item.kode);
+            const seksi = item.bidang || 'Lainnya';
             if (code.length === 12) {
-                window.expandedCodes.add(code);
+                window.expandedCodes.add(seksi + '::' + code);
             }
-            window.expandedSeksi.add(item.bidang || 'Lainnya');
+            window.expandedSeksi.add(seksi);
         });
         
         btn.innerHTML = '<i class="fa-solid fa-compress"></i> Collapse All';
