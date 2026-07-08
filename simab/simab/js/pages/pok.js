@@ -100,13 +100,15 @@ function renderPok() {
         const depth = c.split('.').length;
         const indentPx = Math.min(depth - 1, 5) * 18;
 
-        let rowBg = 'bg-white';
+        let rowBg = 'bg-white hover:bg-slate-100';
         if (isMatch) {
-            rowBg = 'bg-yellow-200';
+            rowBg = 'bg-yellow-200 hover:bg-yellow-300';
         } else if (isLeaf) {
-            rowBg = i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50';
+            rowBg = i.sumber === 'PNBP' ? 'bg-pink-50 hover:bg-pink-100' : 'bg-blue-50 hover:bg-blue-100';
+        } else if (isParent) {
+            rowBg = 'bg-sky-50 hover:bg-sky-100'; // penanda visual: baris ini bisa diklik untuk expand/collapse
         } else if (depth <= 2) {
-            rowBg = 'bg-slate-50';
+            rowBg = 'bg-slate-50 hover:bg-slate-100';
         }
 
         const textWeight = depth <= 2 ? 'font-bold text-slate-700' : (isLeaf ? 'font-normal text-slate-600' : 'font-semibold text-slate-700');
@@ -120,7 +122,7 @@ function renderPok() {
         const barColor = persenRealisasi >= 90 ? 'bg-green-500' : (persenRealisasi >= 50 ? 'bg-sky-500' : 'bg-amber-400');
         const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
 
-        return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 transition ${rowBg} cursor-pointer" onclick="toggleExpand('${c}')">
+        return `<tr data-kode="${c}" class="border-b transition ${rowBg} cursor-pointer" onclick="toggleExpand('${c}')">
             <td class="p-3 font-mono text-xs text-slate-500 whitespace-nowrap">${c}</td>
             <td class="p-3 ${textWeight}" style="padding-left:${12 + indentPx}px">
                 <span class="whitespace-normal break-words">${i.uraian}</span>
