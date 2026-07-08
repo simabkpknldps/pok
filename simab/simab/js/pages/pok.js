@@ -108,7 +108,7 @@ function renderPok() {
         if (isMatch) {
             rowBg = 'bg-yellow-200 hover:bg-yellow-300';
         } else if (isLeaf) {
-            rowBg = i.sumber === 'PNBP' ? 'bg-pink-50 hover:bg-pink-100' : 'bg-blue-50 hover:bg-blue-100';
+            rowBg = i.sumber === 'PNBP' ? 'bg-pink-200 hover:bg-pink-300' : 'bg-blue-200 hover:bg-blue-300';
         } else if (isParent) {
             rowBg = 'bg-sky-50 hover:bg-sky-100'; // penanda visual: baris ini bisa diklik untuk expand/collapse
         } else if (depth <= 2) {
@@ -121,9 +121,11 @@ function renderPok() {
         const expandKey = seksi + '::' + c;
 
         const pagu = Number(i.pagu || 0);
+        const blokir = Number(i.blokir || 0);
         const realisasi = Number(i.realisasi || 0);
         const sisa = Number(i.sisa || 0);
-        const persenRealisasi = pagu > 0 ? Math.min((realisasi / pagu) * 100, 100) : 0;
+        const paguEfektif = pagu - blokir;
+        const persenRealisasi = paguEfektif > 0 ? Math.min((realisasi / paguEfektif) * 100, 100) : 0;
         const barColor = persenRealisasi >= 90 ? 'bg-green-500' : (persenRealisasi >= 50 ? 'bg-sky-500' : 'bg-amber-400');
         const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
 
@@ -137,7 +139,7 @@ function renderPok() {
             <td class="p-3 text-right whitespace-nowrap">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
             <td class="p-3 text-right whitespace-nowrap">
                 <div>${realisasi.toLocaleString('id-ID')}</div>
-                ${pagu > 0 ? `
+                ${paguEfektif > 0 ? `
                     <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
                         <div class="h-full ${barColor} rounded-full" style="width:${persenRealisasi}%"></div>
                     </div>
