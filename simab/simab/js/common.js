@@ -102,6 +102,7 @@ function openSettings() {
             <button id="cs-tabBtnProfil" class="px-4 py-2 text-sm font-medium border-b-2 transition">Profil</button>
             <button id="cs-tabBtnPejabat" class="px-4 py-2 text-sm font-medium border-b-2 transition">Pejabat</button>
             <button id="cs-tabBtnPassword" class="px-4 py-2 text-sm font-medium border-b-2 transition">Ganti Password</button>
+            <button id="cs-tabBtnTambahPegawai" class="px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap">Tambah Pegawai</button>
         </div>
 
         <div id="cs-tabProfil" class="flex-col gap-3">
@@ -168,6 +169,32 @@ function openSettings() {
                 </button>
             </div>
         </div>
+
+        <div id="cs-tabTambahPegawai" class="hidden flex-col gap-3">
+            <label class="${csLabelClass}">Nama</label>
+            <input id="cs-tpNama" type="text" placeholder="Nama lengkap pegawai" class="${csInputClass}">
+            <label class="${csLabelClass}">NIP</label>
+            <input id="cs-tpNip" type="text" placeholder="NIP pegawai" class="${csInputClass}">
+            <label class="${csLabelClass}">Jabatan</label>
+            <input id="cs-tpJabatan" type="text" placeholder="Jabatan" class="${csInputClass}">
+            <label class="${csLabelClass}">Pangkat</label>
+            <select id="cs-tpPangkat" class="${csInputClass}">
+                <option value="">-- Pilih Pangkat --</option>
+                ${CS_DAFTAR_PANGKAT.map(p => `<option value="${p}">${p}</option>`).join('')}
+            </select>
+            <label class="${csLabelClass}">Kepegawaian</label>
+            <input id="cs-tpKepeg" type="text" placeholder="Kepegawaian" class="${csInputClass}">
+            <label class="${csLabelClass}">Admin</label>
+            <select id="cs-tpAdmin" class="${csInputClass}">
+                <option value="0">0 - Bukan Admin</option>
+                <option value="1">1 - Admin</option>
+            </select>
+            <div class="flex justify-end mt-2">
+                <button id="cs-btnSimpanTambahPegawai" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-user-plus mr-1"></i> Simpan
+                </button>
+            </div>
+        </div>
     `, 'max-w-md');
 
     popup.querySelector('#cs-closeBtn').onclick = () => overlay.remove();
@@ -176,19 +203,26 @@ function openSettings() {
     const tabBtnProfil = popup.querySelector('#cs-tabBtnProfil');
     const tabBtnPejabat = popup.querySelector('#cs-tabBtnPejabat');
     const tabBtnPassword = popup.querySelector('#cs-tabBtnPassword');
+    const tabBtnTambahPegawai = popup.querySelector('#cs-tabBtnTambahPegawai');
     const tabProfil = popup.querySelector('#cs-tabProfil');
     const tabPejabat = popup.querySelector('#cs-tabPejabat');
     const tabPassword = popup.querySelector('#cs-tabPassword');
+    const tabTambahPegawai = popup.querySelector('#cs-tabTambahPegawai');
 
     function csActivateTab(tab) {
-        const tabs = { profil: [tabProfil, tabBtnProfil], pejabat: [tabPejabat, tabBtnPejabat], password: [tabPassword, tabBtnPassword] };
+        const tabs = {
+            profil: [tabProfil, tabBtnProfil],
+            pejabat: [tabPejabat, tabBtnPejabat],
+            password: [tabPassword, tabBtnPassword],
+            tambahPegawai: [tabTambahPegawai, tabBtnTambahPegawai]
+        };
 
         Object.keys(tabs).forEach(key => {
             const [content, btn] = tabs[key];
             const active = key === tab;
             content.classList.toggle('hidden', !active);
             content.classList.toggle('flex', active);
-            btn.className = `px-4 py-2 text-sm font-medium border-b-2 transition ${active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500'}`;
+            btn.className = `px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap ${active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500'}`;
         });
 
         if (tab === 'pejabat') csLoadPejabatData(popup);
@@ -197,9 +231,53 @@ function openSettings() {
     tabBtnProfil.onclick = () => csActivateTab('profil');
     tabBtnPejabat.onclick = () => csActivateTab('pejabat');
     tabBtnPassword.onclick = () => csActivateTab('password');
+    tabBtnTambahPegawai.onclick = () => csActivateTab('tambahPegawai');
 
     // ---- Profil ----
     csBindProfilButtons(popup);
+
+    // ---- Tambah Pegawai ----
+    popup.querySelector('#cs-btnSimpanTambahPegawai').onclick = async function () {
+        const btn = this;
+        const nama = popup.querySelector('#cs-tpNama').value.trim();
+        const nip = popup.querySelector('#cs-tpNip').value.trim();
+        const jabatan = popup.querySelector('#cs-tpJabatan').value.trim();
+        const pangkat = popup.querySelector('#cs-tpPangkat').value;
+        const kepeg = popup.querySelector('#cs-tpKepeg').value.trim();
+        const admin = popup.querySelector('#cs-tpAdmin').value;
+
+        if (!nama || !nip || !jabatan || !pangkat) {
+            alert('Nama, NIP, Jabatan, dan Pangkat harus diisi!');
+            return;
+        }
+
+        btn.disabled = true;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+
+        try {
+            const result = await apiPost({
+                action: 'tambahPegawai',
+                nama, nip, jabatan, pangkat, kepeg, admin
+            });
+            if (result.status === 'success') {
+                showToast('Pegawai baru berhasil ditambahkan');
+                popup.querySelector('#cs-tpNama').value = '';
+                popup.querySelector('#cs-tpNip').value = '';
+                popup.querySelector('#cs-tpJabatan').value = '';
+                popup.querySelector('#cs-tpPangkat').value = '';
+                popup.querySelector('#cs-tpKepeg').value = '';
+                popup.querySelector('#cs-tpAdmin').value = '0';
+            } else {
+                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+            }
+        } catch (e) {
+            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    };
 
     // ---- Ganti Password ----
     popup.querySelector('#cs-btnSimpanPassword').onclick = async function () {
