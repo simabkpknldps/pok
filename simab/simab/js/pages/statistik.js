@@ -30,7 +30,7 @@ async function initStatistikPage() {
         tbody.dataset.dblclickBound = '1';
     }
 
-    await Promise.all([stLoadData(), stLoadPegawaiData(), stLoadBudgetData()]);
+    await Promise.all([stLoadData(), stLoadPegawaiData(), stLoadBudgetData(), stLoadMPData()]);
 }
 
 async function stLoadData() {
@@ -422,4 +422,90 @@ function stRenderBudgetTable(rows) {
     const tbody = document.getElementById('st-budgetTableBody');
     if (!tbody) return;
     tbody.innerHTML = rows.map(r => stRenderBudgetRow(r)).join('');
+}
+
+// ============================================
+// CARD MONITORING MAKSIMUM PENCAIRAN / MP (sheet: bulanan_2026)
+// ============================================
+
+async function stLoadMPData() {
+    const loadingEl = document.getElementById('st-mpLoading');
+    const wrapperEl = document.getElementById('st-mpTableWrapper');
+    const summaryEl = document.getElementById('st-mpSummary');
+
+    if (!loadingEl || !wrapperEl) return; // halaman sudah berpindah
+
+    loadingEl.classList.remove('hidden');
+    loadingEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>';
+    wrapperEl.classList.add('hidden');
+    if (summaryEl) summaryEl.classList.add('hidden');
+
+    try {
+        const result = await apiPost({ action: 'getStatistikMPData' });
+
+        if (result.status !== 'success' || !result.rows || result.rows.length === 0) {
+            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data monitoring MP'}</span>`;
+            return;
+        }
+
+        stRenderMPSummary(result.rows);
+        stRenderMPTable(result.rows);
+
+        loadingEl.classList.add('hidden');
+        wrapperEl.classList.remove('hidden');
+        if (summaryEl) summaryEl.classList.remove('hidden');
+    } catch (e) {
+        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data monitoring MP'}</span>`;
+    }
+}
+
+function stRenderMPSummary(rows) {
+    const totalRow = rows.find(r => r.isTotal) || rows[rows.length - 1];
+
+    document.getElementById('st-mpTotalPagu').textContent = stRupiah(totalRow.paguMP);
+    document.getElementById('st-mpTotalSP2D').textContent = stRupiah(totalRow.realisasiSP2D);
+    document.getElementById('st-mpTotalSisaSP2D').textContent = stRupiah(totalRow.sisaSP2D);
+
+    const persen = totalRow.persenSP2D || 0;
+    document.getElementById('st-mpPersenSP2D').textContent = persen.toFixed(2) + '%';
+    document.getElementById('st-mpPersenBar').style.width = Math.min(persen, 100) + '%';
+}
+
+function stPercentBadge(persen) {
+    const p = persen || 0;
+    const warna = p >= 90 ? 'bg-green-500' : (p >= 70 ? 'bg-sky-500' : 'bg-amber-400');
+    return `
+        <div class="flex flex-col items-center gap-1 w-full">
+            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full ${warna} rounded-full" style="width:${Math.min(p, 100)}%"></div>
+            </div>
+            <span class="text-[11px] text-slate-500">${p.toFixed(2)}%</span>
+        </div>`;
+}
+
+function stRenderMPRow(r) {
+    const rowClass = r.isTotal
+        ? 'bg-slate-50 font-semibold border-t-2 border-slate-300'
+        : 'border-t border-slate-100 hover:bg-slate-50';
+
+    return `
+        <tr class="${rowClass}">
+            <td class="p-2.5 text-center whitespace-nowrap">${r.no}</td>
+            <td class="p-2.5 text-slate-700 whitespace-nowrap">${r.isTotal ? 'Total' : r.uraian}</td>
+            <td class="p-2.5 text-slate-700 whitespace-nowrap">${r.periode || '-'}</td>
+            <td class="p-2.5 text-center whitespace-nowrap">${stFormatDate(r.tanggalMP)}</td>
+            <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.paguMP)}</td>
+            <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.realisasiBruto)}</td>
+            <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.realisasiSP2D)}</td>
+            <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.sisaBruto)}</td>
+            <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.sisaSP2D)}</td>
+            <td class="p-2.5">${stPercentBadge(r.persenBruto)}</td>
+            <td class="p-2.5">${stPercentBadge(r.persenSP2D)}</td>
+        </tr>`;
+}
+
+function stRenderMPTable(rows) {
+    const tbody = document.getElementById('st-mpTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = rows.map(r => stRenderMPRow(r)).join('');
 }
