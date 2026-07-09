@@ -50,6 +50,9 @@ async function initDashboardPage() {
                     </div>
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
                 </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    ${renderAkunBelumRealisasi(data.akunBelumRealisasi)}
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
@@ -92,6 +95,51 @@ function renderMPCard(t, d) {
 
 function renderTopPerjadin(l) {
     return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${idx + 1}. ${i[0]}</div><div class="text-xs font-bold text-sky-600">${i[1]}x</div></div>`).join('')}</div>`;
+}
+
+// Card: Daftar Akun Yang Belum Tercapai Realisasi Sesuai Waktu
+// Data dikirim backend (getAkunBelumRealisasiData) berbentuk:
+// { bulanSekarang, faktorBulan, data: [ { seksi, items: [ {kode, uraian, pagu, blokir, realisasi, target, selisih} ] } ] }
+function renderAkunBelumRealisasi(akunData) {
+    const header = `
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-700">Daftar Akun Yang Belum Tercapai Realisasi Sesuai Waktu</h3>
+            ${akunData ? `<span class="text-[11px] text-slate-400">Target s.d Bulan ke-${akunData.faktorBulan}</span>` : ''}
+        </div>
+    `;
+
+    if (!akunData || !akunData.data || akunData.data.length === 0) {
+        return `${header}<div class="text-sm text-slate-400 text-center py-6">✅ Semua akun sudah sesuai target realisasi bulan berjalan.</div>`;
+    }
+
+    const body = `
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 max-h-[28rem] overflow-y-auto pr-2 custom-scrollbar">
+            ${akunData.data.map(grp => `
+                <div>
+                    <div class="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">
+                        ${grp.seksi} <span class="text-slate-400 font-normal normal-case">(${grp.items.length} akun)</span>
+                    </div>
+                    <div class="space-y-2">
+                        ${grp.items.map(it => `
+                            <div class="border border-slate-100 rounded-lg p-3 bg-slate-50/60">
+                                <div class="flex justify-between items-start gap-2">
+                                    <div class="text-[10px] font-mono text-slate-500 break-all">${it.kode}</div>
+                                    <div class="text-[10px] font-semibold text-red-500 whitespace-nowrap">-${Math.round(it.selisih).toLocaleString()}</div>
+                                </div>
+                                <div class="text-xs text-slate-700 mt-1">${it.uraian}</div>
+                                <div class="flex justify-between text-[10px] text-slate-500 mt-2">
+                                    <span>Realisasi: <b class="text-slate-700">${Math.round(it.realisasi).toLocaleString()}</b></span>
+                                    <span>Target: <b class="text-slate-700">${Math.round(it.target).toLocaleString()}</b></span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    return header + body;
 }
 
 window.initDashboardPage = initDashboardPage;
