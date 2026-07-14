@@ -17,6 +17,7 @@
  * A id, B mak, C uraian, D pelaksana, E tujuan, G tglMulai, P status
  */
 
+
 let klCalendarData = {};      // { "yyyy-MM-dd": [ {c,d,e,p}, ... ] }
 let klCurrentDate = new Date();
 let klSelectedKey = null;     // key tanggal yang sedang dipilih (untuk search filter)
