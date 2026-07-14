@@ -23,11 +23,10 @@ async function navigate(page) {
     const title = document.getElementById('page-title');
     title.innerText = page.charAt(0).toUpperCase() + page.slice(1);
 
-    // Highlight tombol nav aktif (cocokkan navigate('x') atau navigateMobile('x'))
+    // Highlight tombol nav aktif
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        const isActive = (btn.getAttribute('onclick') || '').includes(`('${page}')`);
-        btn.classList.toggle('bg-sky-50', isActive);
-        btn.classList.toggle('text-sky-700', isActive);
+        btn.classList.toggle('bg-sky-50', btn.getAttribute('onclick') === `navigate('${page}')`);
+        btn.classList.toggle('text-sky-700', btn.getAttribute('onclick') === `navigate('${page}')`);
     });
 
     // Spinner sementara loading fragment
