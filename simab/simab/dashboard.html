@@ -22,30 +22,39 @@
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
 
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
-        <div class="p-6 border-b border-slate-100"><h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB</h1></div>
-        <nav class="p-4 space-y-2 flex-grow">
-            <button onclick="navigate('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-gauge mr-3"></i> Dashboard</button>
-            <button onclick="navigate('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-folder-open mr-3"></i> POK</button>
-            <button onclick="navigate('kegiatan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-list-check mr-3"></i> Daftar Kegiatan</button>
-            <button onclick="navigate('perjadin')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-wallet mr-3"></i> Perjadinku</button>
-            <button onclick="navigate('kalender')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-regular fa-calendar mr-3"></i> Kalender</button>
-            <button onclick="navigate('statistik')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-chart-column mr-3"></i> Statistik</button>
+    <!-- Overlay gelap di belakang sidebar, khusus mobile -->
+    <div id="sidebarOverlay" onclick="closeSidebar()" class="fixed inset-0 bg-slate-900/40 z-30 hidden lg:hidden"></div>
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col -translate-x-full transition-transform duration-200 ease-in-out lg:static lg:translate-x-0">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB</h1>
+            <button onclick="closeSidebar()" class="lg:hidden text-slate-400 hover:text-slate-600 p-1" title="Tutup menu"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <nav class="p-4 space-y-2 flex-grow overflow-y-auto">
+            <button onclick="navigateMobile('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-gauge mr-3"></i> Dashboard</button>
+            <button onclick="navigateMobile('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-folder-open mr-3"></i> POK</button>
+            <button onclick="navigateMobile('kegiatan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-list-check mr-3"></i> Daftar Kegiatan</button>
+            <button onclick="navigateMobile('perjadin')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-wallet mr-3"></i> Perjadinku</button>
+            <button onclick="navigateMobile('kalender')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-regular fa-calendar mr-3"></i> Kalender</button>
+            <button onclick="navigateMobile('statistik')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-chart-column mr-3"></i> Statistik</button>
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-            <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
-            <div class="flex items-center gap-4">
-                <span id="user-name" class="text-slate-600 font-medium text-sm">
+    <main class="flex-1 flex flex-col overflow-hidden min-w-0">
+        <header class="h-16 sm:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-8 gap-2">
+            <div class="flex items-center gap-3 min-w-0">
+                <button onclick="openSidebar()" class="lg:hidden text-slate-600 hover:text-sky-700 p-2 -ml-1" title="Menu"><i class="fa-solid fa-bars text-lg"></i></button>
+                <h2 id="page-title" class="text-base sm:text-lg font-semibold text-slate-700 truncate">Dashboard</h2>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                <span id="user-name" class="hidden sm:inline text-slate-600 font-medium text-sm">
                     <i class="fa-solid fa-user mr-2"></i><span id="nama-login">Guest</span>
                 </span>
-                <button onclick="openSettings()" class="text-slate-600 hover:text-sky-700 font-medium text-sm" title="Settings"><i class="fa-solid fa-gear"></i></button>
-                <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm" title="Logout"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
+                <button onclick="openSettings()" class="text-slate-600 hover:text-sky-700 font-medium text-sm p-2" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm p-2" title="Logout"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
             </div>
         </header>
-        <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
+        <div id="app" class="flex-1 p-4 sm:p-8 overflow-y-auto space-y-6"></div>
     </main>
 
     <!-- Notifikasi global, dipakai halaman manapun -->
@@ -61,6 +70,26 @@
     <script src="js/pages/kalender.js"></script>
     <script src="js/pages/statistik.js"></script>
     <script src="js/router.js"></script>
+
+    <!-- Responsive sidebar (drawer) khusus mobile -->
+    <script>
+        const sidebarEl = document.getElementById('sidebar');
+        const overlayEl = document.getElementById('sidebarOverlay');
+
+        function openSidebar() {
+            sidebarEl.classList.remove('-translate-x-full');
+            overlayEl.classList.remove('hidden');
+        }
+        function closeSidebar() {
+            sidebarEl.classList.add('-translate-x-full');
+            overlayEl.classList.add('hidden');
+        }
+        // Dipakai oleh tombol menu di sidebar: pindah halaman lalu tutup drawer (mobile saja)
+        function navigateMobile(page) {
+            navigate(page);
+            if (window.innerWidth < 1024) closeSidebar();
+        }
+    </script>
 
     <!-- PWA: daftarkan service worker -->
     <script>

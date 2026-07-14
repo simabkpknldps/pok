@@ -15,6 +15,7 @@ const PAGE_INIT = {
     kegiatan: () => window.initKegiatanPage && window.initKegiatanPage(),
     perjadin: () => window.initPerjadinPage && window.initPerjadinPage(),
     kalender: () => window.initKalenderPage && window.initKalenderPage(),
+    statistik: () => window.initStatistikPage && window.initStatistikPage(),
 };
 
 async function navigate(page) {
@@ -22,10 +23,11 @@ async function navigate(page) {
     const title = document.getElementById('page-title');
     title.innerText = page.charAt(0).toUpperCase() + page.slice(1);
 
-    // Highlight tombol nav aktif
+    // Highlight tombol nav aktif (cocokkan navigate('x') atau navigateMobile('x'))
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.toggle('bg-sky-50', btn.getAttribute('onclick') === `navigate('${page}')`);
-        btn.classList.toggle('text-sky-700', btn.getAttribute('onclick') === `navigate('${page}')`);
+        const isActive = (btn.getAttribute('onclick') || '').includes(`('${page}')`);
+        btn.classList.toggle('bg-sky-50', isActive);
+        btn.classList.toggle('text-sky-700', isActive);
     });
 
     // Spinner sementara loading fragment
