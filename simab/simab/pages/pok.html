@@ -7,10 +7,21 @@
         </button>
     </div>
 
-    <div class="pok-table-container border border-slate-200 rounded-xl max-h-[70vh] overflow-y-auto">
+    <div class="overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl pok-table-container">
         <table class="w-full text-sm">
+            <thead id="pok-thead" class="bg-slate-100 text-slate-600 text-xs uppercase">
+                <tr>
+                    <th class="p-3 text-left">Kode</th>
+                    <th class="p-3 text-left">Uraian</th>
+                    <th class="p-3 text-right">Pagu</th>
+                    <th class="p-3 text-right">Blokir</th>
+                    <th class="p-3 text-right">Realisasi</th>
+                    <th class="p-3 text-right">Sisa</th>
+                    <th class="p-3 text-center">Aksi</th>
+                </tr>
+            </thead>
             <tbody id="pok-tbody">
-                <tr><td colspan="8" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>
+                <tr><td colspan="7" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>
             </tbody>
         </table>
     </div>

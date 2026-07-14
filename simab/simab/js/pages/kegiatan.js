@@ -90,7 +90,6 @@ function bindKegiatanEvents() {
             if (isAdmin || statusKegiatan === 'Rekam Data') kgShowDeletePopup(tr);
             else alert('Anda tidak memiliki kewenangan!');
         }
-        else if (btn.classList.contains('kg-btn-detil')) kgShowDetilPopup(tr);
         else if (btn.classList.contains('kg-btn-pelaksana')) kgShowPelaksanaPopup(tr);
         else if (btn.classList.contains('kg-btn-lpt')) kgShowLPTPopup(tr);
         else if (btn.classList.contains('kg-btn-bayar')) {
@@ -165,7 +164,6 @@ function kgRenderTable(rows) {
                     <button class="kg-btn-lpt w-7 h-7 rounded hover:bg-slate-100" title="LPT"><i class="fa-solid fa-file-lines"></i></button>
                     <button class="kg-btn-bayar w-7 h-7 rounded hover:bg-slate-100" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
                     <button class="kg-btn-sp2d w-7 h-7 rounded hover:bg-slate-100" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
-                    <button class="kg-btn-detil w-7 h-7 rounded hover:bg-slate-100 text-sky-600" title="Detil"><i class="fa-solid fa-circle-info"></i></button>
                     <button class="kg-btn-hapus w-7 h-7 rounded hover:bg-slate-100 text-red-500" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
@@ -750,59 +748,6 @@ function kgShowSP2DPopup(tr) {
             btn.disabled = false;
         }
     };
-}
-
-// ---- Detil ----
-function kgShowDetilPopup(tr) {
-    const id = tr.dataset.id;
-    const data = kgCurrentTableRowsData.find(r => String(r.A) === String(id))
-        || kgAllRows.find(r => String(r.A) === String(id));
-
-    if (!data) {
-        alert('Data detil tidak ditemukan.');
-        return;
-    }
-
-    const formatDate = (v) => {
-        if (!v) return '-';
-        const d = new Date(v);
-        if (isNaN(d.getTime())) return String(v);
-        return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
-
-    const jumlahFormatted = 'Rp ' + Number(data.M || 0).toLocaleString('id-ID');
-
-    const baris = (label, value) => `
-        <div class="flex justify-between items-start gap-4 py-2 border-b border-slate-100 text-sm">
-            <span class="text-slate-500 whitespace-nowrap">${label}</span>
-            <span class="font-medium text-slate-800 text-right break-words">${(value === undefined || value === null || value === '') ? '-' : value}</span>
-        </div>`;
-
-    const { overlay, popup } = kgOpenOverlay(`
-        <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Detil Kegiatan #${data.A ?? ''}</h3>
-        <div class="flex flex-col">
-            ${baris('ID Kegiatan', data.A)}
-            ${baris('MAK', data.B)}
-            ${baris('Uraian / No ST', data.C)}
-            ${baris('Pelaksana Tugas', data.D)}
-            ${baris('Tujuan', data.E)}
-            ${baris('Tgl ST', formatDate(data.F))}
-            ${baris('Tgl Mulai', formatDate(data.G))}
-            ${baris('Tgl Selesai', formatDate(data.H))}
-            ${baris('Tgl LPT', formatDate(data.I))}
-            ${baris('Tgl Bayar', formatDate(data.J))}
-            ${baris('Jumlah', jumlahFormatted)}
-            ${baris('User', data.N)}
-            ${baris('Status', data.P)}
-            ${baris('Tgl SP2D', formatDate(data.Q))}
-            ${baris('Nomor SPM', data.R)}
-        </div>
-        <div class="flex justify-end mt-2">
-            <button id="kg-detilClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button>
-        </div>
-    `, 'max-w-md');
-
-    popup.querySelector('#kg-detilClose').onclick = () => overlay.remove();
 }
 
 // ---- Hapus ----

@@ -4,39 +4,13 @@
 
 window.rawPokData = [];
 window.expandedCodes = new Set();
-window.expandedSeksi = new Set(); // Seksi (grup) yang sedang dibuka
 window.searchResults = [];
 window.searchIndex = -1;
 window.selectedKode = "";
 window.detilKegiatanData = [];
 
-// Warna badge per Seksi (kolom I sheet pok_sumber_2026)
-const POK_SEKSI_COLORS = {
-    'PN': 'bg-sky-100 text-sky-700',
-    'HI': 'bg-purple-100 text-purple-700',
-    'KI': 'bg-amber-100 text-amber-700',
-    'Lelang': 'bg-rose-100 text-rose-700',
-    'Penilaian': 'bg-emerald-100 text-emerald-700',
-    'PKN': 'bg-indigo-100 text-indigo-700',
-    'Umum': 'bg-slate-200 text-slate-700'
-};
-
-function pokSeksiBadgeClass(seksi) {
-    return POK_SEKSI_COLORS[seksi] || 'bg-slate-100 text-slate-600';
-}
-
-function toggleSeksiGroup(seksi) {
-    if (window.expandedSeksi.has(seksi)) {
-        window.expandedSeksi.delete(seksi);
-    } else {
-        window.expandedSeksi.add(seksi);
-    }
-    renderPok();
-}
-
 async function initPokPage() {
     window.expandedCodes = new Set();
-    window.expandedSeksi = new Set();
     window.searchResults = [];
     window.selectedKode = "";
     await loadPokData();
@@ -45,7 +19,7 @@ async function initPokPage() {
 async function loadPokData() {
     const tbody = document.getElementById('pok-tbody');
     try {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
         
         const data = await apiPost({ action: 'getPOKData' });
         
@@ -60,7 +34,7 @@ async function loadPokData() {
         const errorMsg = e.name === 'AbortError' 
             ? 'Timeout: Server tidak merespons (>30 detik)'
             : e.message || 'Gagal memuat data';
-        tbody.innerHTML = `<tr><td colspan="8" class="text-red-500 p-4 text-center">❌ ${errorMsg}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-red-500 p-4 text-center">❌ ${errorMsg}</td></tr>`;
     }
 }
 
@@ -70,127 +44,45 @@ function renderPok() {
 
     const uniqueMap = new Map();
     window.rawPokData.forEach(item => {
-        uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
+        uniqueMap.set(String(item.kode), item);
     });
     const uniqueData = Array.from(uniqueMap.values());
 
     const keyword = (document.getElementById("searchPok")?.value || "").toLowerCase().trim();
+    const bidang = document.getElementById("filterBidang")?.value || "Semua";
 
-    // Kelompokkan berdasarkan Seksi (kolom I), urutan sesuai kemunculan pertama di data
-    const groups = new Map(); // seksi -> array item
-    uniqueData.forEach(item => {
-        const seksi = item.bidang || 'Lainnya';
-        if (!groups.has(seksi)) groups.set(seksi, []);
-        groups.get(seksi).push(item);
-    });
-
-    const pokRenderRow = (i, seksi, groupItems) => {
+    tbody.innerHTML = uniqueData.map(i => {
         const c = String(i.kode);
         const uraian = String(i.uraian || "").toLowerCase();
 
+        if (bidang !== "Semua" && (i.bidang || "") !== bidang) return '';
+
         const isParent = c.length === 12;
-        const isLeaf = c.length > 27;
-        const isChildVisible = Array.from(window.expandedCodes).some(k => {
-            if (!k.startsWith(seksi + '::')) return false;
-            const p = k.slice((seksi + '::').length);
-            return c.startsWith(p) && c !== p;
-        });
+        const isChildVisible = Array.from(window.expandedCodes).some(p => c.startsWith(p) && c !== p);
 
         if (!isParent && !isChildVisible) return '';
 
         const isMatch = keyword && (c.toLowerCase().includes(keyword) || uraian.includes(keyword));
+        const matchClass = isMatch ? 'bg-yellow-200' : (c.length > 27 ? (i.sumber === 'PNBP' ? 'bg-pink-50' : 'bg-blue-50') : 'bg-white');
 
-        // Level hierarki berdasarkan jumlah segmen kode (dipisah titik), untuk indentasi visual
-        const depth = c.split('.').length;
-        const indentPx = Math.min(depth - 1, 5) * 18;
+        const hasChildren = uniqueData.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
 
-        let rowBg = 'bg-white hover:bg-slate-100';
-        if (isMatch) {
-            rowBg = 'bg-yellow-200 hover:bg-yellow-300';
-        } else if (isLeaf) {
-            rowBg = i.sumber === 'PNBP' ? 'bg-pink-200 hover:bg-pink-300' : 'bg-blue-200 hover:bg-blue-300';
-        } else if (isParent) {
-            rowBg = 'bg-sky-50 hover:bg-sky-100'; // penanda visual: baris ini bisa diklik untuk expand/collapse
-        } else if (depth <= 2) {
-            rowBg = 'bg-slate-50 hover:bg-slate-100';
-        }
-
-        const textWeight = depth <= 2 ? 'font-bold text-slate-700' : (isLeaf ? 'font-normal text-slate-600' : 'font-semibold text-slate-700');
-
-        const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
-        const expandKey = seksi + '::' + c;
-
-        const pagu = Number(i.pagu || 0);
-        const blokir = Number(i.blokir || 0);
-        const realisasi = Number(i.realisasi || 0);
-        const sisa = Number(i.sisa || 0);
-        const paguEfektif = pagu - blokir;
-        const persenRealisasi = paguEfektif > 0 ? Math.min((realisasi / paguEfektif) * 100, 100) : 0;
-        const barColor = persenRealisasi >= 90 ? 'bg-green-500' : (persenRealisasi >= 50 ? 'bg-sky-500' : 'bg-amber-400');
-        const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
-
-        return `<tr data-kode="${c}" data-seksi="${seksi}" class="border-b transition ${rowBg} cursor-pointer" onclick="toggleExpand('${c}', '${seksi}')">
-            <td class="p-3 font-mono text-xs text-slate-500 whitespace-nowrap">${c}</td>
-            <td class="p-3 ${textWeight}" style="padding-left:${12 + indentPx}px">
-                <span class="whitespace-normal break-words">${i.uraian}</span>
-                ${hasChildren ? (window.expandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
-            </td>
-            <td class="p-3 text-right whitespace-nowrap">${pagu.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-right whitespace-nowrap">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
-            <td class="p-3 text-right whitespace-nowrap">
-                <div>${realisasi.toLocaleString('id-ID')}</div>
-                ${paguEfektif > 0 ? `
-                    <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
-                        <div class="h-full ${barColor} rounded-full" style="width:${persenRealisasi}%"></div>
-                    </div>
-                    <div class="text-[10px] text-slate-400 mt-0.5">${persenRealisasi.toFixed(1)}%</div>
-                ` : ''}
-            </td>
-            <td class="p-3 text-right whitespace-nowrap ${sisaClass}">${sisa.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-center whitespace-nowrap text-slate-500">${i.sumber || '-'}</td>
-            <td class="p-3 text-center whitespace-nowrap">
-                ${isLeaf ? `
+        return `<tr data-kode="${c}" class="border-b hover:bg-slate-100 ${matchClass} cursor-pointer" onclick="toggleExpand('${c}')">
+            <td class="p-3 font-mono text-xs font-bold">${c}</td>
+            <td class="p-3 font-medium">${i.uraian} ${hasChildren ? (window.expandedCodes.has(c) ? ' <i class="fa-solid fa-chevron-down text-[10px]"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]"></i>') : ''}</td>
+            <td class="p-3 text-right">${Number(i.pagu || 0).toLocaleString()}</td>
+            <td class="p-3 text-right">${Number(i.blokir || 0).toLocaleString()}</td>
+            <td class="p-3 text-right">${Number(i.realisasi || 0).toLocaleString()}</td>
+            <td class="p-3 text-right">${Number(i.sisa || 0).toLocaleString()}</td>
+            <td class="p-3 text-center">
+                ${c.length > 27 ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
                         class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
                     <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
                 ` : ''}
             </td>
         </tr>`;
-    };
-
-    const groupHeaderRow = (seksi, count, isOpen) => `
-        <tr class="cursor-pointer select-none" onclick="toggleSeksiGroup('${seksi}')">
-            <td colspan="8" class="p-3 font-bold text-sm ${pokSeksiBadgeClass(seksi)}">
-                <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>
-                ${seksi}
-                <span class="ml-2 font-normal text-xs opacity-70">(${count} item)</span>
-            </td>
-        </tr>`;
-
-    const columnSubHeaderRow = () => `
-        <tr class="text-slate-500 text-[11px] uppercase">
-            <td class="p-2 text-left bg-slate-50 font-semibold">Kode</td>
-            <td class="p-2 text-left bg-slate-50 font-semibold">Uraian</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Pagu</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Blokir</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Realisasi</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Sisa</td>
-            <td class="p-2 text-center bg-slate-50 font-semibold">SD</td>
-            <td class="p-2 text-center bg-slate-50 font-semibold">Aksi</td>
-        </tr>`;
-
-    let html = '';
-    groups.forEach((items, seksi) => {
-        const isOpen = window.expandedSeksi.has(seksi);
-        html += groupHeaderRow(seksi, items.length, isOpen);
-
-        if (isOpen) {
-            html += columnSubHeaderRow();
-            html += items.map(i => pokRenderRow(i, seksi, items)).join('');
-        }
-    });
-
-    tbody.innerHTML = html;
+    }).join('');
 }
 
 function searchPok() {
@@ -210,16 +102,14 @@ function searchPok() {
 
     if (window.searchResults.length > 0) {
         window.selectedKode = window.searchResults[0].kode;
-        const seksi = window.searchResults[0].bidang || 'Lainnya';
 
         const parentCode = String(window.selectedKode).substring(0, 12);
-        window.expandedCodes.add(seksi + '::' + parentCode);
-        window.expandedSeksi.add(seksi); // buka grup Seksi terkait
+        window.expandedCodes.add(parentCode);
 
         renderPok();
 
         setTimeout(() => {
-            const el = document.querySelector(`tr[data-kode="${window.selectedKode}"][data-seksi="${seksi}"]`);
+            const el = document.querySelector(`tr[data-kode="${window.selectedKode}"]`);
             if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 100);
     }
@@ -230,37 +120,29 @@ function gotoSearchResult() {
     if (!item) return;
 
     const kode = String(item.kode);
-    const seksi = item.bidang || 'Lainnya';
     window.selectedKode = kode;
 
     if (kode.length > 12) {
         window.expandedCodes.clear();
-        window.expandedCodes.add(seksi + '::' + kode.substring(0, 12));
+        window.expandedCodes.add(kode.substring(0, 12));
     }
-    window.expandedSeksi.add(seksi); // buka grup Seksi terkait
 
     renderPok();
 
     setTimeout(() => {
-        document.querySelector(`[data-kode="${kode}"][data-seksi="${seksi}"]`)
+        document.querySelector(`[data-kode="${kode}"]`)
             ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 50);
 }
 
-function toggleExpand(code, seksi) {
+function toggleExpand(code) {
     if (String(code).length !== 12) return;
 
-    const key = seksi + '::' + code;
-    const wasOpen = window.expandedCodes.has(key);
-
-    // Accordion per Seksi: tutup dulu semua kode yang sedang terbuka di Seksi yang sama,
-    // supaya expand di satu Seksi tidak ikut membuka kode yang sama di Seksi lain.
-    Array.from(window.expandedCodes).forEach(k => {
-        if (k.startsWith(seksi + '::')) window.expandedCodes.delete(k);
-    });
-
-    if (!wasOpen) {
-        window.expandedCodes.add(key);
+    if (window.expandedCodes.has(code)) {
+        window.expandedCodes.clear();
+    } else {
+        window.expandedCodes.clear();
+        window.expandedCodes.add(code);
     }
 
     renderPok();
@@ -270,27 +152,24 @@ function toggleExpandAll() {
     const btn = document.getElementById("toggleExpandBtn");
     
     if (window.expandedCodes.size === 0) {
-        // Expand all - tambah semua parent codes (12 digit) & buka semua grup Seksi
+        // Expand all - tambah semua parent codes (12 digit)
         const uniqueMap = new Map();
         window.rawPokData.forEach(item => {
-            uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
+            uniqueMap.set(String(item.kode), item);
         });
         const uniqueData = Array.from(uniqueMap.values());
         
         uniqueData.forEach(item => {
             const code = String(item.kode);
-            const seksi = item.bidang || 'Lainnya';
             if (code.length === 12) {
-                window.expandedCodes.add(seksi + '::' + code);
+                window.expandedCodes.add(code);
             }
-            window.expandedSeksi.add(seksi);
         });
         
         btn.innerHTML = '<i class="fa-solid fa-compress"></i> Collapse All';
     } else {
         // Collapse all
         window.expandedCodes.clear();
-        window.expandedSeksi.clear();
         btn.innerHTML = '<i class="fa-solid fa-expand"></i> Expand All';
     }
     
@@ -467,9 +346,6 @@ function renderDetilTable(data) {
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${sClass}">${i.status || '-'}</span>
                 </div>
                 <div class="w-[8%] flex justify-center gap-2">
-                    <button onclick="showDetilKegiatanInfo('${i.idKegiatan}')" class="text-slate-600 hover:text-slate-800" title="Detil">
-                        <i class="fa-solid fa-circle-info"></i>
-                    </button>
                     ${i.status === 'Rekam Data' ? `
                         <button onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600 hover:text-sky-800 font-bold" title="Update Pelaksana">
                             <i class="fa-solid fa-users"></i>
@@ -479,61 +355,6 @@ function renderDetilTable(data) {
             </div>
         `;
     }).join('');
-}
-
-function pokOpenOverlay(innerHtml, widthClass) {
-    const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4';
-
-    const popup = document.createElement('div');
-    popup.className = `bg-white rounded-2xl shadow-xl w-full ${widthClass || 'max-w-md'} p-6 flex flex-col gap-3 max-h-[90vh] overflow-y-auto`;
-    popup.innerHTML = innerHtml;
-
-    overlay.appendChild(popup);
-    document.body.appendChild(overlay);
-    return { overlay, popup };
-}
-
-function showDetilKegiatanInfo(idKegiatan) {
-    const data = window.detilKegiatanData.find(d => d.idKegiatan === idKegiatan);
-    if (!data) {
-        alert('Data detil tidak ditemukan.');
-        return;
-    }
-
-    const formatDate = (v) => {
-        if (!v) return '-';
-        const d = new Date(v);
-        if (isNaN(d.getTime())) return String(v);
-        return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    };
-
-    const baris = (label, value) => `
-        <div class="flex justify-between items-start gap-4 py-2 border-b border-slate-100 text-sm">
-            <span class="text-slate-500 whitespace-nowrap">${label}</span>
-            <span class="font-medium text-slate-800 text-right break-words">${(value === undefined || value === null || value === '') ? '-' : value}</span>
-        </div>`;
-
-    const { overlay, popup } = pokOpenOverlay(`
-        <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Detil Kegiatan #${data.idKegiatan ?? ''}</h3>
-        <div class="flex flex-col">
-            ${baris('ID Kegiatan', data.idKegiatan)}
-            ${baris('MAK', data.mak)}
-            ${baris('Uraian / No ST', data.uraian)}
-            ${baris('Pelaksana Tugas', data.pelaksana_kegiatan)}
-            ${baris('Tujuan', data.tujuan)}
-            ${baris('Tgl ST', formatDate(data.tglSt))}
-            ${baris('Jumlah', 'Rp ' + Number(data.estimasi || 0).toLocaleString('id-ID'))}
-            ${baris('User', data.userLogin)}
-            ${baris('Status', data.status)}
-            ${baris('Nomor SPM', data.nomorSPM)}
-        </div>
-        <div class="flex justify-end mt-2">
-            <button id="pok-detilInfoClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button>
-        </div>
-    `, 'max-w-md');
-
-    popup.querySelector('#pok-detilInfoClose').onclick = () => overlay.remove();
 }
 
 function filterDetil() {
@@ -726,7 +547,6 @@ async function simpanPelaksana() {
 }
 
 window.initPokPage = initPokPage;
-window.toggleSeksiGroup = toggleSeksiGroup;
 window.loadPokData = loadPokData;
 window.renderPok = renderPok;
 window.searchPok = searchPok;
@@ -738,7 +558,6 @@ window.closeRekamModal = closeRekamModal;
 window.cekKecukupanDana = cekKecukupanDana;
 window.simpanData = simpanData;
 window.openDetilModal = openDetilModal;
-window.showDetilKegiatanInfo = showDetilKegiatanInfo;
 window.filterDetil = filterDetil;
 window.openPelaksanaModal = openPelaksanaModal;
 window.closePelaksanaModal = closePelaksanaModal;

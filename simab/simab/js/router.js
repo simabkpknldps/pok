@@ -15,7 +15,6 @@ const PAGE_INIT = {
     kegiatan: () => window.initKegiatanPage && window.initKegiatanPage(),
     perjadin: () => window.initPerjadinPage && window.initPerjadinPage(),
     kalender: () => window.initKalenderPage && window.initKalenderPage(),
-    statistik: () => window.initStatistikPage && window.initStatistikPage(),
 };
 
 async function navigate(page) {
