@@ -1,272 +1,1515 @@
-/**
- * Halaman Perjadinku
- * Diadaptasi dari perjadinku.html (versi standalone lama) ke pola SPA:
- * - Entry point: initPerjadinPage()  (dipanggil oleh router.js lewat PAGE_INIT.perjadin)
- * - Komunikasi backend lewat apiPost() (js/api.js), sama seperti halaman Daftar Kegiatan
- * - Helper umum: showToast() dsb dari js/common.js (tidak wajib dipakai di halaman ini)
- *
- * PERBEDAAN DARI VERSI LAMA (GAS_Perjadin_lama.txt):
- * - GAS lama: doGet(kantor, nama) -> server sudah memfilter data per pegawai & per MAK.
- * - GAS sekarang: hanya ada action 'getKegiatanData' (dipakai bersama halaman Kegiatan)
- *   yang mengembalikan SEMUA baris kegiatan (semua pegawai, kolom A-R).
- *   Filtering per nama pegawai & per jenis MAK dilakukan di sini (client).
- *
- * Struktur baris data dari backend (huruf kolom sheet Data_Kegiatan_2026):
- * A id, B mak, C uraian, D pelaksana, E tujuan, F tglST, G tglMulai,
- * H tglSelesai, I tglLPT, J tglBayar, M jumlah, N user, P status
- */
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalender SiMAB</title>
 
-let pjAllRows = [];       // baris milik user login yang sedang login, sudah difilter MAK 524111/524113
-let pjChartInstance = null;
-let pjFirstLoad = true;
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-async function initPerjadinPage() {
-    const root = document.getElementById('pj-detailBody');
-    if (!root) return; // fragment belum ter-render, batalkan
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+<style>
 
-    pjAllRows = [];
-    pjFirstLoad = true;
-
-    pjBindEvents();
-    await pjLoadData();
+.popup-overlay{
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.3);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:99999;
+}
+.popup-box{
+    background:#fff;
+    border-radius:8px;
+    padding:20px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.3);
 }
 
-function pjBindEvents() {
-    document.getElementById('pj-searchBox').addEventListener('input', pjApplyFilter);
-
-    document.querySelectorAll('input[name="pj-statusFilter"]').forEach(rb => {
-        rb.addEventListener('change', pjApplyFilter);
-    });
+    
+    .cards {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:20px;
+    margin-bottom:30px;
 }
 
-// MAK dianggap "perjalanan dinas" jika mengandung kode 524111 (luar kota) / 524113 (dalam kota)
-function pjIsPerjalananDinas(mak) {
-    const s = String(mak || '');
-    return s.includes('524111') || s.includes('524113');
+.card {
+    background:white; padding:20px; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.05);
+    display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;
+}
+.card h3{ font-size:20px; margin-bottom:10px; }
+.card p{ font-size:24px; font-weight:600; }
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Inter',sans-serif;
+}
+.chart-box {
+    display: flex;
+    flex-direction: column;
+    flex: 1;             /* isi penuh ruang parent */
+    min-height: 0;       /* agar flex-basis tidak menahan */
 }
 
-function pjJenis(mak) {
-    const s = String(mak || '');
-    if (s.includes('524111')) return 'luar';
-    if (s.includes('524113')) return 'dalam';
-    return null;
+
+    
+body{
+    display:grid;
+    grid-template-columns:240px 1fr;
+    background:#f8fafc;
+    color:#334155;
 }
 
-async function pjLoadData() {
-    const tbody = document.getElementById('pj-detailBody');
-    tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>`;
+/* SIDEBAR */
+.sidebar{
+    height:100vh;
+    background:#ffffff;
+    border-right:1px solid #e5e7eb;
+    display:flex;
+    flex-direction:column;
+    position:sticky;
+    top:0;
+}
 
+.sidebar-brand{
+    padding:20px;
+    background:#e0f2fe;
+    color:#0369a1;
+    font-weight:600;
+    font-size:18px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.sidebar ul{
+    list-style:none;
+    padding:20px 10px;
+}
+
+.sidebar ul li{
+    padding:10px 14px;
+    margin-bottom:6px;
+    border-radius:10px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-size:14px;
+    color:#475569;
+    transition:0.2s;
+}
+
+.sidebar ul li:hover{
+    background:#f1f5f9;
+}
+
+.sidebar ul li.active{
+    background:#e0f2fe;
+    color:#0369a1;
+    font-weight:600;
+}
+
+.page-header{
+    margin-bottom:25px;
+}
+
+.page-header h2{
+    font-size:22px;
+    font-weight:700;
+    margin-bottom:4px;
+    color:#0f172a;
+}
+
+.page-header p{
+    font-size:14px;
+    color:#64748b;
+}
+
+    
+/* MAIN */
+.main{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+/* TOPBAR */
+.topbar{
+    height:60px;
+    background:#ffffff;
+    border-bottom:1px solid #e5e7eb;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 30px;
+    position:sticky;
+    top:0;
+    z-index:1000;
+}
+
+.topbar-left{
+    font-weight:600;
+}
+
+.topbar-right{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    font-size:14px;
+}
+
+.topbar-right i{
+    font-size:16px;
+    cursor:pointer;
+    color:#475569;
+    transition:0.2s;
+}
+
+.topbar-right i:hover{
+    color:#0369a1;
+}
+
+.user-info{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:500;
+}
+
+/* CONTENT */
+.content{
+    padding:30px;
+    padding-bottom:80px; /* agar tidak tertutup footer */
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+    margin-bottom:25px;
+}
+
+.card{
+    padding:20px;
+    border-radius:16px;
+    border:1px solid #e5e7eb;
+    transition:0.2s;
+    background:white;
+}
+
+.card:hover{
+    transform:translateY(-4px);
+}
+
+.cards .card:nth-child(1){background:#e0f2fe;color:#2F4F4F;}
+.cards .card:nth-child(2){background:#dcfce7;color:#2F4F4F;}
+.cards .card:nth-child(3){background:#ffedd5;color:#2F4F4F;}
+.cards .card:nth-child(4){background:#FFFACD;color:#2F4F4F;}
+.cards .card:nth-child(5){background:#fee2e2;color:#2F4F4F;}
+
+.card h3{
+    font-size:13px;
+    margin-bottom:8px;
+}
+
+.card span{
+    font-size:24px;
+    font-weight:700;
+}
+
+.dashboard-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr;
+    gap:20px;
+    align-items:stretch;
+}
+
+
+.dashboard-grid{
+    display:flex;
+    gap:20px;
+}
+
+.chart-box{
+    flex:2;
+}
+
+.belanja-card{
+    flex:1;
+}
+
+    
+
+.dashboard-grid-full{
+    grid-column:1 / -1;
+    display:block;   /* jadikan full */
+}
+
+.dashboard-grid-full .chart-box{
+    width:100%;
+    height:auto;              /* hilangkan batas tinggi */
+    overflow-x:auto;          /* scroll horizontal */
+}
+
+#monitoringMPTable{
+    min-width:1200px;   /* supaya tidak gepeng */
+}
+
+    #monitoringMPTable thead th{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+    
+.chart-box{
+    background:white;
+    padding:16px;
+    border-radius:16px;
+    border:1px solid #e5e7eb;
+    height:auto;
+    min-height:260px;
+}
+
+
+    .belanja-box{
+    margin-top:20px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+
+.belanja-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid #f1f5f9;
+    padding-bottom:8px;
+}
+
+.belanja-row small{
+    font-size:13px;
+    color:#64748b;
+}
+
+.belanja-row strong{
+    font-size:20px;
+    font-weight:700;
+    color:#0f172a;
+}
+
+.belanja-footnote{
+    margin-top:10px;
+    font-size:12px;
+    color:#94a3b8;
+}
+
+    
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+}
+
+th, td{
+    padding:10px;
+    border-bottom:1px solid #e5e7eb;
+    text-align:left;
+}
+
+th{
+    background:#f1f5f9;
+    font-weight:600;
+}
+
+/* FOOTER FREEZE */
+.footer{
+    position:fixed;
+    bottom:0;
+    left:240px;
+    right:0;
+    height:45px;
+    background:#ffffff;
+    border-top:1px solid #e5e7eb;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    color:#64748b;
+}
+
+@media(max-width:1000px){
+    body{
+        grid-template-columns:1fr;
+    }
+    .footer{
+        left:0;
+    }
+    .dashboard-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+    #monitoringMPTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+#monitoringMPTable th,
+#monitoringMPTable td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: right;
+    white-space: nowrap;
+}
+
+#monitoringMPTable th:first-child,
+#monitoringMPTable td:first-child {
+    text-align: left;
+}
+
+#monitoringMPTable thead th {
+    background: #f1f5f9;
+    font-weight: 600;
+}
+
+#monitoringMPTable tfoot td {
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+#monitoringMPTable tbody {
+    display: block;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+#monitoringMPTable thead,
+#monitoringMPTable tbody tr,
+#monitoringMPTable tfoot {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+/* Kecilkan kolom pertama */
+#monitoringMPTable th:first-child,
+#monitoringMPTable td:first-child{
+    width:30px;        /* ubah sesuai kebutuhan */
+    max-width:30px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+/* Kolom No diperkecil */
+#monitoringMPTable th:nth-child(1),
+#monitoringMPTable td:nth-child(1){
+    width:50px;
+    max-width:50px;
+    text-align:center;
+}
+
+    /* Samakan ukuran tabel Kegiatan Hari Ini */
+.chart-box table{
+    font-size:13px;
+}
+
+.chart-box table th,
+.chart-box table td{
+    padding:8px 10px;
+}
+
+    /* Perkecil card belanja */
+.belanja-box{
+    gap:12px;
+}
+
+.belanja-row strong{
+    font-size:16px;   /* sebelumnya 20px */
+}
+
+.belanja-row small{
+    font-size:12px;
+}
+
+#barangRealisasi,
+#barangSisa,
+#modalRealisasi,
+#modalSisa{
+    font-size:12px;
+    font-weight:600;
+}
+
+.belanja-card{
+    background:white;
+    padding:16px;
+    border-radius:16px;
+    border:1px solid #e5e7eb;
+}
+
+.belanja-card h4{
+    margin-bottom:12px;
+    font-size:14px;
+    font-weight:600;
+}
+
+.progress-container{
+    width:100%;
+    height:10px;
+    background:#e5e7eb;   /* ← ini yang hilang */
+    border-radius:8px;
+    margin:8px 0 14px 0;
+    overflow:hidden;
+}
+
+.progress-bar{
+    height:100%;
+    background:#2563eb;
+    border-radius:8px;
+    transition:width 0.4s ease;
+}
+
+
+
+.progress-info{
+    margin-top:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.progress-info span{
+    font-size:18px;
+    font-weight:700;
+    color:#1d4ed8;
+}
+
+.progress-info small{
+    font-size:12px;
+    color:#64748b;
+    text-align:right;
+}
+
+/* Samakan tinggi card layer kedua */
+.layer-2 .chart-box{
+    min-height:220px;   /* samakan dengan kegiatan hari ini */
+}
+
+    .layer-2{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr;
+    gap:14px;
+    align-items:stretch;  /* PENTING supaya tinggi sama */
+}
+
+    .chart-box{
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+}
+
+.dashboard-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr;
+    gap:20px;
+    align-items:stretch;   /* PENTING */
+}
+
+.chart-box,
+.belanja-card{
+    display:flex;
+    flex-direction:column;
+    padding:16px 18px;
+    border-radius:14px;
+    min-height:230px;   /* samakan tinggi fix */
+}
+
+.chart-box h3,
+.belanja-card h3{
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:12px;
+}
+
+    .chart-box table{
+    flex:1;   /* isi penuh ruang */
+}
+
+.progress-info{
+    margin-top:auto;   /* dorong ke bawah */
+}
+
+
+.progress-info{
+    margin-top:auto;       /* dorong isi ke bawah agar rapi */
+}
+
+.chart-box table{
+    font-size:13px;   /* sedikit lebih kecil */
+}
+
+.chart-box th,
+.chart-box td{
+    padding:6px 8px;  /* lebih rapat */
+}
+
+.modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+}
+
+.modal-box{
+    width:90%;
+    max-width:1100px;
+    background:#fff;
+    border-radius:16px;
+    padding:20px;
+    animation:fadeIn 0.25s ease;
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.modal-header h3{
+    font-size:18px;
+    font-weight:600;
+}
+
+.close-btn{
+    font-size:22px;
+    cursor:pointer;
+}
+
+.modal-body{
+    overflow-x:auto;
+}
+
+.modal-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+}
+
+.modal-table th{
+    background:#f1f5f9;
+    padding:8px;
+    text-align:center;
+    font-weight:600;
+}
+
+.modal-table td{
+    padding:6px 8px;
+    text-align:right;
+    border-bottom:1px solid #eee;
+}
+
+.modal-table td:first-child,
+.modal-table td:nth-child(2){
+    text-align:left;
+}
+
+.modal-table tfoot td{
+    font-weight:700;
+    background:#f8fafc;
+}
+
+@keyframes fadeIn{
+    from{opacity:0; transform:scale(0.95);}
+    to{opacity:1; transform:scale(1);}
+}
+
+#top5Table th,
+#top5Table td{
+    padding:6px 8px;
+    border-bottom:1px solid #e5e7eb;
+}
+
+#top5Table th{
+    background:#f1f5f9;
+    font-weight:600;
+    text-align:left;
+}
+
+#top5Table tr:hover{
+    background:#f8fafc;
+}
+
+/* ===== BELANJA CARD IMPROVED ===== */
+
+.belanja-card{
+    background:white;
+    padding:18px;
+    border-radius:14px;
+    border:1px solid #e5e7eb;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+
+/* Progress bar lebih kecil */
+.progress-bar{
+    width:100%;
+    height:8px;              /* lebih kecil */
+    background:#e5e7eb;
+    border-radius:6px;
+    overflow:hidden;
+}
+
+.progress-fill{
+    height:100%;
+    background:#2563eb;
+    border-radius:6px;
+    transition:width 0.4s ease;
+}
+
+/* Detail layout */
+.belanja-detail{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+}
+
+/* Persen kiri */
+.belanja-detail .persen{
+    font-size:20px;
+    font-weight:700;
+    color:#2563eb;
+    text-align:left;
+}
+
+/* Angka kanan */
+.belanja-detail .angka{
+    text-align:right;
+    line-height:1.6;
+}
+
+/* Label kecil */
+.belanja-detail .angka{
+    font-size:11px;       /* label kecil */
+    color:#64748b;
+}
+
+/* Nominal biru */
+.belanja-detail .angka b{
+    font-size:14px;
+    color:#2563eb;
+    font-weight:600;
+}
+
+.topbar-right .fa-calendar {
+    display: none;
+}
+
+.calendar-table{
+    width:100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size:14px;
+    text-align:center;
+}
+
+.calendar-table th{
+    background:#f1f5f9;
+    padding:10px 0;
+    font-weight:600;
+}
+
+.calendar-table td{
+    height:80px;
+    vertical-align:top;
+    border:1px solid #e5e7eb;
+    padding:4px;
+    position:relative;
+}
+
+.calendar-table td .day-number{
+    position:absolute;
+    top:4px;
+    left:4px;
+    font-weight:600;
+    font-size:13px;
+}
+
+.calendar-event{
+    display:block;
+    margin-top:20px;
+    padding:2px 4px;
+    border-radius:6px;
+    font-size:12px;
+    color:#fff;
+    text-align:left;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.event-blue{ background:#3b82f6; }
+.event-green{ background:#22c55e; }
+.event-orange{ background:#f97316; }
+.event-red{ background:#ef4444; }
+.event-purple{ background:#a78bfa; }
+
+.chart-box {
+    flex: 1; /* isi penuh ruang parent */
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 14px;
+    text-align: center;
+    flex: 1;             /* tabel ikut fleksibel */
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-table thead {
+    flex: 0 0 auto;      /* header tidak ikut stretch */
+}
+
+.calendar-table tbody {
+    display: table-row-group; /* default */
+    flex: unset;              /* hilangkan flex/grid */
+    grid-template-rows: unset;
+}
+.calendar-table tr {
+    display: table-row;       /* default */
+}
+
+.calendar-table td {
+    border: 1px solid #e5e7eb;
+    position: relative;
+    padding: 4px;
+    overflow: hidden;
+    height: 100%;        /* supaya td ikut tinggi row */
+}
+
+.chart-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-table {
+    flex: 1;
+    width: 100%;
+}
+
+.calendar-table td {
+    height: auto; /* atau 80px kalau ingin tetap fix */
+}
+
+.chart-box {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size:14px;
+    text-align:center;
+    display: table; /* pastikan table default, jangan flex */
+}
+
+.calendar-table thead {
+    display: table-header-group;
+}
+
+.calendar-table tbody {
+    display: table-row-group;
+}
+
+.calendar-table tr {
+    display: table-row;
+}
+
+.calendar-table td {
+    border: 1px solid #e5e7eb;
+    position: relative;
+    padding: 8px;
+    height: 100px; /* lebih tinggi */
+    vertical-align: top;
+}
+
+.calendar-table td .day-number {
+    font-size: 16px; /* lebih besar */
+}
+
+.calendar-event {
+    font-size: 13px; /* sedikit lebih besar */
+    padding: 3px 6px;
+}
+
+.calendar-table td.other-month {
+    color: #9ca3af; /* abu-abu untuk tanggal bulan lain */
+}
+
+.calendar-table td.today {
+    background:#3b82f6;
+    color:white;
+}
+.calendar-table td.today .calendar-event{
+    background:white;
+    color:#2563eb;
+}
+
+.btn-nav {
+    padding:6px 12px;
+    border:none;
+    background:#3b82f6;
+    color:white;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:16px;
+    transition:0.2s;
+}
+.btn-nav:hover { background:#2563eb; }
+
+.month-year-selects {
+    display:flex;
+    gap:10px;
+    align-items:center;
+}
+
+.select-flat {
+    padding:6px 10px;
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    background:#f8fafc;
+    font-size:14px;
+    cursor:pointer;
+}
+.select-flat:focus {
+    outline:none;
+    border-color:#3b82f6;
+    box-shadow:0 0 0 2px rgba(59,130,246,0.3);
+}
+
+.calendar-table {
+    display: table; /* pastikan table default */
+    flex: unset;    /* hapus flex/grid */
+}
+.calendar-table tbody {
+    display: table-row-group;
+    flex: unset;
+}
+.calendar-table tr {
+    display: table-row;
+}
+
+.event-red{ background:#f87171; }
+
+.status-badge{
+    padding:4px 10px;
+    border-radius:8px;
+    font-size:12px;
+    font-weight:600;
+    display:inline-block;
+}
+
+/* Warna sesuai status */
+.status-rekam{
+    background:#fbcfe8;
+    color:#9d174d;
+}
+
+.status-terlaksana{
+    background:#e5e7eb;
+    color:#374151;
+}
+
+.status-lpt{
+    background:#fef08a;
+    color:#854d0e;
+}
+
+.status-terbayar{
+    background:#bbf7d0;
+    color:#166534;
+}
+
+.status-selesai{
+    background:#bfdbfe;
+    color:#1e3a8a;
+}
+
+/* Freeze header popup */
+#datePopup thead th{
+    position: sticky;
+    top: 0;
+    background: #f1f5f9;
+    z-index: 5;
+}
+    
+</style>
+</head>
+
+<body>
+
+    <div id="overlayLoading" class="popup-overlay" style="display:none;">
+        <div class="popup-box" style="width:300px; text-align:center; padding:20px;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:32px;"></i>
+            <div style="margin-top:10px; font-weight:600;">Memuat data...</div>
+        </div>
+    </div>
+
+    
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>SiMAB</span>
+    </div>
+    <ul>
+        <li onclick="goDashboard()">
+            <i class="fa-solid fa-gauge"></i>Dashboard
+        </li>
+        <li onclick="goPOK()">
+            <i class="fa-solid fa-folder-open"></i>POK
+        </li>
+        <li onclick="goKegiatan()"><i class="fa-solid fa-gauge"></i>Daftar Kegiatan</li>
+        <li onclick="goPerjadinku()"><i class="fa-solid fa-wallet"></i>Perjadinku</li>
+        <li onclick="goStatistik()"><i class="fa-solid fa-chart-column"></i>Statistik</li>
+        <li class="active" onclick="goKalender()"><i class="fa-regular fa-calendar"></i>Kalender</li>
+</ul>
+
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <div class="topbar-left">
+            Sistem Monitoring Anggaran Belanja
+        </div>
+
+        <div class="topbar-right">
+            <i class="fa-regular fa-calendar"></i>
+            <i class="fa-solid fa-gear"></i>
+
+            <div class="user-info">
+                <i class="fa-regular fa-user"></i>
+                <span id="namaUser"></span>
+            </div>
+
+            <i class="fa-solid fa-right-from-bracket" title="Logout" onclick="logout()"></i>
+        </div>
+    </div>
+
+    <div class="content">
+    
+
+
+    <div class="chart-box">
+        <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px;">
+            <button onclick="prevMonth()" class="btn-nav">&lt;</button>
+        
+            <div class="month-year-selects">
+                <label>
+                    Bulan:
+                    <select id="monthSelect" class="select-flat"></select>
+                </label>
+                <label>
+                    Tahun:
+                    <select id="yearSelect" class="select-flat"></select>
+                </label>
+            </div>
+        
+            <button onclick="nextMonth()" class="btn-nav">&gt;</button>
+        </div>
+        <table class="calendar-table">
+            <thead>
+                <tr>
+                    <th>Minggu</th>
+                    <th>Senin</th>
+                    <th>Selasa</th>
+                    <th>Rabu</th>
+                    <th>Kamis</th>
+                    <th>Jumat</th>
+                    <th>Sabtu</th>
+                </tr>
+            </thead>
+            <tbody id="calendarBody">
+                <!-- kalender akan di-generate JS -->
+            </tbody>
+        </table>
+    </div>
+
+        
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    © KPKNL Denpasar 2026
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    
+<script>
+    
+let calendarData = {};
+
+let currentDate = new Date();
+
+    async function loadCalendarData() {
     try {
-        const data = await apiPost({ action: 'getKegiatanData', kantor: sessionStorage.getItem('kantor') });
+        const kantor = sessionStorage.getItem("kantor");
 
-        if (!data || data.status !== 'success') {
-            tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">Gagal memuat data perjadin.</td></tr>`;
-            return;
-        }
-
-        const nama = (sessionStorage.getItem('nama') || '').trim().toLowerCase();
-
-        pjAllRows = (data.rows || []).filter(r => {
-            const pelaksana = String(r.D || '').trim().toLowerCase();
-            return pelaksana === nama && pjIsPerjalananDinas(r.B);
+        const response = await fetch("https://script.google.com/macros/s/AKfycbwmXkJ102SD72VS1cYOu3UEIwvESrTY1rbQJwgJJzLGF_YMa20-naPvG24KyRul7FYmoQ/exec", {
+            method: "POST",
+            body: JSON.stringify({
+                action: "getCalendar",
+                kantor: kantor
+            })
         });
 
-        pjRenderStatusSummary(pjAllRows);
-        pjUpdateLokasiFavorit(pjAllRows);
-        pjUpdateJenisPerjadin(pjAllRows);
-        pjUpdateChart(pjAllRows);
+        const result = await response.json();
 
-        const defaultRadio = document.querySelector('input[name="pj-statusFilter"]:checked').value;
-        pjRenderDetailTable(pjFilterByStatus(pjAllRows, defaultRadio));
+        if(result.status === "success"){
+            calendarData = result.data;
+        } else {
+            alert(result.message);
+        }
 
-        pjFirstLoad = false;
-
-    } catch (e) {
-        console.error('Error loadData perjadin:', e);
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">❌ ${e.message || 'Gagal memuat data perjadin.'}</td></tr>`;
+    } catch(error) {
+        alert("Gagal koneksi ke server");
+        console.error(error);
     }
 }
 
-function pjFilterByStatus(rows, status) {
-    if (status === 'Semua') return rows;
-    return rows.filter(r => r.P === status);
-}
+    
+function renderCalendar(){
+    const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
 
-// search + radio hanya mempengaruhi tabel detail (ringkasan status & kartu bawah tetap dari semua data user)
-function pjApplyFilter() {
-    const keyword = document.getElementById('pj-searchBox').value.toLowerCase();
-    const status = document.querySelector('input[name="pj-statusFilter"]:checked').value;
+    const firstDay = new Date(year, month, 1).getDay(); // 0=minggu
+    const lastDate = new Date(year, month+1, 0).getDate();
+    const prevLastDate = new Date(year, month, 0).getDate();
 
-    let filtered = pjFilterByStatus(pjAllRows, status);
-    if (keyword) {
-        filtered = filtered.filter(r =>
-            String(r.B || '').toLowerCase().includes(keyword) ||
-            String(r.C || '').toLowerCase().includes(keyword) ||
-            String(r.E || '').toLowerCase().includes(keyword)
-        );
+    const tbody = document.getElementById("calendarBody");
+    tbody.innerHTML = "";
+
+    let day = 1;
+    for(let week=0; week<6; week++){
+        const tr = document.createElement("tr");
+        for(let d=0; d<7; d++){
+            const td = document.createElement("td");
+            let dayNum = 0;
+            let isOtherMonth = false;
+
+            if(week===0 && d<firstDay){
+                dayNum = prevLastDate - firstDay + d + 1;
+                isOtherMonth = true;
+            } else if(day > lastDate){
+                dayNum = day - lastDate;
+                isOtherMonth = true;
+                day++;
+            } else {
+                dayNum = day;
+                day++;
+            }
+
+            td.innerHTML = `<span class="day-number">${dayNum}</span>`;
+
+            if(isOtherMonth){
+                td.classList.add("other-month");
+            } else {
+                // tambahkan contoh event
+                const events = getEventsForDay(dayNum, month+1, year);
+                events.forEach(ev=>{
+                    const span = document.createElement("span");
+                    span.className = `calendar-event event-${ev.color}`;
+                    span.textContent = ev.title;
+                    if(!isOtherMonth){
+                        td.addEventListener("dblclick", function(){
+                            openDatePopup(dayNum, month+1, year);
+                        });
+                    }
+                    td.appendChild(span);
+                });
+
+                // highlight hari ini
+                const today = new Date();
+                if(dayNum === today.getDate() && month === today.getMonth() && year === today.getFullYear()){
+                    td.classList.add("today");
+                }
+            }
+
+            tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
     }
-    pjRenderDetailTable(filtered);
 }
 
-function pjFormatDate(v) {
-    if (!v) return '';
-    const d = new Date(v);
-    if (isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+initMonthYearDropdowns();
+renderCalendar();  // <-- panggil ini supaya kalender muncul
+monthSelect.addEventListener("change", changeMonthYear);
+yearSelect.addEventListener("change", changeMonthYear);
 
-function pjStatusClasses(status) {
-    switch (status) {
-        case 'Rekam Data': return 'bg-red-300';
-        case 'Terlaksana': return 'bg-slate-300';
-        case 'LPT': return 'bg-yellow-300';
-        case 'Terbayar': return 'bg-green-400';
-        case 'Selesai': return 'bg-blue-400 text-white';
-        default: return '';
+function getEventsForDay(day, month, year){
+
+    const key = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+
+    if(!calendarData[key]) return [];
+
+    const items = calendarData[key];
+    const maxShow = 2;
+    const events = [];
+
+    items.slice(0, maxShow).forEach(item=>{
+        let title = item.c;
+
+        if(title.length > 25){
+            title = title.substring(0,25) + "...";
+        }
+
+        events.push({
+            title: title,
+            color: "green"
+        });
+    });
+
+    if(items.length > maxShow){
+        events.push({
+            title: "+" + (items.length - maxShow),
+            color: "red"
+        });
     }
+
+    return events;
 }
 
-function pjRenderDetailTable(rows) {
-    const tbody = document.getElementById('pj-detailBody');
-    tbody.innerHTML = '';
+function goDashboard(){
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+    if(!kantor){
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+    window.location.href="dashboard.html";
+}
+function goPOK(){ 
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+    if(!kantor){
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+    window.location.href="data_pok.html";
+}
+function goKegiatan(){
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+    if(!kantor){
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+    window.location.href = "data_kegiatan.html";
+}
 
-    if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Tidak ada data</td></tr>`;
+function goPerjadinku(){
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+    if(!kantor){
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+    window.location.href = "perjadinku.html";
+}
+
+    function goKalender() {
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
+
+    if (!kantor) {
+        alert("Session kantor belum ada. Silakan login ulang!");
         return;
     }
 
-    rows.forEach(r => {
-        const jumlah = Number(r.M || 0);
-        const tr = document.createElement('tr');
-        tr.className = 'border-b border-slate-100 hover:bg-slate-50';
-        tr.innerHTML = `
-            <td class="p-2 align-top">${r.B ?? ''}</td>
-            <td class="p-2 align-top">${r.C ?? ''}</td>
-            <td class="p-2 align-top">${r.E ?? ''}</td>
-            <td class="p-2 align-top whitespace-nowrap">${pjFormatDate(r.G)}</td>
-            <td class="p-2 align-top whitespace-nowrap">${pjFormatDate(r.H)}</td>
-            <td class="p-2 align-top text-right whitespace-nowrap">${jumlah.toLocaleString('id-ID')}</td>
-            <td class="p-2 align-top text-center font-semibold rounded ${pjStatusClasses(r.P)}">${r.P ?? ''}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+    // Tidak perlu kirim apa-apa, sessionStorage tetap terbaca di halaman berikutnya
+    window.location.href = "kalender.html";
 }
 
-function pjRenderStatusSummary(rows) {
-    const statusList = ['Rekam Data', 'Terlaksana', 'LPT', 'Terbayar', 'Selesai'];
-    const summary = {};
-    statusList.forEach(s => summary[s] = { frek: 0, jumlah: 0 });
+function goStatistik() {
+    const kantor = sessionStorage.getItem("kantor");
+    const admin = sessionStorage.getItem("admin");
 
-    rows.forEach(r => {
-        const s = r.P;
-        if (summary[s]) {
-            summary[s].frek += 1;
-            summary[s].jumlah += Number(r.M || 0);
+    if (!kantor) {
+        alert("Session kantor belum ada. Silakan login ulang!");
+        return;
+    }
+
+
+    // Tidak perlu kirim apa-apa, sessionStorage tetap terbaca di halaman berikutnya
+    window.location.href = "statistik.html";
+}
+    
+// Populate dropdown bulan & tahun
+function initMonthYearDropdowns() {
+    const monthSelect = document.getElementById("monthSelect");
+    const yearSelect = document.getElementById("yearSelect");
+    const monthNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+    // bulan
+    monthNames.forEach((name, index)=>{
+        const opt = document.createElement("option");
+        opt.value = index;
+        opt.textContent = name;
+        monthSelect.appendChild(opt);
+    });
+
+    // tahun ±5 tahun dari sekarang
+    const currentYear = new Date().getFullYear();
+    for(let y = currentYear - 5; y <= currentYear + 5; y++){
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        yearSelect.appendChild(opt);
+    }
+
+    // set default sesuai currentDate
+    monthSelect.value = currentDate.getMonth();
+    yearSelect.value = currentDate.getFullYear();
+}
+
+// ketika dropdown berubah
+function changeMonthYear() {
+    const monthSelect = document.getElementById("monthSelect");
+    const yearSelect = document.getElementById("yearSelect");
+    currentDate.setMonth(parseInt(monthSelect.value));
+    currentDate.setFullYear(parseInt(yearSelect.value));
+    renderCalendar();
+}
+
+// panggil saat load
+//initMonthYearDropdowns();
+
+function prevMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar();
+    document.getElementById("monthSelect").value = currentDate.getMonth();
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+}
+
+function nextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+    document.getElementById("monthSelect").value = currentDate.getMonth();
+    document.getElementById("yearSelect").value = currentDate.getFullYear();
+}
+    
+function logout(){
+    sessionStorage.clear();
+    window.location.replace("index.html");
+}
+
+function openDatePopup(day, month, year){
+
+    document.getElementById("popupSearch").value = "";
+    const key = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const items = calendarData[key] || [];
+
+    document.getElementById("popupDateTitle").textContent =
+        `Detail Kegiatan Tanggal ${day}-${month}-${year}`;
+
+    const tbody = document.getElementById("popupTableBody");
+    tbody.innerHTML = "";
+
+    if(items.length === 0){
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" style="padding:15px; text-align:center; color:#64748b;">
+                    Tidak ada data
+                </td>
+            </tr>
+        `;
+    } else {
+        items.forEach(item=>{
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td style="padding:8px;">${item.c || ""}</td>
+                <td style="padding:8px;">${item.d || ""}</td>
+                <td style="padding:8px;">${item.e || ""}</td>
+                <td style="padding:8px;">
+                    
+                        ${getStatusBadge(item.p)}
+                    
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    document.getElementById("datePopup").style.display = "flex";
+}
+
+function closeDatePopup(){
+    document.getElementById("datePopup").style.display = "none";
+}
+
+function getStatusBadge(status){
+
+    if(!status) return "-";
+
+    const s = status.toLowerCase().trim();
+
+    let className = "";
+
+    if(s === "rekam data"){
+        className = "status-rekam";
+    }
+    else if(s === "terlaksana"){
+        className = "status-terlaksana";
+    }
+    else if(s === "lpt"){
+        className = "status-lpt";
+    }
+    else if(s === "terbayar"){
+        className = "status-terbayar";
+    }
+    else if(s === "selesai"){
+        className = "status-selesai";
+    }
+    else{
+        className = "status-terlaksana"; // default abu
+    }
+
+    return `<span class="status-badge ${className}">${status}</span>`;
+}
+
+function filterPopupTable(){
+
+    const input = document.getElementById("popupSearch");
+    const filter = input.value.toLowerCase();
+    const tbody = document.getElementById("popupTableBody");
+    const rows = tbody.getElementsByTagName("tr");
+
+    for(let i = 0; i < rows.length; i++){
+        const rowText = rows[i].innerText.toLowerCase();
+
+        if(rowText.includes(filter)){
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
         }
-    });
-
-    const tbody = document.getElementById('pj-statusSummary');
-    tbody.innerHTML = '';
-
-    let totalFrek = 0, totalJumlah = 0;
-    statusList.forEach(status => {
-        const item = summary[status];
-        totalFrek += item.frek;
-        totalJumlah += item.jumlah;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="p-2 border-b border-slate-100">${status}</td>
-            <td class="p-2 border-b border-slate-100 text-center">${item.frek}</td>
-            <td class="p-2 border-b border-slate-100 text-right">${item.jumlah.toLocaleString('id-ID')}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    const trTotal = document.createElement('tr');
-    trTotal.innerHTML = `
-        <td class="p-2 font-semibold">Total</td>
-        <td class="p-2 text-center font-semibold">${totalFrek}</td>
-        <td class="p-2 text-right font-semibold">${totalJumlah.toLocaleString('id-ID')}</td>
-    `;
-    tbody.appendChild(trTotal);
+    }
+}
+    
+function showLoading() {
+    document.getElementById("overlayLoading").style.display = "flex";
 }
 
-function pjUpdateLokasiFavorit(rows) {
-    const lokasiMap = {};
-    rows.forEach(r => {
-        const tujuan = String(r.E || '').trim();
-        if (!tujuan) return;
-        lokasiMap[tujuan] = (lokasiMap[tujuan] || 0) + 1;
-    });
-
-    const tbody = document.getElementById('pj-lokasiBody');
-    tbody.innerHTML = '';
-
-    const sorted = Object.entries(lokasiMap).sort((a, b) => b[1] - a[1]);
-    sorted.forEach(([lokasi, frek], idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="p-2 border-b border-slate-100">${idx + 1}</td>
-            <td class="p-2 border-b border-slate-100">${lokasi}</td>
-            <td class="p-2 border-b border-slate-100 text-right">${frek}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+function hideLoading() {
+    document.getElementById("overlayLoading").style.display = "none";
 }
 
-function pjUpdateJenisPerjadin(rows) {
-    let luar = 0, dalam = 0;
-    rows.forEach(r => {
-        const j = pjJenis(r.B);
-        if (j === 'luar') luar += 1;
-        else if (j === 'dalam') dalam += 1;
-    });
 
-    const tbody = document.getElementById('pj-jenisBody');
-    tbody.innerHTML = `
-        <tr><td class="p-2 border-b border-slate-100">Luar Kota</td><td class="p-2 border-b border-slate-100 text-right">${luar}</td></tr>
-        <tr><td class="p-2">Dalam Kota</td><td class="p-2 text-right">${dalam}</td></tr>
-    `;
-}
+    
+// panggil pertama kali pakai overlay
+document.addEventListener("DOMContentLoaded", async function(){
 
-function pjUpdateChart(rows) {
-    const monthCounts = new Array(12).fill(0);
-    rows.forEach(r => {
-        const d = new Date(r.G);
-        if (!isNaN(d.getTime())) monthCounts[d.getMonth()] += 1;
-    });
+    const nama = sessionStorage.getItem("nama");
+    const kantor = sessionStorage.getItem("kantor");
 
-    const canvas = document.getElementById('pj-chartPerjadin');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    if(!kantor){
+        alert("Session habis. Silakan login ulang!");
+        window.location.replace("index.html");
+        return;
+    }
 
-    if (pjChartInstance) pjChartInstance.destroy();
+    // tampilkan nama di topbar
+    if(nama){
+        document.getElementById("namaUser").textContent = nama;
+    }
 
-    pjChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-            datasets: [{
-                label: 'Frekuensi Perjadin',
-                data: monthCounts,
-                borderColor: '#0369a1',
-                backgroundColor: 'rgba(3,105,161,0.2)',
-                tension: 0.3,
-                fill: true,
-                pointRadius: 4,
-                pointBackgroundColor: '#0369a1',
-                pointBorderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Jumlah' } },
-                x: { title: { display: true, text: 'Bulan' } }
-            }
-        }
-    });
-}
+    showLoading();
 
-window.initPerjadinPage = initPerjadinPage;
+    await loadCalendarData();
+    renderCalendar();
+
+    hideLoading();
+
+});
+
+//document.getElementById("namaUser").textContent = nama;
+
+
+    
+// ===== AUTO REFRESH SETIAP 1 MENIT =====
+setInterval(async function(){
+
+    console.log("Auto refresh kalender...");
+
+    await loadCalendarData();
+    renderCalendar();
+
+}, 60000); // 60000 ms = 1 menit
+</script>
+
+ <!-- POPUP DETAIL TANGGAL -->
+<div id="datePopup" class="popup-overlay" style="display:none;">
+    <div class="popup-box" style="width:90%; max-width:900px;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 id="popupDateTitle">Detail Kegiatan</h3>
+            <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeDatePopup()"></i>
+        </div>
+
+        <div style="margin-bottom:10px;">
+            <input type="text"
+                   id="popupSearch"
+                   placeholder="Cari uraian, pelaksana, tujuan, status..."
+                   onkeyup="filterPopupTable()"
+                   style="
+                        width:100%;
+                        padding:8px 10px;
+                        border:1px solid #cbd5e1;
+                        border-radius:8px;
+                        font-size:13px;
+                   ">
+        </div>
+        
+        <div style="max-height:400px; overflow:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:8px; text-align:left;">Uraian / No ST</th>
+                        <th style="padding:8px; text-align:left;">Pelaksana Tugas</th>
+                        <th style="padding:8px; text-align:left;">Tujuan</th>
+                        <th style="padding:8px; text-align:left;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="popupTableBody">
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>   
+    
+</body>
+</html>
