@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️SiMAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
+
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
+        <div class="p-6 border-b border-slate-100"><h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB</h1></div>
+        <nav class="p-4 space-y-2 flex-grow">
+            <button onclick="navigate('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-gauge mr-3"></i> Dashboard</button>
+            <button onclick="navigate('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-folder-open mr-3"></i> POK</button>
+            <button onclick="navigate('kegiatan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-list-check mr-3"></i> Daftar Kegiatan</button>
+            <button onclick="navigate('perjadin')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-wallet mr-3"></i> Perjadinku</button>
+            <button onclick="navigate('kalender')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-regular fa-calendar mr-3"></i> Kalender</button>
+            <button onclick="navigate('statistik')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-chart-column mr-3"></i> Statistik</button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
+            <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
+            <div class="flex items-center gap-4">
+                <span id="user-name" class="text-slate-600 font-medium text-sm">
+                    <i class="fa-solid fa-user mr-2"></i><span id="nama-login">Guest</span>
+                </span>
+                <button onclick="openSettings()" class="text-slate-600 hover:text-sky-700 font-medium text-sm" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm" title="Logout"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
+            </div>
+        </header>
+        <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
+    </main>
+
+    <!-- Notifikasi global, dipakai halaman manapun -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
+
+    <!-- Urutan penting: common & api dulu, baru router, baru semua js per-halaman  -->
+    <script src="js/common.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/pages/dashboard.js"></script>
+    <script src="js/pages/pok.js"></script>
+    <script src="js/pages/kegiatan.js"></script>
+    <script src="js/pages/perjadin.js"></script>
+    <script src="js/pages/kalender.js"></script>
+    <script src="js/pages/statistik.js"></script>
+    <script src="js/router.js"></script>
+</body>
+</html>

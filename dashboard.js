@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️Login SiMAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+
+    <!-- Dekorasi background minimalis -->
+    <div class="pointer-events-none absolute -top-24 -left-24 w-72 h-72 bg-sky-100 rounded-full blur-3xl opacity-70"></div>
+    <div class="pointer-events-none absolute -bottom-24 -right-24 w-72 h-72 bg-sky-200 rounded-full blur-3xl opacity-60"></div>
+
+    <div class="relative w-full max-w-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+
+            <div class="mb-8 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-shield-halved text-sky-600 text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">SiMAB</h1>
+                <p class="text-xs text-slate-400 tracking-widest font-semibold mt-1">SISTEM MONITORING ANGGARAN BELANJA</p>
+            </div>
+
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">NIP</label>
+                    <div class="relative">
+                        <i class="fa-regular fa-id-card absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="text" id="nip" placeholder="Masukkan NIP" required autocomplete="username"
+                            class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="password" id="password" placeholder="Masukkan password" required autocomplete="current-password"
+                            class="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                        <button type="button" id="togglePassword" tabindex="-1"
+                            class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-sky-600 transition">
+                            <i class="fa-regular fa-eye text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <p id="loginError" class="hidden text-red-500 text-xs bg-red-50 border border-red-100 rounded-lg px-3 py-2"></p>
+
+                <button type="submit" id="loginBtn"
+                    class="w-full bg-sky-600 text-white py-3 rounded-xl font-semibold hover:bg-sky-700 active:bg-sky-800 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    <span id="loginBtnText">Masuk</span>
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center text-xs text-slate-400 mt-6">&copy; <span id="tahunFooter"></span> SiMAB &mdash; Sistem Monitoring Anggaran Belanja</p>
+    </div>
+
+    <script>
+        document.getElementById('tahunFooter').textContent = new Date().getFullYear();
+
+        // MASUKKAN URL DARI "GAS REDIRECTOR" ANDA DI SINI
+        const redirectorUrl = "https://script.google.com/macros/s/AKfycbxhclFUTLCSzjQHK-W-dyZgF3dFeF5SaJEk6JvdhMU_6HA9Bs_avFb9G25gPrWT1XxXxA/exec";
+
+        // Toggle tampil/sembunyi password
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const pwInput = document.getElementById('password');
+            const icon = this.querySelector('i');
+            const isHidden = pwInput.type === 'password';
+            pwInput.type = isHidden ? 'text' : 'password';
+            icon.classList.toggle('fa-eye', !isHidden);
+            icon.classList.toggle('fa-eye-slash', isHidden);
+        });
+
+        function showLoginError(message) {
+            const errBox = document.getElementById('loginError');
+            errBox.textContent = message;
+            errBox.classList.remove('hidden');
+        }
+
+        function hideLoginError() {
+            document.getElementById('loginError').classList.add('hidden');
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideLoginError();
+
+            const btn = document.getElementById('loginBtn');
+            const btnText = document.getElementById('loginBtnText');
+            btn.disabled = true;
+            btnText.textContent = 'Memproses...';
+            btn.querySelector('i').className = 'fa-solid fa-spinner fa-spin';
+
+            try {
+                // 1. Ambil URL GAS Utama yang dinamis dari Redirector
+                const resUrl = await fetch(redirectorUrl);
+                const realUrl = await resUrl.text();
+
+                // 2. Gunakan URL tersebut untuk proses login
+                const res = await fetch(realUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'login',
+                        nip: document.getElementById('nip').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    sessionStorage.setItem('nama', data.nama);
+                    sessionStorage.setItem('nip', data.nip);
+                    sessionStorage.setItem('realUrl', realUrl); // Simpan agar dashboard tahu URL-nya
+                    sessionStorage.setItem('admin', data.admin);
+                    sessionStorage.setItem('jabatan', data.jabatan);
+                    sessionStorage.setItem('pangkat', data.pangkat);
+                    sessionStorage.setItem('kepeg', data.kepeg);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    showLoginError(data.message || 'NIP atau password salah.');
+                }
+            } catch (err) {
+                showLoginError('Koneksi ke server gagal, pastikan redirector aktif.');
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = 'Masuk';
+                btn.querySelector('i').className = 'fa-solid fa-arrow-right-to-bracket';
+            }
+        });
+    </script>
+</body>
+</html>
