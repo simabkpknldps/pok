@@ -891,7 +891,14 @@ async function downloadSeksiPDF(seksi) {
                 5: { cellWidth: 70, halign: 'right' },
                 6: { cellWidth: 40, halign: 'center' }
             },
-            margin: { left: 40, right: 40 }
+            margin: { left: 40, right: 40 },
+            didParseCell: (data) => {
+                if (data.section !== 'body') return;
+                const rowItem = items[data.row.index];
+                if (rowItem && String(rowItem.kode).length > 27) {
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            }
         });
 
         const tanggal = new Date().toISOString().split('T')[0];
