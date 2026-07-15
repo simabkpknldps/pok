@@ -881,7 +881,7 @@ async function downloadSeksiPDF(seksi) {
             head: [['Kode', 'Uraian', 'Pagu', 'Blokir', 'Realisasi', 'Sisa', 'SD']],
             body,
             styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
-            headStyles: { fillColor: [2, 132, 199], textColor: 255, fontStyle: 'bold' },
+            headStyles: { fillColor: [2, 132, 199], textColor: [37, 99, 235], fontStyle: 'bold' },
             columnStyles: {
                 0: { cellWidth: 130, overflow: 'visible' },
                 1: { cellWidth: 230 },
