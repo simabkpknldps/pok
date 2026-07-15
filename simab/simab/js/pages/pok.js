@@ -880,8 +880,18 @@ async function downloadSeksiPDF(seksi) {
             startY: 58,
             head: [['Kode', 'Uraian', 'Pagu', 'Blokir', 'Realisasi', 'Sisa', 'SD']],
             body,
-            styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
-            headStyles: { fillColor: [2, 132, 199], textColor: [37, 99, 235], fontStyle: 'bold' },
+            styles: {
+                fontSize: 7,
+                cellPadding: 3,
+                overflow: 'linebreak'
+            },
+            headStyles: {
+                fillColor: [2, 132, 199],
+                textColor: 255,
+                fontStyle: 'bold',
+                halign: 'center',
+                valign: 'middle'
+            },
             columnStyles: {
                 0: { cellWidth: 130, overflow: 'visible' },
                 1: { cellWidth: 230 },
@@ -897,6 +907,7 @@ async function downloadSeksiPDF(seksi) {
                 const rowItem = items[data.row.index];
                 if (rowItem && String(rowItem.kode).length > 27) {
                     data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.textColor = [37, 99, 235];
                 }
             }
         });
