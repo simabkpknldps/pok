@@ -161,8 +161,8 @@ function renderPok() {
     const groupHeaderRow = (seksi, count, isOpen) => `
         <tr class="select-none">
             <td colspan="8" class="p-3 font-bold text-sm ${pokSeksiBadgeClass(seksi)}">
-                <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <div class="cursor-pointer flex-1" onclick="toggleSeksiGroup('${seksi}')">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="cursor-pointer flex items-center" onclick="toggleSeksiGroup('${seksi}')">
                         <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>
                         ${seksi}
                         <span class="ml-2 font-normal text-xs opacity-70">(${count} item)</span>
@@ -820,7 +820,7 @@ async function downloadSeksiExcel(seksi) {
 
         const ws = XLSX.utils.json_to_sheet(rows);
         ws['!cols'] = [
-            { wch: 16 }, { wch: 55 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 12 }
+            { wch: 32 }, { wch: 55 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 12 }
         ];
 
         const wb = XLSX.utils.book_new();
@@ -883,13 +883,13 @@ async function downloadSeksiPDF(seksi) {
             styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
             headStyles: { fillColor: [2, 132, 199], textColor: 255, fontStyle: 'bold' },
             columnStyles: {
-                0: { cellWidth: 90 },
-                1: { cellWidth: 260 },
-                2: { cellWidth: 85, halign: 'right' },
-                3: { cellWidth: 75, halign: 'right' },
-                4: { cellWidth: 85, halign: 'right' },
-                5: { cellWidth: 75, halign: 'right' },
-                6: { cellWidth: 50, halign: 'center' }
+                0: { cellWidth: 130, overflow: 'visible' },
+                1: { cellWidth: 230 },
+                2: { cellWidth: 80, halign: 'right' },
+                3: { cellWidth: 70, halign: 'right' },
+                4: { cellWidth: 80, halign: 'right' },
+                5: { cellWidth: 70, halign: 'right' },
+                6: { cellWidth: 40, halign: 'center' }
             },
             margin: { left: 40, right: 40 }
         });
