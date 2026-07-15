@@ -10,7 +10,6 @@ window.searchIndex = -1;
 window.selectedKode = "";
 window.detilKegiatanData = [];
 
-
 // Warna badge per Seksi (kolom I sheet pok_sumber_2026)
 const POK_SEKSI_COLORS = {
     'PN': 'bg-sky-100 text-sky-700',
@@ -160,11 +159,25 @@ function renderPok() {
     };
 
     const groupHeaderRow = (seksi, count, isOpen) => `
-        <tr class="cursor-pointer select-none" onclick="toggleSeksiGroup('${seksi}')">
+        <tr class="select-none">
             <td colspan="8" class="p-3 font-bold text-sm ${pokSeksiBadgeClass(seksi)}">
-                <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>
-                ${seksi}
-                <span class="ml-2 font-normal text-xs opacity-70">(${count} item)</span>
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <div class="cursor-pointer flex-1" onclick="toggleSeksiGroup('${seksi}')">
+                        <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>
+                        ${seksi}
+                        <span class="ml-2 font-normal text-xs opacity-70">(${count} item)</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="event.stopPropagation();downloadSeksiPDF('${seksi}')"
+                            class="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-pdf"></i> PDF
+                        </button>
+                        <button onclick="event.stopPropagation();downloadSeksiExcel('${seksi}')"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-excel"></i> Excel
+                        </button>
+                    </div>
+                </div>
             </td>
         </tr>`;
 
@@ -726,6 +739,171 @@ async function simpanPelaksana() {
     }
 }
 
+// ==========================================================================
+// EXPORT PDF & EXCEL PER SEKSI
+// ==========================================================================
+
+function loadExternalScript(src) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[data-src="${src}"]`)) return resolve();
+        const script = document.createElement('script');
+        script.src = src;
+        script.dataset.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Gagal memuat library: ' + src));
+        document.head.appendChild(script);
+    });
+}
+
+async function ensureExcelLib() {
+    if (window.XLSX) return;
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+}
+
+async function ensurePdfLibs() {
+    if (!(window.jspdf && window.jspdf.jsPDF)) {
+        await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    }
+    // autoTable perlu jsPDF sudah tersedia lebih dulu
+    const hasAutoTable = window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable;
+    if (!hasAutoTable) {
+        await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    }
+}
+
+// Ambil data unik (sudah dedup kode+bidang) untuk 1 seksi tertentu
+function getSeksiExportData(seksi) {
+    const uniqueMap = new Map();
+    (window.rawPokData || []).forEach(item => {
+        uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
+    });
+    const uniqueData = Array.from(uniqueMap.values());
+    return uniqueData
+        .filter(item => (item.bidang || 'Lainnya') === seksi)
+        .sort((a, b) => String(a.kode).localeCompare(String(b.kode)));
+}
+
+function toggleDownloadBtnLoading(btnEl, loading, originalHtml) {
+    if (!btnEl) return;
+    if (loading) {
+        btnEl.dataset.originalHtml = originalHtml;
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    } else {
+        btnEl.disabled = false;
+        btnEl.innerHTML = btnEl.dataset.originalHtml || originalHtml;
+    }
+}
+
+async function downloadSeksiExcel(seksi) {
+    const btn = event ? event.currentTarget : null;
+    const originalHtml = '<i class="fa-solid fa-file-excel"></i> Excel';
+    try {
+        toggleDownloadBtnLoading(btn, true, originalHtml);
+        await ensureExcelLib();
+
+        const items = getSeksiExportData(seksi);
+        if (items.length === 0) {
+            alert('Tidak ada data untuk seksi ' + seksi);
+            return;
+        }
+
+        const rows = items.map(i => ({
+            'Kode': i.kode,
+            'Uraian': i.uraian,
+            'Pagu': Number(i.pagu || 0),
+            'Blokir': Number(i.blokir || 0),
+            'Realisasi': Number(i.realisasi || 0),
+            'Sisa': Number(i.sisa || 0),
+            'Sumber Dana': i.sumber || '-'
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [
+            { wch: 16 }, { wch: 55 }, { wch: 18 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 12 }
+        ];
+
+        const wb = XLSX.utils.book_new();
+        const sheetName = String(seksi).replace(/[\\/?*[\]:]/g, '').substring(0, 31) || 'POK';
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+        const tanggal = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `POK_${seksi}_${tanggal}.xlsx`);
+    } catch (e) {
+        console.error('Gagal export Excel:', e);
+        alert('Gagal membuat file Excel: ' + (e.message || 'Terjadi kesalahan'));
+    } finally {
+        toggleDownloadBtnLoading(btn, false, originalHtml);
+    }
+}
+
+async function downloadSeksiPDF(seksi) {
+    const btn = event ? event.currentTarget : null;
+    const originalHtml = '<i class="fa-solid fa-file-pdf"></i> PDF';
+    try {
+        toggleDownloadBtnLoading(btn, true, originalHtml);
+        await ensurePdfLibs();
+
+        const items = getSeksiExportData(seksi);
+        if (items.length === 0) {
+            alert('Tidak ada data untuk seksi ' + seksi);
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+        doc.setFontSize(13);
+        doc.text(`POK - Seksi ${seksi}`, 40, 32);
+        doc.setFontSize(9);
+        doc.setTextColor(120);
+        doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 40, 46);
+        doc.setTextColor(0);
+
+        const body = items.map(i => {
+            const pagu = Number(i.pagu || 0);
+            const blokir = Number(i.blokir || 0);
+            const realisasi = Number(i.realisasi || 0);
+            const sisa = Number(i.sisa || 0);
+            return [
+                String(i.kode),
+                String(i.uraian || ''),
+                pagu.toLocaleString('id-ID'),
+                blokir.toLocaleString('id-ID'),
+                realisasi.toLocaleString('id-ID'),
+                sisa.toLocaleString('id-ID'),
+                i.sumber || '-'
+            ];
+        });
+
+        doc.autoTable({
+            startY: 58,
+            head: [['Kode', 'Uraian', 'Pagu', 'Blokir', 'Realisasi', 'Sisa', 'SD']],
+            body,
+            styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
+            headStyles: { fillColor: [2, 132, 199], textColor: 255, fontStyle: 'bold' },
+            columnStyles: {
+                0: { cellWidth: 90 },
+                1: { cellWidth: 260 },
+                2: { cellWidth: 85, halign: 'right' },
+                3: { cellWidth: 75, halign: 'right' },
+                4: { cellWidth: 85, halign: 'right' },
+                5: { cellWidth: 75, halign: 'right' },
+                6: { cellWidth: 50, halign: 'center' }
+            },
+            margin: { left: 40, right: 40 }
+        });
+
+        const tanggal = new Date().toISOString().split('T')[0];
+        doc.save(`POK_${seksi}_${tanggal}.pdf`);
+    } catch (e) {
+        console.error('Gagal export PDF:', e);
+        alert('Gagal membuat file PDF: ' + (e.message || 'Terjadi kesalahan'));
+    } finally {
+        toggleDownloadBtnLoading(btn, false, originalHtml);
+    }
+}
+
 window.initPokPage = initPokPage;
 window.toggleSeksiGroup = toggleSeksiGroup;
 window.loadPokData = loadPokData;
@@ -748,3 +926,5 @@ window.submitPelaksana = submitPelaksana;
 window.updatePelaksanaField = updatePelaksanaField;
 window.deletePelaksanaRow = deletePelaksanaRow;
 window.simpanPelaksana = simpanPelaksana;
+window.downloadSeksiExcel = downloadSeksiExcel;
+window.downloadSeksiPDF = downloadSeksiPDF;
