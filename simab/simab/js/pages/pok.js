@@ -130,7 +130,7 @@ function renderPok() {
         const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
 
         return `<tr data-kode="${c}" data-seksi="${seksi}" class="border-b transition ${rowBg} cursor-pointer" onclick="toggleExpand('${c}', '${seksi}')">
-            <td class="p-3 font-mono text-xs text-slate-500 whitespace-nowrap">${c}</td>
+            <td class="p-3 font-mono text-xs ${isLeaf ? 'font-bold text-slate-700' : 'text-slate-500'} whitespace-nowrap">${c}</td>
             <td class="p-3 ${textWeight}" style="padding-left:${12 + indentPx}px">
                 <span class="whitespace-normal break-words">${i.uraian}</span>
                 ${hasChildren ? (window.expandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
