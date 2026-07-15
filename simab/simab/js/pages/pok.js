@@ -10,6 +10,7 @@ window.searchIndex = -1;
 window.selectedKode = "";
 window.detilKegiatanData = [];
 
+
 // Warna badge per Seksi (kolom I sheet pok_sumber_2026)
 const POK_SEKSI_COLORS = {
     'PN': 'bg-sky-100 text-sky-700',
