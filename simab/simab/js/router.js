@@ -36,6 +36,7 @@ async function navigate(page) {
         </div>
     `;
 
+    
     try {
         const res = await fetch(`pages/${page}.html`);
         if (!res.ok) throw new Error('Halaman tidak ditemukan: ' + page);
