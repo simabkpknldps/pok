@@ -3,8 +3,9 @@
  */
 
 function logout() {
-    sessionStorage.clear();
-    window.location.href = 'index.html';
+    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'lastActivity']
+        .forEach(k => localStorage.removeItem(k));
+    window.location.href = 'index.html?reason=logout';
 }
 
 function showToast(message) {
@@ -31,7 +32,7 @@ function generateIdUsulan() {
 }
 
 function initializeUserName() {
-    const nama = sessionStorage.getItem('nama') || 'Guest';
+    const nama = localStorage.getItem('nama') || 'Guest';
     const namaLoginElement = document.getElementById('nama-login');
     if (namaLoginElement) {
         namaLoginElement.textContent = nama;
@@ -80,11 +81,11 @@ function commonOpenOverlay(innerHtml, widthClass) {
 }
 
 function openSettings() {
-    const nip = sessionStorage.getItem('nip') || '';
-    const nama = sessionStorage.getItem('nama') || '';
-    const jabatan = sessionStorage.getItem('jabatan') || '';
-    const pangkat = sessionStorage.getItem('pangkat') || '';
-    const kepeg = sessionStorage.getItem('kepeg') || '';
+    const nip = localStorage.getItem('nip') || '';
+    const nama = localStorage.getItem('nama') || '';
+    const jabatan = localStorage.getItem('jabatan') || '';
+    const pangkat = localStorage.getItem('pangkat') || '';
+    const kepeg = localStorage.getItem('kepeg') || '';
 
     const pangkatOptions = CS_DAFTAR_PANGKAT.map(p =>
         `<option value="${p}" ${p === pangkat ? 'selected' : ''}>${p}</option>`
@@ -354,7 +355,7 @@ function csBindProfilButtons(popup) {
 
     btnSimpan.onclick = async function () {
         const btn = this;
-        const nip = sessionStorage.getItem('nip') || '';
+        const nip = localStorage.getItem('nip') || '';
         const jabatan = jabatanInput.value.trim();
         const pangkat = pangkatSelect.value;
         const kepeg = kepegInput.value.trim();
@@ -376,9 +377,9 @@ function csBindProfilButtons(popup) {
             if (result.status === 'success') {
                 showToast('Profil berhasil diubah');
 
-                sessionStorage.setItem('jabatan', jabatan);
-                sessionStorage.setItem('pangkat', pangkat);
-                sessionStorage.setItem('kepeg', kepeg);
+                localStorage.setItem('jabatan', jabatan);
+                localStorage.setItem('pangkat', pangkat);
+                localStorage.setItem('kepeg', kepeg);
 
                 jabatanInput.setAttribute('readonly', 'readonly');
                 jabatanInput.classList.add('bg-slate-100');
