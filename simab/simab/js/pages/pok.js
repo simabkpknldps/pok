@@ -389,7 +389,7 @@ function cekKecukupanDana() {
 
 async function simpanData() {
     const btn = document.getElementById("btnSimpan");
-    const namaUser = sessionStorage.getItem('nama') || "Guest";
+    const namaUser = localStorage.getItem('nama') || "Guest";
     const scrollPos = document.querySelector('.overflow-y-auto')?.scrollTop;
 
     const payload = {
@@ -582,7 +582,7 @@ async function openPelaksanaModal(idKegiatan) {
     document.getElementById("pelaksanaMak").value = data.mak || '';
     document.getElementById("pelaksanaUraian").value = data.uraian || '';
     document.getElementById("pelaksanaTujuan").value = data.tujuan || '';
-    document.getElementById("pelaksanaUser").value = data.userLogin || sessionStorage.getItem('nama') || '';
+    document.getElementById("pelaksanaUser").value = data.userLogin || localStorage.getItem('nama') || '';
     document.getElementById("pelaksanaTglSt").value = data.tglSt ? new Date(data.tglSt).toISOString().split('T')[0] : '';
 
     // Clear input & render tabel
@@ -707,7 +707,7 @@ async function simpanPelaksana() {
             uraian: window.pelaksanaCurrentData.uraian,
             tujuan: window.pelaksanaCurrentData.tujuan,
             tglSt: window.pelaksanaCurrentData.tglSt,
-            userLogin: sessionStorage.getItem('nama') || "Guest",
+            userLogin: localStorage.getItem('nama') || "Guest",
             pelaksanaData: window.pelaksanaTableData
         };
 
