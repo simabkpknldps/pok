@@ -145,6 +145,7 @@ function renderAkunBelumRealisasi(akunData) {
     return header + body;
 }
 
+
 // Buka halaman POK lewat router (navigate() di router.js sudah nunggu initPokPage()+loadPokData()
 // selesai sebelum resolve), lalu isi search box (#searchPok) dan manfaatkan searchPok() yang sudah
 // ada di pok.js untuk expand baris + scroll otomatis ke akun yang dimaksud.
