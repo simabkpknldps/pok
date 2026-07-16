@@ -78,7 +78,7 @@ function bindKegiatanEvents() {
         const btn = e.target.closest('button');
         if (!btn) return;
         const tr = btn.closest('tr');
-        const isAdmin = sessionStorage.getItem('admin') === '1';
+        const isAdmin = localStorage.getItem('admin') === '1';
         const statusKegiatan = tr.cells[8].textContent.trim();
 
         if (btn.classList.contains('kg-btn-copy')) kgShowCopyPopup(tr);
@@ -200,7 +200,7 @@ async function kgLoadData(showSpinner) {
             container.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>`;
         }
 
-        const data = await apiPost({ action: 'getKegiatanData', kantor: sessionStorage.getItem('kantor') });
+        const data = await apiPost({ action: 'getKegiatanData', kantor: localStorage.getItem('kantor') });
 
         if (!data || data.status !== 'success') {
             container.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-red-500">Gagal memuat data kegiatan.</td></tr>`;
@@ -371,7 +371,7 @@ function kgShowEditPopup(tr) {
         try {
             const result = await apiPost({
                 action: 'updateKegiatanDetail',
-                kantor: sessionStorage.getItem('kantor'),
+                kantor: localStorage.getItem('kantor'),
                 id: idKegiatan,
                 uraian: document.getElementById('kg-editUraian').value,
                 pelaksana: document.getElementById('kg-editPelaksana').value,
@@ -497,13 +497,13 @@ function kgShowPelaksanaPopup(tr) {
         try {
             const result = await apiPost({
                 action: 'updatePelaksanaKegiatan',
-                kantor: sessionStorage.getItem('kantor'),
+                kantor: localStorage.getItem('kantor'),
                 idKegiatanLama: idKegiatan,
                 mak: mak,
                 uraian: popup.querySelector('#kg-pelUraian').value,
                 tujuan: tujuan,
                 tglSt: popup.querySelector('#kg-pelTglST').value,
-                userLogin: sessionStorage.getItem('nama') || user,
+                userLogin: localStorage.getItem('nama') || user,
                 pelaksanaData: dataPelaksana
             });
             if (result.status === 'success') {
@@ -574,7 +574,7 @@ function kgShowLPTPopup(tr) {
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({ action: 'updateLPT', kantor: sessionStorage.getItem('kantor'), rows: dataLPT });
+            const result = await apiPost({ action: 'updateLPT', kantor: localStorage.getItem('kantor'), rows: dataLPT });
             if (result.status === 'success') {
                 overlay.remove();
                 showToast('LPT berhasil disimpan');
@@ -647,7 +647,7 @@ function kgShowBayarPopup(tr) {
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({ action: 'updateBayarMultiple', kantor: sessionStorage.getItem('kantor'), data: tblData });
+            const result = await apiPost({ action: 'updateBayarMultiple', kantor: localStorage.getItem('kantor'), data: tblData });
             if (result.status === 'success') {
                 overlay.remove();
                 showToast('Pembayaran berhasil disimpan');
@@ -735,7 +735,7 @@ function kgShowSP2DPopup(tr) {
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({ action: 'saveSP2D', kantor: sessionStorage.getItem('kantor'), rows: dataSP2D });
+            const result = await apiPost({ action: 'saveSP2D', kantor: localStorage.getItem('kantor'), rows: dataSP2D });
             if (result.status === 'success') {
                 overlay.remove();
                 showToast('SP2D berhasil disimpan');
@@ -825,7 +825,7 @@ function kgShowDeletePopup(tr) {
         this.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({ action: 'deleteKegiatan', kantor: sessionStorage.getItem('kantor'), id: idKegiatan });
+            const result = await apiPost({ action: 'deleteKegiatan', kantor: localStorage.getItem('kantor'), id: idKegiatan });
             if (result.status === 'success') {
                 overlay.remove();
                 showToast('Kegiatan berhasil dihapus');
