@@ -41,6 +41,9 @@
     <!-- Notifikasi global, dipakai halaman manapun -->
     <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
 
+    <!-- session.js WAJIB PALING PERTAMA: guard login + auto-logout idle 1 jam -->
+    <script src="js/session.js"></script>
+
     <!-- Urutan penting: common & api dulu, baru router, baru semua js per-halaman  -->
     <script src="js/common.js"></script>
     <script src="js/api.js"></script>
