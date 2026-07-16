@@ -504,6 +504,7 @@ function stRenderMPRow(r) {
         </tr>`;
 }
 
+
 function stRenderMPTable(rows) {
     const tbody = document.getElementById('st-mpTableBody');
     if (!tbody) return;
