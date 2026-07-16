@@ -120,7 +120,7 @@ function klChangeMonthYear() {
 
 async function klLoadCalendarData() {
     try {
-        const data = await apiPost({ action: 'getKegiatanData', kantor: sessionStorage.getItem('kantor') });
+        const data = await apiPost({ action: 'getKegiatanData', kantor: localStorage.getItem('kantor') });
 
         if (!data || data.status !== 'success') {
             console.error('Gagal memuat data kalender:', data && data.message);
