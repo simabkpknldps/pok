@@ -57,14 +57,14 @@ async function pjLoadData() {
     tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>`;
 
     try {
-        const data = await apiPost({ action: 'getKegiatanData', kantor: sessionStorage.getItem('kantor') });
+        const data = await apiPost({ action: 'getKegiatanData', kantor: localStorage.getItem('kantor') });
 
         if (!data || data.status !== 'success') {
             tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">Gagal memuat data perjadin.</td></tr>`;
             return;
         }
 
-        const nama = (sessionStorage.getItem('nama') || '').trim().toLowerCase();
+        const nama = (localStorage.getItem('nama') || '').trim().toLowerCase();
 
         pjAllRows = (data.rows || []).filter(r => {
             const pelaksana = String(r.D || '').trim().toLowerCase();
