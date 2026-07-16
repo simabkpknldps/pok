@@ -34,6 +34,8 @@
                 <p class="text-xs text-slate-400 tracking-widest font-semibold mt-1">SISTEM MONITORING ANGGARAN BELANJA</p>
             </div>
 
+            <p id="sessionNotice" class="hidden text-amber-600 text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4"></p>
+
             <form id="loginForm" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">NIP</label>
@@ -72,6 +74,21 @@
 
     <script>
         document.getElementById('tahunFooter').textContent = new Date().getFullYear();
+
+        // Tampilkan pesan jika datang dari auto-logout (idle 1 jam) atau logout manual
+        (function checkLogoutReason() {
+            const params = new URLSearchParams(window.location.search);
+            const reason = params.get('reason');
+            if (reason === 'idle') {
+                const box = document.getElementById('sessionNotice');
+                box.textContent = 'Sesi Anda berakhir karena tidak ada aktivitas selama 1 jam. Silakan login kembali.';
+                box.classList.remove('hidden');
+            } else if (reason === 'logout') {
+                const box = document.getElementById('sessionNotice');
+                box.textContent = 'Anda telah berhasil logout.';
+                box.classList.remove('hidden');
+            }
+        })();
 
         // MASUKKAN URL DARI "GAS REDIRECTOR" ANDA DI SINI
         const redirectorUrl = "https://script.google.com/macros/s/AKfycbxhclFUTLCSzjQHK-W-dyZgF3dFeF5SaJEk6JvdhMU_6HA9Bs_avFb9G25gPrWT1XxXxA/exec";
@@ -123,13 +140,14 @@
                 const data = await res.json();
 
                 if (data.status === 'success') {
-                    sessionStorage.setItem('nama', data.nama);
-                    sessionStorage.setItem('nip', data.nip);
-                    sessionStorage.setItem('realUrl', realUrl); // Simpan agar dashboard tahu URL-nya
-                    sessionStorage.setItem('admin', data.admin);
-                    sessionStorage.setItem('jabatan', data.jabatan);
-                    sessionStorage.setItem('pangkat', data.pangkat);
-                    sessionStorage.setItem('kepeg', data.kepeg);
+                    localStorage.setItem('nama', data.nama);
+                    localStorage.setItem('nip', data.nip);
+                    localStorage.setItem('realUrl', realUrl); // Simpan agar dashboard tahu URL-nya
+                    localStorage.setItem('admin', data.admin);
+                    localStorage.setItem('jabatan', data.jabatan);
+                    localStorage.setItem('pangkat', data.pangkat);
+                    localStorage.setItem('kepeg', data.kepeg);
+                    localStorage.setItem('lastActivity', Date.now().toString());
                     window.location.href = 'dashboard.html';
                 } else {
                     showLoginError(data.message || 'NIP atau password salah.');
