@@ -3,9 +3,9 @@
  */
 
 function getApiUrl() {
-    const url = sessionStorage.getItem('realUrl');
+    const url = localStorage.getItem('realUrl');
     if (!url) {
-        console.error('realUrl tidak ditemukan di sessionStorage. User belum login?');
+        console.error('realUrl tidak ditemukan di localStorage. User belum login?');
     }
     return url;
 }
