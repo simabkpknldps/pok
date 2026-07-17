@@ -442,7 +442,7 @@ async function tambahRowRpdBerjalan() {
         if (!Array.isArray(rpdBerjalanCache.rows)) rpdBerjalanCache.rows = [];
         rpdBerjalanCache.rows.push(newRow);
 
-        tombolTambahRow.insertAdjacentHTML('beforebegin', renderRpdRowTambahan(newRow));
+        tombolTambahRow.insertAdjacentHTML('beforebegin', renderRpdRowTambahan(newRow, true));
         refreshRpdSummaryUI();
 
         const newTr = tbody.querySelector(`tr[data-row="${newRow.rowIndex}"][data-fixed="tambahan"]`);
