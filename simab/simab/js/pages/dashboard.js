@@ -164,6 +164,12 @@ function formatAngka(n) {
     return Math.round(Number(n) || 0).toLocaleString('id-ID');
 }
 
+// Cek status admin dari localStorage (diset saat login di index.html: localStorage.setItem('admin', data.admin))
+function isAdminUser() {
+    const val = (localStorage.getItem('admin') || '').toString().trim().toLowerCase();
+    return val === 'true' || val === '1' || val === 'ya' || val === 'yes' || val === 'admin';
+}
+
 function hitungSisaRpdBerjalan() {
     if (!rpdBerjalanCache) return 0;
     const kekurangan = Number(rpdBerjalanCache.kekurangan?.jumlah) || 0;
@@ -177,11 +183,15 @@ function renderMonitoringRpdBerjalan(data) {
     const kekurangan = data.kekurangan || { rowIndex: null, uraian: 'Kekurangan', jumlah: 0 };
     const rows = data.rows || [];
     const sisa = kekurangan.jumlah - rows.reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
+    const admin = isAdminUser();
 
     return `
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-2">
             <h3 class="font-semibold text-slate-700 text-base">Monitoring RPD Berjalan</h3>
         </div>
+        <p class="text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 mb-4">
+            <i class="fa-solid fa-circle-info mr-1"></i>Hanya admin yang dapat menambah, mengubah, dan menghapus data pada tabel ini.
+        </p>
         <div class="overflow-x-auto">
             <table class="w-full text-sm" id="table-rpd-berjalan">
                 <thead>
@@ -192,17 +202,18 @@ function renderMonitoringRpdBerjalan(data) {
                     </tr>
                 </thead>
                 <tbody id="tbody-rpd-berjalan">
-                    ${renderRpdRowUtama(rpdBerjalan)}
+                    ${renderRpdRowUtama(rpdBerjalan, admin)}
                     ${renderRpdRowReadonly(sp2d)}
                     ${renderRpdRowReadonly(kekurangan)}
-                    ${rows.map(r => renderRpdRowTambahan(r)).join('')}
+                    ${rows.map(r => renderRpdRowTambahan(r, admin)).join('')}
+                    ${admin ? `
                     <tr id="row-rpd-tambah">
                         <td colspan="3" class="pt-2 pb-1 text-center">
                             <button onclick="tambahRowRpdBerjalan()" class="text-sky-600 hover:text-sky-700 text-sm font-semibold" title="Tambah baris">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
                         </td>
-                    </tr>
+                    </tr>` : ''}
                 </tbody>
             </table>
         </div>
@@ -212,9 +223,9 @@ function renderMonitoringRpdBerjalan(data) {
     `;
 }
 
-// Baris "RPD Berjalan" (baris 2) - satu-satunya baris tetap yang bisa diedit lewat toggle Ubah/Simpan
-function renderRpdRowUtama(row) {
-    if (rpdEditModeUtama) {
+// Baris "RPD Berjalan" (baris 2) - satu-satunya baris tetap yang bisa diedit lewat toggle Ubah/Simpan (khusus admin)
+function renderRpdRowUtama(row, admin) {
+    if (rpdEditModeUtama && admin) {
         return `
         <tr class="border-b border-slate-100 bg-sky-50/40" data-row="${row.rowIndex}" data-fixed="utama">
             <td class="py-1.5 pr-2">
@@ -237,7 +248,9 @@ function renderRpdRowUtama(row) {
         <td class="py-1.5 pr-2 text-slate-700 font-medium">${escapeHtml(row.uraian) || 'RPD Berjalan'}</td>
         <td class="py-1.5 pr-2 text-right text-slate-700">${formatAngka(row.jumlah)}</td>
         <td class="py-1.5 pl-2 text-center">
-            <button onclick="mulaiUbahRpdBerjalanUtama()" class="text-sky-600 hover:text-sky-700 text-xs font-semibold hover:underline">Ubah</button>
+            ${admin
+                ? `<button onclick="mulaiUbahRpdBerjalanUtama()" class="text-sky-600 hover:text-sky-700 text-xs font-semibold hover:underline">Ubah</button>`
+                : `<span class="text-slate-300">—</span>`}
         </td>
     </tr>`;
 }
@@ -252,11 +265,20 @@ function renderRpdRowReadonly(row) {
     </tr>`;
 }
 
-// Baris tambahan (baris 5-20) - bebas diedit inline & dihapus.
+// Baris tambahan (baris 5-20) - bebas diedit inline & dihapus, khusus admin.
+// Untuk non-admin ditampilkan read-only (tanpa input/tombol hapus).
 // Nilai ditampilkan dengan format ribuan (mis. 26.650.000) selaras dengan baris RPD Berjalan/SP2D/Kekurangan
 // di atasnya. Saat input difokus, format ribuan dilepas dulu supaya gampang diketik ulang; saat blur,
 // nilai diparse ulang jadi angka lalu diformat lagi.
-function renderRpdRowTambahan(row) {
+function renderRpdRowTambahan(row, admin) {
+    if (!admin) {
+        return `
+        <tr class="border-b border-slate-100" data-row="${row.rowIndex}" data-fixed="tambahan">
+            <td class="py-1.5 pr-2 text-slate-700">${escapeHtml(row.uraian)}</td>
+            <td class="py-1.5 pr-2 text-right text-slate-700">${formatAngka(row.jumlah)}</td>
+            <td class="py-1.5 pl-2 text-center text-slate-300">—</td>
+        </tr>`;
+    }
     return `
     <tr class="border-b border-slate-100" data-row="${row.rowIndex}" data-fixed="tambahan">
         <td class="py-1.5 pr-2">
@@ -297,14 +319,16 @@ function refreshRpdSummaryUI() {
 // --- Baris "RPD Berjalan" (utama): toggle mode edit Ubah/Simpan ---
 
 function mulaiUbahRpdBerjalanUtama() {
+    if (!isAdminUser()) return; // jaga-jaga: hanya admin yang boleh masuk mode edit
     rpdEditModeUtama = true;
     const tr = document.querySelector('#tbody-rpd-berjalan tr[data-fixed="utama"]');
     if (tr && rpdBerjalanCache) {
-        tr.outerHTML = renderRpdRowUtama(rpdBerjalanCache.rpdBerjalan);
+        tr.outerHTML = renderRpdRowUtama(rpdBerjalanCache.rpdBerjalan, true);
     }
 }
 
 async function simpanRpdBerjalanUtama() {
+    if (!isAdminUser()) return;
     const uraianInput = document.getElementById('input-rpd-utama-uraian');
     const jumlahInput = document.getElementById('input-rpd-utama-jumlah');
     const uraian = uraianInput ? uraianInput.value : '';
@@ -318,7 +342,7 @@ async function simpanRpdBerjalanUtama() {
         }
         rpdEditModeUtama = false;
         const tr = document.querySelector('#tbody-rpd-berjalan tr[data-fixed="utama"]');
-        if (tr) tr.outerHTML = renderRpdRowUtama(rpdBerjalanCache.rpdBerjalan);
+        if (tr) tr.outerHTML = renderRpdRowUtama(rpdBerjalanCache.rpdBerjalan, true);
         refreshRpdSummaryUI();
     } catch (e) {
         console.error('Gagal menyimpan RPD Berjalan:', e);
@@ -329,6 +353,7 @@ async function simpanRpdBerjalanUtama() {
 // --- Baris tambahan: tambah / edit / hapus ---
 
 async function tambahRowRpdBerjalan() {
+    if (!isAdminUser()) return;
     const tbody = document.getElementById('tbody-rpd-berjalan');
     const tombolTambahRow = document.getElementById('row-rpd-tambah');
     if (!tbody || !tombolTambahRow) return;
@@ -357,6 +382,7 @@ async function tambahRowRpdBerjalan() {
 }
 
 async function updateRpdBerjalanRow(rowIndex, field, value) {
+    if (!isAdminUser()) return;
     try {
         await apiPost({ action: 'updateRpdBerjalanRow', rowIndex, field, value });
         if (rpdBerjalanCache && Array.isArray(rpdBerjalanCache.rows)) {
@@ -371,6 +397,7 @@ async function updateRpdBerjalanRow(rowIndex, field, value) {
 }
 
 async function hapusRpdBerjalanRow(rowIndex) {
+    if (!isAdminUser()) return;
     if (!confirm('Hapus baris ini?')) return;
     try {
         await apiPost({ action: 'deleteRpdBerjalanRow', rowIndex });
