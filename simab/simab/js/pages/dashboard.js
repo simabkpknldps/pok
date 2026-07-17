@@ -302,7 +302,7 @@ function renderMonitoringRpdBerjalan(data) {
                     <tr id="row-rpd-tambah">
                         <td colspan="3" class="pt-2 pb-1 text-center">
                             <button onclick="tambahRowRpdBerjalan()" class="text-sky-600 hover:text-sky-700 text-sm font-semibold" title="Tambah baris">
-                                <i class="fa-solid fa-plus"></i>Tambah Data
+                                <i class="fa-solid fa-plus"></i> Tambah Data
                             </button>
                         </td>
                     </tr>` : ''}
