@@ -5,7 +5,6 @@
 let dashboardDataCache = null;
 let rpdBerjalanCache = null;
 let rpdEditModeUtama = false; // true saat baris "RPD Berjalan" sedang mode edit (Ubah -> Simpan)
-let dashboardAutoRefreshInterval = null; // handle setInterval auto-refresh background
 
 async function fetchDashboardData() {
     try {
@@ -50,9 +49,6 @@ async function initDashboardPage() {
     const container = document.getElementById('dashboard-content');
     if (!container) return;
 
-    // Hentikan dulu auto-refresh yang mungkin masih berjalan dari sesi sebelumnya
-    stopDashboardAutoRefresh();
-
     // Selalu refresh setiap masuk halaman ini (perilaku sama seperti versi lama)
     dashboardDataCache = null;
     rpdBerjalanCache = null;
@@ -79,118 +75,49 @@ async function initDashboardPage() {
         : null;
 
     try {
-        container.innerHTML = buildDashboardHtml(data, rpdData, rpdError);
+        container.innerHTML = `
+            <div class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                        <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
+                        <div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">
+                            ${data.kegiatanHariIni.map(item => `<div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>`).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" id="card-rpd-berjalan">
+                    ${rpdError
+                        ? `<h3 class="font-semibold text-slate-700 mb-4">Monitoring RPD Berjalan</h3><div class="text-sm text-red-500">❌ ${rpdError}</div>`
+                        : renderMonitoringRpdBerjalan(rpdData)}
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    ${renderAkunBelumRealisasi(data.akunBelumRealisasi)}
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        ${Object.entries(data.seksi).map(([nama, val]) => {
+                            const p = (val * 100).toFixed(2);
+                            return `<div><div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${p < 30 ? 'bg-red-500' : p < 70 ? 'bg-orange-500' : p < 90 ? 'bg-yellow-400' : 'bg-green-500'} h-2 rounded-full" style="width: ${p}%"></div></div></div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
         initCharts(data);
-        // Mulai auto-refresh diam-diam (tanpa loading) setiap 1 menit
-        startDashboardAutoRefresh();
     } catch (e) {
         console.error('Dashboard error:', e);
         const errorMsg = e.message || 'Gagal memuat dashboard';
         container.innerHTML = `<div class="text-center text-red-500 mt-10">❌ ${errorMsg}</div>`;
-    }
-}
-
-// Bangun HTML utama dashboard. Dipakai baik saat load pertama (initDashboardPage)
-// maupun saat auto-refresh diam-diam di background (refreshDashboardInBackground),
-// supaya keduanya konsisten dan tidak duplikasi kode.
-function buildDashboardHtml(data, rpdData, rpdError) {
-    return `
-        <div class="space-y-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
-                    <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
-                    <div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">
-                        ${data.kegiatanHariIni.map(item => `<div class="border-b pb-2"><div class="text-sm font-semibold">${item.uraian}</div><div class="text-[10px] text-slate-500">${item.pelaksana} | ${item.tujuan}</div></div>`).join('')}
-                    </div>
-                </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" id="card-rpd-berjalan">
-                ${rpdError
-                    ? `<h3 class="font-semibold text-slate-700 mb-4">Monitoring RPD Berjalan</h3><div class="text-sm text-red-500">❌ ${rpdError}</div>`
-                    : renderMonitoringRpdBerjalan(rpdData)}
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                ${renderAkunBelumRealisasi(data.akunBelumRealisasi)}
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 class="font-semibold text-slate-700 mb-6">Data Per Seksi</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    ${Object.entries(data.seksi).map(([nama, val]) => {
-                        const p = (val * 100).toFixed(2);
-                        return `<div><div class="flex justify-between text-xs font-semibold mb-1 text-slate-600"><span>${nama}</span><span>${p}%</span></div><div class="w-full bg-slate-100 rounded-full h-2"><div class="${p < 30 ? 'bg-red-500' : p < 70 ? 'bg-orange-500' : p < 90 ? 'bg-yellow-400' : 'bg-green-500'} h-2 rounded-full" style="width: ${p}%"></div></div></div>`;
-                    }).join('')}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// ============================================================
-// Auto-refresh dashboard di background setiap 1 menit, tanpa loading spinner.
-// - Tidak menimpa tampilan kalau baris "RPD Berjalan" sedang dalam mode edit
-//   (supaya perubahan yang belum disimpan tidak hilang).
-// - Kalau container halaman dashboard sudah tidak ada (user pindah halaman),
-//   interval otomatis dihentikan sendiri.
-// - Kalau gagal fetch, error hanya dicatat di console, tampilan lama tetap
-//   dipertahankan (tidak ditimpa pesan error).
-// ============================================================
-
-function startDashboardAutoRefresh() {
-    stopDashboardAutoRefresh();
-    dashboardAutoRefreshInterval = setInterval(refreshDashboardInBackground, 60 * 1000);
-}
-
-function stopDashboardAutoRefresh() {
-    if (dashboardAutoRefreshInterval) {
-        clearInterval(dashboardAutoRefreshInterval);
-        dashboardAutoRefreshInterval = null;
-    }
-}
-
-async function refreshDashboardInBackground() {
-    const container = document.getElementById('dashboard-content');
-    if (!container) {
-        // Sudah pindah dari halaman dashboard, hentikan auto-refresh
-        stopDashboardAutoRefresh();
-        return;
-    }
-
-    // Jangan refresh kalau baris utama RPD Berjalan sedang dalam mode edit,
-    // supaya perubahan yang belum disimpan tidak tertimpa
-    if (rpdEditModeUtama) return;
-
-    try {
-        const [dashResult, rpdResult] = await Promise.allSettled([
-            fetchDashboardData(),
-            fetchRpdBerjalanData()
-        ]);
-
-        if (dashResult.status !== 'fulfilled') {
-            console.error('Auto-refresh dashboard gagal:', dashResult.reason);
-            return; // biarkan tampilan lama, jangan ditimpa error
-        }
-
-        const data = dashResult.value;
-        const rpdData = rpdResult.status === 'fulfilled' ? rpdResult.value : null;
-        const rpdError = rpdResult.status !== 'fulfilled'
-            ? (rpdResult.reason && rpdResult.reason.message ? rpdResult.reason.message : 'Gagal memuat data RPD Berjalan')
-            : null;
-
-        // Cek ulang, siapa tahu baris utama masuk mode edit persis saat fetch berlangsung
-        if (rpdEditModeUtama) return;
-
-        container.innerHTML = buildDashboardHtml(data, rpdData, rpdError);
-        initCharts(data);
-    } catch (e) {
-        console.error('Gagal auto-refresh dashboard di background:', e);
     }
 }
 
@@ -220,7 +147,7 @@ function renderTopPerjadin(l) {
 //   Baris 2 -> RPD Berjalan   (satu-satunya baris tetap yang bisa diedit, via Ubah/Simpan)
 //   Baris 3 -> SP2D           (formula otomatis di sheet, read-only)
 //   Baris 4 -> Kekurangan     (formula otomatis di sheet, read-only)
-//   Baris 5-20 -> baris tambahan (bebas tambah/edit/hapus), ditandai warna kuning
+//   Baris 5-20 -> baris tambahan (bebas tambah/edit/hapus)
 // "Sisa" = Kekurangan - total baris tambahan, dihitung di sisi frontend (tidak disimpan ke sheet).
 // ============================================================
 
@@ -340,30 +267,28 @@ function renderRpdRowReadonly(row) {
 
 // Baris tambahan (baris 5-20) - bebas diedit inline & dihapus, khusus admin.
 // Untuk non-admin ditampilkan read-only (tanpa input/tombol hapus).
-// Semua baris tambahan (di bawah baris Kekurangan) diberi warna latar kuning
-// agar mudah dibedakan dari baris tetap (RPD Berjalan / SP2D / Kekurangan) di atasnya.
 // Nilai ditampilkan dengan format ribuan (mis. 26.650.000) selaras dengan baris RPD Berjalan/SP2D/Kekurangan
 // di atasnya. Saat input difokus, format ribuan dilepas dulu supaya gampang diketik ulang; saat blur,
 // nilai diparse ulang jadi angka lalu diformat lagi.
 function renderRpdRowTambahan(row, admin) {
     if (!admin) {
         return `
-        <tr class="border-b border-slate-100 bg-yellow-50" data-row="${row.rowIndex}" data-fixed="tambahan">
+        <tr class="border-b border-slate-100" data-row="${row.rowIndex}" data-fixed="tambahan">
             <td class="py-1.5 pr-2 text-slate-700">${escapeHtml(row.uraian)}</td>
             <td class="py-1.5 pr-2 text-right text-slate-700">${formatAngka(row.jumlah)}</td>
             <td class="py-1.5 pl-2 text-center text-slate-300">—</td>
         </tr>`;
     }
     return `
-    <tr class="border-b border-slate-100 bg-yellow-50" data-row="${row.rowIndex}" data-fixed="tambahan">
+    <tr class="border-b border-slate-100" data-row="${row.rowIndex}" data-fixed="tambahan">
         <td class="py-1.5 pr-2">
             <input type="text" value="${escapeHtml(row.uraian)}" placeholder="Uraian..."
-                class="w-full border-none bg-transparent focus:bg-yellow-100 rounded px-1.5 py-1 text-slate-700 outline-none focus:ring-1 focus:ring-sky-200"
+                class="w-full border-none bg-transparent focus:bg-slate-50 rounded px-1.5 py-1 text-slate-700 outline-none focus:ring-1 focus:ring-sky-200"
                 onchange="updateRpdBerjalanRow(${row.rowIndex}, 'uraian', this.value)">
         </td>
         <td class="py-1.5 pr-2">
             <input type="text" inputmode="numeric" value="${formatAngka(row.jumlah)}" placeholder="0"
-                class="w-full text-right border-none bg-transparent focus:bg-yellow-100 rounded px-0 py-1 text-slate-700 outline-none focus:ring-1 focus:ring-sky-200"
+                class="w-full text-right border-none bg-transparent focus:bg-slate-50 rounded px-0 py-1 text-slate-700 outline-none focus:ring-1 focus:ring-sky-200"
                 onfocus="this.value = (parseFloat(this.value.replace(/\\./g,'').replace(/,/g,'.')) || 0)"
                 onblur="this.value = formatAngka(this.value.replace(/\\./g,'').replace(/,/g,'.'))"
                 onchange="updateRpdBerjalanRow(${row.rowIndex}, 'jumlah', this.value.replace(/\\./g,'').replace(/,/g,'.'))">
