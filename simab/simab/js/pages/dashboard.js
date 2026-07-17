@@ -243,11 +243,24 @@ function isAdminUser() {
     return val === 'true' || val === '1' || val === 'ya' || val === 'yes' || val === 'admin';
 }
 
-function hitungSisaRpdBerjalan() {
-    if (!rpdBerjalanCache) return 0;
+// Hitung "Sisa" (kekurangan - total baris tambahan) sekaligus status warna:
+// hijau kalau (SP2D + total semua baris tambahan) berada di antara 95%-105%
+// dari nilai RPD Berjalan; merah kalau di luar rentang itu.
+function hitungStatusSisaRpdBerjalan() {
+    if (!rpdBerjalanCache) return { sisa: 0, isHijau: false };
+
     const kekurangan = Number(rpdBerjalanCache.kekurangan?.jumlah) || 0;
+    const sp2d = Number(rpdBerjalanCache.sp2d?.jumlah) || 0;
+    const rpdBerjalanJumlah = Number(rpdBerjalanCache.rpdBerjalan?.jumlah) || 0;
     const totalTambahan = (rpdBerjalanCache.rows || []).reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
-    return kekurangan - totalTambahan;
+
+    const sisa = kekurangan - totalTambahan;
+    const totalSp2dTambahan = sp2d + totalTambahan;
+    const isHijau = rpdBerjalanJumlah !== 0
+        ? (totalSp2dTambahan >= rpdBerjalanJumlah * 0.95 && totalSp2dTambahan <= rpdBerjalanJumlah * 1.05)
+        : totalSp2dTambahan === 0;
+
+    return { sisa, isHijau };
 }
 
 function renderMonitoringRpdBerjalan(data) {
@@ -255,7 +268,13 @@ function renderMonitoringRpdBerjalan(data) {
     const sp2d = data.sp2d || { rowIndex: null, uraian: 'SP2D', jumlah: 0 };
     const kekurangan = data.kekurangan || { rowIndex: null, uraian: 'Kekurangan', jumlah: 0 };
     const rows = data.rows || [];
-    const sisa = kekurangan.jumlah - rows.reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
+    const totalTambahan = rows.reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
+    const sisa = kekurangan.jumlah - totalTambahan;
+    const totalSp2dTambahan = (Number(sp2d.jumlah) || 0) + totalTambahan;
+    const rpdBerjalanJumlah = Number(rpdBerjalan.jumlah) || 0;
+    const isHijau = rpdBerjalanJumlah !== 0
+        ? (totalSp2dTambahan >= rpdBerjalanJumlah * 0.95 && totalSp2dTambahan <= rpdBerjalanJumlah * 1.05)
+        : totalSp2dTambahan === 0;
     const admin = isAdminUser();
 
     return `
@@ -291,7 +310,7 @@ function renderMonitoringRpdBerjalan(data) {
             </table>
         </div>
         <div class="mt-4 pt-4 border-t border-slate-200" id="summary-rpd-berjalan">
-            ${renderRpdSisa(sisa)}
+            ${renderRpdSisa(sisa, isHijau)}
         </div>
     `;
 }
@@ -376,11 +395,11 @@ function renderRpdRowTambahan(row, admin) {
     </tr>`;
 }
 
-function renderRpdSisa(sisa) {
+function renderRpdSisa(sisa, isHijau) {
     return `
         <div class="flex justify-between items-center bg-slate-50 rounded-lg px-4 py-3">
             <span class="font-semibold text-slate-700">Sisa</span>
-            <span class="font-bold text-lg ${sisa > 0 ? 'text-red-500' : 'text-emerald-600'}">${formatAngka(sisa)}</span>
+            <span class="font-bold text-lg ${isHijau ? 'text-emerald-600' : 'text-red-500'}">${formatAngka(sisa)}</span>
         </div>
     `;
 }
@@ -388,7 +407,8 @@ function renderRpdSisa(sisa) {
 function refreshRpdSummaryUI() {
     const summaryEl = document.getElementById('summary-rpd-berjalan');
     if (!summaryEl || !rpdBerjalanCache) return;
-    summaryEl.innerHTML = renderRpdSisa(hitungSisaRpdBerjalan());
+    const { sisa, isHijau } = hitungStatusSisaRpdBerjalan();
+    summaryEl.innerHTML = renderRpdSisa(sisa, isHijau);
 }
 
 // --- Baris "RPD Berjalan" (utama): toggle mode edit Ubah/Simpan ---
