@@ -222,8 +222,10 @@ function renderRpdRowUtama(row) {
                     class="w-full border-none bg-white rounded px-1.5 py-1 text-slate-700 outline-none ring-1 ring-sky-200">
             </td>
             <td class="py-1.5 pr-2">
-                <input type="number" id="input-rpd-utama-jumlah" value="${Number(row.jumlah) || 0}"
-                    class="w-full text-right border-none bg-white rounded px-1.5 py-1 text-slate-700 outline-none ring-1 ring-sky-200">
+                <input type="text" inputmode="numeric" id="input-rpd-utama-jumlah" value="${formatAngka(row.jumlah)}"
+                    class="w-full text-right border-none bg-white rounded px-1.5 py-1 text-slate-700 outline-none ring-1 ring-sky-200"
+                    onfocus="this.value = (parseFloat(this.value.replace(/\\./g,'').replace(/,/g,'.')) || 0)"
+                    onblur="this.value = formatAngka(this.value.replace(/\\./g,'').replace(/,/g,'.'))">
             </td>
             <td class="py-1.5 pl-2 text-center">
                 <button onclick="simpanRpdBerjalanUtama()" class="text-emerald-600 hover:text-emerald-700 text-xs font-semibold hover:underline">Simpan</button>
@@ -250,7 +252,10 @@ function renderRpdRowReadonly(row) {
     </tr>`;
 }
 
-// Baris tambahan (baris 5-20) - bebas diedit inline & dihapus
+// Baris tambahan (baris 5-20) - bebas diedit inline & dihapus.
+// Nilai ditampilkan dengan format ribuan (mis. 26.650.000) selaras dengan baris RPD Berjalan/SP2D/Kekurangan
+// di atasnya. Saat input difokus, format ribuan dilepas dulu supaya gampang diketik ulang; saat blur,
+// nilai diparse ulang jadi angka lalu diformat lagi.
 function renderRpdRowTambahan(row) {
     return `
     <tr class="border-b border-slate-100" data-row="${row.rowIndex}" data-fixed="tambahan">
@@ -260,9 +265,11 @@ function renderRpdRowTambahan(row) {
                 onchange="updateRpdBerjalanRow(${row.rowIndex}, 'uraian', this.value)">
         </td>
         <td class="py-1.5 pr-2">
-            <input type="number" value="${Number(row.jumlah) || 0}" placeholder="0"
-                class="w-full text-right border-none bg-transparent focus:bg-slate-50 rounded px-1.5 py-1 text-slate-700 outline-none focus:ring-1 focus:ring-sky-200"
-                onchange="updateRpdBerjalanRow(${row.rowIndex}, 'jumlah', this.value)">
+            <input type="text" inputmode="numeric" value="${formatAngka(row.jumlah)}" placeholder="0"
+                class="w-full text-right border-none bg-transparent focus:bg-slate-50 rounded px-0 py-1 text-slate-700 outline-none focus:ring-1 focus:ring-sky-200"
+                onfocus="this.value = (parseFloat(this.value.replace(/\\./g,'').replace(/,/g,'.')) || 0)"
+                onblur="this.value = formatAngka(this.value.replace(/\\./g,'').replace(/,/g,'.'))"
+                onchange="updateRpdBerjalanRow(${row.rowIndex}, 'jumlah', this.value.replace(/\\./g,'').replace(/,/g,'.'))">
         </td>
         <td class="py-1.5 pl-2 text-center">
             <button onclick="hapusRpdBerjalanRow(${row.rowIndex})" class="text-red-400 hover:text-red-600" title="Hapus baris">
@@ -301,7 +308,7 @@ async function simpanRpdBerjalanUtama() {
     const uraianInput = document.getElementById('input-rpd-utama-uraian');
     const jumlahInput = document.getElementById('input-rpd-utama-jumlah');
     const uraian = uraianInput ? uraianInput.value : '';
-    const jumlah = jumlahInput ? (parseFloat(jumlahInput.value) || 0) : 0;
+    const jumlah = jumlahInput ? (parseFloat(String(jumlahInput.value).replace(/\./g, '').replace(/,/g, '.')) || 0) : 0;
 
     try {
         await apiPost({ action: 'updateRpdBerjalanUtama', uraian, jumlah });
