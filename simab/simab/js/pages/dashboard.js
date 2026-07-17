@@ -3,6 +3,8 @@
  */
 
 let dashboardDataCache = null;
+let rpdBerjalanCache = null;
+let rpdEditModeUtama = false; // true saat baris "RPD Berjalan" sedang mode edit (Ubah -> Simpan)
 
 async function fetchDashboardData() {
     try {
@@ -21,21 +23,58 @@ async function fetchDashboardData() {
     }
 }
 
+// Ambil data Monitoring RPD Berjalan dari sheet dash_bulanan_2026 (kolom R:S).
+// Backend mengembalikan: { rpdBerjalan, sp2d, kekurangan, rows: [...] }
+// - rpdBerjalan/sp2d/kekurangan masing-masing: { rowIndex, uraian, jumlah }
+// - rows: daftar baris tambahan (bisa tambah/edit/hapus), masing-masing { rowIndex, uraian, jumlah }
+async function fetchRpdBerjalanData() {
+    try {
+        const data = await apiPost({ action: 'getRpdBerjalanData' });
+        if (!data || typeof data !== 'object') {
+            throw new Error('Format data RPD Berjalan tidak valid');
+        }
+        if (!Array.isArray(data.rows)) data.rows = [];
+        rpdBerjalanCache = data;
+        return data;
+    } catch (e) {
+        console.error('Error loading RPD Berjalan:', e);
+        const errorMsg = e.name === 'AbortError'
+            ? 'Timeout: Server tidak merespons (>30 detik)'
+            : e.message || 'Gagal memuat data RPD Berjalan';
+        throw new Error(errorMsg);
+    }
+}
+
 async function initDashboardPage() {
     const container = document.getElementById('dashboard-content');
     if (!container) return;
 
     // Selalu refresh setiap masuk halaman ini (perilaku sama seperti versi lama)
     dashboardDataCache = null;
+    rpdBerjalanCache = null;
+    rpdEditModeUtama = false;
     container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
 
-    try {
-        const data = await fetchDashboardData();
-        if (!data) {
-            container.innerHTML = `<div class="text-center text-red-500 mt-10">❌ Gagal memuat data dashboard.</div>`;
-            return;
-        }
+    // Ambil data dashboard utama & data RPD Berjalan secara paralel.
+    // Pakai allSettled supaya kalau salah satu gagal, yang lain tetap bisa tampil.
+    const [dashResult, rpdResult] = await Promise.allSettled([
+        fetchDashboardData(),
+        fetchRpdBerjalanData()
+    ]);
 
+    if (dashResult.status !== 'fulfilled') {
+        const msg = dashResult.reason && dashResult.reason.message ? dashResult.reason.message : 'Gagal memuat dashboard';
+        container.innerHTML = `<div class="text-center text-red-500 mt-10">❌ ${msg}</div>`;
+        return;
+    }
+
+    const data = dashResult.value;
+    const rpdData = rpdResult.status === 'fulfilled' ? rpdResult.value : null;
+    const rpdError = rpdResult.status !== 'fulfilled'
+        ? (rpdResult.reason && rpdResult.reason.message ? rpdResult.reason.message : 'Gagal memuat data RPD Berjalan')
+        : null;
+
+    try {
         container.innerHTML = `
             <div class="space-y-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -49,6 +88,11 @@ async function initDashboardPage() {
                         </div>
                     </div>
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" id="card-rpd-berjalan">
+                    ${rpdError
+                        ? `<h3 class="font-semibold text-slate-700 mb-4">Monitoring RPD Berjalan</h3><div class="text-sm text-red-500">❌ ${rpdError}</div>`
+                        : renderMonitoringRpdBerjalan(rpdData)}
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                     ${renderAkunBelumRealisasi(data.akunBelumRealisasi)}
@@ -95,6 +139,244 @@ function renderMPCard(t, d) {
 
 function renderTopPerjadin(l) {
     return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${idx + 1}. ${i[0]}</div><div class="text-xs font-bold text-sky-600">${i[1]}x</div></div>`).join('')}</div>`;
+}
+
+// ============================================================
+// Card: Monitoring RPD Berjalan
+// Sheet dash_bulanan_2026 (kolom R = uraian, kolom S = jumlah):
+//   Baris 2 -> RPD Berjalan   (satu-satunya baris tetap yang bisa diedit, via Ubah/Simpan)
+//   Baris 3 -> SP2D           (formula otomatis di sheet, read-only)
+//   Baris 4 -> Kekurangan     (formula otomatis di sheet, read-only)
+//   Baris 5-20 -> baris tambahan (bebas tambah/edit/hapus)
+// "Sisa" = Kekurangan - total baris tambahan, dihitung di sisi frontend (tidak disimpan ke sheet).
+// ============================================================
+
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatAngka(n) {
+    return Math.round(Number(n) || 0).toLocaleString('id-ID');
+}
+
+function hitungSisaRpdBerjalan() {
+    if (!rpdBerjalanCache) return 0;
+    const kekurangan = Number(rpdBerjalanCache.kekurangan?.jumlah) || 0;
+    const totalTambahan = (rpdBerjalanCache.rows || []).reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
+    return kekurangan - totalTambahan;
+}
+
+function renderMonitoringRpdBerjalan(data) {
+    const rpdBerjalan = data.rpdBerjalan || { rowIndex: null, uraian: 'RPD Berjalan', jumlah: 0 };
+    const sp2d = data.sp2d || { rowIndex: null, uraian: 'SP2D', jumlah: 0 };
+    const kekurangan = data.kekurangan || { rowIndex: null, uraian: 'Kekurangan', jumlah: 0 };
+    const rows = data.rows || [];
+    const sisa = kekurangan.jumlah - rows.reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
+
+    return `
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-700 text-base">Monitoring RPD Berjalan</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="table-rpd-berjalan">
+                <thead>
+                    <tr class="text-left text-slate-400 border-b border-slate-100">
+                        <th class="py-2 pr-2 font-medium">Uraian</th>
+                        <th class="py-2 pr-2 font-medium text-right w-40">Nilai</th>
+                        <th class="py-2 pl-2 font-medium text-center w-28">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-rpd-berjalan">
+                    ${renderRpdRowUtama(rpdBerjalan)}
+                    ${renderRpdRowReadonly(sp2d)}
+                    ${renderRpdRowReadonly(kekurangan)}
+                    ${rows.map(r => renderRpdRowTambahan(r)).join('')}
+                    <tr id="row-rpd-tambah">
+                        <td colspan="3" class="pt-2 pb-1 text-center">
+                            <button onclick="tambahRowRpdBerjalan()" class="text-sky-600 hover:text-sky-700 text-sm font-semibold" title="Tambah baris">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-200" id="summary-rpd-berjalan">
+            ${renderRpdSisa(sisa)}
+        </div>
+    `;
+}
+
+// Baris "RPD Berjalan" (baris 2) - satu-satunya baris tetap yang bisa diedit lewat toggle Ubah/Simpan
+function renderRpdRowUtama(row) {
+    if (rpdEditModeUtama) {
+        return `
+        <tr class="border-b border-slate-100 bg-sky-50/40" data-row="${row.rowIndex}" data-fixed="utama">
+            <td class="py-1.5 pr-2">
+                <input type="text" id="input-rpd-utama-uraian" value="${escapeHtml(row.uraian)}"
+                    class="w-full border-none bg-white rounded px-1.5 py-1 text-slate-700 outline-none ring-1 ring-sky-200">
+            </td>
+            <td class="py-1.5 pr-2">
+                <input type="number" id="input-rpd-utama-jumlah" value="${Number(row.jumlah) || 0}"
+                    class="w-full text-right border-none bg-white rounded px-1.5 py-1 text-slate-700 outline-none ring-1 ring-sky-200">
+            </td>
+            <td class="py-1.5 pl-2 text-center">
+                <button onclick="simpanRpdBerjalanUtama()" class="text-emerald-600 hover:text-emerald-700 text-xs font-semibold hover:underline">Simpan</button>
+            </td>
+        </tr>`;
+    }
+    return `
+    <tr class="border-b border-slate-100" data-row="${row.rowIndex}" data-fixed="utama">
+        <td class="py-1.5 pr-2 text-slate-700 font-medium">${escapeHtml(row.uraian) || 'RPD Berjalan'}</td>
+        <td class="py-1.5 pr-2 text-right text-slate-700">${formatAngka(row.jumlah)}</td>
+        <td class="py-1.5 pl-2 text-center">
+            <button onclick="mulaiUbahRpdBerjalanUtama()" class="text-sky-600 hover:text-sky-700 text-xs font-semibold hover:underline">Ubah</button>
+        </td>
+    </tr>`;
+}
+
+// Baris SP2D / Kekurangan (baris 3 & 4) - read-only, formula otomatis di sheet
+function renderRpdRowReadonly(row) {
+    return `
+    <tr class="border-b border-slate-100" data-row="${row.rowIndex}" data-fixed="readonly">
+        <td class="py-1.5 pr-2 text-slate-700 font-medium">${escapeHtml(row.uraian)}</td>
+        <td class="py-1.5 pr-2 text-right text-slate-700">${formatAngka(row.jumlah)}</td>
+        <td class="py-1.5 pl-2 text-center text-slate-300">—</td>
+    </tr>`;
+}
+
+// Baris tambahan (baris 5-20) - bebas diedit inline & dihapus
+function renderRpdRowTambahan(row) {
+    return `
+    <tr class="border-b border-slate-100" data-row="${row.rowIndex}" data-fixed="tambahan">
+        <td class="py-1.5 pr-2">
+            <input type="text" value="${escapeHtml(row.uraian)}" placeholder="Uraian..."
+                class="w-full border-none bg-transparent focus:bg-slate-50 rounded px-1.5 py-1 text-slate-700 outline-none focus:ring-1 focus:ring-sky-200"
+                onchange="updateRpdBerjalanRow(${row.rowIndex}, 'uraian', this.value)">
+        </td>
+        <td class="py-1.5 pr-2">
+            <input type="number" value="${Number(row.jumlah) || 0}" placeholder="0"
+                class="w-full text-right border-none bg-transparent focus:bg-slate-50 rounded px-1.5 py-1 text-slate-700 outline-none focus:ring-1 focus:ring-sky-200"
+                onchange="updateRpdBerjalanRow(${row.rowIndex}, 'jumlah', this.value)">
+        </td>
+        <td class="py-1.5 pl-2 text-center">
+            <button onclick="hapusRpdBerjalanRow(${row.rowIndex})" class="text-red-400 hover:text-red-600" title="Hapus baris">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </td>
+    </tr>`;
+}
+
+function renderRpdSisa(sisa) {
+    return `
+        <div class="flex justify-between items-center bg-slate-50 rounded-lg px-4 py-3">
+            <span class="font-semibold text-slate-700">Sisa</span>
+            <span class="font-bold text-lg ${sisa > 0 ? 'text-red-500' : 'text-emerald-600'}">${formatAngka(sisa)}</span>
+        </div>
+    `;
+}
+
+function refreshRpdSummaryUI() {
+    const summaryEl = document.getElementById('summary-rpd-berjalan');
+    if (!summaryEl || !rpdBerjalanCache) return;
+    summaryEl.innerHTML = renderRpdSisa(hitungSisaRpdBerjalan());
+}
+
+// --- Baris "RPD Berjalan" (utama): toggle mode edit Ubah/Simpan ---
+
+function mulaiUbahRpdBerjalanUtama() {
+    rpdEditModeUtama = true;
+    const tr = document.querySelector('#tbody-rpd-berjalan tr[data-fixed="utama"]');
+    if (tr && rpdBerjalanCache) {
+        tr.outerHTML = renderRpdRowUtama(rpdBerjalanCache.rpdBerjalan);
+    }
+}
+
+async function simpanRpdBerjalanUtama() {
+    const uraianInput = document.getElementById('input-rpd-utama-uraian');
+    const jumlahInput = document.getElementById('input-rpd-utama-jumlah');
+    const uraian = uraianInput ? uraianInput.value : '';
+    const jumlah = jumlahInput ? (parseFloat(jumlahInput.value) || 0) : 0;
+
+    try {
+        await apiPost({ action: 'updateRpdBerjalanUtama', uraian, jumlah });
+        if (rpdBerjalanCache && rpdBerjalanCache.rpdBerjalan) {
+            rpdBerjalanCache.rpdBerjalan.uraian = uraian;
+            rpdBerjalanCache.rpdBerjalan.jumlah = jumlah;
+        }
+        rpdEditModeUtama = false;
+        const tr = document.querySelector('#tbody-rpd-berjalan tr[data-fixed="utama"]');
+        if (tr) tr.outerHTML = renderRpdRowUtama(rpdBerjalanCache.rpdBerjalan);
+        refreshRpdSummaryUI();
+    } catch (e) {
+        console.error('Gagal menyimpan RPD Berjalan:', e);
+        alert(e.message || 'Gagal menyimpan perubahan.');
+    }
+}
+
+// --- Baris tambahan: tambah / edit / hapus ---
+
+async function tambahRowRpdBerjalan() {
+    const tbody = document.getElementById('tbody-rpd-berjalan');
+    const tombolTambahRow = document.getElementById('row-rpd-tambah');
+    if (!tbody || !tombolTambahRow) return;
+
+    try {
+        const newRow = await apiPost({ action: 'addRpdBerjalanRow', uraian: '', jumlah: 0 });
+        if (!newRow || typeof newRow.rowIndex === 'undefined') {
+            throw new Error('Respons baris baru dari server tidak valid');
+        }
+        if (!rpdBerjalanCache) rpdBerjalanCache = { rows: [] };
+        if (!Array.isArray(rpdBerjalanCache.rows)) rpdBerjalanCache.rows = [];
+        rpdBerjalanCache.rows.push(newRow);
+
+        tombolTambahRow.insertAdjacentHTML('beforebegin', renderRpdRowTambahan(newRow));
+        refreshRpdSummaryUI();
+
+        const newTr = tbody.querySelector(`tr[data-row="${newRow.rowIndex}"][data-fixed="tambahan"]`);
+        if (newTr) {
+            const firstInput = newTr.querySelector('input[type="text"]');
+            if (firstInput) firstInput.focus();
+        }
+    } catch (e) {
+        console.error('Gagal menambah baris RPD Berjalan:', e);
+        alert(e.message || 'Gagal menambah baris baru.');
+    }
+}
+
+async function updateRpdBerjalanRow(rowIndex, field, value) {
+    try {
+        await apiPost({ action: 'updateRpdBerjalanRow', rowIndex, field, value });
+        if (rpdBerjalanCache && Array.isArray(rpdBerjalanCache.rows)) {
+            const row = rpdBerjalanCache.rows.find(r => r.rowIndex === rowIndex);
+            if (row) row[field] = field === 'jumlah' ? (parseFloat(value) || 0) : value;
+        }
+        refreshRpdSummaryUI();
+    } catch (e) {
+        console.error('Gagal update baris RPD Berjalan:', e);
+        alert(e.message || 'Gagal menyimpan perubahan.');
+    }
+}
+
+async function hapusRpdBerjalanRow(rowIndex) {
+    if (!confirm('Hapus baris ini?')) return;
+    try {
+        await apiPost({ action: 'deleteRpdBerjalanRow', rowIndex });
+
+        // Backend menggeser baris-baris di bawahnya ke atas supaya tidak ada celah,
+        // jadi cara paling aman & konsisten di sisi frontend adalah reload ulang data card ini.
+        const freshData = await fetchRpdBerjalanData();
+        const card = document.getElementById('card-rpd-berjalan');
+        if (card) card.innerHTML = renderMonitoringRpdBerjalan(freshData);
+    } catch (e) {
+        console.error('Gagal menghapus baris RPD Berjalan:', e);
+        alert(e.message || 'Gagal menghapus baris.');
+    }
 }
 
 // Card: Daftar Akun Yang Belum Tercapai Realisasi Sesuai Waktu
