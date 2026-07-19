@@ -340,9 +340,7 @@ function renderRpdRowUtama(row, admin) {
         <td class="py-1.5 pr-2 text-slate-700 font-medium">${escapeHtml(row.uraian) || 'RPD Berjalan'}</td>
         <td class="py-1.5 pr-2 text-right text-slate-700">${formatAngka(row.jumlah)}</td>
         <td class="py-1.5 pl-2 text-center">
-            ${admin
-                ? `<button onclick="mulaiUbahRpdBerjalanUtama()" class="text-sky-600 hover:text-sky-700 text-xs font-semibold hover:underline">Ubah</button>`
-                : `<span class="text-slate-300">—</span>`}
+            <span class="text-slate-300">—</span>
         </td>
     </tr>`;
 }
