@@ -9,6 +9,7 @@ window.searchResults = [];
 window.searchIndex = -1;
 window.selectedKode = "";
 window.detilKegiatanData = [];
+window.refCoaData = null; // cache B1 & B2 sheet ref_coa (kodeSatker, kodeUnit)
 
 // Warna badge per Seksi (kolom I sheet pok_sumber_2026)
 const POK_SEKSI_COLORS = {
@@ -39,6 +40,8 @@ async function initPokPage() {
     window.expandedSeksi = new Set();
     window.searchResults = [];
     window.selectedKode = "";
+    // Load di background, tidak perlu ditunggu supaya tidak menghambat render tabel POK
+    fetchRefCoaData();
     await loadPokData();
 }
 
@@ -61,6 +64,110 @@ async function loadPokData() {
             ? 'Timeout: Server tidak merespons (>30 detik)'
             : e.message || 'Gagal memuat data';
         tbody.innerHTML = `<tr><td colspan="8" class="text-red-500 p-4 text-center">❌ ${errorMsg}</td></tr>`;
+    }
+}
+
+// ========================================
+// REF COA (kode satker & kode unit statis dari sheet ref_coa, B1 & B2)
+// ========================================
+
+async function fetchRefCoaData() {
+    if (window.refCoaData) return window.refCoaData;
+    try {
+        const data = await apiGet('getRefCoa');
+        if (data && !data.error) {
+            window.refCoaData = data;
+        } else {
+            console.error('Error dari API getRefCoa:', data && data.error);
+        }
+    } catch (e) {
+        console.error('Gagal memuat data ref_coa:', e);
+    }
+    return window.refCoaData;
+}
+
+// Susun string kode salin sesuai format:
+// {kodeSatker}.{kodeUnit}.{kodeAkun}.{BA}{Es1}{Prog}.{gabungan4digit+seksi}.{prefix}000000001.00000.2.2251.2.000000.000000
+function buildKodeSalin(item) {
+    const refCoa = window.refCoaData || {};
+    const kodeSatker = String(refCoa.kodeSatker || '').trim();
+    const kodeUnit = String(refCoa.kodeUnit || '').trim();
+
+    const c = String(item.kode || '');
+    const parts = c.split('.');
+    // Kode akun = segmen kedua dari belakang, contoh: 4798.FAE.007.100.A.524111.01 -> 524111
+    const kodeAkun = parts.length >= 2 ? parts[parts.length - 2] : '';
+    // Gabungan 2 segmen pertama, contoh: 4798.FAE... -> 4798FAE
+    const gabungan = parts.length >= 2 ? (parts[0] + parts[1]) : '';
+
+    const pad = (val, len) => {
+        const s = String(val ?? '').trim();
+        return (/^\d+$/.test(s) && s.length < len) ? s.padStart(len, '0') : s;
+    };
+    const ba = pad(item.ba, 3);   // kolom J, contoh: 015
+    const es1 = pad(item.es1, 2); // kolom K, contoh: 09
+    const prog = String(item.prog || '').trim(); // kolom L, contoh: CD
+
+    // RM -> A, PNBP -> D
+    const prefix = String(item.sumber || '').toUpperCase() === 'PNBP' ? 'D' : 'A';
+
+    return [
+        kodeSatker,
+        kodeUnit,
+        kodeAkun,
+        ba + es1 + prog,
+        gabungan,
+        prefix + '000000001',
+        '00000',
+        '2',
+        '2251',
+        '2',
+        '000000',
+        '000000'
+    ].join('.');
+}
+
+async function copyKodeAkun(idx) {
+    const item = window.rawPokData[idx];
+    if (!item) return;
+
+    if (!window.refCoaData) {
+        await fetchRefCoaData();
+    }
+    if (!window.refCoaData) {
+        alert('Gagal memuat data ref_coa (kode satker/unit), tidak bisa membuat kode.');
+        return;
+    }
+
+    const kode = buildKodeSalin(item);
+    await copyTextToClipboard(kode);
+}
+
+async function copyTextToClipboard(text) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            showToast('Kode berhasil disalin!');
+            return;
+        }
+        throw new Error('Clipboard API tidak tersedia');
+    } catch (e) {
+        // Fallback untuk browser/lingkungan yang tidak mendukung navigator.clipboard
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast('Kode berhasil disalin!');
+        } catch (err) {
+            console.error('Gagal menyalin kode:', err);
+            alert('Gagal menyalin kode. Kode: ' + text);
+        }
     }
 }
 
@@ -152,7 +259,11 @@ function renderPok() {
                 ${isLeaf ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
                         class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
-                    <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700">Detil</button>
+                    <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700 mr-1">Detil</button>
+                    <button onclick="event.stopPropagation();copyKodeAkun(${window.rawPokData.indexOf(i)})"
+                        class="bg-amber-600 text-white px-2 py-1 rounded text-[10px] hover:bg-amber-700" title="Salin kode akun lengkap">
+                        <i class="fa-solid fa-copy"></i> Copy
+                    </button>
                 ` : ''}
             </td>
         </tr>`;
@@ -946,3 +1057,5 @@ window.deletePelaksanaRow = deletePelaksanaRow;
 window.simpanPelaksana = simpanPelaksana;
 window.downloadSeksiExcel = downloadSeksiExcel;
 window.downloadSeksiPDF = downloadSeksiPDF;
+window.fetchRefCoaData = fetchRefCoaData;
+window.copyKodeAkun = copyKodeAkun;
