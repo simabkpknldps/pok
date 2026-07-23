@@ -258,11 +258,15 @@ function renderPok() {
             <td class="p-3 text-center whitespace-nowrap">
                 ${isLeaf ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
-                        class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1">Rekam</button>
-                    <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700 mr-1">Detil</button>
+                        class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1" title="Rekam">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                    <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700 mr-1" title="Detil">
+                        <i class="fa-solid fa-exclamation"></i>
+                    </button>
                     <button onclick="event.stopPropagation();copyKodeAkun(${window.rawPokData.indexOf(i)})"
                         class="bg-amber-600 text-white px-2 py-1 rounded text-[10px] hover:bg-amber-700" title="Salin kode akun lengkap">
-                        <i class="fa-solid fa-copy"></i> Copy
+                        <i class="fa-solid fa-copy"></i>
                     </button>
                 ` : ''}
             </td>
