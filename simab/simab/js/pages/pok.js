@@ -258,15 +258,15 @@ function renderPok() {
             <td class="p-3 text-center whitespace-nowrap">
                 ${isLeaf ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
-                        class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] hover:bg-sky-700 mr-1" title="Rekam">
-                        <i class="fa-solid fa-plus"></i>
+                        class="bg-sky-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-sky-700 mr-1" title="Rekam">
+                        <i class="fa-solid fa-plus text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
-                    <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white px-2 py-1 rounded text-[10px] hover:bg-slate-700 mr-1" title="Detil">
-                        <i class="fa-solid fa-exclamation"></i>
+                    <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-slate-700 mr-1" title="Detil">
+                        <i class="fa-solid fa-exclamation text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                     <button onclick="event.stopPropagation();copyKodeAkun(${window.rawPokData.indexOf(i)})"
-                        class="bg-amber-600 text-white px-2 py-1 rounded text-[10px] hover:bg-amber-700" title="Salin kode akun lengkap">
-                        <i class="fa-solid fa-copy"></i>
+                        class="bg-amber-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-amber-700" title="Salin kode akun lengkap">
+                        <i class="fa-solid fa-copy text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                 ` : ''}
             </td>
