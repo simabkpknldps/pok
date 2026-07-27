@@ -53,8 +53,8 @@ async function rpdLoadData() {
         // Header (baris 2, kolom U:X) + kolom Aksi tambahan
         // Kolom 1 (U) rata tengah, kolom 2-4 (V, W, X) rata kanan
         theadRow.innerHTML = result.header
-            .map((h, idx) => `<th class="px-3 py-2 font-semibold whitespace-nowrap ${rpdColAlign(idx)}">${rpdEscapeHtml(h)}</th>`)
-            .join('') + `<th class="px-3 py-2 font-semibold text-center w-24">Aksi</th>`;
+            .map((h, idx) => `<th class="px-3 py-1.5 font-semibold whitespace-nowrap ${rpdColAlign(idx)}">${rpdEscapeHtml(h)}</th>`)
+            .join('') + `<th class="px-3 py-1.5 font-semibold text-center">Aksi</th>`;
 
         // Baris data (baris 3-14)
         tbody.innerHTML = result.rows.map(row => rpdRenderRow(row)).join('');
@@ -77,7 +77,7 @@ function rpdColAlign(idx) {
 
 function rpdRenderRow(row) {
     const cells = row.values.map((v, idx) => `
-        <td class="px-3 py-2 rpd-cell ${rpdColAlign(idx)}" data-col="${idx}" data-display="${rpdEscapeAttr(v)}">
+        <td class="px-3 py-1.5 rpd-cell ${rpdColAlign(idx)}" data-col="${idx}" data-display="${rpdEscapeAttr(v)}">
             ${rpdFormatCell(v)}
         </td>
     `).join('');
@@ -85,7 +85,7 @@ function rpdRenderRow(row) {
     return `
         <tr data-row="${row.rowIndex}">
             ${cells}
-            <td class="px-3 py-2 text-center">
+            <td class="px-3 py-1.5 text-center">
                 <div class="rpd-actions inline-flex items-center gap-3">
                     <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD baris ini">
                         <i class="fa-solid fa-pen"></i>
