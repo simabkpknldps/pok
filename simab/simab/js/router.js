@@ -16,6 +16,7 @@ const PAGE_INIT = {
     perjadin: () => window.initPerjadinPage && window.initPerjadinPage(),
     kalender: () => window.initKalenderPage && window.initKalenderPage(),
     statistik: () => window.initStatistikPage && window.initStatistikPage(),
+    rpd: () => window.initRpdPage && window.initRpdPage(),
 };
 
 async function navigate(page) {
