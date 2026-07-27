@@ -103,7 +103,7 @@ function rpdFormatCell(v, idx) {
     if (v === '' || v === null || typeof v === 'undefined') return '-';
 
     // Hanya kolom index 4 yang ditampilkan sebagai persen
-    if (idx === RPD_COL_PERSEN_INDEX) {
+    if (idx === RPD_COL_RPD_INDEX) {
         const num = Number(String(v).replace(/\./g, '').replace(',', '.'));
         if (!isNaN(num)) {
             return (num * 100).toLocaleString('id-ID', {
