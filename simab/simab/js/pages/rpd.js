@@ -102,12 +102,15 @@ function rpdRenderRow(row) {
 function rpdFormatCell(v, idx) {
     if (v === '' || v === null || typeof v === 'undefined') return '-';
 
-    // Kolom % Deviasi (T): tampilkan sebagai persen.
+    // Kolom % Deviasi (T): tampilkan sebagai persen + warna.
     // Asumsi: nilai di sheet tersimpan sbg pecahan (0.05 = 5%), sesuai format
     // "Percent" default Google Sheets. Kalau ternyata nilainya sudah dalam
-    // bentuk angka persen utuh (5 = 5%), hapus perkalian *100 di bawah ini.
+    // bentuk angka persen utuh (5 = 5%), sesuaikan threshold di bawah (pakai 5 & -5, bukan 0.05 & -0.05).
     if (idx === RPD_COL_PERSEN_DEVIASI_INDEX && typeof v === 'number') {
-        return (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+        const persenText = (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+        // Merah jika >= 5% atau <= -5%, hijau jika di antara -5% s/d 5% (termasuk 0%)
+        const colorClass = (v >= 0.05 || v <= -0.05) ? 'text-red-600' : 'text-green-600';
+        return `<span class="${colorClass} font-medium">${persenText}</span>`;
     }
 
     if (typeof v === 'number') return formatRibuan(v);
