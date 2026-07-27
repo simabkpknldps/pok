@@ -25,9 +25,9 @@
  * -----------------------------------------------------------------------
  */
 
-const RPD_COL_PERSEN_DEVIASI_INDEX = 0; // index ke-0 dalam range T:X = kolom T (% Deviasi)
-const RPD_COL_BULAN_INDEX = 1;          // index ke-1 = kolom U (Bulan), satu-satunya yang rata tengah
-const RPD_COL_RPD_INDEX = 2;            // index ke-2 = kolom V (RPD), satu-satunya yang editable
+const RPD_COL_PERSEN_DEVIASI_INDEX = 4; // index ke-0 dalam range T:X = kolom T (% Deviasi)
+const RPD_COL_BULAN_INDEX = 0;          // index ke-1 = kolom U (Bulan), satu-satunya yang rata tengah
+const RPD_COL_RPD_INDEX = 1;            // index ke-2 = kolom V (RPD), satu-satunya yang editable
 
 async function initRpdPage() {
     // Fragment pages/rpd.html sudah otomatis dimuat router ke #app sebelum
@@ -102,17 +102,23 @@ function rpdRenderRow(row) {
 function rpdFormatCell(v, idx) {
     if (v === '' || v === null || typeof v === 'undefined') return '-';
 
-    // Kolom % Deviasi (T): tampilkan sebagai persen.
-    // Asumsi: nilai di sheet tersimpan sbg pecahan (0.05 = 5%), sesuai format
-    // "Percent" default Google Sheets. Kalau ternyata nilainya sudah dalam
-    // bentuk angka persen utuh (5 = 5%), hapus perkalian *100 di bawah ini.
-    if (idx === RPD_COL_PERSEN_DEVIASI_INDEX && typeof v === 'number') {
-        return (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+    // Hanya kolom index 4 yang ditampilkan sebagai persen
+    if (idx === RPD_COL_PERSEN_INDEX) {
+        const num = Number(String(v).replace(/\./g, '').replace(',', '.'));
+        if (!isNaN(num)) {
+            return (num * 100).toLocaleString('id-ID', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + '%';
+        }
     }
 
+    // Semua kolom selain index 4 ditampilkan sebagai angka biasa
     if (typeof v === 'number') return formatRibuan(v);
+
     const stripped = String(v).trim().replace(/\./g, '').replace(/,/g, '.');
     if (stripped !== '' && !isNaN(stripped)) return formatRibuan(v);
+
     return rpdEscapeHtml(v);
 }
 
