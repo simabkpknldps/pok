@@ -7,16 +7,22 @@
  * Struktur range (sisi backend, lihat action getRpdTabelData / updateRpdTabelRow
  * di Apps Script):
  *   Baris 2 (U2:X2)   -> header/judul kolom, TIDAK bisa diedit dari sini.
- *   Baris 3-14 (U:X)  -> data, bisa diedit PER BARIS lewat tombol Aksi.
+ *   Baris 3-14 (U:X)  -> data. HANYA kolom yang judulnya mengandung kata
+ *                        "RPD" yang bisa diedit; kolom lain di baris yang
+ *                        sama tetap read-only.
  *
  * Alur edit per baris:
- *   1. Klik icon pencil  -> semua sel di baris itu berubah jadi <input>,
- *      icon berubah jadi disket (save).
- *   2. Klik icon disket  -> nilai input dikirim ke backend
- *      (action: updateRpdTabelRow) untuk baris tsb, sheet ikut ter-update,
- *      lalu baris kembali ke mode tampilan (read-only) dengan nilai baru.
+ *   1. Klik icon pencil  -> HANYA sel kolom RPD di baris itu berubah jadi
+ *      <input>. Tombol Aksi berubah jadi 2 tombol: disket (simpan) & x (batal).
+ *   2. Klik disket -> nilai input kolom RPD dikirim ke backend
+ *      (action: updateRpdTabelRow, kolom lain dikirim apa adanya/tidak berubah),
+ *      sheet ter-update, baris kembali ke mode tampilan dengan nilai baru.
+ *   3. Klik x (batal) -> edit dibatalkan, nilai kembali seperti semula,
+ *      tidak ada yang dikirim ke backend.
  * -----------------------------------------------------------------------
  */
+
+let rpdHeaderCache = [];
 
 async function initRpdPage() {
     // Fragment pages/rpd.html sudah otomatis dimuat router ke #app sebelum
@@ -43,11 +49,13 @@ async function rpdLoadData() {
             throw new Error(result.message || 'Gagal memuat data RPD');
         }
 
+        rpdHeaderCache = result.header;
+
         // Header (baris 2, kolom U:X) + kolom Aksi tambahan
         // Kolom 1 (U) rata tengah, kolom 2-4 (V, W, X) rata kanan
         theadRow.innerHTML = result.header
             .map((h, idx) => `<th class="px-3 py-2 font-semibold whitespace-nowrap ${rpdColAlign(idx)}">${rpdEscapeHtml(h)}</th>`)
-            .join('') + `<th class="px-3 py-2 font-semibold text-center w-20">Aksi</th>`;
+            .join('') + `<th class="px-3 py-2 font-semibold text-center w-24">Aksi</th>`;
 
         // Baris data (baris 3-14)
         tbody.innerHTML = result.rows.map(row => rpdRenderRow(row)).join('');
@@ -61,6 +69,12 @@ async function rpdLoadData() {
         errorEl.classList.remove('hidden');
         errorEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i>${e.message || 'Terjadi kesalahan'}`;
     }
+}
+
+// Cari index kolom yang judulnya mengandung kata "RPD" (case-insensitive).
+// Kolom inilah satu-satunya yang boleh diedit dari halaman ini.
+function rpdGetEditableColIndex() {
+    return rpdHeaderCache.findIndex(h => String(h || '').toLowerCase().includes('rpd'));
 }
 
 function rpdColAlign(idx) {
@@ -79,9 +93,11 @@ function rpdRenderRow(row) {
         <tr data-row="${row.rowIndex}">
             ${cells}
             <td class="px-3 py-2 text-center">
-                <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah baris ini">
-                    <i class="fa-solid fa-pen"></i>
-                </button>
+                <div class="rpd-actions inline-flex items-center gap-3">
+                    <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah baris ini">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                </div>
             </td>
         </tr>
     `;
@@ -109,43 +125,102 @@ function rpdBindRowButtons() {
     document.querySelectorAll('#rpd-tbody .rpd-btn-ubah').forEach(btn => {
         btn.onclick = function () {
             const tr = btn.closest('tr');
-            rpdEnterEditMode(tr, btn);
+            const actionsDiv = btn.closest('.rpd-actions');
+            rpdEnterEditMode(tr, actionsDiv);
         };
     });
 }
 
-// Ubah semua sel di baris jadi <input>, ganti icon pencil -> disket
-function rpdEnterEditMode(tr, btn) {
+// Masuk mode edit: HANYA sel kolom RPD yang jadi <input>, kolom lain tetap read-only.
+// Tombol Aksi berubah jadi [simpan] [batal].
+function rpdEnterEditMode(tr, actionsDiv) {
+    const editableCol = rpdGetEditableColIndex();
+    if (editableCol === -1) {
+        alert('Kolom "RPD" tidak ditemukan di header tabel, tidak ada kolom yang bisa diedit.');
+        return;
+    }
+
     const cells = tr.querySelectorAll('.rpd-cell');
     cells.forEach(td => {
-        const currentValue = td.getAttribute('data-display') || '';
         const colIdx = Number(td.getAttribute('data-col'));
+        if (colIdx !== editableCol) return; // kolom selain RPD tetap read-only, tidak disentuh
+
+        const currentValue = td.getAttribute('data-display') || '';
         td.innerHTML = `<input type="text"
             class="rpd-input w-full px-2 py-1 border border-sky-300 rounded-lg text-sm ${rpdColAlign(colIdx)} focus:outline-none focus:ring-2 focus:ring-sky-500"
             value="${rpdEscapeAttr(currentValue)}">`;
     });
 
-    btn.classList.remove('rpd-btn-ubah', 'text-sky-600', 'hover:text-sky-800');
-    btn.classList.add('rpd-btn-simpan', 'text-green-600', 'hover:text-green-800');
-    btn.title = 'Simpan perubahan';
-    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
-    btn.onclick = function () {
-        rpdSaveRow(tr, btn);
+    actionsDiv.innerHTML = `
+        <button class="rpd-btn-simpan text-green-600 hover:text-green-800" title="Simpan">
+            <i class="fa-solid fa-floppy-disk"></i>
+        </button>
+        <button class="rpd-btn-batal text-slate-400 hover:text-red-600" title="Batal">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    `;
+    actionsDiv.querySelector('.rpd-btn-simpan').onclick = function () {
+        rpdSaveRow(tr, actionsDiv);
+    };
+    actionsDiv.querySelector('.rpd-btn-batal').onclick = function () {
+        rpdCancelEdit(tr, actionsDiv);
     };
 
-    const firstInput = tr.querySelector('.rpd-input');
-    if (firstInput) firstInput.focus();
+    const input = tr.querySelector('.rpd-input');
+    if (input) input.focus();
 }
 
-// Kirim nilai baris ke backend (action: updateRpdTabelRow), lalu kembalikan baris ke mode tampilan
-async function rpdSaveRow(tr, btn) {
-    const rowIndex = tr.getAttribute('data-row');
-    const inputs = tr.querySelectorAll('.rpd-input');
-    const values = Array.from(inputs).map(inp => inp.value.trim());
+// Batalkan edit: kembalikan sel kolom RPD ke tampilan semula (tanpa kirim apapun ke backend)
+function rpdCancelEdit(tr, actionsDiv) {
+    const editableCol = rpdGetEditableColIndex();
+    const cells = tr.querySelectorAll('.rpd-cell');
+    cells.forEach(td => {
+        const colIdx = Number(td.getAttribute('data-col'));
+        if (colIdx !== editableCol) return;
+        const currentValue = td.getAttribute('data-display') || '';
+        td.innerHTML = rpdFormatCell(currentValue);
+    });
 
-    const originalIcon = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    rpdResetActionsToPencil(tr, actionsDiv);
+}
+
+function rpdResetActionsToPencil(tr, actionsDiv) {
+    actionsDiv.innerHTML = `
+        <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah baris ini">
+            <i class="fa-solid fa-pen"></i>
+        </button>
+    `;
+    actionsDiv.querySelector('.rpd-btn-ubah').onclick = function () {
+        rpdEnterEditMode(tr, actionsDiv);
+    };
+}
+
+// Kirim nilai baris ke backend (action: updateRpdTabelRow). Kolom selain RPD dikirim
+// apa adanya (nilai yang sudah ada / tidak berubah), hanya kolom RPD yang nilainya baru.
+async function rpdSaveRow(tr, actionsDiv) {
+    const editableCol = rpdGetEditableColIndex();
+    const rowIndex = tr.getAttribute('data-row');
+    const cells = tr.querySelectorAll('.rpd-cell');
+
+    const values = [];
+    let newEditableValue = null;
+    cells.forEach(td => {
+        const colIdx = Number(td.getAttribute('data-col'));
+        if (colIdx === editableCol) {
+            const input = td.querySelector('.rpd-input');
+            newEditableValue = input ? input.value.trim() : (td.getAttribute('data-display') || '');
+            values[colIdx] = newEditableValue;
+        } else {
+            values[colIdx] = td.getAttribute('data-display') || '';
+        }
+    });
+
+    const btnSimpan = actionsDiv.querySelector('.rpd-btn-simpan');
+    const originalIcon = btnSimpan ? btnSimpan.innerHTML : '';
+    if (btnSimpan) {
+        btnSimpan.disabled = true;
+        btnSimpan.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    }
 
     try {
         const result = await apiPost({
@@ -157,30 +232,26 @@ async function rpdSaveRow(tr, btn) {
         if (result.status === 'success') {
             showToast('Data RPD berhasil diperbarui');
 
-            const cells = tr.querySelectorAll('.rpd-cell');
-            cells.forEach((td, idx) => {
-                const v = values[idx];
-                td.setAttribute('data-display', v);
-                td.innerHTML = rpdFormatCell(v);
-            });
+            const editableTd = tr.querySelector(`.rpd-cell[data-col="${editableCol}"]`);
+            if (editableTd) {
+                editableTd.setAttribute('data-display', newEditableValue);
+                editableTd.innerHTML = rpdFormatCell(newEditableValue);
+            }
 
-            btn.classList.remove('rpd-btn-simpan', 'text-green-600', 'hover:text-green-800');
-            btn.classList.add('rpd-btn-ubah', 'text-sky-600', 'hover:text-sky-800');
-            btn.title = 'Ubah baris ini';
-            btn.innerHTML = '<i class="fa-solid fa-pen"></i>';
-            btn.disabled = false;
-            btn.onclick = function () {
-                rpdEnterEditMode(tr, btn);
-            };
+            rpdResetActionsToPencil(tr, actionsDiv);
         } else {
             alert('Gagal menyimpan: ' + (result.message || 'Terjadi kesalahan.'));
-            btn.disabled = false;
-            btn.innerHTML = originalIcon;
+            if (btnSimpan) {
+                btnSimpan.disabled = false;
+                btnSimpan.innerHTML = originalIcon;
+            }
         }
     } catch (e) {
         alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
-        btn.disabled = false;
-        btn.innerHTML = originalIcon;
+        if (btnSimpan) {
+            btnSimpan.disabled = false;
+            btnSimpan.innerHTML = originalIcon;
+        }
     }
 }
 
