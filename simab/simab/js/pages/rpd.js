@@ -4,25 +4,26 @@
  * Halaman "RPD" — menampilkan tabel dari sheet "dash_bulanan_2026",
  * range U2:X14.
  *
- * Struktur range (sisi backend, lihat action getRpdTabelData / updateRpdTabelRow
- * di Apps Script):
- *   Baris 2 (U2:X2)   -> header/judul kolom, TIDAK bisa diedit dari sini.
- *   Baris 3-14 (U:X)  -> data. HANYA kolom yang judulnya mengandung kata
- *                        "RPD" yang bisa diedit; kolom lain di baris yang
- *                        sama tetap read-only.
+ * Struktur kolom (U, V, W, X):
+ *   U -> Bulan      (read-only)
+ *   V -> RPD        (SATU-SATUNYA kolom yang bisa diedit dari halaman ini)
+ *   W -> Realisasi  (read-only)
+ *   X -> Deviasi = RPD - Realisasi, FORMULA di sheet (=V-W). Read-only,
+ *        nilainya otomatis ikut berubah begitu kolom RPD (V) diupdate.
  *
  * Alur edit per baris:
- *   1. Klik icon pencil  -> HANYA sel kolom RPD di baris itu berubah jadi
+ *   1. Klik icon pencil  -> HANYA sel kolom RPD (V) di baris itu berubah jadi
  *      <input>. Tombol Aksi berubah jadi 2 tombol: disket (simpan) & x (batal).
- *   2. Klik disket -> nilai input kolom RPD dikirim ke backend
- *      (action: updateRpdTabelRow, kolom lain dikirim apa adanya/tidak berubah),
- *      sheet ter-update, baris kembali ke mode tampilan dengan nilai baru.
+ *   2. Klik disket -> HANYA nilai kolom RPD yang dikirim ke backend
+ *      (action: updateRpdTabelRow), yang menulis 1 sel saja ke sheet
+ *      (kolom V). Kolom Bulan/Realisasi/Deviasi tidak pernah ditulis ulang,
+ *      supaya formula Deviasi (=V-W) di kolom X tetap aman.
  *   3. Klik x (batal) -> edit dibatalkan, nilai kembali seperti semula,
  *      tidak ada yang dikirim ke backend.
  * -----------------------------------------------------------------------
  */
 
-let rpdHeaderCache = [];
+const RPD_COL_RPD_INDEX = 1; // index ke-1 dalam kolom U:X = kolom V (RPD), satu-satunya yang editable
 
 async function initRpdPage() {
     // Fragment pages/rpd.html sudah otomatis dimuat router ke #app sebelum
@@ -49,8 +50,6 @@ async function rpdLoadData() {
             throw new Error(result.message || 'Gagal memuat data RPD');
         }
 
-        rpdHeaderCache = result.header;
-
         // Header (baris 2, kolom U:X) + kolom Aksi tambahan
         // Kolom 1 (U) rata tengah, kolom 2-4 (V, W, X) rata kanan
         theadRow.innerHTML = result.header
@@ -71,12 +70,6 @@ async function rpdLoadData() {
     }
 }
 
-// Cari index kolom yang judulnya mengandung kata "RPD" (case-insensitive).
-// Kolom inilah satu-satunya yang boleh diedit dari halaman ini.
-function rpdGetEditableColIndex() {
-    return rpdHeaderCache.findIndex(h => String(h || '').toLowerCase().includes('rpd'));
-}
-
 function rpdColAlign(idx) {
     // Kolom 1 (index 0) rata tengah, kolom 2-4 (index 1-3) rata kanan
     return idx === 0 ? 'text-center' : 'text-right';
@@ -94,7 +87,7 @@ function rpdRenderRow(row) {
             ${cells}
             <td class="px-3 py-2 text-center">
                 <div class="rpd-actions inline-flex items-center gap-3">
-                    <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah baris ini">
+                    <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD baris ini">
                         <i class="fa-solid fa-pen"></i>
                     </button>
                 </div>
@@ -131,25 +124,16 @@ function rpdBindRowButtons() {
     });
 }
 
-// Masuk mode edit: HANYA sel kolom RPD yang jadi <input>, kolom lain tetap read-only.
+// Masuk mode edit: HANYA sel kolom RPD (V) yang jadi <input>, kolom lain tetap read-only.
 // Tombol Aksi berubah jadi [simpan] [batal].
 function rpdEnterEditMode(tr, actionsDiv) {
-    const editableCol = rpdGetEditableColIndex();
-    if (editableCol === -1) {
-        alert('Kolom "RPD" tidak ditemukan di header tabel, tidak ada kolom yang bisa diedit.');
-        return;
-    }
+    const td = tr.querySelector(`.rpd-cell[data-col="${RPD_COL_RPD_INDEX}"]`);
+    if (!td) return;
 
-    const cells = tr.querySelectorAll('.rpd-cell');
-    cells.forEach(td => {
-        const colIdx = Number(td.getAttribute('data-col'));
-        if (colIdx !== editableCol) return; // kolom selain RPD tetap read-only, tidak disentuh
-
-        const currentValue = td.getAttribute('data-display') || '';
-        td.innerHTML = `<input type="text"
-            class="rpd-input w-full px-2 py-1 border border-sky-300 rounded-lg text-sm ${rpdColAlign(colIdx)} focus:outline-none focus:ring-2 focus:ring-sky-500"
-            value="${rpdEscapeAttr(currentValue)}">`;
-    });
+    const currentValue = td.getAttribute('data-display') || '';
+    td.innerHTML = `<input type="text"
+        class="rpd-input w-full px-2 py-1 border border-sky-300 rounded-lg text-sm ${rpdColAlign(RPD_COL_RPD_INDEX)} focus:outline-none focus:ring-2 focus:ring-sky-500"
+        value="${rpdEscapeAttr(currentValue)}">`;
 
     actionsDiv.innerHTML = `
         <button class="rpd-btn-simpan text-green-600 hover:text-green-800" title="Simpan">
@@ -166,27 +150,23 @@ function rpdEnterEditMode(tr, actionsDiv) {
         rpdCancelEdit(tr, actionsDiv);
     };
 
-    const input = tr.querySelector('.rpd-input');
+    const input = td.querySelector('.rpd-input');
     if (input) input.focus();
 }
 
 // Batalkan edit: kembalikan sel kolom RPD ke tampilan semula (tanpa kirim apapun ke backend)
 function rpdCancelEdit(tr, actionsDiv) {
-    const editableCol = rpdGetEditableColIndex();
-    const cells = tr.querySelectorAll('.rpd-cell');
-    cells.forEach(td => {
-        const colIdx = Number(td.getAttribute('data-col'));
-        if (colIdx !== editableCol) return;
+    const td = tr.querySelector(`.rpd-cell[data-col="${RPD_COL_RPD_INDEX}"]`);
+    if (td) {
         const currentValue = td.getAttribute('data-display') || '';
         td.innerHTML = rpdFormatCell(currentValue);
-    });
-
+    }
     rpdResetActionsToPencil(tr, actionsDiv);
 }
 
 function rpdResetActionsToPencil(tr, actionsDiv) {
     actionsDiv.innerHTML = `
-        <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah baris ini">
+        <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD baris ini">
             <i class="fa-solid fa-pen"></i>
         </button>
     `;
@@ -195,25 +175,13 @@ function rpdResetActionsToPencil(tr, actionsDiv) {
     };
 }
 
-// Kirim nilai baris ke backend (action: updateRpdTabelRow). Kolom selain RPD dikirim
-// apa adanya (nilai yang sudah ada / tidak berubah), hanya kolom RPD yang nilainya baru.
+// Kirim HANYA nilai RPD (kolom V) yang baru ke backend. Backend hanya menulis
+// 1 sel (kolom V), sehingga formula Deviasi (=V-W) di kolom X tidak pernah tersentuh.
 async function rpdSaveRow(tr, actionsDiv) {
-    const editableCol = rpdGetEditableColIndex();
     const rowIndex = tr.getAttribute('data-row');
-    const cells = tr.querySelectorAll('.rpd-cell');
-
-    const values = [];
-    let newEditableValue = null;
-    cells.forEach(td => {
-        const colIdx = Number(td.getAttribute('data-col'));
-        if (colIdx === editableCol) {
-            const input = td.querySelector('.rpd-input');
-            newEditableValue = input ? input.value.trim() : (td.getAttribute('data-display') || '');
-            values[colIdx] = newEditableValue;
-        } else {
-            values[colIdx] = td.getAttribute('data-display') || '';
-        }
-    });
+    const td = tr.querySelector(`.rpd-cell[data-col="${RPD_COL_RPD_INDEX}"]`);
+    const input = td ? td.querySelector('.rpd-input') : null;
+    const newValue = input ? input.value.trim() : '';
 
     const btnSimpan = actionsDiv.querySelector('.rpd-btn-simpan');
     const originalIcon = btnSimpan ? btnSimpan.innerHTML : '';
@@ -226,19 +194,21 @@ async function rpdSaveRow(tr, actionsDiv) {
         const result = await apiPost({
             action: 'updateRpdTabelRow',
             rowIndex: Number(rowIndex),
-            values: values
+            value: newValue
         });
 
         if (result.status === 'success') {
             showToast('Data RPD berhasil diperbarui');
 
-            const editableTd = tr.querySelector(`.rpd-cell[data-col="${editableCol}"]`);
-            if (editableTd) {
-                editableTd.setAttribute('data-display', newEditableValue);
-                editableTd.innerHTML = rpdFormatCell(newEditableValue);
-            }
+            td.setAttribute('data-display', newValue);
+            td.innerHTML = rpdFormatCell(newValue);
 
             rpdResetActionsToPencil(tr, actionsDiv);
+
+            // Kolom Deviasi (X) otomatis berubah lewat formula di sheet begitu RPD
+            // (kolom V) berubah, jadi muat ulang seluruh tabel supaya nilai Deviasi
+            // yang ditampilkan ikut ter-update.
+            await rpdLoadData();
         } else {
             alert('Gagal menyimpan: ' + (result.message || 'Terjadi kesalahan.'));
             if (btnSimpan) {
