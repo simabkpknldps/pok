@@ -200,15 +200,24 @@ async function rpdSaveRow(tr, actionsDiv) {
         if (result.status === 'success') {
             showToast('Data RPD berhasil diperbarui');
 
-            td.setAttribute('data-display', newValue);
-            td.innerHTML = rpdFormatCell(newValue);
+            // Backend mengembalikan seluruh baris (U:X) SETELAH SpreadsheetApp.flush(),
+            // jadi Deviasi (kolom X) di sini sudah nilai terbaru hasil formula =V-W,
+            // langsung dipakai tanpa perlu reload/request terpisah.
+            const updatedValues = result.values;
+            if (Array.isArray(updatedValues)) {
+                const cells = tr.querySelectorAll('.rpd-cell');
+                cells.forEach(cellTd => {
+                    const colIdx = Number(cellTd.getAttribute('data-col'));
+                    const v = updatedValues[colIdx];
+                    cellTd.setAttribute('data-display', v);
+                    cellTd.innerHTML = rpdFormatCell(v);
+                });
+            } else {
+                td.setAttribute('data-display', newValue);
+                td.innerHTML = rpdFormatCell(newValue);
+            }
 
             rpdResetActionsToPencil(tr, actionsDiv);
-
-            // Kolom Deviasi (X) otomatis berubah lewat formula di sheet begitu RPD
-            // (kolom V) berubah, jadi muat ulang seluruh tabel supaya nilai Deviasi
-            // yang ditampilkan ikut ter-update.
-            await rpdLoadData();
         } else {
             alert('Gagal menyimpan: ' + (result.message || 'Terjadi kesalahan.'));
             if (btnSimpan) {
