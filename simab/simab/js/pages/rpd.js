@@ -44,8 +44,9 @@ async function rpdLoadData() {
         }
 
         // Header (baris 2, kolom U:X) + kolom Aksi tambahan
+        // Kolom 1 (U) rata tengah, kolom 2-4 (V, W, X) rata kanan
         theadRow.innerHTML = result.header
-            .map(h => `<th class="px-3 py-2 font-semibold whitespace-nowrap">${rpdEscapeHtml(h)}</th>`)
+            .map((h, idx) => `<th class="px-3 py-2 font-semibold whitespace-nowrap ${rpdColAlign(idx)}">${rpdEscapeHtml(h)}</th>`)
             .join('') + `<th class="px-3 py-2 font-semibold text-center w-20">Aksi</th>`;
 
         // Baris data (baris 3-14)
@@ -62,9 +63,14 @@ async function rpdLoadData() {
     }
 }
 
+function rpdColAlign(idx) {
+    // Kolom 1 (index 0) rata tengah, kolom 2-4 (index 1-3) rata kanan
+    return idx === 0 ? 'text-center' : 'text-right';
+}
+
 function rpdRenderRow(row) {
     const cells = row.values.map((v, idx) => `
-        <td class="px-3 py-2 rpd-cell" data-col="${idx}" data-display="${rpdEscapeAttr(v)}">
+        <td class="px-3 py-2 rpd-cell ${rpdColAlign(idx)}" data-col="${idx}" data-display="${rpdEscapeAttr(v)}">
             ${rpdFormatCell(v)}
         </td>
     `).join('');
@@ -113,8 +119,9 @@ function rpdEnterEditMode(tr, btn) {
     const cells = tr.querySelectorAll('.rpd-cell');
     cells.forEach(td => {
         const currentValue = td.getAttribute('data-display') || '';
+        const colIdx = Number(td.getAttribute('data-col'));
         td.innerHTML = `<input type="text"
-            class="rpd-input w-full px-2 py-1 border border-sky-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            class="rpd-input w-full px-2 py-1 border border-sky-300 rounded-lg text-sm ${rpdColAlign(colIdx)} focus:outline-none focus:ring-2 focus:ring-sky-500"
             value="${rpdEscapeAttr(currentValue)}">`;
     });
 
