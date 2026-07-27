@@ -2,28 +2,32 @@
  * js/pages/rpd.js
  * -----------------------------------------------------------------------
  * Halaman "RPD" — menampilkan tabel dari sheet "dash_bulanan_2026",
- * range U2:X14.
+ * range T2:X14.
  *
- * Struktur kolom (U, V, W, X):
- *   U -> Bulan      (read-only)
- *   V -> RPD        (SATU-SATUNYA kolom yang bisa diedit dari halaman ini)
- *   W -> Realisasi  (read-only)
- *   X -> Deviasi = RPD - Realisasi, FORMULA di sheet (=V-W). Read-only,
- *        nilainya otomatis ikut berubah begitu kolom RPD (V) diupdate.
+ * Struktur kolom (T, U, V, W, X):
+ *   T -> % Deviasi  (formula di sheet, read-only, ditampilkan sbg persen, rata kanan)
+ *   U -> Bulan      (read-only, rata tengah)
+ *   V -> RPD        (SATU-SATUNYA kolom yang bisa diedit dari halaman ini, rata kanan)
+ *   W -> Realisasi  (read-only, rata kanan)
+ *   X -> Deviasi = RPD - Realisasi, FORMULA di sheet (=V-W). Read-only, rata kanan.
+ *        Kolom T (% Deviasi) & X (Deviasi) otomatis ikut berubah begitu
+ *        kolom RPD (V) diupdate.
  *
  * Alur edit per baris:
  *   1. Klik icon pencil  -> HANYA sel kolom RPD (V) di baris itu berubah jadi
  *      <input>. Tombol Aksi berubah jadi 2 tombol: disket (simpan) & x (batal).
  *   2. Klik disket -> HANYA nilai kolom RPD yang dikirim ke backend
  *      (action: updateRpdTabelRow), yang menulis 1 sel saja ke sheet
- *      (kolom V). Kolom Bulan/Realisasi/Deviasi tidak pernah ditulis ulang,
- *      supaya formula Deviasi (=V-W) di kolom X tetap aman.
+ *      (kolom V). Kolom lain (T, U, W, X) tidak pernah ditulis ulang,
+ *      supaya formula % Deviasi & Deviasi tetap aman.
  *   3. Klik x (batal) -> edit dibatalkan, nilai kembali seperti semula,
  *      tidak ada yang dikirim ke backend.
  * -----------------------------------------------------------------------
  */
 
-const RPD_COL_RPD_INDEX = 1; // index ke-1 dalam kolom U:X = kolom V (RPD), satu-satunya yang editable
+const RPD_COL_PERSEN_DEVIASI_INDEX = 0; // index ke-0 dalam range T:X = kolom T (% Deviasi)
+const RPD_COL_BULAN_INDEX = 1;          // index ke-1 = kolom U (Bulan), satu-satunya yang rata tengah
+const RPD_COL_RPD_INDEX = 2;            // index ke-2 = kolom V (RPD), satu-satunya yang editable
 
 async function initRpdPage() {
     // Fragment pages/rpd.html sudah otomatis dimuat router ke #app sebelum
@@ -50,8 +54,7 @@ async function rpdLoadData() {
             throw new Error(result.message || 'Gagal memuat data RPD');
         }
 
-        // Header (baris 2, kolom U:X) + kolom Aksi tambahan
-        // Kolom 1 (U) rata tengah, kolom 2-4 (V, W, X) rata kanan
+        // Header (baris 2, kolom T:X) + kolom Aksi tambahan
         theadRow.innerHTML = result.header
             .map((h, idx) => `<th class="px-3 py-1.5 font-semibold whitespace-nowrap ${rpdColAlign(idx)}">${rpdEscapeHtml(h)}</th>`)
             .join('') + `<th class="px-3 py-1.5 font-semibold text-center">Aksi</th>`;
@@ -71,14 +74,14 @@ async function rpdLoadData() {
 }
 
 function rpdColAlign(idx) {
-    // Kolom 1 (index 0) rata tengah, kolom 2-4 (index 1-3) rata kanan
-    return idx === 0 ? 'text-center' : 'text-right';
+    // Hanya kolom Bulan (U) yang rata tengah, semua kolom lain (termasuk % Deviasi) rata kanan
+    return idx === RPD_COL_BULAN_INDEX ? 'text-center' : 'text-right';
 }
 
 function rpdRenderRow(row) {
     const cells = row.values.map((v, idx) => `
         <td class="px-3 py-1.5 rpd-cell ${rpdColAlign(idx)}" data-col="${idx}" data-display="${rpdEscapeAttr(v)}">
-            ${rpdFormatCell(v)}
+            ${rpdFormatCell(v, idx)}
         </td>
     `).join('');
 
@@ -96,8 +99,17 @@ function rpdRenderRow(row) {
     `;
 }
 
-function rpdFormatCell(v) {
+function rpdFormatCell(v, idx) {
     if (v === '' || v === null || typeof v === 'undefined') return '-';
+
+    // Kolom % Deviasi (T): tampilkan sebagai persen.
+    // Asumsi: nilai di sheet tersimpan sbg pecahan (0.05 = 5%), sesuai format
+    // "Percent" default Google Sheets. Kalau ternyata nilainya sudah dalam
+    // bentuk angka persen utuh (5 = 5%), hapus perkalian *100 di bawah ini.
+    if (idx === RPD_COL_PERSEN_DEVIASI_INDEX && typeof v === 'number') {
+        return (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+    }
+
     if (typeof v === 'number') return formatRibuan(v);
     const stripped = String(v).trim().replace(/\./g, '').replace(/,/g, '.');
     if (stripped !== '' && !isNaN(stripped)) return formatRibuan(v);
@@ -159,7 +171,7 @@ function rpdCancelEdit(tr, actionsDiv) {
     const td = tr.querySelector(`.rpd-cell[data-col="${RPD_COL_RPD_INDEX}"]`);
     if (td) {
         const currentValue = td.getAttribute('data-display') || '';
-        td.innerHTML = rpdFormatCell(currentValue);
+        td.innerHTML = rpdFormatCell(currentValue, RPD_COL_RPD_INDEX);
     }
     rpdResetActionsToPencil(tr, actionsDiv);
 }
@@ -176,7 +188,7 @@ function rpdResetActionsToPencil(tr, actionsDiv) {
 }
 
 // Kirim HANYA nilai RPD (kolom V) yang baru ke backend. Backend hanya menulis
-// 1 sel (kolom V), sehingga formula Deviasi (=V-W) di kolom X tidak pernah tersentuh.
+// 1 sel (kolom V), sehingga formula % Deviasi (T) & Deviasi (X) tidak pernah tersentuh.
 async function rpdSaveRow(tr, actionsDiv) {
     const rowIndex = tr.getAttribute('data-row');
     const td = tr.querySelector(`.rpd-cell[data-col="${RPD_COL_RPD_INDEX}"]`);
@@ -200,8 +212,8 @@ async function rpdSaveRow(tr, actionsDiv) {
         if (result.status === 'success') {
             showToast('Data RPD berhasil diperbarui');
 
-            // Backend mengembalikan seluruh baris (U:X) SETELAH SpreadsheetApp.flush(),
-            // jadi Deviasi (kolom X) di sini sudah nilai terbaru hasil formula =V-W,
+            // Backend mengembalikan seluruh baris (T:X) SETELAH SpreadsheetApp.flush(),
+            // jadi % Deviasi (T) & Deviasi (X) di sini sudah nilai terbaru hasil formula,
             // langsung dipakai tanpa perlu reload/request terpisah.
             const updatedValues = result.values;
             if (Array.isArray(updatedValues)) {
@@ -210,11 +222,11 @@ async function rpdSaveRow(tr, actionsDiv) {
                     const colIdx = Number(cellTd.getAttribute('data-col'));
                     const v = updatedValues[colIdx];
                     cellTd.setAttribute('data-display', v);
-                    cellTd.innerHTML = rpdFormatCell(v);
+                    cellTd.innerHTML = rpdFormatCell(v, colIdx);
                 });
             } else {
                 td.setAttribute('data-display', newValue);
-                td.innerHTML = rpdFormatCell(newValue);
+                td.innerHTML = rpdFormatCell(newValue, RPD_COL_RPD_INDEX);
             }
 
             rpdResetActionsToPencil(tr, actionsDiv);
