@@ -25,6 +25,7 @@
  * -----------------------------------------------------------------------
  */
 
+
 const RPD_COL_PERSEN_DEVIASI_INDEX = 0; // index ke-0 dalam range T:X = kolom T (% Deviasi)
 const RPD_COL_BULAN_INDEX = 1;          // index ke-1 = kolom U (Bulan), satu-satunya yang rata tengah
 const RPD_COL_RPD_INDEX = 2;            // index ke-2 = kolom V (RPD), satu-satunya yang editable
