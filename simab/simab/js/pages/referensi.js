@@ -17,6 +17,17 @@ let refPegawaiLoaded = false;
 
 const refInputClass = 'w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500';
 
+// Hanya admin (localStorage 'admin' === '1') yang boleh mengubah/menghapus data referensi.
+// Pegawai non-admin tetap bisa melihat & mencari data, tapi kolom Aksi disembunyikan.
+function refIsAdmin() {
+    return localStorage.getItem('admin') === '1';
+}
+
+// Aksi kolom Aksi: kalau bukan admin, tampilkan kunci sebagai pengganti tombol edit/hapus.
+function refAksiCell(disabledIconClass) {
+    return `<span class="${disabledIconClass} text-slate-300" title="Hanya admin yang bisa mengubah data ini"><i class="fa-solid fa-lock"></i></span>`;
+}
+
 function initReferensiPage() {
     const tabBtnSbm = document.getElementById('ref-tabBtnSbm');
     const tabBtnPegawai = document.getElementById('ref-tabBtnPegawai');
@@ -92,16 +103,20 @@ function refRenderSbmTable(keyword) {
             </td>
             <td class="py-2 px-4">
                 <div class="flex items-center justify-center gap-2">
+                    ${refIsAdmin() ? `
                     <button class="ref-sbm-btnEdit text-sky-600 hover:text-sky-800" title="Ubah"><i class="fa-solid fa-pen"></i></button>
                     <button class="ref-sbm-btnSave hidden text-green-600 hover:text-green-800" title="Simpan"><i class="fa-solid fa-floppy-disk"></i></button>
                     <button class="ref-sbm-btnCancel hidden text-slate-400 hover:text-slate-600" title="Batal"><i class="fa-solid fa-xmark"></i></button>
                     <button class="ref-sbm-btnDelete text-red-500 hover:text-red-700" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    ` : refAksiCell('ref-sbm-locked')}
                 </div>
             </td>
         </tr>
     `).join('');
 
-    tbody.querySelectorAll('tr').forEach(tr => refBindSbmRow(tr));
+    if (refIsAdmin()) {
+        tbody.querySelectorAll('tr').forEach(tr => refBindSbmRow(tr));
+    }
 }
 
 function refBindSbmRow(tr) {
@@ -156,6 +171,7 @@ function refBindSbmRow(tr) {
     btnSave.onclick = async () => {
         const payload = {
             action: 'updateRefSbmRow',
+            nip: localStorage.getItem('nip') || '',
             row: rowId,
             luarKota: luarKotaInput.value.replace(/\D/g, ''),
             dalamKota: dalamKotaInput.value.replace(/\D/g, ''),
@@ -191,7 +207,7 @@ function refBindSbmRow(tr) {
         if (!confirm(`Hapus data SBM untuk "${kabupaten}"?`)) return;
         btnDelete.disabled = true;
         try {
-            const result = await apiPost({ action: 'deleteRefSbmRow', row: rowId });
+            const result = await apiPost({ action: 'deleteRefSbmRow', nip: localStorage.getItem('nip') || '', row: rowId });
             if (result.status === 'success') {
                 refSbmData = refSbmData.filter(r => String(r.row) !== String(rowId));
                 showToast('Data SBM berhasil dihapus');
@@ -293,16 +309,20 @@ function refRenderPegawaiTable(keyword) {
             </td>
             <td class="py-2 px-4">
                 <div class="flex items-center justify-center gap-2">
+                    ${refIsAdmin() ? `
                     <button class="ref-peg-btnEdit text-sky-600 hover:text-sky-800" title="Ubah"><i class="fa-solid fa-pen"></i></button>
                     <button class="ref-peg-btnSave hidden text-green-600 hover:text-green-800" title="Simpan"><i class="fa-solid fa-floppy-disk"></i></button>
                     <button class="ref-peg-btnCancel hidden text-slate-400 hover:text-slate-600" title="Batal"><i class="fa-solid fa-xmark"></i></button>
                     <button class="ref-peg-btnDelete text-red-500 hover:text-red-700" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    ` : refAksiCell('ref-peg-locked')}
                 </div>
             </td>
         </tr>
     `).join('');
 
-    tbody.querySelectorAll('tr').forEach(tr => refBindPegawaiRow(tr));
+    if (refIsAdmin()) {
+        tbody.querySelectorAll('tr').forEach(tr => refBindPegawaiRow(tr));
+    }
 }
 
 function refBindPegawaiRow(tr) {
@@ -389,6 +409,7 @@ function refBindPegawaiRow(tr) {
 
         const payload = {
             action: 'updateRefPegawaiRow',
+            nip: localStorage.getItem('nip') || '',
             row: rowId,
             nama, jabatan, pangkat,
             kepeg: kepegCheckbox.checked ? '1' : '0',
@@ -429,7 +450,7 @@ function refBindPegawaiRow(tr) {
         if (!confirm(`Hapus data pegawai "${nama}"?`)) return;
         btnDelete.disabled = true;
         try {
-            const result = await apiPost({ action: 'deleteRefPegawaiRow', row: rowId });
+            const result = await apiPost({ action: 'deleteRefPegawaiRow', nip: localStorage.getItem('nip') || '', row: rowId });
             if (result.status === 'success') {
                 refPegawaiData = refPegawaiData.filter(r => String(r.row) !== String(rowId));
                 showToast('Data pegawai berhasil dihapus');
