@@ -41,8 +41,15 @@ function initReferensiPage() {
         tabBtnSbm.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${isSbm ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
         tabBtnPegawai.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${!isSbm ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
 
-        if (isSbm && !refSbmLoaded) refLoadSbmData();
-        if (!isSbm && !refPegawaiLoaded) refLoadPegawaiData();
+        // Kalau data sudah pernah dimuat sebelumnya (mis. sempat pindah ke halaman lain lalu balik
+        // ke Referensi), tabel/tbody di fragment HTML ini baru (isinya spinner "Memuat data...").
+        // Jangan cuma skip fetch-nya, tapi render ulang dari cache supaya tabel langsung muncul
+        // instan tanpa perlu request ulang ke server.
+        if (isSbm) {
+            refSbmLoaded ? refRenderSbmTable(document.getElementById('ref-sbm-search').value) : refLoadSbmData();
+        } else {
+            refPegawaiLoaded ? refRenderPegawaiTable(document.getElementById('ref-pegawai-search').value) : refLoadPegawaiData();
+        }
     }
 
     tabBtnSbm.onclick = () => activateTab('sbm');
