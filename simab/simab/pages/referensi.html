@@ -1,0 +1,79 @@
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200">
+
+    <!-- Tab header -->
+    <div class="flex border-b border-slate-200 px-4 sm:px-6 overflow-x-auto">
+        <button id="ref-tabBtnSbm" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
+            <i class="fa-solid fa-money-bill-wave mr-2"></i>SBM Uang Harian
+        </button>
+        <button id="ref-tabBtnPegawai" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
+            <i class="fa-solid fa-users mr-2"></i>Pegawai
+        </button>
+    </div>
+
+    <!-- ==================== TAB SBM ==================== -->
+    <div id="ref-tabSbm" class="p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div class="relative w-full sm:max-w-xs">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input id="ref-sbm-search" type="text" placeholder="Cari Kabupaten / Kota..."
+                    class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+            </div>
+        </div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-slate-500">
+                        <th class="py-3 px-4 font-medium">Kabupaten / Kota</th>
+                        <th class="py-3 px-4 font-medium">Luar Kota</th>
+                        <th class="py-3 px-4 font-medium">Dalam Kota</th>
+                        <th class="py-3 px-4 font-medium">Diklat</th>
+                        <th class="py-3 px-4 font-medium text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="ref-sbm-tbody" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="5" class="text-center text-slate-400 py-8">
+                            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p id="ref-sbm-empty" class="hidden text-center text-slate-400 py-6 text-sm">Tidak ada data yang cocok.</p>
+    </div>
+
+    <!-- ==================== TAB PEGAWAI ==================== -->
+    <div id="ref-tabPegawai" class="hidden p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div class="relative w-full sm:max-w-xs">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input id="ref-pegawai-search" type="text" placeholder="Cari Nama / NIP..."
+                    class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+            </div>
+        </div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-slate-500">
+                        <th class="py-3 px-4 font-medium">Nama</th>
+                        <th class="py-3 px-4 font-medium">NIP</th>
+                        <th class="py-3 px-4 font-medium">Jabatan</th>
+                        <th class="py-3 px-4 font-medium">Pangkat</th>
+                        <th class="py-3 px-4 font-medium text-center">Kepegawaian</th>
+                        <th class="py-3 px-4 font-medium text-center">Admin</th>
+                        <th class="py-3 px-4 font-medium text-center">Status</th>
+                        <th class="py-3 px-4 font-medium text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="ref-pegawai-tbody" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="8" class="text-center text-slate-400 py-8">
+                            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p id="ref-pegawai-empty" class="hidden text-center text-slate-400 py-6 text-sm">Tidak ada data yang cocok.</p>
+    </div>
+</div>
