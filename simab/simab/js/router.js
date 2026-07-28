@@ -17,6 +17,7 @@ const PAGE_INIT = {
     kalender: () => window.initKalenderPage && window.initKalenderPage(),
     statistik: () => window.initStatistikPage && window.initStatistikPage(),
     rpd: () => window.initRpdPage && window.initRpdPage(),
+    referensi: () => window.initReferensiPage && window.initReferensiPage(),
 };
 
 async function navigate(page) {
