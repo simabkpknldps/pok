@@ -33,6 +33,16 @@
                 <span id="user-name" class="text-slate-600 font-medium text-sm">
                     <i class="fa-solid fa-user mr-2"></i><span id="nama-login">Guest</span>
                 </span>
+                <div id="notif-wrapper" class="relative">
+                    <button id="notif-bell-btn" onclick="toggleNotifikasiDropdown()" class="relative text-slate-600 hover:text-sky-700 font-medium text-sm" title="Notifikasi">
+                        <i class="fa-solid fa-bell"></i>
+                        <span id="notif-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-[10px] leading-none rounded-full px-1.5 py-1 min-w-[16px] text-center">0</span>
+                    </button>
+                    <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-50">
+                        <div class="p-3 border-b border-slate-100 font-semibold text-slate-700 text-sm">Notifikasi</div>
+                        <div id="notif-list" class="divide-y divide-slate-100"></div>
+                    </div>
+                </div>
                 <button onclick="openSettings()" class="text-slate-600 hover:text-sky-700 font-medium text-sm" title="Settings"><i class="fa-solid fa-gear"></i></button>
                 <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm" title="Logout"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
             </div>
