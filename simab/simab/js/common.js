@@ -666,7 +666,7 @@ async function refreshNotifikasi() {
 
         listEl.innerHTML = data.map(n => `
             <div class="p-3 flex items-start gap-2 hover:bg-slate-50">
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 cursor-pointer notif-item" data-nip="${n.nip}" title="Lihat detail rekening">
                     <p class="text-sm font-medium text-slate-700 truncate">${n.nama}</p>
                     <p class="text-xs text-slate-500">${n.keterangan}</p>
                     <p class="text-[11px] text-slate-400 mt-0.5">${n.tanggal}</p>
@@ -676,6 +676,15 @@ async function refreshNotifikasi() {
                 </button>
             </div>
         `).join('');
+
+        listEl.querySelectorAll('.notif-item').forEach(item => {
+            item.onclick = () => {
+                // Tutup dropdown notifikasi, lalu tampilkan popup detail rekening
+                notifDropdownOpen = false;
+                document.getElementById('notif-dropdown').classList.add('hidden');
+                showNotifRekeningDetail(item.getAttribute('data-nip'));
+            };
+        });
 
         listEl.querySelectorAll('.notif-delete-btn').forEach(btn => {
             btn.onclick = async (e) => {
@@ -701,6 +710,54 @@ async function refreshNotifikasi() {
         });
     } catch (e) {
         console.error('Gagal memuat notifikasi', e);
+    }
+}
+
+// Popup detail rekening, dipanggil saat sebuah notifikasi diklik
+async function showNotifRekeningDetail(nip) {
+    const viewerNip = localStorage.getItem('nip') || '';
+
+    const { overlay, popup } = commonOpenOverlay(`
+        <div class="flex items-center justify-between mb-1">
+            <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-building-columns mr-2"></i>Data Rekening</h3>
+            <button id="nrd-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="nrd-loading" class="text-center text-slate-400 py-6">
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...
+        </div>
+        <div id="nrd-content" class="hidden flex-col gap-3">
+            <label class="${csLabelClass}">Nama</label>
+            <input id="nrd-nama" type="text" readonly class="${csInputClass} bg-slate-100">
+            <label class="${csLabelClass}">NIP</label>
+            <input id="nrd-nip" type="text" readonly class="${csInputClass} bg-slate-100">
+            <label class="${csLabelClass}">Nama Bank</label>
+            <input id="nrd-bank" type="text" readonly class="${csInputClass} bg-slate-100">
+            <label class="${csLabelClass}">Nomor Rekening</label>
+            <input id="nrd-norek" type="text" readonly class="${csInputClass} bg-slate-100">
+        </div>
+    `, 'max-w-sm');
+
+    popup.querySelector('#nrd-closeBtn').onclick = () => overlay.remove();
+
+    const loadingEl = popup.querySelector('#nrd-loading');
+    const contentEl = popup.querySelector('#nrd-content');
+
+    try {
+        const result = await apiPost({ action: 'getRekeningDetailByNip', nip, viewerNip });
+        if (result.status === 'success') {
+            popup.querySelector('#nrd-nama').value = result.nama || '';
+            popup.querySelector('#nrd-nip').value = result.nip || '';
+            popup.querySelector('#nrd-bank').value = result.namaBank || '';
+            popup.querySelector('#nrd-norek').value = result.norek || '';
+
+            loadingEl.classList.add('hidden');
+            contentEl.classList.remove('hidden');
+            contentEl.classList.add('flex');
+        } else {
+            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data rekening'}</span>`;
+        }
+    } catch (e) {
+        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data rekening'}</span>`;
     }
 }
 
@@ -743,3 +800,4 @@ window.openSettings = openSettings;
 window.commonOpenOverlay = commonOpenOverlay;
 window.toggleNotifikasiDropdown = toggleNotifikasiDropdown;
 window.refreshNotifikasi = refreshNotifikasi;
+window.showNotifRekeningDetail = showNotifRekeningDetail;
