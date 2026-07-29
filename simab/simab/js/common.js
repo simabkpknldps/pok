@@ -67,6 +67,18 @@ const CS_DAFTAR_PANGKAT = [
     'Pembina Utama / IV.e'
 ];
 
+// Daftar Bank untuk dropdown Rekening (tab Settings > Rekening)
+const CS_DAFTAR_BANK = [
+    'BRI', 'BNI', 'BCA', 'Mandiri', 'BSI', 'BTN', 'CIMB Niaga', 'Danamon',
+    'Permata', 'Panin', 'Maybank Indonesia', 'OCBC NISP', 'HSBC Indonesia',
+    'Citibank', 'UOB Indonesia', 'BTPN', 'KB Bukopin', 'Mega', 'Sinarmas',
+    'Commonwealth', 'DBS Indonesia', 'Muamalat', 'Bank Jago', 'Bank Jatim',
+    'Bank DKI', 'Bank Jabar Banten (BJB)', 'Bank Jateng', 'Bank Nagari',
+    'Bank Sumut', 'Bank Sumsel Babel', 'Bank Kalbar', 'Bank Kalsel',
+    'Bank Kaltimtara', 'Bank Sulselbar', 'Bank NTB Syariah', 'Bank Papua',
+    'Bank Aceh Syariah', 'Bank Riau Kepri'
+];
+
 function commonOpenOverlay(innerHtml, widthClass) {
     const overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4 overflow-x-hidden';
@@ -94,6 +106,8 @@ function openSettings() {
     const pangkatExtraOption = (pangkat && !CS_DAFTAR_PANGKAT.includes(pangkat))
         ? `<option value="${pangkat}" selected>${pangkat}</option>` : '';
 
+    const bankOptions = CS_DAFTAR_BANK.map(b => `<option value="${b}">${b}</option>`).join('');
+
     const { overlay, popup } = commonOpenOverlay(`
         <div class="flex items-center justify-between mb-1">
             <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-gear mr-2"></i>Pengaturan</h3>
@@ -101,6 +115,7 @@ function openSettings() {
         </div>
         <div class="flex border-b border-slate-200 mb-2 overflow-x-auto">
             <button id="cs-tabBtnProfil" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Profil</button>
+            <button id="cs-tabBtnRekening" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Rekening</button>
             <button id="cs-tabBtnPejabat" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Pejabat</button>
             <button id="cs-tabBtnPassword" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Ganti Password</button>
             <button id="cs-tabBtnTambahPegawai" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Tambah Pegawai</button>
@@ -128,6 +143,33 @@ function openSettings() {
                 <button id="cs-btnSimpanProfil" class="hidden px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
                     <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
                 </button>
+            </div>
+        </div>
+
+        <div id="cs-tabRekening" class="hidden flex-col gap-3">
+            <div id="cs-rekeningLoading" class="text-center text-slate-400 py-6">
+                <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data rekening...
+            </div>
+            <div id="cs-rekeningForm" class="hidden flex-col gap-3">
+                <label class="${csLabelClass}">Nama Bank</label>
+                <select id="cs-rekBank" disabled class="${csInputClass} bg-slate-100">
+                    <option value="">-- Pilih Bank --</option>
+                    ${bankOptions}
+                </select>
+                <label class="${csLabelClass}">Nomor Rekening</label>
+                <input id="cs-rekNorek" type="text" inputmode="numeric" readonly class="${csInputClass} bg-slate-100" placeholder="Nomor rekening">
+                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <i class="fa-solid fa-circle-info mr-1"></i>
+                    Catatan: Rekening selain BRI akan ada Fee Benificiary Rp.2500,-
+                </p>
+                <div class="flex justify-end gap-2 mt-2">
+                    <button id="cs-btnUbahRekening" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                        <i class="fa-solid fa-pen-to-square mr-1"></i> Ubah
+                    </button>
+                    <button id="cs-btnSimpanRekening" class="hidden px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+                        <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -205,10 +247,12 @@ function openSettings() {
 
     // ---- Tab switching ----
     const tabBtnProfil = popup.querySelector('#cs-tabBtnProfil');
+    const tabBtnRekening = popup.querySelector('#cs-tabBtnRekening');
     const tabBtnPejabat = popup.querySelector('#cs-tabBtnPejabat');
     const tabBtnPassword = popup.querySelector('#cs-tabBtnPassword');
     const tabBtnTambahPegawai = popup.querySelector('#cs-tabBtnTambahPegawai');
     const tabProfil = popup.querySelector('#cs-tabProfil');
+    const tabRekening = popup.querySelector('#cs-tabRekening');
     const tabPejabat = popup.querySelector('#cs-tabPejabat');
     const tabPassword = popup.querySelector('#cs-tabPassword');
     const tabTambahPegawai = popup.querySelector('#cs-tabTambahPegawai');
@@ -216,6 +260,7 @@ function openSettings() {
     function csActivateTab(tab) {
         const tabs = {
             profil: [tabProfil, tabBtnProfil],
+            rekening: [tabRekening, tabBtnRekening],
             pejabat: [tabPejabat, tabBtnPejabat],
             password: [tabPassword, tabBtnPassword],
             tambahPegawai: [tabTambahPegawai, tabBtnTambahPegawai]
@@ -230,9 +275,11 @@ function openSettings() {
         });
 
         if (tab === 'pejabat') csLoadPejabatData(popup);
+        if (tab === 'rekening') csLoadRekeningData(popup);
     }
 
     tabBtnProfil.onclick = () => csActivateTab('profil');
+    tabBtnRekening.onclick = () => csActivateTab('rekening');
     tabBtnPejabat.onclick = () => csActivateTab('pejabat');
     tabBtnPassword.onclick = () => csActivateTab('password');
     tabBtnTambahPegawai.onclick = () => csActivateTab('tambahPegawai');
@@ -402,6 +449,98 @@ function csBindProfilButtons(popup) {
     };
 }
 
+async function csLoadRekeningData(popup) {
+    const loadingEl = popup.querySelector('#cs-rekeningLoading');
+    const formEl = popup.querySelector('#cs-rekeningForm');
+
+    if (!formEl.classList.contains('hidden')) return; // sudah dimuat sebelumnya
+
+    loadingEl.classList.remove('hidden');
+    formEl.classList.add('hidden');
+
+    const nip = localStorage.getItem('nip') || '';
+
+    try {
+        const result = await apiPost({ action: 'getRekeningData', nip });
+        if (result.status === 'success') {
+            popup.querySelector('#cs-rekBank').value = result.namaBank || '';
+            popup.querySelector('#cs-rekNorek').value = result.norek || '';
+
+            loadingEl.classList.add('hidden');
+            formEl.classList.remove('hidden');
+            formEl.classList.add('flex');
+
+            csBindRekeningButtons(popup);
+        } else {
+            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data rekening'}</span>`;
+        }
+    } catch (e) {
+        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data rekening'}</span>`;
+    }
+}
+
+function csBindRekeningButtons(popup) {
+    const bankSelect = popup.querySelector('#cs-rekBank');
+    const norekInput = popup.querySelector('#cs-rekNorek');
+    const btnUbah = popup.querySelector('#cs-btnUbahRekening');
+    const btnSimpan = popup.querySelector('#cs-btnSimpanRekening');
+
+    btnUbah.onclick = function () {
+        bankSelect.disabled = false;
+        bankSelect.classList.remove('bg-slate-100');
+        norekInput.removeAttribute('readonly');
+        norekInput.classList.remove('bg-slate-100');
+
+        btnUbah.classList.add('hidden');
+        btnSimpan.classList.remove('hidden');
+        bankSelect.focus();
+    };
+
+    btnSimpan.onclick = async function () {
+        const btn = this;
+        const nip = localStorage.getItem('nip') || '';
+        const namaBank = bankSelect.value;
+        const norek = norekInput.value.trim();
+
+        if (!namaBank || !norek) {
+            alert('Nama Bank dan Nomor Rekening harus diisi!');
+            return;
+        }
+
+        btn.disabled = true;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+
+        try {
+            const result = await apiPost({
+                action: 'updateRekeningData',
+                nip, namaBank, norek
+            });
+            if (result.status === 'success') {
+                showToast('Data rekening berhasil diubah');
+
+                bankSelect.disabled = true;
+                bankSelect.classList.add('bg-slate-100');
+                norekInput.setAttribute('readonly', 'readonly');
+                norekInput.classList.add('bg-slate-100');
+
+                btnSimpan.classList.add('hidden');
+                btnUbah.classList.remove('hidden');
+
+                // Muncul notifikasi baru di sheet -> refresh lonceng notifikasi
+                if (typeof refreshNotifikasi === 'function') refreshNotifikasi();
+            } else {
+                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+            }
+        } catch (e) {
+            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    };
+}
+
 async function csLoadPejabatData(popup) {
     const loadingEl = popup.querySelector('#cs-pejabatLoading');
     const formEl = popup.querySelector('#cs-pejabatForm');
@@ -488,8 +627,112 @@ function csBindPejabatButtons(popup) {
     };
 }
 
-// Initialize user name saat halaman dimuat
+// ==========================================
+// Notifikasi (lonceng)
+// - Data dari sheet ref_notifikasi (admin: semua, bukan admin: sesuai NIP login)
+// - Update background setiap 5 menit
+// - Badge menampilkan jumlah notifikasi
+// - Ada tombol hapus per notifikasi
+// ==========================================
+
+const NOTIF_POLL_MS = 5 * 60 * 1000; // 5 menit
+let notifPollTimer = null;
+let notifDropdownOpen = false;
+
+async function refreshNotifikasi() {
+    const badge = document.getElementById('notif-badge');
+    const listEl = document.getElementById('notif-list');
+    if (!badge || !listEl) return; // halaman ini tidak punya lonceng notifikasi
+
+    const nip = localStorage.getItem('nip') || '';
+
+    try {
+        const result = await apiPost({ action: 'getNotifikasiData', nip });
+        if (result.status !== 'success') return;
+
+        const data = result.data || [];
+
+        if (data.length > 0) {
+            badge.textContent = data.length > 99 ? '99+' : String(data.length);
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+
+        if (data.length === 0) {
+            listEl.innerHTML = `<div class="p-4 text-center text-slate-400 text-sm">Tidak ada notifikasi</div>`;
+            return;
+        }
+
+        listEl.innerHTML = data.map(n => `
+            <div class="p-3 flex items-start gap-2 hover:bg-slate-50">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-700 truncate">${n.nama}</p>
+                    <p class="text-xs text-slate-500">${n.keterangan}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">${n.tanggal}</p>
+                </div>
+                <button class="notif-delete-btn text-slate-300 hover:text-red-500 text-sm shrink-0" title="Hapus notifikasi" data-row="${n.row}">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+
+        listEl.querySelectorAll('.notif-delete-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const row = btn.getAttribute('data-row');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                try {
+                    const res = await apiPost({ action: 'deleteNotifikasi', nip, row });
+                    if (res.status === 'success') {
+                        refreshNotifikasi();
+                    } else {
+                        alert('Gagal hapus notifikasi: ' + (res.message || 'Terjadi kesalahan.'));
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                    }
+                } catch (err) {
+                    alert('Error koneksi: ' + (err.message || 'Tidak diketahui'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                }
+            };
+        });
+    } catch (e) {
+        console.error('Gagal memuat notifikasi', e);
+    }
+}
+
+function toggleNotifikasiDropdown() {
+    const dropdown = document.getElementById('notif-dropdown');
+    if (!dropdown) return;
+    notifDropdownOpen = !notifDropdownOpen;
+    dropdown.classList.toggle('hidden', !notifDropdownOpen);
+    if (notifDropdownOpen) refreshNotifikasi();
+}
+
+// Klik di luar dropdown -> tutup
+document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('notif-wrapper');
+    const dropdown = document.getElementById('notif-dropdown');
+    if (!wrapper || !dropdown) return;
+    if (notifDropdownOpen && !wrapper.contains(e.target)) {
+        notifDropdownOpen = false;
+        dropdown.classList.add('hidden');
+    }
+});
+
+function initNotifikasiPolling() {
+    if (!document.getElementById('notif-badge')) return; // halaman ini tidak punya lonceng notifikasi
+    refreshNotifikasi();
+    if (notifPollTimer) clearInterval(notifPollTimer);
+    notifPollTimer = setInterval(refreshNotifikasi, NOTIF_POLL_MS);
+}
+
+// Initialize user name & notifikasi saat halaman dimuat
 document.addEventListener('DOMContentLoaded', initializeUserName);
+document.addEventListener('DOMContentLoaded', initNotifikasiPolling);
 
 window.logout = logout;
 window.showToast = showToast;
@@ -498,3 +741,5 @@ window.generateIdUsulan = generateIdUsulan;
 window.initializeUserName = initializeUserName;
 window.openSettings = openSettings;
 window.commonOpenOverlay = commonOpenOverlay;
+window.toggleNotifikasiDropdown = toggleNotifikasiDropdown;
+window.refreshNotifikasi = refreshNotifikasi;
