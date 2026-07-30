@@ -9,6 +9,7 @@
  * Selesai. Tidak perlu sentuh file lain.
  */
 
+
 const PAGE_INIT = {
     dashboard: () => window.initDashboardPage && window.initDashboardPage(),
     pok: () => window.initPokPage && window.initPokPage(),
