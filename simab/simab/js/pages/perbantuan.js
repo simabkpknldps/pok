@@ -498,20 +498,27 @@ function pbOpenEditModal(row) {
     const tbody = popup.querySelector('#pb-ed-pegawai-tbody');
     const searchInput = popup.querySelector('#pb-ed-pegawai-search');
 
-    // Prefill baris pegawai dari data yang sudah ada. NIP & Status dicari dari
-    // daftar pegawai (kalau ketemu berdasarkan nama), kalau tidak dikosongkan
-    // supaya bisa diisi manual.
-    const existingMatch = pbPegawaiList.find(p =>
-        String(p.nama || p.Nama || '').toLowerCase() === String(row.D || '').toLowerCase()
-    );
-    pbTuAddPegawaiRow(
-        tbody,
-        row.D,
-        existingMatch ? (existingMatch.nip || existingMatch.NIP || '') : '',
-        existingMatch ? (existingMatch.status !== undefined ? existingMatch.status : existingMatch.Status) : ''
-    );
-    const firstJumlahInput = tbody.querySelector('.pb-tu-jumlah');
-    if (firstJumlahInput && row.M) firstJumlahInput.value = formatRibuan(row.M);
+    // Prefill baris pegawai dari SEMUA data yang satu grup (kolom C sama persis
+    // dengan baris yang diklik) — bukan cuma baris yang diklik saja. Jadi kalau
+    // ada 2 baris sheet untuk 1 usulan yang sama, tabel di popup Ubah akan
+    // menampilkan 2 baris pegawai juga. NIP & Status dicari dari daftar pegawai
+    // (kalau ketemu berdasarkan nama), kalau tidak dikosongkan supaya bisa
+    // diisi manual.
+    const groupRows = pbAllRows.filter(r => String(r.C) === String(row.C));
+    (groupRows.length ? groupRows : [row]).forEach(r => {
+        const existingMatch = pbPegawaiList.find(p =>
+            String(p.nama || p.Nama || '').toLowerCase() === String(r.D || '').toLowerCase()
+        );
+        pbTuAddPegawaiRow(
+            tbody,
+            r.D,
+            existingMatch ? (existingMatch.nip || existingMatch.NIP || '') : '',
+            existingMatch ? (existingMatch.status !== undefined ? existingMatch.status : existingMatch.Status) : ''
+        );
+        const lastRowEl = tbody.querySelector('tr:last-child');
+        const jumlahInput = lastRowEl ? lastRowEl.querySelector('.pb-tu-jumlah') : null;
+        if (jumlahInput && r.M) jumlahInput.value = formatRibuan(r.M);
+    });
 
     popup.querySelector('#pb-ed-btnSubmitPegawai').onclick = () => {
         const val = searchInput.value.trim();
