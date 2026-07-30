@@ -247,6 +247,7 @@
         const daftarCekMsg = document.getElementById('daftarCekMsg');
         const daftarError = document.getElementById('daftarError');
         const daftarSuccess = document.getElementById('daftarSuccess');
+        let daftarNipFound = false; // true kalau NIP sudah ada saat cek (dipakai untuk perilaku tombol setelah Daftar sukses)
 
         // Dapatkan realUrl (URL GAS utama) lewat redirector, sama seperti proses login.
         async function getRealUrlForDaftar() {
@@ -267,6 +268,15 @@
             document.getElementById('daftarPangkat').value = '';
             document.getElementById('daftarStatusText').value = '';
             document.getElementById('daftarKeteranganDitemukan').classList.add('hidden');
+            daftarNipFound = false;
+
+            // Kembalikan tombol Daftar ke kondisi semula (kalau sebelumnya sempat
+            // berubah jadi "Tutup" warna merah setelah sukses daftar dgn NIP ditemukan)
+            const btnSimpan = document.getElementById('daftarBtnSimpan');
+            const btnSimpanText = document.getElementById('daftarBtnSimpanText');
+            btnSimpan.className = 'w-full bg-sky-600 text-white py-2.5 rounded-xl font-semibold hover:bg-sky-700 active:bg-sky-800 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed';
+            btnSimpanText.textContent = 'Daftar';
+            btnSimpan.disabled = false;
         }
 
         document.getElementById('daftarLink').addEventListener('click', (e) => {
@@ -320,6 +330,7 @@
                 const keteranganEl = document.getElementById('daftarKeteranganDitemukan');
 
                 if (data.found) {
+                    daftarNipFound = true;
                     // NIP ditemukan -> semua field read-only, tampilkan data dari ref_pegawai
                     namaEl.value = data.nama || '';
                     nipEl.value = data.nip || '';
@@ -335,6 +346,7 @@
                     statusSelectEl.classList.add('hidden');
                     keteranganEl.classList.remove('hidden');
                 } else {
+                    daftarNipFound = false;
                     // NIP tidak ditemukan -> semua field aktif/bisa diisi, NIP terisi dari pencarian
                     namaEl.value = '';
                     nipEl.value = nip;
@@ -365,6 +377,14 @@
         document.getElementById('daftarBtnSimpan').addEventListener('click', async function () {
             const btn = this;
             const btnText = document.getElementById('daftarBtnSimpanText');
+
+            // Kalau tombol sedang dalam kondisi "Tutup" (setelah sukses daftar
+            // dengan NIP ditemukan), klik ini cukup menutup popup saja.
+            if (btnText.textContent === 'Tutup') {
+                daftarModal.classList.replace('flex', 'hidden');
+                return;
+            }
+
             daftarError.classList.add('hidden');
             daftarSuccess.classList.add('hidden');
 
@@ -402,9 +422,22 @@
                 if (data.status === 'success') {
                     daftarSuccess.textContent = data.message || 'Pendaftaran berhasil.';
                     daftarSuccess.classList.remove('hidden');
-                    setTimeout(() => {
-                        daftarModal.classList.replace('flex', 'hidden');
-                    }, 2000);
+
+                    if (daftarNipFound) {
+                        // NIP ditemukan -> tombol Daftar berubah jadi "Tutup" warna merah,
+                        // beri jeda ~3 detik sebelum popup otomatis tertutup.
+                        btn.disabled = false;
+                        btnText.textContent = 'Tutup';
+                        btn.className = 'w-full bg-red-600 text-white py-2.5 rounded-xl font-semibold hover:bg-red-700 active:bg-red-800 transition flex items-center justify-center gap-2';
+
+                        setTimeout(() => {
+                            daftarModal.classList.replace('flex', 'hidden');
+                        }, 3000);
+                    } else {
+                        setTimeout(() => {
+                            daftarModal.classList.replace('flex', 'hidden');
+                        }, 2000);
+                    }
                 } else {
                     daftarError.textContent = data.message || 'Gagal mendaftar.';
                     daftarError.classList.remove('hidden');
@@ -413,8 +446,12 @@
                 daftarError.textContent = 'Koneksi ke server gagal, pastikan redirector aktif.';
                 daftarError.classList.remove('hidden');
             } finally {
-                btn.disabled = false;
-                btnText.textContent = originalText;
+                // Jangan kembalikan tombol ke "Daftar" kalau sedang menampilkan "Tutup"
+                // (kasus sukses + NIP ditemukan) — biarkan tetap "Tutup" warna merah.
+                if (btnText.textContent !== 'Tutup') {
+                    btn.disabled = false;
+                    btnText.textContent = originalText;
+                }
             }
         });
     </script>
