@@ -117,8 +117,10 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">Pangkat</label>
-                    <input type="text" id="daftarPangkat"
+                    <select id="daftarPangkat"
                         class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                        <option value="">-- Pilih Pangkat --</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">Status</label>
@@ -249,6 +251,39 @@
         const daftarSuccess = document.getElementById('daftarSuccess');
         let daftarNipFound = false; // true kalau NIP sudah ada saat cek (dipakai untuk perilaku tombol setelah Daftar sukses)
 
+        // Daftar Pangkat/Golongan — sama persis dengan CS_DAFTAR_PANGKAT di common.js
+        // (dashboard), supaya pilihannya konsisten di seluruh aplikasi.
+        const DAFTAR_PANGKAT = [
+            'Juru Muda / I.a',
+            'Juru Muda Tk. I / I.b',
+            'Juru / I.c',
+            'Juru Tk. I / I.d',
+            'Pengatur Muda / II.a',
+            'Pengatur Muda Tk. I / II.b',
+            'Pengatur / II.c',
+            'Pengatur Tk. I / II.d',
+            'Penata Muda / III.a',
+            'Penata Muda Tk. I / III.b',
+            'Penata / III.c',
+            'Penata Tk. I / III.d',
+            'Pembina / IV.a',
+            'Pembina Tk. I / IV.b',
+            'Pembina Muda / IV.c',
+            'Pembina Madya / IV.d',
+            'Pembina Utama / IV.e'
+        ];
+
+        // Isi ulang dropdown Pangkat. Kalau `selected` bukan bagian dari daftar baku
+        // (mis. pegawai PPNPN yang kolom Pangkat-nya diisi teks lain), tetap
+        // ditampilkan sebagai opsi tersendiri supaya tidak hilang datanya.
+        function daftarSetPangkatOptions(selected) {
+            const el = document.getElementById('daftarPangkat');
+            const extra = (selected && !DAFTAR_PANGKAT.includes(selected))
+                ? `<option value="${selected}" selected>${selected}</option>` : '';
+            el.innerHTML = `<option value="">-- Pilih Pangkat --</option>${extra}${DAFTAR_PANGKAT.map(p =>
+                `<option value="${p}" ${p === selected ? 'selected' : ''}>${p}</option>`).join('')}`;
+        }
+
         // Dapatkan realUrl (URL GAS utama) lewat redirector, sama seperti proses login.
         async function getRealUrlForDaftar() {
             const resUrl = await fetch(redirectorUrl);
@@ -265,7 +300,8 @@
             document.getElementById('daftarNama').value = '';
             document.getElementById('daftarNip').value = '';
             document.getElementById('daftarJabatan').value = '';
-            document.getElementById('daftarPangkat').value = '';
+            daftarSetPangkatOptions('');
+            document.getElementById('daftarPangkat').disabled = false;
             document.getElementById('daftarStatusText').value = '';
             document.getElementById('daftarKeteranganDitemukan').classList.add('hidden');
             daftarNipFound = false;
@@ -354,13 +390,15 @@
                     namaEl.value = data.nama || '';
                     nipEl.value = data.nip || '';
                     jabatanEl.value = data.jabatan || '';
-                    pangkatEl.value = data.pangkat || '';
+                    daftarSetPangkatOptions(data.pangkat || '');
+                    pangkatEl.disabled = true;
                     statusTextEl.value = (String(data.statusPegawai) === '1') ? 'PNS' : 'PPNPN';
 
-                    [namaEl, nipEl, jabatanEl, pangkatEl].forEach(el => {
+                    [namaEl, nipEl, jabatanEl].forEach(el => {
                         el.readOnly = true;
                         el.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
                     });
+                    pangkatEl.classList.add('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
                     statusTextEl.classList.remove('hidden');
                     statusSelectEl.classList.add('hidden');
                     keteranganEl.classList.remove('hidden');
@@ -373,13 +411,15 @@
                     namaEl.value = '';
                     nipEl.value = nip;
                     jabatanEl.value = '';
-                    pangkatEl.value = '';
+                    daftarSetPangkatOptions('');
+                    pangkatEl.disabled = false;
                     statusSelectEl.value = '1';
 
-                    [namaEl, nipEl, jabatanEl, pangkatEl].forEach(el => {
+                    [namaEl, nipEl, jabatanEl].forEach(el => {
                         el.readOnly = false;
                         el.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
                     });
+                    pangkatEl.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
                     statusTextEl.classList.add('hidden');
                     statusSelectEl.classList.remove('hidden');
                     keteranganEl.classList.add('hidden');
