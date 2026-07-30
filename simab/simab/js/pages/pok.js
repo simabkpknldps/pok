@@ -750,6 +750,57 @@ function filterDetil() {
 window.pelaksanaTableData = []; // Store tabel pelaksana
 window.pelaksanaCurrentData = {}; // Store data kegiatan yang dibuka
 
+// Menyisipkan indikator toggle "Perbantuan" (disabled/read-only) di samping
+// field Tgl ST/ND pada popup Pelaksana Kegiatan. Nilainya mengikuti kolom S
+// sheet Data_Kegiatan_2026 (1=on, 0=off) dan TIDAK bisa diklik/diubah user —
+// hanya menampilkan status apa adanya, lalu dikirim balik utuh saat Simpan.
+function ensurePelaksanaPerbantuanIndicator() {
+    if (document.getElementById('pelaksanaPerbantuanToggle')) return;
+
+    const tglStInput = document.getElementById('pelaksanaTglSt');
+    if (!tglStInput) return;
+
+    const tglStContainer = tglStInput.closest('div') || tglStInput.parentElement;
+    if (!tglStContainer || !tglStContainer.parentElement) return;
+
+    const rowWrapper = document.createElement('div');
+    rowWrapper.className = 'grid grid-cols-2 gap-3 items-start';
+
+    tglStContainer.parentElement.insertBefore(rowWrapper, tglStContainer);
+    rowWrapper.appendChild(tglStContainer);
+
+    const toggleContainer = document.createElement('div');
+    toggleContainer.innerHTML = `
+        <label class="block text-sm font-medium text-slate-600 mb-1">Perbantuan</label>
+        <button type="button" id="pelaksanaPerbantuanToggle" data-on="0" disabled aria-pressed="false"
+            class="relative w-11 h-6 rounded-full bg-slate-300 opacity-60 cursor-not-allowed" style="transition: background-color .2s ease;">
+            <span id="pelaksanaPerbantuanToggleKnob"
+                class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow"
+                style="transition: transform .2s ease; transform: translateX(0);"></span>
+        </button>
+    `;
+    rowWrapper.appendChild(toggleContainer);
+}
+
+function setPelaksanaPerbantuanIndicator(on) {
+    const btn = document.getElementById('pelaksanaPerbantuanToggle');
+    const knob = document.getElementById('pelaksanaPerbantuanToggleKnob');
+    if (!btn || !knob) return;
+
+    btn.dataset.on = on ? '1' : '0';
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+
+    if (on) {
+        btn.classList.remove('bg-slate-300');
+        btn.classList.add('bg-sky-600');
+        knob.style.transform = 'translateX(20px)';
+    } else {
+        btn.classList.remove('bg-sky-600');
+        btn.classList.add('bg-slate-300');
+        knob.style.transform = 'translateX(0)';
+    }
+}
+
 async function openPelaksanaModal(idKegiatan) {
     // Cari data di detilKegiatanData berdasarkan idKegiatan
     const data = window.detilKegiatanData.find(d => d.idKegiatan === idKegiatan);
@@ -772,6 +823,9 @@ async function openPelaksanaModal(idKegiatan) {
     document.getElementById("pelaksanaTujuan").value = data.tujuan || '';
     document.getElementById("pelaksanaUser").value = data.userLogin || localStorage.getItem('nama') || '';
     document.getElementById("pelaksanaTglSt").value = data.tglSt ? new Date(data.tglSt).toISOString().split('T')[0] : '';
+
+    ensurePelaksanaPerbantuanIndicator();
+    setPelaksanaPerbantuanIndicator(String(data.perbantuan) === '1');
 
     // Clear input & render tabel
     document.getElementById("inputPelaksana").value = '';
@@ -896,7 +950,8 @@ async function simpanPelaksana() {
             tujuan: window.pelaksanaCurrentData.tujuan,
             tglSt: window.pelaksanaCurrentData.tglSt,
             userLogin: localStorage.getItem('nama') || "Guest",
-            pelaksanaData: window.pelaksanaTableData
+            pelaksanaData: window.pelaksanaTableData,
+            perbantuan: document.getElementById('pelaksanaPerbantuanToggle')?.dataset.on === '1' ? 1 : 0
         };
 
         const result = await apiPost(payload);
