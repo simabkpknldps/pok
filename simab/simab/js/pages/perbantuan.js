@@ -38,28 +38,36 @@ const PB_STATUS_STYLE = {
 async function initPerbantuanPage() {
     const tbody = document.getElementById('pb-tbody');
     tbody.innerHTML = `
-        <tr><td colspan="12" class="text-center text-slate-400 py-10">
+        <tr><td colspan="9" class="text-center text-slate-400 py-10">
             <i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat data...
         </td></tr>`;
 
     try {
         const result = await apiPost({ action: 'getPerbantuanData' });
         if (result.status !== 'success') {
-            tbody.innerHTML = `<tr><td colspan="12" class="text-center text-red-500 py-10">
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-red-500 py-10">
                 Gagal memuat data: ${result.message || 'Terjadi kesalahan.'}</td></tr>`;
             return;
         }
 
-        pbAllRows = result.rows || [];
+        pbAllRows = pbSortByTglMulai(result.rows || []);
         pbPegawaiList = result.pegawai || [];
 
         pbRenderTable(pbAllRows);
         pbBindSearch();
         pbBindTambahUsulan();
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="12" class="text-center text-red-500 py-10">
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-red-500 py-10">
             Error koneksi: ${e.message || 'Tidak diketahui'}</td></tr>`;
     }
+}
+
+function pbSortByTglMulai(rows) {
+    return [...rows].sort((a, b) => {
+        const ta = a.G ? new Date(a.G).getTime() : 0;
+        const tb = b.G ? new Date(b.G).getTime() : 0;
+        return tb - ta; // tanggal paling terakhir (terbaru) di atas
+    });
 }
 
 function pbBindSearch() {
@@ -111,16 +119,13 @@ function pbRenderTable(rows) {
 
     tbody.innerHTML = rows.map(r => `
         <tr class="border-b border-slate-100 hover:bg-slate-50" data-id="${pbEsc(r.A)}">
-            <td class="p-3 whitespace-nowrap">${pbEsc(r.B)}</td>
             <td class="p-3 max-w-xs">${pbEsc(r.C)}</td>
             <td class="p-3 whitespace-nowrap">${pbEsc(r.D)}</td>
             <td class="p-3 max-w-xs">${pbEsc(r.E)}</td>
             <td class="p-3 whitespace-nowrap">${pbFormatTanggal(r.F)}</td>
             <td class="p-3 whitespace-nowrap">${pbFormatTanggal(r.G)}</td>
             <td class="p-3 whitespace-nowrap">${pbFormatTanggal(r.H)}</td>
-            <td class="p-3 whitespace-nowrap">${pbFormatTanggal(r.I)}</td>
-            <td class="p-3 whitespace-nowrap">${pbFormatTanggal(r.J)}</td>
-            <td class="p-3 text-right whitespace-nowrap">${r.M ? 'Rp ' + formatRibuan(r.M) : '-'}</td>
+            <td class="p-3 text-right whitespace-nowrap">${r.M ? formatRibuan(r.M) : '-'}</td>
             <td class="p-3 whitespace-nowrap">${pbStatusBadge(r.P)}</td>
             <td class="p-3">
                 <div class="flex items-center justify-center gap-3 text-slate-500">
