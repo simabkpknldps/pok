@@ -3,7 +3,7 @@
  */
 
 function logout() {
-    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'lastActivity']
+    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'lastActivity']
         .forEach(k => localStorage.removeItem(k));
     window.location.href = 'index.html?reason=logout';
 }
@@ -283,6 +283,13 @@ function openSettings() {
     tabBtnPejabat.onclick = () => csActivateTab('pejabat');
     tabBtnPassword.onclick = () => csActivateTab('password');
     tabBtnTambahPegawai.onclick = () => csActivateTab('tambahPegawai');
+
+    // User dengan akses terbatas (ref_pegawai kolom H = 0) tidak boleh melihat
+    // atau mengakses tab Pejabat sama sekali.
+    if (window.isAksesTerbatas && window.isAksesTerbatas()) {
+        tabBtnPejabat.remove();
+        tabPejabat.remove();
+    }
 
     // ---- Profil ----
     csBindProfilButtons(popup);
