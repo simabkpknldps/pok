@@ -65,7 +65,7 @@
         if (Date.now() - last > IDLE_LIMIT_MS) {
             // Hapus key sesi yang sama persis dengan yang dihapus logout() di common.js,
             // supaya perilaku konsisten, lalu redirect dengan alasan 'idle'.
-            ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'lastActivity']
+            ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'lastActivity']
                 .forEach(k => localStorage.removeItem(k));
             window.location.href = LOGIN_PAGE + '?reason=idle';
         }
@@ -88,7 +88,15 @@
             admin: localStorage.getItem('admin') || '',
             jabatan: localStorage.getItem('jabatan') || '',
             pangkat: localStorage.getItem('pangkat') || '',
-            kepeg: localStorage.getItem('kepeg') || ''
+            kepeg: localStorage.getItem('kepeg') || '',
+            aksesMenu: localStorage.getItem('aksesMenu') || ''
         };
+    };
+
+    // true kalau user hanya punya akses terbatas (kolom H ref_pegawai = 0):
+    // hanya boleh ke menu Perjadinku, Referensi (tab SBM Uang Harian), dan
+    // Perbantuan. Setting tetap bisa diakses tapi tanpa tab Pejabat.
+    window.isAksesTerbatas = function () {
+        return localStorage.getItem('aksesMenu') === '0';
     };
 })();
