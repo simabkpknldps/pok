@@ -100,6 +100,16 @@ function pbFormatTanggal(val) {
     return val;
 }
 
+function pbFormatTglStNd(val) {
+    if (!val) return '-';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return String(val);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
 function pbEsc(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -120,9 +130,9 @@ function pbRenderTable(rows) {
     tbody.innerHTML = rows.map(r => `
         <tr class="border-b border-slate-100 hover:bg-slate-50" data-id="${pbEsc(r.A)}">
             <td class="p-3 max-w-xs">${pbEsc(r.C)}</td>
-            <td class="p-3 whitespace-nowrap">${pbEsc(r.D)}</td>
+            <td class="p-3 max-w-[10rem] truncate" title="${pbEsc(r.D)}">${pbEsc(r.D)}</td>
             <td class="p-3 max-w-xs">${pbEsc(r.E)}</td>
-            <td class="p-3 whitespace-nowrap">${pbFormatTanggal(r.F)}</td>
+            <td class="p-3 whitespace-nowrap">${pbFormatTglStNd(r.F)}</td>
             <td class="p-3 whitespace-nowrap">${pbFormatTanggal(r.G)}</td>
             <td class="p-3 whitespace-nowrap">${pbFormatTanggal(r.H)}</td>
             <td class="p-3 text-right whitespace-nowrap">${r.M ? formatRibuan(r.M) : '-'}</td>
