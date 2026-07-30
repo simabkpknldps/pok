@@ -26,6 +26,7 @@
 
 let pbAllRows = [];
 let pbPegawaiList = [];
+let pbLokasiList = [];
 
 const PB_STATUS_STYLE = {
     'Rekam Data': 'bg-pink-100 text-pink-700',
@@ -52,6 +53,7 @@ async function initPerbantuanPage() {
 
         pbAllRows = pbSortByTglMulai(result.rows || []);
         pbPegawaiList = result.pegawai || [];
+        pbLokasiList = result.lokasi || [];
 
         pbRenderTable(pbAllRows);
         pbBindSearch();
@@ -140,7 +142,6 @@ function pbRenderTable(rows) {
             <td class="p-3">
                 <div class="flex items-center justify-center gap-3 text-slate-500">
                     <button class="pb-btn-edit hover:text-sky-600" title="Ubah"><i class="fa-solid fa-pencil"></i></button>
-                    <button class="pb-btn-pegawai hover:text-emerald-600" title="Pegawai"><i class="fa-solid fa-user-plus"></i></button>
                     <button class="pb-btn-detil hover:text-slate-800" title="Detil"><i class="fa-solid fa-eye"></i></button>
                     <button class="pb-btn-hapus hover:text-red-600" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                 </div>
@@ -154,7 +155,6 @@ function pbRenderTable(rows) {
         if (!row) return;
 
         tr.querySelector('.pb-btn-edit').onclick = () => pbOpenEditModal(row);
-        tr.querySelector('.pb-btn-pegawai').onclick = () => pbOpenPegawaiModal(row);
         tr.querySelector('.pb-btn-detil').onclick = () => pbOpenDetilModal(row);
         tr.querySelector('.pb-btn-hapus').onclick = () => pbHapusRow(row);
     });
@@ -168,50 +168,163 @@ function pbBindTambahUsulan() {
     if (btn) btn.onclick = pbOpenTambahUsulanModal;
 }
 
+function pbTuAddPegawaiRow(tbody, nama, nip) {
+    const emptyRow = tbody.querySelector('#pb-tu-pegawai-empty');
+    if (emptyRow) emptyRow.remove();
+
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-slate-100';
+    tr.dataset.nama = nama;
+    tr.innerHTML = `
+        <td class="p-2 whitespace-nowrap">${pbEsc(nama)}</td>
+        <td class="p-2"><input type="text" class="pb-tu-nip w-24 px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="NIP" value="${pbEsc(nip || '')}"></td>
+        <td class="p-2"><input type="text" inputmode="numeric" class="pb-tu-jumlah w-28 px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="0"></td>
+        <td class="p-2 text-center">
+            <button type="button" class="pb-tu-btnHapusPegawai text-red-400 hover:text-red-600" title="Hapus">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </td>
+    `;
+    tr.querySelector('.pb-tu-jumlah').oninput = function () { this.value = formatRibuan(this.value); };
+    tr.querySelector('.pb-tu-btnHapusPegawai').onclick = () => {
+        tr.remove();
+        if (!tbody.querySelector('tr')) {
+            tbody.innerHTML = `<tr id="pb-tu-pegawai-empty">
+                <td colspan="4" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
+            </tr>`;
+        }
+    };
+    tbody.appendChild(tr);
+}
+
 function pbOpenTambahUsulanModal() {
     const inputClass = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500';
     const labelClass = 'text-sm font-medium text-slate-600';
+
+    const tujuanOptions = pbLokasiList.map(t => `<option value="${pbEsc(t)}"></option>`).join('');
+    const pegawaiOptions = pbPegawaiList.map(p => `<option value="${pbEsc(p.nama || p.Nama || '')}"></option>`).join('');
 
     const { overlay, popup } = commonOpenOverlay(`
         <div class="flex items-center justify-between mb-1">
             <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-plus mr-2"></i>Tambah Usulan Perbantuan</h3>
             <button id="pb-tu-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <label class="${labelClass}">MAK</label>
-        <input id="pb-tu-mak" type="text" placeholder="Kode MAK" class="${inputClass}">
-        <label class="${labelClass}">Uraian</label>
-        <input id="pb-tu-uraian" type="text" placeholder="Uraian kegiatan" class="${inputClass}">
+
+        <label class="${labelClass}">ID Kegiatan</label>
+        <input id="pb-tu-idkegiatan" type="text" placeholder="ID Kegiatan" class="${inputClass}">
+
+        <label class="${labelClass}">No ST / Uraian Kegiatan</label>
+        <input id="pb-tu-nost" type="text" placeholder="Contoh: ST-0123/KNL.1404/2026" class="${inputClass}">
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+                <label class="${labelClass}">Tgl ST / Tgl Kegiatan</label>
+                <input id="pb-tu-tglst" type="date" class="${inputClass}">
+            </div>
+            <div>
+                <label class="${labelClass}">Tgl Mulai</label>
+                <input id="pb-tu-tglmulai" type="date" class="${inputClass}">
+            </div>
+            <div>
+                <label class="${labelClass}">Tgl Selesai</label>
+                <input id="pb-tu-tglselesai" type="date" class="${inputClass}">
+            </div>
+        </div>
+
         <label class="${labelClass}">Tujuan</label>
-        <input id="pb-tu-tujuan" type="text" placeholder="Tujuan" class="${inputClass}">
-        <label class="${labelClass}">Tanggal ST/ND</label>
-        <input id="pb-tu-tglst" type="date" class="${inputClass}">
-        <label class="${labelClass}">Estimasi Jumlah (Rp)</label>
-        <input id="pb-tu-jumlah" type="text" inputmode="numeric" placeholder="0" class="${inputClass}">
+        <input id="pb-tu-tujuan" type="text" placeholder="Ketik tujuan..." list="pb-tu-tujuan-list" autocomplete="off" class="${inputClass}">
+        <datalist id="pb-tu-tujuan-list">${tujuanOptions}</datalist>
+
+        <label class="${labelClass}">Cari / Tambah Pegawai</label>
+        <div class="flex gap-2">
+            <input id="pb-tu-pegawai-search" type="text" placeholder="Ketik nama pegawai..." list="pb-tu-pegawai-list" autocomplete="off" class="${inputClass} flex-1">
+            <button id="pb-tu-btnSubmitPegawai" type="button" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium shrink-0">Submit</button>
+        </div>
+        <datalist id="pb-tu-pegawai-list">${pegawaiOptions}</datalist>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl mt-1">
+            <table class="w-full text-xs border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-600 uppercase">
+                        <th class="p-2 text-left">Nama</th>
+                        <th class="p-2 text-left">NIP</th>
+                        <th class="p-2 text-left">Jumlah RAB</th>
+                        <th class="p-2 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="pb-tu-pegawai-tbody">
+                    <tr id="pb-tu-pegawai-empty">
+                        <td colspan="4" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <div class="flex justify-end gap-2 mt-2">
+            <button id="pb-tu-btnTutup" type="button" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-xmark mr-1"></i> Tutup
+            </button>
             <button id="pb-tu-btnSimpan" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
                 <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
             </button>
         </div>
-    `, 'max-w-md');
+    `, 'max-w-2xl');
 
+    // Tutup popup (otomatis menghapus semua isian karena elemen dihapus dari DOM)
     popup.querySelector('#pb-tu-closeBtn').onclick = () => overlay.remove();
+    popup.querySelector('#pb-tu-btnTutup').onclick = () => overlay.remove();
 
-    // Auto-format ribuan saat mengetik jumlah
-    const jumlahInput = popup.querySelector('#pb-tu-jumlah');
-    jumlahInput.oninput = () => { jumlahInput.value = formatRibuan(jumlahInput.value); };
+    const tbody = popup.querySelector('#pb-tu-pegawai-tbody');
+    const searchInput = popup.querySelector('#pb-tu-pegawai-search');
+
+    popup.querySelector('#pb-tu-btnSubmitPegawai').onclick = () => {
+        const val = searchInput.value.trim();
+        if (!val) return;
+
+        const match = pbPegawaiList.find(p =>
+            String(p.nama || p.Nama || '').toLowerCase() === val.toLowerCase()
+        );
+        const nama = match ? (match.nama || match.Nama) : val;
+        const nip = match ? (match.nip || match.NIP || '') : '';
+
+        pbTuAddPegawaiRow(tbody, nama, nip);
+        searchInput.value = '';
+        searchInput.focus();
+    };
+
+    // Enter di kolom search sama seperti klik Submit
+    searchInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            popup.querySelector('#pb-tu-btnSubmitPegawai').click();
+        }
+    };
 
     popup.querySelector('#pb-tu-btnSimpan').onclick = async function () {
         const btn = this;
-        const mak = popup.querySelector('#pb-tu-mak').value.trim();
-        const uraian = popup.querySelector('#pb-tu-uraian').value.trim();
-        const tujuan = popup.querySelector('#pb-tu-tujuan').value.trim();
+        const idKegiatan = popup.querySelector('#pb-tu-idkegiatan').value.trim();
+        const noSt = popup.querySelector('#pb-tu-nost').value.trim();
         const tglSt = popup.querySelector('#pb-tu-tglst').value;
-        const estimasi = popup.querySelector('#pb-tu-jumlah').value.replace(/\./g, '');
+        const tglMulai = popup.querySelector('#pb-tu-tglmulai').value;
+        const tglSelesai = popup.querySelector('#pb-tu-tglselesai').value;
+        const tujuan = popup.querySelector('#pb-tu-tujuan').value.trim();
 
-        if (!mak || !uraian || !tujuan || !tglSt) {
-            alert('MAK, Uraian, Tujuan, dan Tanggal ST/ND harus diisi!');
+        if (!idKegiatan || !noSt || !tglSt || !tglMulai || !tglSelesai || !tujuan) {
+            alert('ID Kegiatan, No ST/Uraian Kegiatan, Tgl ST, Tgl Mulai, Tgl Selesai, dan Tujuan harus diisi!');
             return;
         }
+
+        const rows = Array.from(tbody.querySelectorAll('tr')).filter(tr => tr.id !== 'pb-tu-pegawai-empty');
+        if (rows.length === 0) {
+            alert('Tambahkan minimal satu pegawai!');
+            return;
+        }
+
+        const pelaksanaData = rows.map(tr => ({
+            nama: tr.dataset.nama,
+            nip: tr.querySelector('.pb-tu-nip').value.trim(),
+            jumlah: tr.querySelector('.pb-tu-jumlah').value.replace(/\./g, '')
+        }));
 
         btn.disabled = true;
         const originalText = btn.innerHTML;
@@ -219,18 +332,12 @@ function pbOpenTambahUsulanModal() {
 
         try {
             const nip = localStorage.getItem('nip') || '';
-            const today = new Date();
-            const tglRekam = today.getFullYear() + '-' +
-                String(today.getMonth() + 1).padStart(2, '0') + '-' +
-                String(today.getDate()).padStart(2, '0');
 
             const result = await apiPost({
                 action: 'simpanPerbantuan',
-                idKegiatan: generateIdUsulan(),
-                mak, uraian, tujuan, tglSt,
-                estimasi,
+                idKegiatan, noSt, tglSt, tglMulai, tglSelesai, tujuan,
                 userLogin: nip,
-                tglRekam
+                pelaksanaData
             });
 
             if (result.status === 'success') {
@@ -307,116 +414,6 @@ function pbOpenEditModal(row) {
             });
             if (result.status === 'success') {
                 showToast('Data kegiatan berhasil diubah');
-                overlay.remove();
-                initPerbantuanPage();
-            } else {
-                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
-            }
-        } catch (e) {
-            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    };
-}
-
-// ==========================================
-// Pegawai (assign pelaksana)
-// ==========================================
-function pbOpenPegawaiModal(row) {
-    const namaOptions = pbPegawaiList.map(p => {
-        const nama = p.nama || p.Nama || p;
-        return `<option value="${pbEsc(nama)}">${pbEsc(nama)}</option>`;
-    }).join('');
-
-    const { overlay, popup } = commonOpenOverlay(`
-        <div class="flex items-center justify-between mb-1">
-            <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-user-plus mr-2"></i>Pegawai Pelaksana</h3>
-            <button id="pb-pg-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <p class="text-xs text-slate-500 -mt-1">MAK ${pbEsc(row.B)} — ${pbEsc(row.C)}</p>
-        <div id="pb-pg-list" class="flex flex-col gap-3"></div>
-        <button id="pb-pg-btnTambahBaris" class="text-sky-600 hover:text-sky-800 text-sm font-medium text-left">
-            <i class="fa-solid fa-circle-plus mr-1"></i> Tambah pelaksana
-        </button>
-        <div class="flex justify-end gap-2 mt-2">
-            <button id="pb-pg-btnSimpan" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
-                <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
-            </button>
-        </div>
-    `, 'max-w-lg');
-
-    popup.querySelector('#pb-pg-closeBtn').onclick = () => overlay.remove();
-
-    const listEl = popup.querySelector('#pb-pg-list');
-    const inputClass = 'w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500';
-
-    function pbAddBarisPelaksana() {
-        const idx = listEl.children.length;
-        const div = document.createElement('div');
-        div.className = 'pb-pg-baris grid grid-cols-1 sm:grid-cols-4 gap-2 border border-slate-200 rounded-xl p-3';
-        div.innerHTML = `
-            <div class="sm:col-span-4 flex justify-between items-center mb-1">
-                <span class="text-xs font-semibold text-slate-500">Pelaksana ${idx + 1}</span>
-                <button type="button" class="pb-pg-btnHapusBaris text-red-400 hover:text-red-600 text-xs"><i class="fa-solid fa-trash"></i></button>
-            </div>
-            <select class="pb-pg-nama ${inputClass} sm:col-span-1">
-                <option value="">-- Nama --</option>
-                ${namaOptions}
-            </select>
-            <input type="date" class="pb-pg-mulai ${inputClass} sm:col-span-1" placeholder="Tgl Mulai">
-            <input type="date" class="pb-pg-selesai ${inputClass} sm:col-span-1" placeholder="Tgl Selesai">
-            <input type="text" inputmode="numeric" class="pb-pg-jumlah ${inputClass} sm:col-span-1" placeholder="Jumlah (Rp)">
-        `;
-        div.querySelector('.pb-pg-btnHapusBaris').onclick = () => div.remove();
-        div.querySelector('.pb-pg-jumlah').oninput = function () { this.value = formatRibuan(this.value); };
-        listEl.appendChild(div);
-    }
-
-    // Baris awal: prefill dari data pelaksana yang sudah ada (kalau ada)
-    pbAddBarisPelaksana();
-    if (row.D) listEl.querySelector('.pb-pg-nama').value = row.D;
-    if (row.G) listEl.querySelector('.pb-pg-mulai').value = row.G;
-    if (row.H) listEl.querySelector('.pb-pg-selesai').value = row.H;
-    if (row.M) listEl.querySelector('.pb-pg-jumlah').value = formatRibuan(row.M);
-
-    popup.querySelector('#pb-pg-btnTambahBaris').onclick = pbAddBarisPelaksana;
-
-    popup.querySelector('#pb-pg-btnSimpan').onclick = async function () {
-        const btn = this;
-        const baris = Array.from(listEl.querySelectorAll('.pb-pg-baris'));
-        const pelaksanaData = baris.map(b => ({
-            nama: b.querySelector('.pb-pg-nama').value,
-            tglMulai: b.querySelector('.pb-pg-mulai').value,
-            tglSelesai: b.querySelector('.pb-pg-selesai').value,
-            jumlah: b.querySelector('.pb-pg-jumlah').value.replace(/\./g, '')
-        })).filter(p => p.nama);
-
-        if (pelaksanaData.length === 0) {
-            alert('Pilih minimal satu nama pelaksana!');
-            return;
-        }
-
-        btn.disabled = true;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
-
-        try {
-            const nip = localStorage.getItem('nip') || '';
-            const result = await apiPost({
-                action: 'updatePelaksanaKegiatan',
-                idKegiatanLama: row.A,
-                mak: row.B,
-                uraian: row.C,
-                tujuan: row.E,
-                tglSt: row.F,
-                userLogin: nip,
-                pelaksanaData,
-                isPerbantuan: true // penting: supaya baris baru tetap kolom S = 1 (tetap tampil di halaman Perbantuan)
-            });
-            if (result.status === 'success') {
-                showToast('Data pelaksana berhasil disimpan');
                 overlay.remove();
                 initPerbantuanPage();
             } else {
