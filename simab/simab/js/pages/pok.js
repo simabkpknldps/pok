@@ -430,6 +430,12 @@ function toggleExpandAll() {
 // row yang sama. Dibuat lewat JS (bukan HTML statis) supaya tidak perlu
 // mengubah markup halaman POK secara manual. Idempotent: hanya disisipkan
 // sekali walau openRekamModal dipanggil berkali-kali.
+//
+// Catatan: toggle sengaja tidak pakai class Tailwind "peer-checked:..." karena
+// class itu bisa hilang saat CSS Tailwind di-build/purge (tidak ke-detect
+// karena disisipkan lewat JS, bukan ada di markup HTML asli) sehingga
+// animasinya tidak jalan. Sebagai gantinya, warna & posisi knob diatur
+// langsung lewat JS supaya selalu bergerak.
 function ensurePerbantuanToggle() {
     if (document.getElementById('perbantuanToggle')) return;
 
@@ -439,9 +445,10 @@ function ensurePerbantuanToggle() {
     const idUsulanContainer = idUsulanInput.closest('div') || idUsulanInput.parentElement;
     if (!idUsulanContainer || !idUsulanContainer.parentElement) return;
 
-    // Bungkus container ID Usulan bersama toggle baru dalam satu row (grid 2 kolom)
+    // Bungkus container ID Usulan bersama toggle baru dalam satu row (grid 2 kolom).
+    // items-start supaya label "Perbantuan" sejajar tingginya dengan label "ID Usulan".
     const rowWrapper = document.createElement('div');
-    rowWrapper.className = 'grid grid-cols-2 gap-3 items-end';
+    rowWrapper.className = 'grid grid-cols-2 gap-3 items-start';
 
     idUsulanContainer.parentElement.insertBefore(rowWrapper, idUsulanContainer);
     rowWrapper.appendChild(idUsulanContainer);
@@ -449,27 +456,42 @@ function ensurePerbantuanToggle() {
     const toggleContainer = document.createElement('div');
     toggleContainer.innerHTML = `
         <label class="block text-sm font-medium text-slate-600 mb-1">Perbantuan</label>
-        <label class="inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="perbantuanToggle" class="sr-only peer">
-            <div class="relative w-11 h-6 bg-slate-300 peer-checked:bg-sky-600 rounded-full transition-colors">
-                <div class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
-            </div>
-            <span id="perbantuanToggleLabel" class="ml-2 text-sm text-slate-500">Off</span>
-        </label>
+        <button type="button" id="perbantuanToggle" data-on="0" aria-pressed="false"
+            class="relative w-11 h-6 rounded-full bg-slate-300" style="transition: background-color .2s ease;">
+            <span id="perbantuanToggleKnob"
+                class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow"
+                style="transition: transform .2s ease; transform: translateX(0);"></span>
+        </button>
     `;
     rowWrapper.appendChild(toggleContainer);
 
-    toggleContainer.querySelector('#perbantuanToggle').addEventListener('change', function () {
-        document.getElementById('perbantuanToggleLabel').textContent = this.checked ? 'On' : 'Off';
+    toggleContainer.querySelector('#perbantuanToggle').addEventListener('click', function () {
+        setPerbantuanToggle(this.dataset.on !== '1');
     });
 }
 
+function setPerbantuanToggle(on) {
+    const btn = document.getElementById('perbantuanToggle');
+    const knob = document.getElementById('perbantuanToggleKnob');
+    if (!btn || !knob) return;
+
+    btn.dataset.on = on ? '1' : '0';
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+
+    if (on) {
+        btn.classList.remove('bg-slate-300');
+        btn.classList.add('bg-sky-600');
+        knob.style.transform = 'translateX(20px)';
+    } else {
+        btn.classList.remove('bg-sky-600');
+        btn.classList.add('bg-slate-300');
+        knob.style.transform = 'translateX(0)';
+    }
+}
+
 function resetPerbantuanToggle() {
-    const checkbox = document.getElementById('perbantuanToggle');
-    if (!checkbox) return;
-    checkbox.checked = false; // default off (0)
-    const label = document.getElementById('perbantuanToggleLabel');
-    if (label) label.textContent = 'Off';
+    if (!document.getElementById('perbantuanToggle')) return;
+    setPerbantuanToggle(false); // default off (0)
 }
 
 function openRekamModal(idx) {
@@ -567,7 +589,7 @@ async function simpanData() {
         estimasi: document.getElementById("estimasiBiaya").value.replace(/\./g, ''),
         userLogin: namaUser,
         tglRekam: new Date().toISOString().split('T')[0],
-        perbantuan: document.getElementById("perbantuanToggle")?.checked ? 1 : 0
+        perbantuan: document.getElementById("perbantuanToggle")?.dataset.on === '1' ? 1 : 0
     };
 
     btn.disabled = true;
