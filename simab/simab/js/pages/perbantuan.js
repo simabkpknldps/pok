@@ -603,61 +603,48 @@ function pbOpenEditModal(row) {
 }
 
 // ==========================================
-// Detil
+// Detil — menampilkan semua kolom sheet Data_Kegiatan_2026 untuk baris ini,
+// kecuali kolom K, L, O, dan S (formula bantu & flag internal).
+// Data sudah tersedia di client (row didapat dari getPerbantuanData), jadi
+// tidak perlu panggil API lagi.
 // ==========================================
-async function pbOpenDetilModal(row) {
+function pbOpenDetilModal(row) {
+    const fields = [
+        { label: 'ID Kegiatan', value: row.A },
+        { label: 'MAK', value: row.B },
+        { label: 'Uraian', value: row.C },
+        { label: 'Pelaksana', value: row.D },
+        { label: 'Tujuan', value: row.E },
+        { label: 'Tgl ST/ND', value: pbFormatTanggal(row.F) },
+        { label: 'Tgl Mulai', value: pbFormatTanggal(row.G) },
+        { label: 'Tgl Selesai', value: pbFormatTanggal(row.H) },
+        { label: 'Tgl LPT', value: pbFormatTanggal(row.I) },
+        { label: 'Tgl Bayar', value: pbFormatTanggal(row.J) },
+        { label: 'Jumlah RAB', value: row.M ? formatRibuan(row.M) : '-' },
+        { label: 'User', value: row.N },
+        { label: 'Status', value: null, html: pbStatusBadge(row.P) },
+        { label: 'Tgl SP2D', value: pbFormatTanggal(row.Q) },
+        { label: 'Nomor SPM', value: row.R }
+    ];
+
+    const rowsHtml = fields.map(f => `
+        <div class="grid grid-cols-3 gap-2 py-1.5 border-b border-slate-100">
+            <div class="text-slate-500 font-medium">${pbEsc(f.label)}</div>
+            <div class="col-span-2">${f.html ? f.html : (pbEsc(f.value) || '-')}</div>
+        </div>
+    `).join('');
+
     const { overlay, popup } = commonOpenOverlay(`
         <div class="flex items-center justify-between mb-1">
-            <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-eye mr-2"></i>Detil Kegiatan — MAK ${pbEsc(row.B)}</h3>
+            <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-eye mr-2"></i>Detil Kegiatan</h3>
             <button id="pb-dt-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div id="pb-dt-content" class="text-center text-slate-400 py-6">
-            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat detil...
+        <div class="text-sm">
+            ${rowsHtml}
         </div>
     `, 'max-w-2xl');
 
     popup.querySelector('#pb-dt-closeBtn').onclick = () => overlay.remove();
-
-    try {
-        const list = await apiGet('getDetil', { mak: row.B });
-        const contentEl = popup.querySelector('#pb-dt-content');
-
-        if (!Array.isArray(list) || list.length === 0) {
-            contentEl.innerHTML = '<p class="text-slate-400 text-sm">Tidak ada detil ditemukan.</p>';
-            return;
-        }
-
-        contentEl.className = 'overflow-x-auto';
-        contentEl.innerHTML = `
-            <table class="w-full text-xs border-collapse">
-                <thead>
-                    <tr class="bg-slate-50 text-slate-600 uppercase">
-                        <th class="p-2 text-left">Pelaksana</th>
-                        <th class="p-2 text-left">Tujuan</th>
-                        <th class="p-2 text-left">Tgl ST/ND</th>
-                        <th class="p-2 text-right">Estimasi</th>
-                        <th class="p-2 text-left">Status</th>
-                        <th class="p-2 text-left">No. SPM</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${list.map(d => `
-                        <tr class="border-b border-slate-100">
-                            <td class="p-2">${pbEsc(d.pelaksana_kegiatan)}</td>
-                            <td class="p-2">${pbEsc(d.tujuan)}</td>
-                            <td class="p-2">${pbEsc(d.tglSt)}</td>
-                            <td class="p-2 text-right">${d.estimasi ? 'Rp ' + formatRibuan(d.estimasi) : '-'}</td>
-                            <td class="p-2">${pbStatusBadge(d.status)}</td>
-                            <td class="p-2">${pbEsc(d.nomorSPM)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
-    } catch (e) {
-        popup.querySelector('#pb-dt-content').innerHTML =
-            `<span class="text-red-500 text-sm">Error koneksi: ${e.message || 'Tidak diketahui'}</span>`;
-    }
 }
 
 // ==========================================
