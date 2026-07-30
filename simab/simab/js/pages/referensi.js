@@ -34,12 +34,24 @@ function initReferensiPage() {
     const tabSbm = document.getElementById('ref-tabSbm');
     const tabPegawai = document.getElementById('ref-tabPegawai');
 
+    // User dengan akses terbatas (ref_pegawai kolom H = 0) cuma boleh lihat
+    // tab "SBM Uang Harian" di halaman Referensi ini — tab Pegawai disembunyikan.
+    const isRestricted = typeof window.isAksesTerbatas === 'function' && window.isAksesTerbatas();
+    if (isRestricted) {
+        tabBtnPegawai.remove();
+        tabPegawai.remove();
+    }
+
     function activateTab(tab) {
+        if (isRestricted) tab = 'sbm'; // paksa selalu di tab SBM untuk user terbatas
+
         const isSbm = tab === 'sbm';
         tabSbm.classList.toggle('hidden', !isSbm);
-        tabPegawai.classList.toggle('hidden', isSbm);
+        if (!isRestricted) tabPegawai.classList.toggle('hidden', isSbm);
         tabBtnSbm.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${isSbm ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
-        tabBtnPegawai.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${!isSbm ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
+        if (!isRestricted) {
+            tabBtnPegawai.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${!isSbm ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
+        }
 
         // Kalau data sudah pernah dimuat sebelumnya (mis. sempat pindah ke halaman lain lalu balik
         // ke Referensi), tabel/tbody di fragment HTML ini baru (isinya spinner "Memuat data...").
@@ -53,7 +65,7 @@ function initReferensiPage() {
     }
 
     tabBtnSbm.onclick = () => activateTab('sbm');
-    tabBtnPegawai.onclick = () => activateTab('pegawai');
+    if (tabBtnPegawai) tabBtnPegawai.onclick = () => activateTab('pegawai');
 
     document.getElementById('ref-sbm-search').oninput = (e) => refRenderSbmTable(e.target.value);
     document.getElementById('ref-pegawai-search').oninput = (e) => refRenderPegawaiTable(e.target.value);
