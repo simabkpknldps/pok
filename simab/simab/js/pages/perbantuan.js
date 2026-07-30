@@ -415,10 +415,11 @@ function pbOpenEditModal(row) {
     const inputClass = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500';
     const labelClass = 'text-sm font-medium text-slate-600';
 
-    // Kolom C tersimpan sebagai "(ID: <idKegiatan>) <noSt>" — ekstrak keduanya.
-    const cMatch = String(row.C || '').match(/^\(ID:\s*(.*?)\)\s*(.*)$/);
-    const idKegiatan = cMatch ? cMatch[1].trim() : '';
-    const noStAwal = cMatch ? cMatch[2].trim() : (row.C || '');
+    // No ST / Uraian Kegiatan ditampilkan & diedit APA ADANYA (row.C sudah
+    // merupakan teks gabungan final) — tidak ada lagi ekstraksi/penambahan
+    // "(ID: ...)" di popup Ubah ini.
+    const noStAwal = row.C || '';
+    const makAwal = row.B || '';
 
     const tujuanOptions = pbLokasiList.map(t => `<option value="${pbEsc(t)}"></option>`).join('');
     const pegawaiOptions = pbPegawaiList.map(p => `<option value="${pbEsc(p.nama || p.Nama || '')}"></option>`).join('');
@@ -429,8 +430,17 @@ function pbOpenEditModal(row) {
             <button id="pb-ed-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
-        <label class="${labelClass}">No ST / Uraian Kegiatan</label>
-        <input id="pb-ed-nost" type="text" value="${pbEsc(noStAwal)}" class="${inputClass}">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+                <label class="${labelClass}">No ST / Uraian Kegiatan</label>
+                <input id="pb-ed-nost" type="text" value="${pbEsc(noStAwal)}" class="${inputClass}">
+            </div>
+            <div>
+                <label class="${labelClass}">MAK</label>
+                <input id="pb-ed-mak" type="text" value="${pbEsc(makAwal)}" disabled
+                    class="w-full px-3 py-2 border border-slate-200 bg-slate-100 text-slate-500 rounded-lg text-sm cursor-not-allowed">
+            </div>
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
@@ -586,7 +596,7 @@ function pbOpenEditModal(row) {
 
             const result = await apiPost({
                 action: 'updatePerbantuan',
-                idKegiatan,
+                mak: makAwal,
                 oldUraianGabungan: row.C,
                 noSt, tglSt, tglMulai, tglSelesai, tujuan,
                 userLogin: namaUser,
