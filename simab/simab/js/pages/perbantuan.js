@@ -168,17 +168,29 @@ function pbBindTambahUsulan() {
     if (btn) btn.onclick = pbOpenTambahUsulanModal;
 }
 
-function pbTuAddPegawaiRow(tbody, nama, nip) {
+function pbTuAddPegawaiRow(tbody, nama, nip, status) {
     const emptyRow = tbody.querySelector('#pb-tu-pegawai-empty');
     if (emptyRow) emptyRow.remove();
+
+    // Normalisasi status: 1/"1" -> PNS, 0/"0" -> PPNPN, selain itu -> belum dipilih
+    let statusVal = '';
+    if (status === 1 || status === '1') statusVal = '1';
+    else if (status === 0 || status === '0') statusVal = '0';
 
     const tr = document.createElement('tr');
     tr.className = 'border-b border-slate-100';
     tr.dataset.nama = nama;
     tr.innerHTML = `
-        <td class="p-2 whitespace-nowrap">${pbEsc(nama)}</td>
-        <td class="p-2"><input type="text" class="pb-tu-nip w-24 px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="NIP" value="${pbEsc(nip || '')}"></td>
-        <td class="p-2"><input type="text" inputmode="numeric" class="pb-tu-jumlah w-28 px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="0"></td>
+        <td class="p-2 whitespace-nowrap truncate">${pbEsc(nama)}</td>
+        <td class="p-2"><input type="text" class="pb-tu-nip w-full px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="NIP" value="${pbEsc(nip || '')}"></td>
+        <td class="p-2">
+            <select class="pb-tu-status w-full px-2 py-1 border border-slate-300 rounded-lg text-xs">
+                <option value="">-- Pilih --</option>
+                <option value="1" ${statusVal === '1' ? 'selected' : ''}>PNS</option>
+                <option value="0" ${statusVal === '0' ? 'selected' : ''}>PPNPN</option>
+            </select>
+        </td>
+        <td class="p-2"><input type="text" inputmode="numeric" class="pb-tu-jumlah w-full px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="0"></td>
         <td class="p-2 text-center">
             <button type="button" class="pb-tu-btnHapusPegawai text-red-400 hover:text-red-600" title="Hapus">
                 <i class="fa-solid fa-trash"></i>
@@ -190,7 +202,7 @@ function pbTuAddPegawaiRow(tbody, nama, nip) {
         tr.remove();
         if (!tbody.querySelector('tr')) {
             tbody.innerHTML = `<tr id="pb-tu-pegawai-empty">
-                <td colspan="4" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
+                <td colspan="5" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
             </tr>`;
         }
     };
@@ -231,30 +243,36 @@ function pbOpenTambahUsulanModal() {
             </div>
         </div>
 
-        <label class="${labelClass}">Tujuan</label>
-        <input id="pb-tu-tujuan" type="text" placeholder="Ketik tujuan..." list="pb-tu-tujuan-list" autocomplete="off" class="${inputClass}">
-        <datalist id="pb-tu-tujuan-list">${tujuanOptions}</datalist>
-
-        <label class="${labelClass}">Cari / Tambah Pegawai</label>
-        <div class="flex gap-2">
-            <input id="pb-tu-pegawai-search" type="text" placeholder="Ketik nama pegawai..." list="pb-tu-pegawai-list" autocomplete="off" class="${inputClass} flex-1">
-            <button id="pb-tu-btnSubmitPegawai" type="button" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium shrink-0">Submit</button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+                <label class="${labelClass}">Tujuan</label>
+                <input id="pb-tu-tujuan" type="text" placeholder="Ketik tujuan..." list="pb-tu-tujuan-list" autocomplete="off" class="${inputClass}">
+                <datalist id="pb-tu-tujuan-list">${tujuanOptions}</datalist>
+            </div>
+            <div>
+                <label class="${labelClass}">Cari / Tambah Pegawai</label>
+                <div class="flex gap-2">
+                    <input id="pb-tu-pegawai-search" type="text" placeholder="Ketik nama pegawai..." list="pb-tu-pegawai-list" autocomplete="off" class="${inputClass} flex-1">
+                    <button id="pb-tu-btnSubmitPegawai" type="button" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium shrink-0">Submit</button>
+                </div>
+                <datalist id="pb-tu-pegawai-list">${pegawaiOptions}</datalist>
+            </div>
         </div>
-        <datalist id="pb-tu-pegawai-list">${pegawaiOptions}</datalist>
 
         <div class="overflow-x-auto border border-slate-200 rounded-xl mt-1">
-            <table class="w-full text-xs border-collapse">
+            <table class="w-full text-xs border-collapse table-fixed">
                 <thead>
                     <tr class="bg-slate-50 text-slate-600 uppercase">
                         <th class="p-2 text-left">Nama</th>
                         <th class="p-2 text-left">NIP</th>
+                        <th class="p-2 text-left">Status</th>
                         <th class="p-2 text-left">Jumlah RAB</th>
-                        <th class="p-2 text-center">Aksi</th>
+                        <th class="p-2 text-center w-14">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="pb-tu-pegawai-tbody">
                     <tr id="pb-tu-pegawai-empty">
-                        <td colspan="4" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
+                        <td colspan="5" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
                     </tr>
                 </tbody>
             </table>
@@ -286,8 +304,9 @@ function pbOpenTambahUsulanModal() {
         );
         const nama = match ? (match.nama || match.Nama) : val;
         const nip = match ? (match.nip || match.NIP || '') : '';
+        const status = match ? (match.status !== undefined ? match.status : match.Status) : '';
 
-        pbTuAddPegawaiRow(tbody, nama, nip);
+        pbTuAddPegawaiRow(tbody, nama, nip, status);
         searchInput.value = '';
         searchInput.focus();
     };
@@ -320,9 +339,18 @@ function pbOpenTambahUsulanModal() {
             return;
         }
 
+        const belumLengkap = rows.some(tr =>
+            !tr.querySelector('.pb-tu-nip').value.trim() || !tr.querySelector('.pb-tu-status').value
+        );
+        if (belumLengkap) {
+            alert('NIP dan Status setiap pegawai di tabel harus diisi!');
+            return;
+        }
+
         const pelaksanaData = rows.map(tr => ({
             nama: tr.dataset.nama,
             nip: tr.querySelector('.pb-tu-nip').value.trim(),
+            status: tr.querySelector('.pb-tu-status').value,
             jumlah: tr.querySelector('.pb-tu-jumlah').value.replace(/\./g, '')
         }));
 
