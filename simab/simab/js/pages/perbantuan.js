@@ -129,7 +129,20 @@ function pbRenderTable(rows) {
     }
     emptyState.classList.add('hidden');
 
-    tbody.innerHTML = rows.map(r => `
+    tbody.innerHTML = rows.map(r => {
+        // User dengan akses terbatas (ref_pegawai kolom H = 0) hanya boleh
+        // melihat tombol Detil untuk baris yang statusnya BUKAN "Rekam Data".
+        // Untuk baris berstatus "Rekam Data", semua tombol tetap tampil.
+        const showFullActions = !pbIsRestrictedUser() || r.P === 'Rekam Data';
+        const actionsHtml = showFullActions ? `
+                    <button class="pb-btn-edit hover:text-sky-600" title="Ubah"><i class="fa-solid fa-pencil"></i></button>
+                    <button class="pb-btn-detil hover:text-slate-800" title="Detil"><i class="fa-solid fa-eye"></i></button>
+                    <button class="pb-btn-hapus hover:text-red-600" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+        ` : `
+                    <button class="pb-btn-detil hover:text-slate-800" title="Detil"><i class="fa-solid fa-eye"></i></button>
+        `;
+
+        return `
         <tr class="border-b border-slate-100 hover:bg-slate-50" data-id="${pbEsc(r.A)}">
             <td class="p-3 max-w-xs">${pbEsc(r.C)}</td>
             <td class="p-3 max-w-[10rem] truncate" title="${pbEsc(r.D)}">${pbEsc(r.D)}</td>
@@ -141,35 +154,50 @@ function pbRenderTable(rows) {
             <td class="p-3 whitespace-nowrap">${pbStatusBadge(r.P)}</td>
             <td class="p-3">
                 <div class="flex items-center justify-center gap-3 text-slate-500">
-                    <button class="pb-btn-edit hover:text-sky-600" title="Ubah"><i class="fa-solid fa-pencil"></i></button>
-                    <button class="pb-btn-detil hover:text-slate-800" title="Detil"><i class="fa-solid fa-eye"></i></button>
-                    <button class="pb-btn-hapus hover:text-red-600" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    ${actionsHtml}
                 </div>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 
     tbody.querySelectorAll('tr').forEach(tr => {
         const id = tr.getAttribute('data-id');
         const row = pbAllRows.find(r => String(r.A) === String(id));
         if (!row) return;
 
-        tr.querySelector('.pb-btn-edit').onclick = () => {
-            if (!pbCanEditOrDelete(row)) {
-                alert('Data tidak dapat diubah karena status bukan "Rekam Data".');
-                return;
-            }
-            pbOpenEditModal(row);
-        };
-        tr.querySelector('.pb-btn-detil').onclick = () => pbOpenDetilModal(row);
-        tr.querySelector('.pb-btn-hapus').onclick = () => {
-            if (!pbCanEditOrDelete(row)) {
-                alert('Data tidak dapat dihapus karena status bukan "Rekam Data".');
-                return;
-            }
-            pbHapusRow(row);
-        };
+        const btnEdit = tr.querySelector('.pb-btn-edit');
+        const btnDetil = tr.querySelector('.pb-btn-detil');
+        const btnHapus = tr.querySelector('.pb-btn-hapus');
+
+        if (btnEdit) {
+            btnEdit.onclick = () => {
+                if (!pbCanEditOrDelete(row)) {
+                    alert('Data tidak dapat diubah karena status bukan "Rekam Data".');
+                    return;
+                }
+                pbOpenEditModal(row);
+            };
+        }
+        if (btnDetil) btnDetil.onclick = () => pbOpenDetilModal(row);
+        if (btnHapus) {
+            btnHapus.onclick = () => {
+                if (!pbCanEditOrDelete(row)) {
+                    alert('Data tidak dapat dihapus karena status bukan "Rekam Data".');
+                    return;
+                }
+                pbHapusRow(row);
+            };
+        }
     });
+}
+
+// User dengan akses terbatas (ref_pegawai kolom H = 0): hanya bisa melihat
+// tombol Detil untuk baris yang statusnya bukan "Rekam Data" di halaman
+// Perbantuan (lihat pbRenderTable).
+function pbIsRestrictedUser() {
+    if (typeof window.isAksesTerbatas === 'function') return window.isAksesTerbatas();
+    return localStorage.getItem('aksesMenu') === '0';
 }
 
 // Admin: bisa ubah/hapus data apapun statusnya.
