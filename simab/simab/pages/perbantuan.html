@@ -1,0 +1,50 @@
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <h3 class="text-lg font-semibold text-slate-700">
+            <i class="fa-solid fa-hands-helping mr-2 text-sky-500"></i> Daftar Perbantuan
+        </h3>
+        <button id="pb-btnTambahUsulan" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-medium shrink-0 transition">
+            <i class="fa-solid fa-plus mr-1"></i> Tambah Usulan
+        </button>
+    </div>
+
+    <div class="relative mb-4">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input id="pb-search" type="text" placeholder="Cari MAK, uraian, pelaksana, atau tujuan..."
+            class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+            <thead>
+                <tr class="bg-slate-50 text-slate-600 text-xs uppercase tracking-wide">
+                    <th class="p-3 text-left rounded-l-xl whitespace-nowrap">MAK</th>
+                    <th class="p-3 text-left whitespace-nowrap">Uraian</th>
+                    <th class="p-3 text-left whitespace-nowrap">Pelaksana</th>
+                    <th class="p-3 text-left whitespace-nowrap">Tujuan</th>
+                    <th class="p-3 text-left whitespace-nowrap">Tgl ST/ND</th>
+                    <th class="p-3 text-left whitespace-nowrap">Tgl Mulai</th>
+                    <th class="p-3 text-left whitespace-nowrap">Tgl Selesai</th>
+                    <th class="p-3 text-left whitespace-nowrap">Tgl LPT</th>
+                    <th class="p-3 text-left whitespace-nowrap">Tgl Bayar</th>
+                    <th class="p-3 text-right whitespace-nowrap">Jumlah</th>
+                    <th class="p-3 text-left whitespace-nowrap">Status</th>
+                    <th class="p-3 text-center rounded-r-xl whitespace-nowrap">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="pb-tbody">
+                <tr>
+                    <td colspan="12" class="text-center text-slate-400 py-10">
+                        <i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat data...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pb-emptyState" class="hidden text-center text-slate-400 py-10">
+        <i class="fa-regular fa-folder-open text-3xl mb-2"></i>
+        <p>Tidak ada data yang cocok.</p>
+    </div>
+</div>
