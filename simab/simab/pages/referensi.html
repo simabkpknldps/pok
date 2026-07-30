@@ -8,6 +8,9 @@
         <button id="ref-tabBtnPegawai" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
             <i class="fa-solid fa-users mr-2"></i>Pegawai
         </button>
+        <button id="ref-tabBtnRekening" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
+            <i class="fa-solid fa-building-columns mr-2"></i>Data Rekening
+        </button>
     </div>
 
     <!-- ==================== TAB SBM ==================== -->
@@ -75,5 +78,36 @@
             </table>
         </div>
         <p id="ref-pegawai-empty" class="hidden text-center text-slate-400 py-6 text-sm">Tidak ada data yang cocok.</p>
+    </div>
+
+    <!-- ==================== TAB DATA REKENING (admin saja) ==================== -->
+    <div id="ref-tabRekening" class="hidden p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div class="relative w-full sm:max-w-xs">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input id="ref-rekening-search" type="text" placeholder="Cari Nama / NIP..."
+                    class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+            </div>
+        </div>
+        <div class="overflow-auto rounded-xl border border-slate-200 max-h-[65vh]">
+            <table class="w-full text-sm border-collapse">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-slate-500">
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Nama</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">NIP</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Nama Bank</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Nomor Rekening</th>
+                    </tr>
+                </thead>
+                <tbody id="ref-rekening-tbody" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="4" class="text-center text-slate-400 py-8">
+                            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p id="ref-rekening-empty" class="hidden text-center text-slate-400 py-6 text-sm">Tidak ada data yang cocok.</p>
     </div>
 </div>
