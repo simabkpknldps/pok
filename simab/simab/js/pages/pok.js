@@ -426,6 +426,52 @@ function toggleExpandAll() {
     renderPok();
 }
 
+// Menyisipkan toggle "Perbantuan" di sebelah kanan field ID Usulan, dalam
+// row yang sama. Dibuat lewat JS (bukan HTML statis) supaya tidak perlu
+// mengubah markup halaman POK secara manual. Idempotent: hanya disisipkan
+// sekali walau openRekamModal dipanggil berkali-kali.
+function ensurePerbantuanToggle() {
+    if (document.getElementById('perbantuanToggle')) return;
+
+    const idUsulanInput = document.getElementById('idUsulan');
+    if (!idUsulanInput) return;
+
+    const idUsulanContainer = idUsulanInput.closest('div') || idUsulanInput.parentElement;
+    if (!idUsulanContainer || !idUsulanContainer.parentElement) return;
+
+    // Bungkus container ID Usulan bersama toggle baru dalam satu row (grid 2 kolom)
+    const rowWrapper = document.createElement('div');
+    rowWrapper.className = 'grid grid-cols-2 gap-3 items-end';
+
+    idUsulanContainer.parentElement.insertBefore(rowWrapper, idUsulanContainer);
+    rowWrapper.appendChild(idUsulanContainer);
+
+    const toggleContainer = document.createElement('div');
+    toggleContainer.innerHTML = `
+        <label class="block text-sm font-medium text-slate-600 mb-1">Perbantuan</label>
+        <label class="inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="perbantuanToggle" class="sr-only peer">
+            <div class="relative w-11 h-6 bg-slate-300 peer-checked:bg-sky-600 rounded-full transition-colors">
+                <div class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow transition-transform peer-checked:translate-x-5"></div>
+            </div>
+            <span id="perbantuanToggleLabel" class="ml-2 text-sm text-slate-500">Off</span>
+        </label>
+    `;
+    rowWrapper.appendChild(toggleContainer);
+
+    toggleContainer.querySelector('#perbantuanToggle').addEventListener('change', function () {
+        document.getElementById('perbantuanToggleLabel').textContent = this.checked ? 'On' : 'Off';
+    });
+}
+
+function resetPerbantuanToggle() {
+    const checkbox = document.getElementById('perbantuanToggle');
+    if (!checkbox) return;
+    checkbox.checked = false; // default off (0)
+    const label = document.getElementById('perbantuanToggleLabel');
+    if (label) label.textContent = 'Off';
+}
+
 function openRekamModal(idx) {
     const data = window.rawPokData[idx];
 
@@ -444,6 +490,9 @@ function openRekamModal(idx) {
     document.getElementById("statusDana").value = "Dana Tersedia";
     document.getElementById("statusDana").className = "w-full rounded-xl border border-slate-300 px-4 py-2.5 transition";
 
+    ensurePerbantuanToggle();
+    resetPerbantuanToggle();
+
     fetchLokasiData();
 }
 
@@ -453,6 +502,7 @@ function closeRekamModal() {
     document.getElementById("uraianKegiatan").value = "";
     document.getElementById("estimasiBiaya").value = "";
     document.getElementById("inputTujuan").value = "";
+    resetPerbantuanToggle();
 
     const statusEl = document.getElementById("statusDana");
     statusEl.value = "Dana Tersedia";
@@ -516,7 +566,8 @@ async function simpanData() {
         tglSt: document.getElementById("tglSt").value,
         estimasi: document.getElementById("estimasiBiaya").value.replace(/\./g, ''),
         userLogin: namaUser,
-        tglRekam: new Date().toISOString().split('T')[0]
+        tglRekam: new Date().toISOString().split('T')[0],
+        perbantuan: document.getElementById("perbantuanToggle")?.checked ? 1 : 0
     };
 
     btn.disabled = true;
