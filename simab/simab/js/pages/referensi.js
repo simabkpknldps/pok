@@ -1,12 +1,14 @@
 /**
  * referensi.js
  * -----------------------------------------------------------------------
- * Halaman "Referensi" -> 2 tab:
+ * Halaman "Referensi" -> 3 tab:
  *   1. SBM Uang Harian  (sheet ref_sbm  : A Kabupaten/Kota | B Luar Kota | C Dalam Kota | D Diklat)
  *   2. Pegawai          (sheet ref_pegawai: A Nama | B NIP | C Jabatan | D Pangkat | E Kepeg | F Admin | G password | H Status)
+ *   3. Data Rekening    (sheet ref_pegawai: A Nama | B NIP | I Nama Bank | J Nomor Rekening) — HANYA ADMIN
  *
- * Aksi tiap baris: pensil (mulai edit) -> disket (simpan) + x (batal).
+ * Aksi tiap baris (tab SBM & Pegawai): pensil (mulai edit) -> disket (simpan) + x (batal).
  * Kolom kunci (Kabupaten/Kota utk SBM, NIP utk Pegawai) tidak pernah bisa diubah.
+ * Tab Data Rekening cuma tampilan (tidak ada edit), dan hanya admin yang bisa melihat tabnya.
  * -----------------------------------------------------------------------
  */
 
@@ -14,6 +16,8 @@ let refSbmData = [];
 let refSbmLoaded = false;
 let refPegawaiData = [];
 let refPegawaiLoaded = false;
+let refRekeningData = [];
+let refRekeningLoaded = false;
 
 const refInputClass = 'w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500';
 
@@ -31,44 +35,64 @@ function refAksiCell(disabledIconClass) {
 function initReferensiPage() {
     const tabBtnSbm = document.getElementById('ref-tabBtnSbm');
     const tabBtnPegawai = document.getElementById('ref-tabBtnPegawai');
+    const tabBtnRekening = document.getElementById('ref-tabBtnRekening');
     const tabSbm = document.getElementById('ref-tabSbm');
     const tabPegawai = document.getElementById('ref-tabPegawai');
+    const tabRekening = document.getElementById('ref-tabRekening');
 
     // User dengan akses terbatas (ref_pegawai kolom H = 0) cuma boleh lihat
-    // tab "SBM Uang Harian" di halaman Referensi ini — tab Pegawai disembunyikan.
+    // tab "SBM Uang Harian" di halaman Referensi ini — tab lain disembunyikan.
     const isRestricted = typeof window.isAksesTerbatas === 'function' && window.isAksesTerbatas();
     if (isRestricted) {
         tabBtnPegawai.remove();
         tabPegawai.remove();
+        tabBtnRekening.remove();
+        tabRekening.remove();
+    } else if (!refIsAdmin()) {
+        // Tab Data Rekening HANYA untuk admin, terlepas dari status akses terbatas.
+        tabBtnRekening.remove();
+        tabRekening.remove();
     }
+
+    const tabs = {
+        sbm: { btn: tabBtnSbm, content: tabSbm },
+        pegawai: { btn: document.getElementById('ref-tabBtnPegawai'), content: document.getElementById('ref-tabPegawai') },
+        rekening: { btn: document.getElementById('ref-tabBtnRekening'), content: document.getElementById('ref-tabRekening') }
+    };
 
     function activateTab(tab) {
         if (isRestricted) tab = 'sbm'; // paksa selalu di tab SBM untuk user terbatas
+        if (tab === 'rekening' && !tabs.rekening.btn) tab = 'sbm'; // jaga-jaga kalau tab rekening tidak ada (non-admin)
 
-        const isSbm = tab === 'sbm';
-        tabSbm.classList.toggle('hidden', !isSbm);
-        if (!isRestricted) tabPegawai.classList.toggle('hidden', isSbm);
-        tabBtnSbm.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${isSbm ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
-        if (!isRestricted) {
-            tabBtnPegawai.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${!isSbm ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
-        }
+        Object.keys(tabs).forEach(key => {
+            const t = tabs[key];
+            if (!t.btn || !t.content) return; // tab dihapus (non-admin / restricted)
+            const active = key === tab;
+            t.content.classList.toggle('hidden', !active);
+            t.btn.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
+        });
 
         // Kalau data sudah pernah dimuat sebelumnya (mis. sempat pindah ke halaman lain lalu balik
         // ke Referensi), tabel/tbody di fragment HTML ini baru (isinya spinner "Memuat data...").
         // Jangan cuma skip fetch-nya, tapi render ulang dari cache supaya tabel langsung muncul
         // instan tanpa perlu request ulang ke server.
-        if (isSbm) {
+        if (tab === 'sbm') {
             refSbmLoaded ? refRenderSbmTable(document.getElementById('ref-sbm-search').value) : refLoadSbmData();
-        } else {
+        } else if (tab === 'pegawai') {
             refPegawaiLoaded ? refRenderPegawaiTable(document.getElementById('ref-pegawai-search').value) : refLoadPegawaiData();
+        } else if (tab === 'rekening') {
+            refRekeningLoaded ? refRenderRekeningTable(document.getElementById('ref-rekening-search').value) : refLoadRekeningDataAll();
         }
     }
 
     tabBtnSbm.onclick = () => activateTab('sbm');
     if (tabBtnPegawai) tabBtnPegawai.onclick = () => activateTab('pegawai');
+    if (tabs.rekening.btn) tabs.rekening.btn.onclick = () => activateTab('rekening');
 
     document.getElementById('ref-sbm-search').oninput = (e) => refRenderSbmTable(e.target.value);
     document.getElementById('ref-pegawai-search').oninput = (e) => refRenderPegawaiTable(e.target.value);
+    const rekeningSearchEl = document.getElementById('ref-rekening-search');
+    if (rekeningSearchEl) rekeningSearchEl.oninput = (e) => refRenderRekeningTable(e.target.value);
 
     activateTab('sbm');
 }
@@ -486,3 +510,55 @@ function refBindPegawaiRow(tr) {
 }
 
 window.initReferensiPage = initReferensiPage;
+
+/* ==========================================================
+ * ================= TAB DATA REKENING (admin) =============
+ * ========================================================== */
+
+async function refLoadRekeningDataAll() {
+    const tbody = document.getElementById('ref-rekening-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+
+    const nip = localStorage.getItem('nip') || '';
+
+    try {
+        const result = await apiPost({ action: 'getAllRekeningData', nip });
+        if (result.status === 'success') {
+            refRekeningData = result.data || [];
+            refRekeningLoaded = true;
+            refRenderRekeningTable('');
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500 py-8">❌ ${result.message || 'Gagal memuat data rekening'}</td></tr>`;
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500 py-8">❌ Error koneksi: ${e.message || 'Tidak diketahui'}</td></tr>`;
+    }
+}
+
+function refRenderRekeningTable(keyword) {
+    const tbody = document.getElementById('ref-rekening-tbody');
+    const emptyMsg = document.getElementById('ref-rekening-empty');
+    if (!tbody) return;
+    const kw = (keyword || '').trim().toLowerCase();
+
+    const filtered = refRekeningData.filter(row =>
+        !kw || String(row.nama).toLowerCase().includes(kw) || String(row.nip).toLowerCase().includes(kw)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        return;
+    }
+    emptyMsg.classList.add('hidden');
+
+    tbody.innerHTML = filtered.map(row => `
+        <tr class="hover:bg-slate-50">
+            <td class="py-2 px-4">${row.nama || '-'}</td>
+            <td class="py-2 px-4 text-slate-600 whitespace-nowrap">${row.nip || '-'}</td>
+            <td class="py-2 px-4">${row.namaBank || '-'}</td>
+            <td class="py-2 px-4 whitespace-nowrap">${row.norek || '-'}</td>
+        </tr>
+    `).join('');
+}
