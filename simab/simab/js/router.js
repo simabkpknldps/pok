@@ -18,6 +18,7 @@ const PAGE_INIT = {
     statistik: () => window.initStatistikPage && window.initStatistikPage(),
     rpd: () => window.initRpdPage && window.initRpdPage(),
     referensi: () => window.initReferensiPage && window.initReferensiPage(),
+    perbantuan: () => window.initPerbantuanPage && window.initPerbantuanPage(),
 };
 
 async function navigate(page) {
