@@ -271,12 +271,8 @@
             daftarNipFound = false;
 
             // Kembalikan tombol Daftar ke kondisi semula (kalau sebelumnya sempat
-            // berubah jadi "Tutup" warna merah setelah sukses daftar dgn NIP ditemukan)
-            const btnSimpan = document.getElementById('daftarBtnSimpan');
-            const btnSimpanText = document.getElementById('daftarBtnSimpanText');
-            btnSimpan.className = 'w-full bg-sky-600 text-white py-2.5 rounded-xl font-semibold hover:bg-sky-700 active:bg-sky-800 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed';
-            btnSimpanText.textContent = 'Daftar';
-            btnSimpan.disabled = false;
+            // berubah jadi "Tutup" warna merah karena NIP ditemukan)
+            setDaftarButtonAsDaftar();
         }
 
         document.getElementById('daftarLink').addEventListener('click', (e) => {
@@ -289,6 +285,28 @@
         document.getElementById('daftarCloseBtn').addEventListener('click', () => {
             daftarModal.classList.replace('flex', 'hidden');
         });
+
+        const DAFTAR_BTN_CLASS_NORMAL = 'w-full bg-sky-600 text-white py-2.5 rounded-xl font-semibold hover:bg-sky-700 active:bg-sky-800 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed';
+        const DAFTAR_BTN_CLASS_TUTUP = 'w-full bg-red-600 text-white py-2.5 rounded-xl font-semibold hover:bg-red-700 active:bg-red-800 transition flex items-center justify-center gap-2';
+
+        // NIP ditemukan -> akun sudah terdaftar, tidak bisa daftar lagi.
+        // Tombol "Daftar" langsung berubah jadi "Tutup" warna merah.
+        function setDaftarButtonAsTutup() {
+            const btn = document.getElementById('daftarBtnSimpan');
+            const btnText = document.getElementById('daftarBtnSimpanText');
+            btn.className = DAFTAR_BTN_CLASS_TUTUP;
+            btnText.textContent = 'Tutup';
+            btn.disabled = false;
+        }
+
+        // NIP tidak ditemukan -> tombol kembali normal sebagai "Daftar".
+        function setDaftarButtonAsDaftar() {
+            const btn = document.getElementById('daftarBtnSimpan');
+            const btnText = document.getElementById('daftarBtnSimpanText');
+            btn.className = DAFTAR_BTN_CLASS_NORMAL;
+            btnText.textContent = 'Daftar';
+            btn.disabled = false;
+        }
 
         document.getElementById('daftarBtnCek').addEventListener('click', async function () {
             const btn = this;
@@ -331,7 +349,8 @@
 
                 if (data.found) {
                     daftarNipFound = true;
-                    // NIP ditemukan -> semua field read-only, tampilkan data dari ref_pegawai
+                    // NIP ditemukan -> semua field read-only, tampilkan data dari ref_pegawai,
+                    // dan tombol Daftar langsung berubah jadi Tutup (tidak bisa daftar lagi).
                     namaEl.value = data.nama || '';
                     nipEl.value = data.nip || '';
                     jabatanEl.value = data.jabatan || '';
@@ -345,9 +364,12 @@
                     statusTextEl.classList.remove('hidden');
                     statusSelectEl.classList.add('hidden');
                     keteranganEl.classList.remove('hidden');
+
+                    setDaftarButtonAsTutup();
                 } else {
                     daftarNipFound = false;
-                    // NIP tidak ditemukan -> semua field aktif/bisa diisi, NIP terisi dari pencarian
+                    // NIP tidak ditemukan -> semua field aktif/bisa diisi, NIP terisi dari pencarian,
+                    // tombol tetap/kembali "Daftar" supaya bisa submit.
                     namaEl.value = '';
                     nipEl.value = nip;
                     jabatanEl.value = '';
@@ -361,6 +383,8 @@
                     statusTextEl.classList.add('hidden');
                     statusSelectEl.classList.remove('hidden');
                     keteranganEl.classList.add('hidden');
+
+                    setDaftarButtonAsDaftar();
                 }
 
                 daftarStep2.classList.remove('hidden');
@@ -422,22 +446,9 @@
                 if (data.status === 'success') {
                     daftarSuccess.textContent = data.message || 'Pendaftaran berhasil.';
                     daftarSuccess.classList.remove('hidden');
-
-                    if (daftarNipFound) {
-                        // NIP ditemukan -> tombol Daftar berubah jadi "Tutup" warna merah,
-                        // beri jeda ~3 detik sebelum popup otomatis tertutup.
-                        btn.disabled = false;
-                        btnText.textContent = 'Tutup';
-                        btn.className = 'w-full bg-red-600 text-white py-2.5 rounded-xl font-semibold hover:bg-red-700 active:bg-red-800 transition flex items-center justify-center gap-2';
-
-                        setTimeout(() => {
-                            daftarModal.classList.replace('flex', 'hidden');
-                        }, 3000);
-                    } else {
-                        setTimeout(() => {
-                            daftarModal.classList.replace('flex', 'hidden');
-                        }, 2000);
-                    }
+                    setTimeout(() => {
+                        daftarModal.classList.replace('flex', 'hidden');
+                    }, 2000);
                 } else {
                     daftarError.textContent = data.message || 'Gagal mendaftar.';
                     daftarError.classList.remove('hidden');
@@ -446,12 +457,8 @@
                 daftarError.textContent = 'Koneksi ke server gagal, pastikan redirector aktif.';
                 daftarError.classList.remove('hidden');
             } finally {
-                // Jangan kembalikan tombol ke "Daftar" kalau sedang menampilkan "Tutup"
-                // (kasus sukses + NIP ditemukan) — biarkan tetap "Tutup" warna merah.
-                if (btnText.textContent !== 'Tutup') {
-                    btn.disabled = false;
-                    btnText.textContent = originalText;
-                }
+                btn.disabled = false;
+                btnText.textContent = originalText;
             }
         });
     </script>
