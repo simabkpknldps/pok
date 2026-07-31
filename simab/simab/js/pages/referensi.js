@@ -541,6 +541,14 @@ async function refLoadRekeningDataAll() {
     }
 }
 
+function refBankOptions(selected) {
+    const bankList = (typeof CS_DAFTAR_BANK !== 'undefined') ? CS_DAFTAR_BANK : [];
+    const extra = (selected && !bankList.includes(selected))
+        ? `<option value="${selected}" selected>${selected}</option>` : '';
+    return `<option value="">-- Pilih Bank --</option>${extra}${bankList.map(b =>
+        `<option value="${b}" ${b === selected ? 'selected' : ''}>${b}</option>`).join('')}`;
+}
+
 function refRenderRekeningTable(keyword) {
     const tbody = document.getElementById('ref-rekening-tbody');
     const emptyMsg = document.getElementById('ref-rekening-empty');
@@ -559,11 +567,99 @@ function refRenderRekeningTable(keyword) {
     emptyMsg.classList.add('hidden');
 
     tbody.innerHTML = filtered.map(row => `
-        <tr class="hover:bg-slate-50">
+        <tr data-row="${row.row}" class="hover:bg-slate-50">
             <td class="py-2 px-4">${row.nama || '-'}</td>
             <td class="py-2 px-4 text-slate-600 whitespace-nowrap">${row.nip || '-'}</td>
-            <td class="py-2 px-4">${row.namaBank || '-'}</td>
-            <td class="py-2 px-4 whitespace-nowrap">${row.norek || '-'}</td>
+            <td class="py-2 px-4">
+                <select class="ref-rek-namabank ${refInputClass}" disabled>${refBankOptions(row.namaBank)}</select>
+            </td>
+            <td class="py-2 px-4">
+                <input type="text" class="ref-rek-norek ${refInputClass}" value="${row.norek || ''}" readonly>
+            </td>
+            <td class="py-2 px-4">
+                <div class="flex items-center justify-center gap-2">
+                    ${refIsAdmin() ? `
+                    <button class="ref-rek-btnEdit text-sky-600 hover:text-sky-800" title="Ubah"><i class="fa-solid fa-pen"></i></button>
+                    <button class="ref-rek-btnSave hidden text-green-600 hover:text-green-800" title="Simpan"><i class="fa-solid fa-floppy-disk"></i></button>
+                    <button class="ref-rek-btnCancel hidden text-slate-400 hover:text-slate-600" title="Batal"><i class="fa-solid fa-xmark"></i></button>
+                    ` : refAksiCell('ref-rek-locked')}
+                </div>
+            </td>
         </tr>
     `).join('');
+
+    if (refIsAdmin()) {
+        tbody.querySelectorAll('tr').forEach(tr => refBindRekeningRow(tr));
+    }
+}
+
+function refBindRekeningRow(tr) {
+    const rowId = tr.getAttribute('data-row');
+    const bankSelect = tr.querySelector('.ref-rek-namabank');
+    const norekInput = tr.querySelector('.ref-rek-norek');
+    const btnEdit = tr.querySelector('.ref-rek-btnEdit');
+    const btnSave = tr.querySelector('.ref-rek-btnSave');
+    const btnCancel = tr.querySelector('.ref-rek-btnCancel');
+
+    let originalValues = {};
+
+    function setEditing(on) {
+        bankSelect.disabled = !on;
+        bankSelect.classList.toggle('bg-slate-100', !on);
+        bankSelect.classList.toggle('bg-white', on);
+        norekInput.toggleAttribute('readonly', !on);
+        norekInput.classList.toggle('bg-slate-100', !on);
+        norekInput.classList.toggle('bg-white', on);
+
+        btnEdit.classList.toggle('hidden', on);
+        btnSave.classList.toggle('hidden', !on);
+        btnCancel.classList.toggle('hidden', !on);
+    }
+
+    btnEdit.onclick = () => {
+        originalValues = { namaBank: bankSelect.value, norek: norekInput.value };
+        setEditing(true);
+        norekInput.focus();
+    };
+
+    btnCancel.onclick = () => {
+        bankSelect.value = originalValues.namaBank;
+        norekInput.value = originalValues.norek;
+        setEditing(false);
+    };
+
+    btnSave.onclick = async () => {
+        const namaBank = bankSelect.value;
+        const norek = norekInput.value.trim();
+
+        const payload = {
+            action: 'updateRekeningRow',
+            nip: localStorage.getItem('nip') || '',
+            row: rowId,
+            namaBank, norek
+        };
+
+        btnSave.disabled = true;
+        const originalIcon = btnSave.innerHTML;
+        btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const result = await apiPost(payload);
+            if (result.status === 'success') {
+                const item = refRekeningData.find(r => String(r.row) === String(rowId));
+                if (item) {
+                    item.namaBank = namaBank;
+                    item.norek = norek;
+                }
+                setEditing(false);
+            } else {
+                alert(result.message || 'Gagal menyimpan data rekening');
+            }
+            btnSave.innerHTML = originalIcon;
+            btnSave.disabled = false;
+        } catch (e) {
+            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
+            btnSave.innerHTML = originalIcon;
+            btnSave.disabled = false;
+        }
+    };
 }
