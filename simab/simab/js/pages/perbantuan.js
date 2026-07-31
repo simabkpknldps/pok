@@ -153,10 +153,9 @@ function pbRenderTable(rows) {
     emptyState.classList.add('hidden');
 
     tbody.innerHTML = rows.map(r => {
-        // User dengan akses terbatas (ref_pegawai kolom H = 0) hanya boleh
-        // melihat tombol Detil untuk baris yang statusnya BUKAN "Rekam Data".
-        // Untuk baris berstatus "Rekam Data", semua tombol tetap tampil.
-        const showFullActions = !pbIsRestrictedUser() || r.P === 'Rekam Data';
+        // Tombol Ubah & Hapus HANYA muncul untuk baris berstatus "Rekam Data" —
+        // berlaku untuk semua user termasuk admin. Selain itu cuma tombol Detil.
+        const showFullActions = r.P === 'Rekam Data';
         const actionsHtml = showFullActions ? `
                     <button class="pb-btn-edit hover:text-sky-600" title="Ubah"><i class="fa-solid fa-pencil"></i></button>
                     <button class="pb-btn-detil hover:text-slate-800" title="Detil"><i class="fa-solid fa-eye"></i></button>
@@ -193,45 +192,10 @@ function pbRenderTable(rows) {
         const btnDetil = tr.querySelector('.pb-btn-detil');
         const btnHapus = tr.querySelector('.pb-btn-hapus');
 
-        if (btnEdit) {
-            btnEdit.onclick = () => {
-                if (!pbCanEditOrDelete(row)) {
-                    alert('Data tidak dapat diubah karena status bukan "Rekam Data".');
-                    return;
-                }
-                pbOpenEditModal(row);
-            };
-        }
+        if (btnEdit) btnEdit.onclick = () => pbOpenEditModal(row);
         if (btnDetil) btnDetil.onclick = () => pbOpenDetilModal(row);
-        if (btnHapus) {
-            btnHapus.onclick = () => {
-                if (!pbCanEditOrDelete(row)) {
-                    alert('Data tidak dapat dihapus karena status bukan "Rekam Data".');
-                    return;
-                }
-                pbHapusRow(row);
-            };
-        }
+        if (btnHapus) btnHapus.onclick = () => pbHapusRow(row);
     });
-}
-
-// User dengan akses terbatas (ref_pegawai kolom H = 0): hanya bisa melihat
-// tombol Detil untuk baris yang statusnya bukan "Rekam Data" di halaman
-// Perbantuan (lihat pbRenderTable).
-function pbIsRestrictedUser() {
-    if (typeof window.isAksesTerbatas === 'function') return window.isAksesTerbatas();
-    return localStorage.getItem('aksesMenu') === '0';
-}
-
-// Admin: bisa ubah/hapus data apapun statusnya.
-// Non-admin: hanya bisa ubah/hapus data yang statusnya masih "Rekam Data".
-function pbIsAdmin() {
-    const admin = localStorage.getItem('admin');
-    return admin === '1' || admin === 'true';
-}
-
-function pbCanEditOrDelete(row) {
-    return pbIsAdmin() || row.P === 'Rekam Data';
 }
 
 // ==========================================
@@ -257,6 +221,16 @@ function pbTuAddPegawaiRow(tbody, nama, nip, status, namaBank, norek) {
         `<option value="${pbEsc(b)}" ${b === namaBank ? 'selected' : ''}>${pbEsc(b)}</option>`
     ).join('') + ((namaBank && !bankList.includes(namaBank)) ? `<option value="${pbEsc(namaBank)}" selected>${pbEsc(namaBank)}</option>` : '');
 
+    // Nama Bank & No Rekening read-only kalau datanya sudah ada di database
+    // (hasil pencarian pegawai yang cocok). Kalau masih kosong (belum ada di
+    // database), boleh diisi/diubah manual.
+    const bankSudahAda = !!namaBank;
+    const norekSudahAda = !!norek;
+    const bankDisabledAttr = bankSudahAda ? 'disabled' : '';
+    const bankClass = bankSudahAda ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white';
+    const norekReadonlyAttr = norekSudahAda ? 'readonly' : '';
+    const norekClass = norekSudahAda ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white';
+
     const tr = document.createElement('tr');
     tr.className = 'border-b border-slate-100';
     tr.dataset.nama = nama;
@@ -272,9 +246,9 @@ function pbTuAddPegawaiRow(tbody, nama, nip, status, namaBank, norek) {
         </td>
         <td class="p-2"><input type="text" inputmode="numeric" class="pb-tu-jumlah w-full px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="0"></td>
         <td class="p-2">
-            <select class="pb-tu-namabank w-full px-2 py-1 border border-slate-300 rounded-lg text-xs">${bankOptionsHtml}</select>
+            <select class="pb-tu-namabank w-full px-2 py-1 border border-slate-300 rounded-lg text-xs ${bankClass}" ${bankDisabledAttr}>${bankOptionsHtml}</select>
         </td>
-        <td class="p-2"><input type="text" inputmode="numeric" class="pb-tu-norek w-full px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="No Rekening" value="${pbEsc(norek || '')}"></td>
+        <td class="p-2"><input type="text" inputmode="numeric" class="pb-tu-norek w-full px-2 py-1 border border-slate-300 rounded-lg text-xs ${norekClass}" placeholder="No Rekening" value="${pbEsc(norek || '')}" ${norekReadonlyAttr}></td>
         <td class="p-2 text-center">
             <button type="button" class="pb-tu-btnHapusPegawai text-red-400 hover:text-red-600" title="Hapus">
                 <i class="fa-solid fa-trash"></i>
