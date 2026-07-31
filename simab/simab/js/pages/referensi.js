@@ -32,7 +32,42 @@ function refAksiCell(disabledIconClass) {
     return `<span class="${disabledIconClass} text-slate-300" title="Hanya admin yang bisa mengubah data ini"><i class="fa-solid fa-lock"></i></span>`;
 }
 
+// Popup konfirmasi hapus (pengganti confirm() browser). onConfirm dipanggil
+// kalau user klik "Hapus"; popup ditutup otomatis setelahnya baik konfirmasi
+// maupun dibatalkan.
+function refConfirmHapusPopup(message, onConfirm) {
+    const { overlay, popup } = commonOpenOverlay(`
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-800">Hapus Data</h3>
+        </div>
+        <p class="text-sm text-slate-600">${message}</p>
+        <div class="flex justify-end gap-2 mt-3">
+            <button id="ref-hapus-cancelBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">Batal</button>
+            <button id="ref-hapus-confirmBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-trash mr-1"></i> Hapus
+            </button>
+        </div>
+    `, 'max-w-sm');
+
+    popup.querySelector('#ref-hapus-cancelBtn').onclick = () => overlay.remove();
+    popup.querySelector('#ref-hapus-confirmBtn').onclick = () => {
+        overlay.remove();
+        onConfirm();
+    };
+}
+
 function initReferensiPage() {
+    // Setiap kali halaman Referensi dibuka (termasuk balik lagi setelah pindah
+    // ke halaman lain), selalu ambil data terbaru dari database — jangan pakai
+    // cache lama dari kunjungan sebelumnya (yang tersimpan di refSbmData dkk,
+    // variabel global yang tidak ke-reset otomatis oleh router SPA).
+    refSbmLoaded = false;
+    refPegawaiLoaded = false;
+    refRekeningLoaded = false;
+
     const tabBtnSbm = document.getElementById('ref-tabBtnSbm');
     const tabBtnPegawai = document.getElementById('ref-tabBtnPegawai');
     const tabBtnRekening = document.getElementById('ref-tabBtnRekening');
@@ -250,24 +285,25 @@ function refBindSbmRow(tr) {
         }
     };
 
-    btnDelete.onclick = async () => {
+    btnDelete.onclick = () => {
         const kabupaten = tr.querySelector('td').innerText;
-        if (!confirm(`Hapus data SBM untuk "${kabupaten}"?`)) return;
-        btnDelete.disabled = true;
-        try {
-            const result = await apiPost({ action: 'deleteRefSbmRow', nip: localStorage.getItem('nip') || '', row: rowId });
-            if (result.status === 'success') {
-                refSbmData = refSbmData.filter(r => String(r.row) !== String(rowId));
-                showToast('Data SBM berhasil dihapus');
-                refRenderSbmTable(document.getElementById('ref-sbm-search').value);
-            } else {
-                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+        refConfirmHapusPopup(`Hapus data SBM untuk <span class="font-medium text-slate-800">"${kabupaten}"</span>?`, async () => {
+            btnDelete.disabled = true;
+            try {
+                const result = await apiPost({ action: 'deleteRefSbmRow', nip: localStorage.getItem('nip') || '', row: rowId });
+                if (result.status === 'success') {
+                    refSbmData = refSbmData.filter(r => String(r.row) !== String(rowId));
+                    showToast('Data SBM berhasil dihapus');
+                    refRenderSbmTable(document.getElementById('ref-sbm-search').value);
+                } else {
+                    alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+                    btnDelete.disabled = false;
+                }
+            } catch (e) {
+                alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
                 btnDelete.disabled = false;
             }
-        } catch (e) {
-            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
-            btnDelete.disabled = false;
-        }
+        });
     };
 }
 
@@ -493,24 +529,25 @@ function refBindPegawaiRow(tr) {
         }
     };
 
-    btnDelete.onclick = async () => {
+    btnDelete.onclick = () => {
         const nama = namaInput.value;
-        if (!confirm(`Hapus data pegawai "${nama}"?`)) return;
-        btnDelete.disabled = true;
-        try {
-            const result = await apiPost({ action: 'deleteRefPegawaiRow', nip: localStorage.getItem('nip') || '', row: rowId });
-            if (result.status === 'success') {
-                refPegawaiData = refPegawaiData.filter(r => String(r.row) !== String(rowId));
-                showToast('Data pegawai berhasil dihapus');
-                refRenderPegawaiTable(document.getElementById('ref-pegawai-search').value);
-            } else {
-                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+        refConfirmHapusPopup(`Hapus data pegawai <span class="font-medium text-slate-800">"${nama}"</span>?`, async () => {
+            btnDelete.disabled = true;
+            try {
+                const result = await apiPost({ action: 'deleteRefPegawaiRow', nip: localStorage.getItem('nip') || '', row: rowId });
+                if (result.status === 'success') {
+                    refPegawaiData = refPegawaiData.filter(r => String(r.row) !== String(rowId));
+                    showToast('Data pegawai berhasil dihapus');
+                    refRenderPegawaiTable(document.getElementById('ref-pegawai-search').value);
+                } else {
+                    alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+                    btnDelete.disabled = false;
+                }
+            } catch (e) {
+                alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
                 btnDelete.disabled = false;
             }
-        } catch (e) {
-            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
-            btnDelete.disabled = false;
-        }
+        });
     };
 }
 
