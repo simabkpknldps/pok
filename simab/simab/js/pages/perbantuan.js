@@ -28,6 +28,29 @@ let pbAllRows = [];
 let pbPegawaiList = [];
 let pbLokasiList = [];
 
+// Daftar Kanpus, Kanwil, dan KPKNL DJKN se-Indonesia — dipakai untuk dropdown
+// "Kantor" (di samping ID Kegiatan) pada popup Tambah Usulan Perbantuan.
+const PB_DAFTAR_KANTOR = [
+    'Kantor Pusat DJKN',
+    'Kanwil DJKN Aceh', 'KPKNL Banda Aceh', 'KPKNL Lhokseumawe',
+    'Kanwil DJKN Sumatera Utara', 'KPKNL Medan', 'KPKNL Pematangsiantar', 'KPKNL Kisaran', 'KPKNL Padangsidimpuan',
+    'Kanwil DJKN Riau, Sumatera Barat, dan Kepulauan Riau', 'KPKNL Pekanbaru', 'KPKNL Dumai', 'KPKNL Padang', 'KPKNL Bukittinggi', 'KPKNL Batam',
+    'Kanwil DJKN Sumatera Selatan, Jambi, dan Bangka Belitung', 'KPKNL Palembang', 'KPKNL Lahat', 'KPKNL Jambi', 'KPKNL Pangkal Pinang',
+    'Kanwil DJKN Lampung dan Bengkulu', 'KPKNL Bandar Lampung', 'KPKNL Metro', 'KPKNL Bengkulu',
+    'Kanwil DJKN Banten', 'KPKNL Serang', 'KPKNL Tangerang I', 'KPKNL Tangerang II',
+    'Kanwil DJKN DKI Jakarta', 'KPKNL Jakarta I', 'KPKNL Jakarta II', 'KPKNL Jakarta III', 'KPKNL Jakarta IV', 'KPKNL Jakarta V',
+    'Kanwil DJKN Jawa Barat', 'KPKNL Bandung', 'KPKNL Bekasi', 'KPKNL Bogor', 'KPKNL Purwakarta', 'KPKNL Tasikmalaya', 'KPKNL Cirebon',
+    'Kanwil DJKN Jawa Tengah dan D.I. Yogyakarta', 'KPKNL Semarang', 'KPKNL Surakarta', 'KPKNL Pekalongan', 'KPKNL Tegal', 'KPKNL Purwokerto', 'KPKNL Yogyakarta',
+    'Kanwil DJKN Jawa Timur', 'KPKNL Surabaya', 'KPKNL Sidoarjo', 'KPKNL Malang', 'KPKNL Jember', 'KPKNL Pamekasan', 'KPKNL Madiun',
+    'Kanwil DJKN Kalimantan Barat', 'KPKNL Pontianak', 'KPKNL Singkawang',
+    'Kanwil DJKN Kalimantan Selatan dan Tengah', 'KPKNL Banjarmasin', 'KPKNL Palangkaraya', 'KPKNL Pangkalan Bun',
+    'Kanwil DJKN Kalimantan Timur dan Utara', 'KPKNL Balikpapan', 'KPKNL Samarinda', 'KPKNL Bontang', 'KPKNL Tarakan',
+    'Kanwil DJKN Bali dan Nusa Tenggara', 'KPKNL Denpasar', 'KPKNL Singaraja', 'KPKNL Mataram', 'KPKNL Bima', 'KPKNL Kupang',
+    'Kanwil DJKN Sulawesi Selatan, Tenggara, dan Barat', 'KPKNL Makassar', 'KPKNL Pare Pare', 'KPKNL Palopo', 'KPKNL Kendari', 'KPKNL Mamuju',
+    'Kanwil DJKN Sulawesi Utara, Tengah, Gorontalo, dan Maluku Utara', 'KPKNL Manado', 'KPKNL Palu', 'KPKNL Gorontalo', 'KPKNL Ternate',
+    'Kanwil DJKN Papua, Papua Barat, dan Maluku', 'KPKNL Jayapura', 'KPKNL Biak', 'KPKNL Sorong', 'KPKNL Ambon'
+];
+
 const PB_STATUS_STYLE = {
     'Rekam Data': 'bg-pink-100 text-pink-700',
     'Terlaksana': 'bg-slate-200 text-slate-700',
@@ -219,7 +242,7 @@ function pbBindTambahUsulan() {
     if (btn) btn.onclick = pbOpenTambahUsulanModal;
 }
 
-function pbTuAddPegawaiRow(tbody, nama, nip, status) {
+function pbTuAddPegawaiRow(tbody, nama, nip, status, namaBank, norek) {
     const emptyRow = tbody.querySelector('.pb-pegawai-empty-row');
     if (emptyRow) emptyRow.remove();
 
@@ -227,6 +250,12 @@ function pbTuAddPegawaiRow(tbody, nama, nip, status) {
     let statusVal = '';
     if (status === 1 || status === '1') statusVal = '1';
     else if (status === 0 || status === '0') statusVal = '0';
+
+    // Dropdown Nama Bank — pakai daftar bank yang sama dengan menu Settings (CS_DAFTAR_BANK).
+    const bankList = (typeof CS_DAFTAR_BANK !== 'undefined') ? CS_DAFTAR_BANK : [];
+    const bankOptionsHtml = `<option value="">-- Pilih Bank --</option>` + bankList.map(b =>
+        `<option value="${pbEsc(b)}" ${b === namaBank ? 'selected' : ''}>${pbEsc(b)}</option>`
+    ).join('') + ((namaBank && !bankList.includes(namaBank)) ? `<option value="${pbEsc(namaBank)}" selected>${pbEsc(namaBank)}</option>` : '');
 
     const tr = document.createElement('tr');
     tr.className = 'border-b border-slate-100';
@@ -242,6 +271,10 @@ function pbTuAddPegawaiRow(tbody, nama, nip, status) {
             </select>
         </td>
         <td class="p-2"><input type="text" inputmode="numeric" class="pb-tu-jumlah w-full px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="0"></td>
+        <td class="p-2">
+            <select class="pb-tu-namabank w-full px-2 py-1 border border-slate-300 rounded-lg text-xs">${bankOptionsHtml}</select>
+        </td>
+        <td class="p-2"><input type="text" inputmode="numeric" class="pb-tu-norek w-full px-2 py-1 border border-slate-300 rounded-lg text-xs" placeholder="No Rekening" value="${pbEsc(norek || '')}"></td>
         <td class="p-2 text-center">
             <button type="button" class="pb-tu-btnHapusPegawai text-red-400 hover:text-red-600" title="Hapus">
                 <i class="fa-solid fa-trash"></i>
@@ -253,7 +286,7 @@ function pbTuAddPegawaiRow(tbody, nama, nip, status) {
         tr.remove();
         if (!tbody.querySelector('tr')) {
             tbody.innerHTML = `<tr class="pb-pegawai-empty-row">
-                <td colspan="5" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
+                <td colspan="7" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
             </tr>`;
         }
     };
@@ -266,6 +299,7 @@ function pbOpenTambahUsulanModal() {
 
     const tujuanOptions = pbLokasiList.map(t => `<option value="${pbEsc(t)}"></option>`).join('');
     const pegawaiOptions = pbPegawaiList.map(p => `<option value="${pbEsc(p.nama || p.Nama || '')}"></option>`).join('');
+    const kantorOptions = PB_DAFTAR_KANTOR.map(k => `<option value="${pbEsc(k)}"></option>`).join('');
 
     const { overlay, popup } = commonOpenOverlay(`
         <div class="flex items-center justify-between mb-1">
@@ -273,8 +307,17 @@ function pbOpenTambahUsulanModal() {
             <button id="pb-tu-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
-        <label class="${labelClass}">ID Kegiatan</label>
-        <input id="pb-tu-idkegiatan" type="text" placeholder="ID Kegiatan" class="${inputClass}">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+                <label class="${labelClass}">ID Kegiatan</label>
+                <input id="pb-tu-idkegiatan" type="text" placeholder="ID Kegiatan" class="${inputClass}">
+            </div>
+            <div>
+                <label class="${labelClass}">Kantor (KPKNL / Kanwil DJKN)</label>
+                <input id="pb-tu-kantor" type="text" placeholder="Ketik nama kantor..." list="pb-tu-kantor-list" autocomplete="off" class="${inputClass}">
+                <datalist id="pb-tu-kantor-list">${kantorOptions}</datalist>
+            </div>
+        </div>
 
         <label class="${labelClass}">No ST / Uraian Kegiatan</label>
         <input id="pb-tu-nost" type="text" placeholder="Contoh: ST-0123/KNL.1404/2026" class="${inputClass}">
@@ -318,12 +361,14 @@ function pbOpenTambahUsulanModal() {
                         <th class="p-2 text-left">NIP</th>
                         <th class="p-2 text-left">Status</th>
                         <th class="p-2 text-left">Jumlah RAB</th>
+                        <th class="p-2 text-left">Nama Bank</th>
+                        <th class="p-2 text-left">No Rekening</th>
                         <th class="p-2 text-center w-14">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="pb-tu-pegawai-tbody">
                     <tr class="pb-pegawai-empty-row">
-                        <td colspan="5" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
+                        <td colspan="7" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
                     </tr>
                 </tbody>
             </table>
@@ -356,8 +401,10 @@ function pbOpenTambahUsulanModal() {
         const nama = match ? (match.nama || match.Nama) : val;
         const nip = match ? (match.nip || match.NIP || '') : '';
         const status = match ? (match.status !== undefined ? match.status : match.Status) : '';
+        const namaBank = match ? (match.namaBank || match.NamaBank || '') : '';
+        const norek = match ? (match.norek || match.Norek || '') : '';
 
-        pbTuAddPegawaiRow(tbody, nama, nip, status);
+        pbTuAddPegawaiRow(tbody, nama, nip, status, namaBank, norek);
         searchInput.value = '';
         searchInput.focus();
     };
@@ -402,7 +449,9 @@ function pbOpenTambahUsulanModal() {
             nama: tr.dataset.nama,
             nip: tr.querySelector('.pb-tu-nip').value.trim(),
             status: tr.querySelector('.pb-tu-status').value,
-            jumlah: tr.querySelector('.pb-tu-jumlah').value.replace(/\./g, '')
+            jumlah: tr.querySelector('.pb-tu-jumlah').value.replace(/\./g, ''),
+            namaBank: tr.querySelector('.pb-tu-namabank').value,
+            norek: tr.querySelector('.pb-tu-norek').value.trim()
         }));
 
         btn.disabled = true;
@@ -411,10 +460,11 @@ function pbOpenTambahUsulanModal() {
 
         try {
             const namaUser = localStorage.getItem('nama') || '';
+            const kantor = popup.querySelector('#pb-tu-kantor').value.trim();
 
             const result = await apiPost({
                 action: 'simpanPerbantuan',
-                idKegiatan, noSt, tglSt, tglMulai, tglSelesai, tujuan,
+                idKegiatan, kantor, noSt, tglSt, tglMulai, tglSelesai, tujuan,
                 userLogin: namaUser,
                 pelaksanaData
             });
@@ -509,12 +559,14 @@ function pbOpenEditModal(row) {
                         <th class="p-2 text-left">NIP</th>
                         <th class="p-2 text-left">Status</th>
                         <th class="p-2 text-left">Jumlah RAB</th>
+                        <th class="p-2 text-left">Nama Bank</th>
+                        <th class="p-2 text-left">No Rekening</th>
                         <th class="p-2 text-center w-14">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="pb-ed-pegawai-tbody">
                     <tr class="pb-pegawai-empty-row">
-                        <td colspan="5" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
+                        <td colspan="7" class="p-3 text-center text-slate-400">Belum ada pegawai ditambahkan.</td>
                     </tr>
                 </tbody>
             </table>
@@ -551,7 +603,9 @@ function pbOpenEditModal(row) {
             tbody,
             r.D,
             existingMatch ? (existingMatch.nip || existingMatch.NIP || '') : '',
-            existingMatch ? (existingMatch.status !== undefined ? existingMatch.status : existingMatch.Status) : ''
+            existingMatch ? (existingMatch.status !== undefined ? existingMatch.status : existingMatch.Status) : '',
+            existingMatch ? (existingMatch.namaBank || existingMatch.NamaBank || '') : '',
+            existingMatch ? (existingMatch.norek || existingMatch.Norek || '') : ''
         );
         const lastRowEl = tbody.querySelector('tr:last-child');
         const jumlahInput = lastRowEl ? lastRowEl.querySelector('.pb-tu-jumlah') : null;
@@ -568,8 +622,10 @@ function pbOpenEditModal(row) {
         const nama = match ? (match.nama || match.Nama) : val;
         const nip = match ? (match.nip || match.NIP || '') : '';
         const status = match ? (match.status !== undefined ? match.status : match.Status) : '';
+        const namaBank = match ? (match.namaBank || match.NamaBank || '') : '';
+        const norek = match ? (match.norek || match.Norek || '') : '';
 
-        pbTuAddPegawaiRow(tbody, nama, nip, status);
+        pbTuAddPegawaiRow(tbody, nama, nip, status, namaBank, norek);
         searchInput.value = '';
         searchInput.focus();
     };
@@ -612,7 +668,9 @@ function pbOpenEditModal(row) {
             nama: tr.dataset.nama,
             nip: tr.querySelector('.pb-tu-nip').value.trim(),
             status: tr.querySelector('.pb-tu-status').value,
-            jumlah: tr.querySelector('.pb-tu-jumlah').value.replace(/\./g, '')
+            jumlah: tr.querySelector('.pb-tu-jumlah').value.replace(/\./g, ''),
+            namaBank: tr.querySelector('.pb-tu-namabank').value,
+            norek: tr.querySelector('.pb-tu-norek').value.trim()
         }));
 
         btn.disabled = true;
