@@ -11,7 +11,6 @@
  * P status, R nomorSPM.
  */
 
-
 let kgAllRows = [];
 let kgCurrentTableRowsData = [];
 let kgPegawaiList = [];
