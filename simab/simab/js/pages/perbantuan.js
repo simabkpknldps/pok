@@ -445,6 +445,9 @@ function pbOpenTambahUsulanModal() {
 
             if (result.status === 'success') {
                 showToast('Usulan perbantuan berhasil ditambahkan');
+                if (Array.isArray(result.refPegawaiErrors) && result.refPegawaiErrors.length > 0) {
+                    alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disinkronkan ke ref_pegawai:\n\n' + result.refPegawaiErrors.join('\n'));
+                }
                 overlay.remove();
                 initPerbantuanPage();
             } else {
@@ -665,6 +668,9 @@ function pbOpenEditModal(row) {
 
             if (result.status === 'success') {
                 showToast('Data perbantuan berhasil diubah');
+                if (Array.isArray(result.refPegawaiErrors) && result.refPegawaiErrors.length > 0) {
+                    alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disinkronkan ke ref_pegawai:\n\n' + result.refPegawaiErrors.join('\n'));
+                }
                 overlay.remove();
                 initPerbantuanPage();
             } else {
