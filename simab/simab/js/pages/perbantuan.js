@@ -382,7 +382,7 @@ function pbOpenTambahUsulanModal() {
                 <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
             </button>
         </div>
-    `, 'max-w-2xl');
+    `, 'max-w-4xl');
 
     // Tutup popup (otomatis menghapus semua isian karena elemen dihapus dari DOM)
     popup.querySelector('#pb-tu-closeBtn').onclick = () => overlay.remove();
@@ -580,7 +580,7 @@ function pbOpenEditModal(row) {
                 <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
             </button>
         </div>
-    `, 'max-w-2xl');
+    `, 'max-w-4xl');
 
     popup.querySelector('#pb-ed-closeBtn').onclick = () => overlay.remove();
     popup.querySelector('#pb-ed-btnTutup').onclick = () => overlay.remove();
