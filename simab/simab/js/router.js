@@ -23,15 +23,16 @@ const PAGE_INIT = {
 };
 
 // Menu yang boleh diakses user dengan akses terbatas (ref_pegawai kolom H = 0).
-// Selain ini akan ditolak & diarahkan ke halaman Perjadinku.
+// Selain ini akan ditolak & diarahkan ke halaman Perbantuan.
 const RESTRICTED_ALLOWED_PAGES = ['perjadin', 'referensi', 'perbantuan'];
+const RESTRICTED_DEFAULT_PAGE = 'perbantuan';
 
 async function navigate(page) {
     // Guard akses menu terbatas (kolom H ref_pegawai = 0)
     if (window.isAksesTerbatas && window.isAksesTerbatas() && !RESTRICTED_ALLOWED_PAGES.includes(page)) {
         alert('Anda tidak memiliki akses ke menu ini.');
-        if (page !== 'perjadin') {
-            navigate('perjadin');
+        if (page !== RESTRICTED_DEFAULT_PAGE) {
+            navigate(RESTRICTED_DEFAULT_PAGE);
         }
         return;
     }
@@ -73,6 +74,6 @@ async function navigate(page) {
 window.navigate = navigate;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const startPage = (window.isAksesTerbatas && window.isAksesTerbatas()) ? 'perjadin' : 'dashboard';
+    const startPage = (window.isAksesTerbatas && window.isAksesTerbatas()) ? RESTRICTED_DEFAULT_PAGE : 'dashboard';
     navigate(startPage);
 });
