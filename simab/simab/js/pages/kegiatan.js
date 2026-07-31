@@ -339,6 +339,7 @@ function kgShowCopyPopup(tr) {
 // ---- Ubah Kegiatan ----
 function kgShowEditPopup(tr) {
     const idKegiatan = tr.dataset.id;
+    const mak = tr.cells[0].textContent.trim();
     const uraian = tr.cells[1].textContent;
     const pelaksana = tr.cells[2].textContent;
     const tujuan = tr.cells[3].textContent;
@@ -347,6 +348,13 @@ function kgShowEditPopup(tr) {
 
     const { overlay, popup } = kgOpenOverlay(`
         <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Ubah Kegiatan #${idKegiatan}</h3>
+        <label class="${kgLabelClass}">MAK</label>
+        <div class="flex gap-2">
+            <input id="kg-editMak" type="text" readonly value="${mak}" class="${kgInputClass} bg-slate-100 text-slate-500 cursor-not-allowed flex-1">
+            <button id="kg-editUbahMak" type="button" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium shrink-0 whitespace-nowrap">
+                <i class="fa-solid fa-list-check mr-1"></i> Ubah MAK
+            </button>
+        </div>
         <label class="${kgLabelClass}">Uraian</label>
         <input id="kg-editUraian" type="text" value="${uraian}" class="${kgInputClass}">
         <label class="${kgLabelClass}">Pelaksana</label>
@@ -363,6 +371,12 @@ function kgShowEditPopup(tr) {
         </div>
     `);
 
+    popup.querySelector('#kg-editUbahMak').onclick = () => {
+        kgOpenPilihMakPopup((kodeMak) => {
+            popup.querySelector('#kg-editMak').value = kodeMak;
+        });
+    };
+
     popup.querySelector('#kg-editCancel').onclick = () => overlay.remove();
     popup.querySelector('#kg-editUpdate').onclick = async function () {
         const btn = this;
@@ -373,6 +387,7 @@ function kgShowEditPopup(tr) {
                 action: 'updateKegiatanDetail',
                 kantor: localStorage.getItem('kantor'),
                 id: idKegiatan,
+                mak: document.getElementById('kg-editMak').value,
                 uraian: document.getElementById('kg-editUraian').value,
                 pelaksana: document.getElementById('kg-editPelaksana').value,
                 tujuan: document.getElementById('kg-editTujuan').value,
@@ -393,6 +408,223 @@ function kgShowEditPopup(tr) {
             btn.disabled = false;
         }
     };
+}
+
+// ==========================================================
+// ================= Popup "Pilih MAK dari POK" =============
+// ==========================================================
+// Menampilkan data POK dengan desain sama seperti halaman POK (kode, uraian,
+// pagu, blokir, realisasi, sisa, sumber dana, dikelompokkan per Seksi/Bidang
+// dan bisa expand/collapse) — tapi kolom Aksi cuma tombol "Pilih" (centang).
+// Klik "Pilih" akan menutup popup ini dan mengisi textbox MAK yang dituju.
+// State (data POK, kode/seksi yang sedang expand) dibuat terpisah dari
+// pok.js (window.rawPokData dkk) supaya tidak saling bentrok kalau kedua
+// script sama-sama ter-load di halaman yang sama.
+let kgMakPokData = [];
+let kgMakExpandedCodes = new Set();
+let kgMakExpandedSeksi = new Set();
+let kgMakOnPilih = null;
+
+function kgMakSeksiBadgeClass(seksi) {
+    let hash = 0;
+    for (let i = 0; i < seksi.length; i++) hash = seksi.charCodeAt(i) + ((hash << 5) - hash);
+    const palette = [
+        'bg-sky-100 text-sky-800', 'bg-emerald-100 text-emerald-800', 'bg-amber-100 text-amber-800',
+        'bg-purple-100 text-purple-800', 'bg-rose-100 text-rose-800', 'bg-indigo-100 text-indigo-800',
+        'bg-teal-100 text-teal-800', 'bg-orange-100 text-orange-800'
+    ];
+    return palette[Math.abs(hash) % palette.length];
+}
+
+async function kgOpenPilihMakPopup(onPilih) {
+    kgMakOnPilih = onPilih;
+    kgMakExpandedCodes = new Set();
+    kgMakExpandedSeksi = new Set();
+
+    const { overlay, popup } = kgOpenOverlay(`
+        <div class="flex items-center justify-between mb-1">
+            <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-list-check mr-2"></i>Pilih MAK dari POK</h3>
+            <button id="kg-mak-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <input type="text" id="kg-mak-search" placeholder="Cari kode / uraian..."
+            class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+        <div class="border border-slate-200 rounded-xl max-h-[65vh] overflow-y-auto">
+            <table class="w-full text-sm">
+                <tbody id="kg-mak-tbody">
+                    <tr><td class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    `, 'max-w-4xl');
+
+    popup.querySelector('#kg-mak-closeBtn').onclick = () => overlay.remove();
+    popup.querySelector('#kg-mak-search').oninput = () => kgRenderMakTable(overlay);
+
+    try {
+        const data = await apiPost({ action: 'getPOKData' });
+        if (!data || !Array.isArray(data)) throw new Error('Format data tidak valid');
+        kgMakPokData = data;
+        kgRenderMakTable(overlay);
+    } catch (e) {
+        document.getElementById('kg-mak-tbody').innerHTML =
+            `<tr><td class="text-center text-red-500 p-6">❌ Gagal memuat data POK: ${e.message || 'Tidak diketahui'}</td></tr>`;
+    }
+}
+
+function kgRenderMakTable(overlay) {
+    const tbody = document.getElementById('kg-mak-tbody');
+    if (!tbody) return;
+
+    const uniqueMap = new Map();
+    kgMakPokData.forEach(item => uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item));
+    const uniqueData = Array.from(uniqueMap.values());
+
+    const keyword = (document.getElementById('kg-mak-search')?.value || '').toLowerCase().trim();
+
+    const groups = new Map();
+    uniqueData.forEach(item => {
+        const seksi = item.bidang || 'Lainnya';
+        if (!groups.has(seksi)) groups.set(seksi, []);
+        groups.get(seksi).push(item);
+    });
+
+    // Kalau lagi mencari, otomatis buka semua seksi & induk yang relevan supaya hasil kelihatan.
+    if (keyword) {
+        groups.forEach((items, seksi) => {
+            const anyMatch = items.some(i => String(i.kode).toLowerCase().includes(keyword) || String(i.uraian || '').toLowerCase().includes(keyword));
+            if (anyMatch) kgMakExpandedSeksi.add(seksi);
+        });
+    }
+
+    const rowHtml = (i, seksi, groupItems) => {
+        const c = String(i.kode);
+        const uraian = String(i.uraian || '').toLowerCase();
+        const isParent = c.length === 12;
+        const isLeaf = c.length > 27;
+        const isChildVisible = Array.from(kgMakExpandedCodes).some(k => {
+            if (!k.startsWith(seksi + '::')) return false;
+            const p = k.slice((seksi + '::').length);
+            return c.startsWith(p) && c !== p;
+        });
+        const isMatch = keyword && (c.toLowerCase().includes(keyword) || uraian.includes(keyword));
+
+        if (!isParent && !isChildVisible && !isMatch) return '';
+
+        const depth = c.split('.').length;
+        const indentPx = Math.min(depth - 1, 5) * 18;
+
+        let rowBg = 'bg-white hover:bg-slate-100';
+        if (isMatch) rowBg = 'bg-yellow-200 hover:bg-yellow-300';
+        else if (isLeaf) rowBg = i.sumber === 'PNBP' ? 'bg-pink-200 hover:bg-pink-300' : 'bg-blue-200 hover:bg-blue-300';
+        else if (isParent) rowBg = 'bg-sky-50 hover:bg-sky-100';
+        else if (depth <= 2) rowBg = 'bg-slate-50 hover:bg-slate-100';
+
+        const textWeight = depth <= 2 ? 'font-bold text-slate-700' : (isLeaf ? 'font-normal text-slate-600' : 'font-semibold text-slate-700');
+        const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
+        const expandKey = seksi + '::' + c;
+
+        const pagu = Number(i.pagu || 0);
+        const blokir = Number(i.blokir || 0);
+        const realisasi = Number(i.realisasi || 0);
+        const sisa = Number(i.sisa || 0);
+        const paguEfektif = pagu - blokir;
+        const persenRealisasi = paguEfektif > 0 ? Math.min((realisasi / paguEfektif) * 100, 100) : 0;
+        const barColor = persenRealisasi >= 90 ? 'bg-green-500' : (persenRealisasi >= 50 ? 'bg-sky-500' : 'bg-amber-400');
+        const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
+
+        return `<tr data-kode="${c}" data-seksi="${seksi}" class="border-b transition ${rowBg} cursor-pointer">
+            <td class="p-3 font-mono text-xs ${isLeaf ? 'font-bold text-slate-700' : 'text-slate-500'} whitespace-nowrap">${c}</td>
+            <td class="p-3 ${textWeight}" style="padding-left:${12 + indentPx}px">
+                <span class="whitespace-normal break-words">${i.uraian}</span>
+                ${hasChildren ? (kgMakExpandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
+            </td>
+            <td class="p-3 text-right whitespace-nowrap">${pagu.toLocaleString('id-ID')}</td>
+            <td class="p-3 text-right whitespace-nowrap">${blokir.toLocaleString('id-ID')}</td>
+            <td class="p-3 text-right whitespace-nowrap">
+                <div>${realisasi.toLocaleString('id-ID')}</div>
+                ${paguEfektif > 0 ? `
+                    <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
+                        <div class="h-full ${barColor} rounded-full" style="width:${persenRealisasi}%"></div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">${persenRealisasi.toFixed(1)}%</div>
+                ` : ''}
+            </td>
+            <td class="p-3 text-right whitespace-nowrap ${sisaClass}">${sisa.toLocaleString('id-ID')}</td>
+            <td class="p-3 text-center whitespace-nowrap text-slate-500">${i.sumber || '-'}</td>
+            <td class="p-3 text-center whitespace-nowrap">
+                ${isLeaf ? `
+                    <button class="kg-mak-btnPilih bg-emerald-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-emerald-700" title="Pilih MAK ini">
+                        <i class="fa-solid fa-check text-[11px] leading-none w-[11px] text-center"></i>
+                    </button>
+                ` : ''}
+            </td>
+        </tr>`;
+    };
+
+    const groupHeaderRow = (seksi, count, isOpen) => `
+        <tr class="select-none">
+            <td colspan="8" class="p-3 font-bold text-sm ${kgMakSeksiBadgeClass(seksi)} kg-mak-toggleSeksi cursor-pointer" data-seksi="${seksi}">
+                <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>
+                ${seksi}
+                <span class="ml-2 font-normal text-xs opacity-70">(${count} item)</span>
+            </td>
+        </tr>`;
+
+    const columnSubHeaderRow = () => `
+        <tr class="text-slate-500 text-[11px] uppercase">
+            <td class="p-2 text-left bg-slate-50 font-semibold">Kode</td>
+            <td class="p-2 text-left bg-slate-50 font-semibold">Uraian</td>
+            <td class="p-2 text-right bg-slate-50 font-semibold">Pagu</td>
+            <td class="p-2 text-right bg-slate-50 font-semibold">Blokir</td>
+            <td class="p-2 text-right bg-slate-50 font-semibold">Realisasi</td>
+            <td class="p-2 text-right bg-slate-50 font-semibold">Sisa</td>
+            <td class="p-2 text-center bg-slate-50 font-semibold">SD</td>
+            <td class="p-2 text-center bg-slate-50 font-semibold">Aksi</td>
+        </tr>`;
+
+    let html = '';
+    groups.forEach((items, seksi) => {
+        const isOpen = kgMakExpandedSeksi.has(seksi);
+        html += groupHeaderRow(seksi, items.length, isOpen);
+        if (isOpen) {
+            html += columnSubHeaderRow();
+            html += items.map(i => rowHtml(i, seksi, items)).join('');
+        }
+    });
+
+    tbody.innerHTML = html;
+
+    // Bind toggle seksi
+    tbody.querySelectorAll('.kg-mak-toggleSeksi').forEach(td => {
+        td.onclick = () => {
+            const seksi = td.dataset.seksi;
+            kgMakExpandedSeksi.has(seksi) ? kgMakExpandedSeksi.delete(seksi) : kgMakExpandedSeksi.add(seksi);
+            kgRenderMakTable(overlay);
+        };
+    });
+
+    // Bind expand/collapse baris (klik baris selain tombol Pilih)
+    tbody.querySelectorAll('tr[data-kode]').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+            if (e.target.closest('.kg-mak-btnPilih')) return;
+            const c = tr.dataset.kode;
+            const seksi = tr.dataset.seksi;
+            const key = seksi + '::' + c;
+            kgMakExpandedCodes.has(key) ? kgMakExpandedCodes.delete(key) : kgMakExpandedCodes.add(key);
+            kgRenderMakTable(overlay);
+        });
+    });
+
+    // Bind tombol Pilih
+    tbody.querySelectorAll('.kg-mak-btnPilih').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const tr = btn.closest('tr[data-kode]');
+            const kode = tr.dataset.kode;
+            if (typeof kgMakOnPilih === 'function') kgMakOnPilih(kode);
+            overlay.remove();
+        };
+    });
 }
 
 // ---- Pelaksana ----
