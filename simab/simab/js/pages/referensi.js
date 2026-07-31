@@ -42,16 +42,19 @@ function initReferensiPage() {
 
     // User dengan akses terbatas (ref_pegawai kolom H = 0) cuma boleh lihat
     // tab "SBM Uang Harian" di halaman Referensi ini — tab lain disembunyikan.
+    // Pakai optional chaining (?.) supaya kalau salah satu elemen tidak ada
+    // (mis. HTML lama yang belum sinkron dgn JS ini), tab SBM tetap jalan
+    // normal alih-alih macet di spinner "Memuat data..." selamanya.
     const isRestricted = typeof window.isAksesTerbatas === 'function' && window.isAksesTerbatas();
     if (isRestricted) {
-        tabBtnPegawai.remove();
-        tabPegawai.remove();
-        tabBtnRekening.remove();
-        tabRekening.remove();
+        tabBtnPegawai?.remove();
+        tabPegawai?.remove();
+        tabBtnRekening?.remove();
+        tabRekening?.remove();
     } else if (!refIsAdmin()) {
         // Tab Data Rekening HANYA untuk admin, terlepas dari status akses terbatas.
-        tabBtnRekening.remove();
-        tabRekening.remove();
+        tabBtnRekening?.remove();
+        tabRekening?.remove();
     }
 
     const tabs = {
@@ -77,20 +80,22 @@ function initReferensiPage() {
         // Jangan cuma skip fetch-nya, tapi render ulang dari cache supaya tabel langsung muncul
         // instan tanpa perlu request ulang ke server.
         if (tab === 'sbm') {
-            refSbmLoaded ? refRenderSbmTable(document.getElementById('ref-sbm-search').value) : refLoadSbmData();
+            refSbmLoaded ? refRenderSbmTable(document.getElementById('ref-sbm-search')?.value || '') : refLoadSbmData();
         } else if (tab === 'pegawai') {
-            refPegawaiLoaded ? refRenderPegawaiTable(document.getElementById('ref-pegawai-search').value) : refLoadPegawaiData();
+            refPegawaiLoaded ? refRenderPegawaiTable(document.getElementById('ref-pegawai-search')?.value || '') : refLoadPegawaiData();
         } else if (tab === 'rekening') {
-            refRekeningLoaded ? refRenderRekeningTable(document.getElementById('ref-rekening-search').value) : refLoadRekeningDataAll();
+            refRekeningLoaded ? refRenderRekeningTable(document.getElementById('ref-rekening-search')?.value || '') : refLoadRekeningDataAll();
         }
     }
 
-    tabBtnSbm.onclick = () => activateTab('sbm');
+    if (tabBtnSbm) tabBtnSbm.onclick = () => activateTab('sbm');
     if (tabBtnPegawai) tabBtnPegawai.onclick = () => activateTab('pegawai');
     if (tabs.rekening.btn) tabs.rekening.btn.onclick = () => activateTab('rekening');
 
-    document.getElementById('ref-sbm-search').oninput = (e) => refRenderSbmTable(e.target.value);
-    document.getElementById('ref-pegawai-search').oninput = (e) => refRenderPegawaiTable(e.target.value);
+    const sbmSearchEl = document.getElementById('ref-sbm-search');
+    if (sbmSearchEl) sbmSearchEl.oninput = (e) => refRenderSbmTable(e.target.value);
+    const pegawaiSearchEl = document.getElementById('ref-pegawai-search');
+    if (pegawaiSearchEl) pegawaiSearchEl.oninput = (e) => refRenderPegawaiTable(e.target.value);
     const rekeningSearchEl = document.getElementById('ref-rekening-search');
     if (rekeningSearchEl) rekeningSearchEl.oninput = (e) => refRenderRekeningTable(e.target.value);
 
