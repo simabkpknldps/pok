@@ -727,20 +727,50 @@ function pbOpenDetilModal(row) {
 // ==========================================
 // Hapus
 // ==========================================
-async function pbHapusRow(row) {
-    if (!confirm(`Hapus kegiatan "${row.C}" (MAK ${row.B})? Tindakan ini tidak dapat dibatalkan.`)) return;
+function pbHapusRow(row) {
+    const { overlay, popup } = commonOpenOverlay(`
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-800">Hapus Data</h3>
+        </div>
+        <p class="text-sm text-slate-600">
+            Yakin ingin menghapus kegiatan <span class="font-medium text-slate-800">"${pbEsc(row.C)}"</span> (MAK ${pbEsc(row.B)})?
+            Tindakan ini tidak dapat dibatalkan.
+        </p>
+        <div class="flex justify-end gap-2 mt-3">
+            <button id="pb-hapus-cancelBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">Batal</button>
+            <button id="pb-hapus-confirmBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-trash mr-1"></i> Hapus
+            </button>
+        </div>
+    `, 'max-w-sm');
 
-    try {
-        const result = await apiPost({ action: 'deleteKegiatan', id: row.A });
-        if (result.status === 'success') {
-            showToast('Data berhasil dihapus');
-            initPerbantuanPage();
-        } else {
-            alert('Gagal menghapus: ' + (result.message || 'Terjadi kesalahan.'));
+    popup.querySelector('#pb-hapus-cancelBtn').onclick = () => overlay.remove();
+    popup.querySelector('#pb-hapus-confirmBtn').onclick = async function () {
+        const btn = this;
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menghapus...';
+
+        try {
+            const result = await apiPost({ action: 'deleteKegiatan', id: row.A });
+            if (result.status === 'success') {
+                overlay.remove();
+                showToast('Data berhasil dihapus');
+                initPerbantuanPage();
+            } else {
+                alert('Gagal menghapus: ' + (result.message || 'Terjadi kesalahan.'));
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        } catch (e) {
+            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
         }
-    } catch (e) {
-        alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
-    }
+    };
 }
 
 window.initPerbantuanPage = initPerbantuanPage;
