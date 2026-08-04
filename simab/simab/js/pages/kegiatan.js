@@ -11,7 +11,6 @@
  * P status, R nomorSPM.
  */
 
-
 let kgCurrentTableRowsData = [];
 let kgPegawaiList = [];
 let kgLokasiList = [];
@@ -43,7 +42,20 @@ async function initKegiatanPage() {
 }
 
 function bindKegiatanEvents() {
-    document.getElementById('kg-btnRefreshData').onclick = () => kgLoadData(false);
+    document.getElementById('kg-btnRefreshData').onclick = async function () {
+        const btn = this;
+        const icon = btn.querySelector('i');
+        btn.disabled = true;
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+        icon.classList.add('fa-spin');
+        try {
+            await kgLoadData(false, true);
+        } finally {
+            icon.classList.remove('fa-spin');
+            btn.classList.remove('opacity-70', 'cursor-not-allowed');
+            btn.disabled = false;
+        }
+    };
     document.getElementById('kg-btnDownloadExcel').onclick = kgDownloadExcel;
     document.getElementById('kg-btnOpenNominatif').onclick = kgOpenNominatifPopup;
 
@@ -147,7 +159,7 @@ function kgStatusClasses(status) {
 function kgRenderTable(rows) {
     kgCurrentTableRowsData = rows;
     const tbody = document.getElementById('kg-dataTableBody');
-    tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment(); // batch semua baris dulu, baru sekali append ke DOM -> hindari reflow berulang tiap baris
 
     const formatDate = (v) => {
         if (!v) return '';
@@ -185,9 +197,13 @@ function kgRenderTable(rows) {
                 </div>
             </td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
     });
+
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
 }
+
 
 function kgPopulateDatalist() {
     const pegawaiDL = document.getElementById('kg-listPegawai');
@@ -206,7 +222,7 @@ function kgPopulateDatalist() {
     });
 }
 
-async function kgLoadData(resetPage) {
+async function kgLoadData(resetPage, forceRefresh) {
     const container = document.getElementById('kg-dataTableBody');
     if (resetPage) kgQuery.page = 1;
 
@@ -225,7 +241,8 @@ async function kgLoadData(resetPage) {
             spm: kgQuery.spm,
             page: kgQuery.page,
             pageSize: kgQuery.pageSize,
-            includeRef: kgFirstLoad // daftar pegawai/lokasi cukup diambil sekali di load awal
+            includeRef: kgFirstLoad, // daftar pegawai/lokasi cukup diambil sekali di load awal
+            forceRefresh: !!forceRefresh
         };
 
         const data = await apiPost(payload);
