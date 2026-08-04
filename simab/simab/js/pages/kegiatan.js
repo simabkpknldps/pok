@@ -80,7 +80,8 @@ function bindKegiatanEvents() {
         const isAdmin = localStorage.getItem('admin') === '1';
         const statusKegiatan = tr.cells[8].textContent.trim();
 
-        if (btn.classList.contains('kg-btn-copy')) kgShowCopyPopup(tr);
+        if (btn.classList.contains('kg-pelaksana-link')) { kgShowPegawaiDetilPopup(btn.dataset.nama); return; }
+        else if (btn.classList.contains('kg-btn-copy')) kgShowCopyPopup(tr);
         else if (btn.classList.contains('kg-btn-ubah')) {
             if (statusKegiatan === 'Rekam Data' || isAdmin) kgShowEditPopup(tr);
             else alert('Anda tidak memiliki kewenangan!');
@@ -149,7 +150,7 @@ function kgRenderTable(rows) {
         tr.innerHTML = `
             <td class="p-2.5 align-top">${r.B ?? ''}</td>
             <td class="p-2.5 align-top">${r.C ?? ''}</td>
-            <td class="p-2.5 align-top">${r.D ?? ''}</td>
+            <td class="p-2.5 align-top">${r.D ? `<button type="button" class="kg-pelaksana-link text-sky-700 hover:text-sky-900 underline decoration-dotted underline-offset-2 text-left" data-nama="${String(r.D).replace(/"/g, '&quot;')}">${r.D}</button>` : ''}</td>
             <td class="p-2.5 align-top">${r.E ?? ''}</td>
             <td class="p-2.5 align-top whitespace-nowrap">${formatDate(r.F)}</td>
             <td class="p-2.5 align-top whitespace-nowrap">${formatDate(r.G)}</td>
@@ -333,6 +334,80 @@ function kgShowCopyPopup(tr) {
             }).catch(() => alert('Gagal menyalin teks.'));
         };
     });
+}
+
+// ---- Detil Pegawai (klik nama di kolom Pelaksana Tugas) ----
+function kgShowPegawaiDetilPopup(nama) {
+    const { overlay, popup } = kgOpenOverlay(`
+        <div class="flex items-center justify-between mb-1">
+            <h3 class="text-base font-semibold text-sky-700"><i class="fa-solid fa-id-card mr-2"></i>Detil Pegawai</h3>
+            <button id="kg-pgwClose" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="kg-pgwLoading" class="text-center text-slate-400 py-6">
+            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...
+        </div>
+        <div id="kg-pgwContent" class="hidden flex-col gap-2.5"></div>
+    `, 'max-w-sm');
+
+    popup.querySelector('#kg-pgwClose').onclick = () => overlay.remove();
+
+    const loadingEl = popup.querySelector('#kg-pgwLoading');
+    const contentEl = popup.querySelector('#kg-pgwContent');
+
+    const field = (label, value, id) => `
+        <div class="flex flex-col gap-1">
+            <label class="${kgLabelClass}">${label}</label>
+            <div class="flex items-center gap-2">
+                <input id="${id}" type="text" value="${String(value ?? '').replace(/"/g, '&quot;')}" readonly class="${kgInputClass} bg-slate-100">
+                <button type="button" class="kg-pgw-copy w-9 h-9 flex-shrink-0 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-500" data-target="${id}" title="Salin">
+                    <i class="fa-solid fa-copy"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+    (async () => {
+        try {
+            const result = await apiPost({ action: 'getPegawaiDetailByNama', nama });
+            if (result.status === 'success') {
+                const statusLabel = String(result.kepeg) === '0' ? 'PPNPN' : 'PNS';
+
+                contentEl.innerHTML =
+                    field('Nama', result.nama, 'kg-pgw-nama') +
+                    field('NIP', result.nip, 'kg-pgw-nip') +
+                    field('Jabatan', result.jabatan, 'kg-pgw-jabatan') +
+                    field('Pangkat', result.pangkat, 'kg-pgw-pangkat') +
+                    field('Status', statusLabel, 'kg-pgw-status') +
+                    field('Nama Bank', result.namaBank, 'kg-pgw-bank') +
+                    field('No Rekening', result.norek, 'kg-pgw-norek');
+
+                loadingEl.classList.add('hidden');
+                contentEl.classList.remove('hidden');
+                contentEl.classList.add('flex');
+
+                contentEl.querySelectorAll('.kg-pgw-copy').forEach(btn => {
+                    btn.onclick = () => {
+                        const input = popup.querySelector('#' + btn.dataset.target);
+                        const val = input.value;
+                        if (!val) return;
+                        navigator.clipboard.writeText(val).then(() => {
+                            const icon = btn.querySelector('i');
+                            icon.classList.replace('fa-copy', 'fa-check');
+                            btn.classList.add('text-green-600', 'border-green-400');
+                            setTimeout(() => {
+                                icon.classList.replace('fa-check', 'fa-copy');
+                                btn.classList.remove('text-green-600', 'border-green-400');
+                            }, 1200);
+                        }).catch(() => alert('Gagal menyalin.'));
+                    };
+                });
+            } else {
+                loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Data pegawai tidak ditemukan'}</span>`;
+            }
+        } catch (e) {
+            loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat detil pegawai'}</span>`;
+        }
+    })();
 }
 
 // ---- Ubah Kegiatan ----
