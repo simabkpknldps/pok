@@ -11,41 +11,50 @@
  * P status, R nomorSPM.
  */
 
-
-let kgAllRows = [];
 let kgCurrentTableRowsData = [];
 let kgPegawaiList = [];
 let kgLokasiList = [];
 let kgFirstLoad = true;
+
+// State query aktif — dikirim ke backend tiap request (search, filter status,
+// nomor SPM, halaman, dan jumlah baris per halaman semuanya diproses di server,
+// bukan lagi filter di client, supaya payload & render tetap ringan walau data
+// sudah ribuan baris).
+let kgQuery = {
+    statusFilter: 'Dalam Proses',
+    search: '',
+    spm: '',
+    page: 1,
+    pageSize: '25'
+};
 
 async function initKegiatanPage() {
     const root = document.getElementById('kg-mainDataTable');
     if (!root) return; // fragment belum ter-render coba
 
     // reset state setiap masuk halaman
-    kgAllRows = [];
     kgCurrentTableRowsData = [];
     kgFirstLoad = true;
+    kgQuery = { statusFilter: 'Dalam Proses', search: '', spm: '', page: 1, pageSize: '25' };
 
     bindKegiatanEvents();
     await kgLoadData(true);
 }
 
 function bindKegiatanEvents() {
-    document.getElementById('kg-btnRefreshData').onclick = () => kgLoadData(true);
+    document.getElementById('kg-btnRefreshData').onclick = () => kgLoadData(false);
     document.getElementById('kg-btnDownloadExcel').onclick = kgDownloadExcel;
     document.getElementById('kg-btnOpenNominatif').onclick = kgOpenNominatifPopup;
 
-    document.getElementById('kg-searchBox').addEventListener('input', function () {
-        const val = this.value.toLowerCase();
-        const radioVal = document.querySelector('input[name="kg-statusFilter"]:checked').value;
-        let filtered = kgFilterByStatus(kgAllRows, radioVal);
-        if (val) {
-            filtered = filtered.filter(r =>
-                Object.keys(r).filter(k => k !== 'N').some(k => String(r[k] || '').toLowerCase().includes(val))
-            );
-        }
-        kgRenderTable(filtered);
+    const runSearch = () => {
+        kgQuery.search = document.getElementById('kg-searchBox').value.trim();
+        kgQuery.spm = ''; // pencarian bebas membatalkan mode pencarian SPM
+        kgQuery.page = 1;
+        kgLoadData(true);
+    };
+    document.getElementById('kg-btnSearch').onclick = runSearch;
+    document.getElementById('kg-searchBox').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') runSearch();
     });
 
     document.getElementById('kg-btnSearchSPM').onclick = function () {
@@ -54,25 +63,41 @@ function bindKegiatanEvents() {
             alert('Masukkan nomor SPM terlebih dahulu!');
             return;
         }
-        const filtered = kgAllRows.filter(r => {
-            const spmSheet = String(r.R || '').trim();
-            return spmSheet === valBox || parseInt(spmSheet, 10) === parseInt(valBox, 10);
-        });
+        kgQuery.spm = valBox;
+        kgQuery.search = '';
+        document.getElementById('kg-searchBox').value = '';
+        kgQuery.page = 1;
+        kgQuery.pageSize = 'all'; // hasil pencarian SPM biasanya sedikit & dipakai utk cetak nominatif/excel, jadi tampilkan semua sekaligus
+        document.getElementById('kg-pageSizeSelect').value = 'all';
         document.querySelector('input[name="kg-statusFilter"][value="Semua"]').checked = true;
-        kgRenderTable(filtered);
-        if (filtered.length === 0) alert('Data dengan Nomor SPM ' + valBox + ' tidak ditemukan.');
+        kgLoadData(true);
     };
 
     document.querySelectorAll('input[name="kg-statusFilter"]').forEach(rb => {
         rb.addEventListener('change', function () {
-            const searchVal = document.getElementById('kg-searchBox').value.toLowerCase();
-            let filtered = kgFilterByStatus(kgAllRows, this.value);
-            if (searchVal) {
-                filtered = filtered.filter(r => Object.keys(r).some(k => String(r[k] || '').toLowerCase().includes(searchVal)));
-            }
-            kgRenderTable(filtered);
+            kgQuery.statusFilter = this.value;
+            kgQuery.spm = ''; // ganti filter status membatalkan mode pencarian SPM
+            kgQuery.page = 1;
+            kgLoadData(true);
         });
     });
+
+    document.getElementById('kg-pageSizeSelect').onchange = function () {
+        kgQuery.pageSize = this.value;
+        kgQuery.page = 1;
+        kgLoadData(true);
+    };
+
+    document.getElementById('kg-btnPrevPage').onclick = () => {
+        if (kgQuery.page > 1) {
+            kgQuery.page -= 1;
+            kgLoadData(false);
+        }
+    };
+    document.getElementById('kg-btnNextPage').onclick = () => {
+        kgQuery.page += 1;
+        kgLoadData(false);
+    };
 
     document.getElementById('kg-dataTableBody').addEventListener('click', function (e) {
         const btn = e.target.closest('button');
@@ -103,20 +128,8 @@ function bindKegiatanEvents() {
     });
 }
 
-function kgFilterByStatus(rows, status) {
-    switch (status) {
-        case 'Dalam Proses': return rows.filter(r => ['Rekam Data', 'Terlaksana'].includes(r.P));
-        case 'LPT': return rows.filter(r => r.P === 'LPT');
-        case 'Terbayar': return rows.filter(r => r.P === 'Terbayar');
-        case 'Selesai': return rows.filter(r => r.P === 'Selesai');
-        case 'Semua': return rows.filter(r => ['Rekam Data', 'Terlaksana', 'LPT', 'Terbayar', 'Selesai'].includes(r.P));
-        default: return rows;
-    }
-}
-
-function kgKalkulasiTotalJumlah(rows) {
-    const total = rows.reduce((sum, r) => sum + Number(r.M || 0), 0);
-    document.getElementById('kg-totalJumlahLabel').textContent = total.toLocaleString('id-ID');
+function kgSetTotalJumlahLabel(total) {
+    document.getElementById('kg-totalJumlahLabel').textContent = Number(total || 0).toLocaleString('id-ID');
 }
 
 function kgStatusClasses(status) {
@@ -173,8 +186,6 @@ function kgRenderTable(rows) {
         `;
         tbody.appendChild(tr);
     });
-
-    kgKalkulasiTotalJumlah(rows);
 }
 
 function kgPopulateDatalist() {
@@ -194,33 +205,73 @@ function kgPopulateDatalist() {
     });
 }
 
-async function kgLoadData(showSpinner) {
+async function kgLoadData(resetPage) {
     const container = document.getElementById('kg-dataTableBody');
+    if (resetPage) kgQuery.page = 1;
+
     try {
-        if (showSpinner && kgFirstLoad) {
+        if (kgFirstLoad) {
             container.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>`;
+        } else {
+            kgShowLoading(true);
         }
 
-        const data = await apiPost({ action: 'getKegiatanData', kantor: localStorage.getItem('kantor') });
+        const payload = {
+            action: 'getKegiatanData',
+            kantor: localStorage.getItem('kantor'),
+            statusFilter: kgQuery.statusFilter,
+            search: kgQuery.search,
+            spm: kgQuery.spm,
+            page: kgQuery.page,
+            pageSize: kgQuery.pageSize,
+            includeRef: kgFirstLoad // daftar pegawai/lokasi cukup diambil sekali di load awal
+        };
+
+        const data = await apiPost(payload);
+        kgShowLoading(false);
 
         if (!data || data.status !== 'success') {
             container.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-red-500">Gagal memuat data kegiatan.</td></tr>`;
             return;
         }
 
-        kgAllRows = data.rows || [];
-        kgPegawaiList = data.pegawai || [];
-        kgLokasiList = data.lokasi || [];
-        kgPopulateDatalist();
+        if (kgFirstLoad) {
+            kgPegawaiList = data.pegawai || [];
+            kgLokasiList = data.lokasi || [];
+            kgPopulateDatalist();
+        }
 
-        const defaultRadio = document.querySelector('input[name="kg-statusFilter"]:checked').value;
-        kgRenderTable(kgFilterByStatus(kgAllRows, defaultRadio));
+        kgCurrentTableRowsData = data.rows || [];
+        kgRenderTable(kgCurrentTableRowsData);
+        kgSetTotalJumlahLabel(data.totalJumlah);
+        kgQuery.page = data.page || 1;
+        kgRenderPaginationInfo(data);
+
+        if (kgQuery.spm && kgCurrentTableRowsData.length === 0) {
+            alert('Data dengan Nomor SPM ' + kgQuery.spm + ' tidak ditemukan.');
+        }
 
         kgFirstLoad = false;
     } catch (e) {
+        kgShowLoading(false);
         console.error('Error loadData kegiatan:', e);
         container.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-red-500">❌ ${e.message || 'Gagal memuat data kegiatan.'}</td></tr>`;
     }
+}
+
+function kgRenderPaginationInfo(data) {
+    const totalRows = data.totalRows || 0;
+    const totalPages = data.totalPages || 1;
+    const page = data.page || 1;
+    const isAll = data.pageSize === 'all';
+
+    document.getElementById('kg-totalRowsLabel').textContent = totalRows.toLocaleString('id-ID');
+    document.getElementById('kg-pageInfo').textContent = isAll ? `1 dari 1` : `${page} dari ${totalPages}`;
+
+    const btnPrev = document.getElementById('kg-btnPrevPage');
+    const btnNext = document.getElementById('kg-btnNextPage');
+    btnPrev.disabled = isAll || page <= 1;
+    btnNext.disabled = isAll || page >= totalPages;
 }
 
 // ==========================================
@@ -1062,8 +1113,7 @@ function kgShowSP2DPopup(tr) {
 // ---- Detil ----
 function kgShowDetilPopup(tr) {
     const id = tr.dataset.id;
-    const data = kgCurrentTableRowsData.find(r => String(r.A) === String(id))
-        || kgAllRows.find(r => String(r.A) === String(id));
+    const data = kgCurrentTableRowsData.find(r => String(r.A) === String(id));
 
     if (!data) {
         alert('Data detil tidak ditemukan.');
