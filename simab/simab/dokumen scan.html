@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Scan Dokumen - SiMAB</title>
+
+<!-- PWA -->
+<meta name="theme-color" content="#0369a1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scan Dokumen">
+<link rel="manifest" href="manifest-dokumen.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+    html, body { overscroll-behavior-y: contain; }
+    #ds-sheet { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
+    .ds-appbar { padding-top: env(safe-area-inset-top); }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+
+<!-- Guard login: harus paling pertama, sebelum script lain -->
+<script src="js/session.js"></script>
+
+<!-- ===================== App Bar ===================== -->
+<div class="ds-appbar bg-sky-700 text-white sticky top-0 z-30 shadow-sm">
+    <div class="flex items-center justify-between px-4 py-3.5">
+        <div>
+            <h1 class="text-base font-semibold leading-tight"><i class="fa-solid fa-camera-retro mr-1.5"></i>Scan Dokumen</h1>
+            <p class="text-[11px] text-sky-100 leading-tight" id="ds-userLabel">SiMAB</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="dashboard.html" class="w-9 h-9 flex items-center justify-center rounded-lg bg-sky-600 hover:bg-sky-800 transition" title="Dashboard">
+                <i class="fa-solid fa-house"></i>
+            </a>
+            <button id="ds-btnLogout" class="w-9 h-9 flex items-center justify-center rounded-lg bg-sky-600 hover:bg-sky-800 transition" title="Keluar">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="ds-offlineBanner" class="hidden bg-amber-100 text-amber-800 text-xs text-center py-1.5 px-3">
+    <i class="fa-solid fa-wifi-slash mr-1"></i> Tidak ada koneksi internet
+</div>
+
+<!-- ===================== Search ===================== -->
+<div class="px-4 pt-4 pb-2 max-w-lg mx-auto">
+    <div class="flex items-center gap-2">
+        <input id="ds-searchInput" type="text" inputmode="search" placeholder="Cari nama, uraian, No ST, No SPM..."
+            class="flex-1 px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+        <button id="ds-btnSearch" class="w-12 h-12 shrink-0 flex items-center justify-center bg-sky-700 hover:bg-sky-800 text-white rounded-xl">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+    </div>
+    <p id="ds-hint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan tombol cari (mis. nama pegawai, uraian kegiatan, No ST, atau No SPM).</p>
+</div>
+
+<!-- ===================== Hasil Pencarian ===================== -->
+<div id="ds-results" class="px-4 pb-8 max-w-lg mx-auto"></div>
+
+<!-- ===================== Bottom Sheet Detail/Aksi ===================== -->
+<div id="ds-sheetOverlay" class="hidden fixed inset-0 bg-black/40 z-40">
+    <div id="ds-sheet" class="fixed left-0 right-0 bottom-0 bg-white rounded-t-2xl max-h-[88vh] overflow-y-auto p-5"></div>
+</div>
+
+<!-- ===================== Scripts ===================== -->
+<script src="js/api.js"></script>
+<script>
+let currentRow = null;
+let photoQueue = []; // { dataUrl } — antrian foto sebelum digabung jadi 1 PDF
+
+const $ = (id) => document.getElementById(id);
+
+function escHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function statusBadgeClass(status) {
+    const map = {
+        'Rekam Data': 'bg-pink-100 text-pink-700',
+        'Terlaksana': 'bg-slate-200 text-slate-700',
+        'LPT': 'bg-yellow-100 text-yellow-700',
+        'Terbayar': 'bg-green-100 text-green-700',
+        'Selesai': 'bg-blue-100 text-blue-700'
+    };
+    return map[status] || 'bg-slate-100 text-slate-500';
+}
+
+// ============================================================
+// Pencarian (pakai action getKegiatanData yang sudah ada — filter
+// & pencarian tetap diproses di server, bukan di HP)
+// ============================================================
+async function runSearch() {
+    const q = $('ds-searchInput').value.trim();
+    const resultsEl = $('ds-results');
+    const hintEl = $('ds-hint');
+
+    if (!q) {
+        resultsEl.innerHTML = '';
+        hintEl.textContent = 'Masukkan kata kunci lalu tekan tombol cari (mis. nama pegawai, uraian kegiatan, No ST, atau No SPM).';
+        return;
+    }
+
+    resultsEl.innerHTML = `<div class="text-center text-sky-600 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+    hintEl.textContent = '';
+
+    try {
+        const data = await apiPost({
+            action: 'getKegiatanData',
+            statusFilter: 'Semua',
+            search: q,
+            page: 1,
+            pageSize: 15,
+            includeRef: false
+        });
+
+        if (!data || data.status !== 'success') {
+            resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">Gagal memuat data.</div>`;
+            return;
+        }
+
+        const rows = data.rows || [];
+        if (rows.length === 0) {
+            resultsEl.innerHTML = `<div class="text-center text-slate-400 py-12"><i class="fa-regular fa-folder-open text-3xl mb-2"></i><p class="text-sm">Data tidak ditemukan.</p></div>`;
+            return;
+        }
+
+        hintEl.textContent = (data.totalRows > rows.length)
+            ? `Menampilkan ${rows.length} dari ${data.totalRows} hasil. Persempit pencarian kalau belum ketemu.`
+            : `${rows.length} hasil ditemukan.`;
+
+        resultsEl.innerHTML = rows.map(dsRenderCard).join('');
+        resultsEl.querySelectorAll('.ds-card').forEach(card => {
+            const id = card.dataset.id;
+            const row = rows.find(r => String(r.A) === id);
+            card.onclick = () => dsOpenDetail(row);
+        });
+
+    } catch (e) {
+        resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">❌ ${escHtml(e.message || 'Terjadi kesalahan.')}</div>`;
+    }
+}
+
+function dsRenderCard(r) {
+    const dokIcon = r.T
+        ? `<i class="fa-solid fa-file-circle-check text-emerald-600"></i>`
+        : `<i class="fa-solid fa-file-circle-xmark text-slate-300"></i>`;
+    return `
+    <div class="ds-card bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5 active:bg-slate-50" data-id="${escHtml(r.A)}">
+        <div class="flex items-start justify-between gap-2">
+            <p class="text-sm font-medium text-slate-800 leading-snug flex-1">${escHtml(r.C)}</p>
+            <span class="ds-dok-icon text-lg shrink-0">${dokIcon}</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">${escHtml(r.D)} &middot; ${escHtml(r.E)}</p>
+        <div class="flex items-center justify-between mt-2">
+            <span class="text-xs text-slate-400">${escHtml(r.F || '-')}</span>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${statusBadgeClass(r.P)}">${escHtml(r.P)}</span>
+        </div>
+    </div>`;
+}
+
+function dsUpdateCardIcon(id, link) {
+    const card = document.querySelector(`.ds-card[data-id="${CSS.escape(String(id))}"]`);
+    if (!card) return;
+    const iconEl = card.querySelector('.ds-dok-icon');
+    if (iconEl) {
+        iconEl.innerHTML = link
+            ? `<i class="fa-solid fa-file-circle-check text-emerald-600"></i>`
+            : `<i class="fa-solid fa-file-circle-xmark text-slate-300"></i>`;
+    }
+}
+
+// ============================================================
+// Bottom sheet detail + aksi dokumen
+// ============================================================
+function dsOpenDetail(row) {
+    currentRow = row;
+    photoQueue = [];
+    $('ds-sheetOverlay').classList.remove('hidden');
+    dsRenderSheet();
+}
+
+function dsCloseDetail() {
+    $('ds-sheetOverlay').classList.add('hidden');
+    photoQueue = [];
+    currentRow = null;
+}
+
+function dsRenderSheet() {
+    const r = currentRow;
+    const hasDoc = !!r.T;
+
+    let photoPreviewHtml = '';
+    if (photoQueue.length > 0) {
+        photoPreviewHtml = `
+        <div class="mt-3 border-t border-slate-100 pt-3">
+            <p class="text-xs font-medium text-slate-500 mb-1.5">${photoQueue.length} foto siap dijadikan PDF:</p>
+            <div class="flex gap-2 overflow-x-auto pb-1">
+                ${photoQueue.map((p, idx) => `
+                    <div class="relative shrink-0">
+                        <img src="${p.dataUrl}" class="w-16 h-20 object-cover rounded-lg border border-slate-200">
+                        <button type="button" class="ds-removePhoto absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center" data-idx="${idx}"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="flex gap-2 mt-2.5">
+                <button id="ds-btnAddMorePhoto" class="flex-1 px-3 py-2.5 border border-sky-300 text-sky-700 rounded-xl text-xs font-medium"><i class="fa-solid fa-camera mr-1"></i> Tambah Foto</button>
+                <button id="ds-btnConfirmPhotos" class="flex-1 px-3 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-medium"><i class="fa-solid fa-check mr-1"></i> Jadikan PDF & Upload</button>
+            </div>
+        </div>`;
+    }
+
+    $('ds-sheet').innerHTML = `
+        <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        <div class="flex items-start justify-between gap-2 mb-1">
+            <h3 class="text-base font-semibold text-slate-800 leading-snug pr-2">${escHtml(r.C)}</h3>
+            <button id="ds-btnCloseSheet" class="text-slate-400 shrink-0 text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p class="text-sm text-slate-500 mb-3">${escHtml(r.D)} &middot; ${escHtml(r.E)}</p>
+
+        <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 rounded-xl p-3 mb-4">
+            <div><span class="text-slate-400">Tgl ST/ND</span><br><span class="text-slate-700 font-medium">${escHtml(r.F || '-')}</span></div>
+            <div><span class="text-slate-400">Tgl Mulai</span><br><span class="text-slate-700 font-medium">${escHtml(r.G || '-')}</span></div>
+            <div><span class="text-slate-400">Status</span><br><span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${statusBadgeClass(r.P)}">${escHtml(r.P)}</span></div>
+            <div><span class="text-slate-400">ID Kegiatan</span><br><span class="text-slate-700 font-medium">${escHtml(r.A)}</span></div>
+        </div>
+
+        <p class="text-xs text-slate-400 mb-2 text-center">${hasDoc ? '✅ Dokumen sudah tersedia' : 'Dokumen belum diupload'}</p>
+
+        <div class="grid grid-cols-3 gap-2">
+            <button id="ds-btnLihat" ${hasDoc ? '' : 'disabled'} class="flex flex-col items-center gap-1 py-3 rounded-xl border ${hasDoc ? 'border-sky-300 text-sky-700' : 'border-slate-200 text-slate-300'}">
+                <i class="fa-solid fa-eye text-lg"></i><span class="text-[11px] font-medium">Lihat</span>
+            </button>
+            <button id="ds-btnFoto" class="flex flex-col items-center gap-1 py-3 rounded-xl border border-emerald-300 text-emerald-700">
+                <i class="fa-solid fa-camera text-lg"></i><span class="text-[11px] font-medium">Ambil Foto</span>
+            </button>
+            <button id="ds-btnUploadPdf" class="flex flex-col items-center gap-1 py-3 rounded-xl border border-sky-300 text-sky-700">
+                <i class="fa-solid fa-file-arrow-up text-lg"></i><span class="text-[11px] font-medium">Upload PDF</span>
+            </button>
+        </div>
+
+        ${hasDoc ? `
+        <button id="ds-btnHapus" class="w-full mt-2.5 py-2.5 rounded-xl border border-red-300 text-red-600 text-xs font-medium">
+            <i class="fa-solid fa-trash mr-1"></i> Hapus Dokumen
+        </button>` : ''}
+
+        <input id="ds-fileInputPdf" type="file" accept="application/pdf,.pdf" class="hidden">
+        <input id="ds-fileInputCamera" type="file" accept="image/*" capture="environment" class="hidden">
+
+        ${photoPreviewHtml}
+
+        <div id="ds-status" class="text-center text-xs text-slate-400 min-h-[18px] mt-3"></div>
+    `;
+
+    dsWireSheetEvents();
+}
+
+function dsWireSheetEvents() {
+    const r = currentRow;
+
+    $('ds-btnCloseSheet').onclick = dsCloseDetail;
+
+    const btnLihat = $('ds-btnLihat');
+    if (r.T && btnLihat) btnLihat.onclick = () => window.open(r.T, '_blank');
+
+    $('ds-btnUploadPdf').onclick = () => $('ds-fileInputPdf').click();
+    $('ds-btnFoto').onclick = () => $('ds-fileInputCamera').click();
+
+    $('ds-fileInputPdf').onchange = async function () {
+        const file = this.files[0];
+        this.value = '';
+        if (!file) return;
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            alert('File harus berformat PDF.');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Ukuran file maksimal 10MB.');
+            return;
+        }
+        try {
+            const base64 = await dsFileToBase64(file);
+            await dsUploadBase64Pdf(base64);
+        } catch (e) {
+            dsSetStatus('❌ ' + (e.message || 'Gagal membaca file.'), 'red');
+        }
+    };
+
+    $('ds-fileInputCamera').onchange = async function () {
+        const file = this.files[0];
+        this.value = '';
+        if (!file) return;
+        dsSetStatus('Memproses foto...', 'sky');
+        try {
+            const dataUrl = await dsResizeImage(file, 1600, 0.72);
+            photoQueue.push({ dataUrl });
+            dsRenderSheet();
+        } catch (e) {
+            dsSetStatus('❌ Gagal memproses foto.', 'red');
+        }
+    };
+
+    const btnHapus = $('ds-btnHapus');
+    if (btnHapus) btnHapus.onclick = dsHapusDokumen;
+
+    const btnAddMore = $('ds-btnAddMorePhoto');
+    if (btnAddMore) btnAddMore.onclick = () => $('ds-fileInputCamera').click();
+
+    const btnConfirm = $('ds-btnConfirmPhotos');
+    if (btnConfirm) btnConfirm.onclick = dsConvertAndUploadPhotos;
+
+    document.querySelectorAll('.ds-removePhoto').forEach(btn => {
+        btn.onclick = () => {
+            photoQueue.splice(Number(btn.dataset.idx), 1);
+            dsRenderSheet();
+        };
+    });
+}
+
+function dsSetStatus(msg, color) {
+    const el = $('ds-status');
+    if (!el) return;
+    const colorMap = { sky: 'text-sky-600', red: 'text-red-500', emerald: 'text-emerald-600' };
+    el.textContent = msg;
+    el.className = 'text-center text-xs min-h-[18px] mt-3 ' + (colorMap[color] || 'text-slate-400');
+}
+
+function dsSetButtonsDisabled(disabled) {
+    ['ds-btnLihat', 'ds-btnFoto', 'ds-btnUploadPdf', 'ds-btnHapus', 'ds-btnAddMorePhoto', 'ds-btnConfirmPhotos'].forEach(id => {
+        const el = $(id);
+        if (el) el.disabled = disabled;
+    });
+}
+
+// ============================================================
+// Helper file & gambar
+// ============================================================
+function dsFileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = () => reject(new Error('Gagal membaca file.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+// Kompres & perkecil foto sebelum dimasukkan ke PDF, supaya ukuran file
+// tetap wajar (foto kamera HP bisa 5-10MB+ kalau dipakai mentah).
+function dsResizeImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round(height * (maxDim / width));
+                        width = maxDim;
+                    } else {
+                        width = Math.round(width * (maxDim / height));
+                        height = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => reject(new Error('Gagal memuat gambar.'));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Gagal membaca file.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function dsGetImageDims(dataUrl) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => reject(new Error('Gagal membaca ukuran gambar.'));
+        img.src = dataUrl;
+    });
+}
+
+// Gabungkan semua foto di antrian jadi 1 file PDF multi-halaman (1 foto = 1
+// halaman, ukuran halaman menyesuaikan ukuran foto), lalu upload seperti PDF biasa.
+async function dsConvertAndUploadPhotos() {
+    if (photoQueue.length === 0) return;
+    dsSetStatus(`Membuat PDF dari ${photoQueue.length} foto...`, 'sky');
+    dsSetButtonsDisabled(true);
+
+    try {
+        const { jsPDF } = window.jspdf;
+        let pdf = null;
+
+        for (let i = 0; i < photoQueue.length; i++) {
+            const dataUrl = photoQueue[i].dataUrl;
+            const dims = await dsGetImageDims(dataUrl);
+            const wPt = dims.width * 0.75; // px (96dpi) -> pt (72dpi)
+            const hPt = dims.height * 0.75;
+
+            if (!pdf) {
+                pdf = new jsPDF({ unit: 'pt', format: [wPt, hPt] });
+            } else {
+                pdf.addPage([wPt, hPt]);
+            }
+            pdf.addImage(dataUrl, 'JPEG', 0, 0, wPt, hPt);
+        }
+
+        const base64 = pdf.output('datauristring').split(',')[1];
+        photoQueue = [];
+        await dsUploadBase64Pdf(base64);
+    } catch (e) {
+        dsSetStatus('❌ Gagal membuat PDF: ' + (e.message || ''), 'red');
+        dsSetButtonsDisabled(false);
+    }
+}
+
+// ============================================================
+// Upload / hapus dokumen (action sama persis dengan halaman Kegiatan & Perbantuan)
+// ============================================================
+async function dsUploadBase64Pdf(base64) {
+    dsSetStatus('Mengupload dokumen...', 'sky');
+    dsSetButtonsDisabled(true);
+
+    try {
+        const result = await apiPost({
+            action: 'uploadDokumenKegiatan',
+            id: currentRow.A,
+            fileData: base64,
+            fileName: currentRow.A + '.pdf'
+        }, 60000);
+
+        if (result.status === 'success') {
+            currentRow.T = result.link;
+            dsUpdateCardIcon(currentRow.A, result.link);
+            // Satu upload bisa berlaku utk beberapa baris (Uraian sama, ID beda) ->
+            // update juga kartu lain yang kebetulan lagi tampil di hasil pencarian.
+            if (result.links) {
+                Object.keys(result.links).forEach(rid => dsUpdateCardIcon(rid, result.links[rid]));
+            }
+            dsSetStatus('✅ Dokumen berhasil diupload.', 'emerald');
+            dsRenderSheet();
+        } else {
+            dsSetStatus('❌ ' + (result.message || 'Upload gagal.'), 'red');
+            dsSetButtonsDisabled(false);
+        }
+    } catch (e) {
+        dsSetStatus('❌ ' + (e.message || 'Upload gagal.'), 'red');
+        dsSetButtonsDisabled(false);
+    }
+}
+
+async function dsHapusDokumen() {
+    if (!confirm('Yakin ingin menghapus dokumen ini?')) return;
+    dsSetStatus('Menghapus dokumen...', 'sky');
+    dsSetButtonsDisabled(true);
+
+    try {
+        const result = await apiPost({ action: 'hapusDokumenKegiatan', id: currentRow.A }, 30000);
+        if (result.status === 'success') {
+            currentRow.T = '';
+            dsUpdateCardIcon(currentRow.A, '');
+            dsSetStatus('✅ Dokumen dihapus.', 'emerald');
+            dsRenderSheet();
+        } else {
+            dsSetStatus('❌ ' + (result.message || 'Gagal menghapus.'), 'red');
+            dsSetButtonsDisabled(false);
+        }
+    } catch (e) {
+        dsSetStatus('❌ ' + (e.message || 'Gagal menghapus.'), 'red');
+        dsSetButtonsDisabled(false);
+    }
+}
+
+// ============================================================
+// Init
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    const user = window.getSessionUser ? window.getSessionUser() : null;
+    if (user && user.nama) $('ds-userLabel').textContent = user.nama;
+
+    $('ds-btnSearch').onclick = runSearch;
+    $('ds-searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
+
+    $('ds-sheetOverlay').addEventListener('click', (e) => {
+        if (e.target === $('ds-sheetOverlay')) dsCloseDetail();
+    });
+
+    $('ds-btnLogout').onclick = () => {
+        if (!confirm('Yakin ingin keluar?')) return;
+        ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'lastActivity']
+            .forEach(k => localStorage.removeItem(k));
+        window.location.href = 'index.html';
+    };
+
+    const updateOfflineBanner = () => $('ds-offlineBanner').classList.toggle('hidden', navigator.onLine);
+    window.addEventListener('online', updateOfflineBanner);
+    window.addEventListener('offline', updateOfflineBanner);
+    updateOfflineBanner();
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw-dokumen.js').catch(() => {});
+    }
+});
+</script>
+</body>
+</html>
