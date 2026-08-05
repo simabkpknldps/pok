@@ -742,6 +742,25 @@ function pbOpenDetilModal(row) {
 // (uploadDokumenKegiatan / hapusDokumenKegiatan) sudah generik berdasarkan ID
 // Kegiatan (kolom A), jadi tinggal dipakai ulang tanpa perlu action baru.
 // ==========================================
+// Update field T (link dokumen) + warna tombol dokumen untuk semua baris yang
+// lagi tampil di tabel, sesuai map {idKegiatan: link}. Dipakai setelah upload,
+// karena satu upload bisa berlaku utk beberapa baris (Uraian sama, ID beda-beda).
+function pbApplyDokumenLinksToTable(links) {
+    Object.keys(links).forEach(rowId => {
+        const link = links[rowId];
+        const found = pbAllRows.find(r => String(r.A) === String(rowId));
+        if (found) found.T = link;
+
+        const tr = document.querySelector(`#pb-tbody tr[data-id="${CSS.escape(String(rowId))}"]`);
+        const dokBtn = tr && tr.querySelector('.pb-btn-dokumen');
+        if (dokBtn) {
+            dokBtn.classList.remove('text-slate-400');
+            dokBtn.classList.add('text-emerald-600');
+            dokBtn.title = 'Dokumen PDF (sudah ada)';
+        }
+    });
+}
+
 function pbOpenDokumenModal(row, tr) {
     const id = row.A;
 
@@ -866,6 +885,10 @@ function pbOpenDokumenModal(row, tr) {
 
                 if (result.status === 'success') {
                     updateDokButtonRow(result.link);
+                    // Upload dari satu baris otomatis berlaku utk SEMUA baris dengan
+                    // Uraian yang sama (backend sudah simpan file terpisah per ID
+                    // Kegiatan) -> update juga baris-baris lain yang lagi tampil di tabel.
+                    pbApplyDokumenLinksToTable(result.links || { [id]: result.link });
                     showToast('Dokumen berhasil diupload');
                     popup.innerHTML = renderContent(result.link);
                     wireEvents(result.link);
