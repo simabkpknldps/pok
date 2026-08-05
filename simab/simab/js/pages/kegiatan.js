@@ -1183,6 +1183,25 @@ function kgShowDetilPopup(tr) {
 }
 
 // ---- Dokumen PDF (upload/lihat/reupload ke Google Drive folder simab_doc) ----
+// Update field T (link dokumen) + warna tombol dokumen untuk semua baris yang
+// lagi tampil di tabel, sesuai map {idKegiatan: link}. Dipakai setelah upload,
+// karena satu upload bisa berlaku utk beberapa baris (Uraian sama, ID beda-beda).
+function kgApplyDokumenLinksToTable(links) {
+    Object.keys(links).forEach(rowId => {
+        const link = links[rowId];
+        const found = kgCurrentTableRowsData.find(r => String(r.A) === String(rowId));
+        if (found) found.T = link;
+
+        const tr = document.querySelector(`#kg-dataTableBody tr[data-id="${CSS.escape(String(rowId))}"]`);
+        const dokBtn = tr && tr.querySelector('.kg-btn-dokumen');
+        if (dokBtn) {
+            dokBtn.classList.remove('text-slate-400');
+            dokBtn.classList.add('text-emerald-600');
+            dokBtn.title = 'Dokumen PDF (sudah ada)';
+        }
+    });
+}
+
 function kgShowDokumenPopup(tr) {
     const id = tr.dataset.id;
     const rowData = kgCurrentTableRowsData.find(r => String(r.A) === String(id));
@@ -1307,12 +1326,11 @@ function kgShowDokumenPopup(tr) {
 
                 if (result.status === 'success') {
                     rowData.T = result.link;
-                    const dokBtn = tr.querySelector('.kg-btn-dokumen');
-                    if (dokBtn) {
-                        dokBtn.classList.remove('text-slate-400');
-                        dokBtn.classList.add('text-emerald-600');
-                        dokBtn.title = 'Dokumen PDF (sudah ada)';
-                    }
+                    // Upload dari satu baris otomatis berlaku utk SEMUA baris dengan
+                    // Uraian yang sama (backend sudah simpan file terpisah per ID
+                    // Kegiatan) -> update juga baris-baris lain yang lagi tampil di tabel.
+                    kgApplyDokumenLinksToTable(result.links || { [id]: result.link });
+
                     popup.innerHTML = renderContent(result.link);
                     wireEvents(result.link);
                 } else {
