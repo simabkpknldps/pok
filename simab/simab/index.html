@@ -227,7 +227,24 @@
                     localStorage.setItem('kepeg', data.kepeg);
                     localStorage.setItem('aksesMenu', data.aksesMenu);
                     localStorage.setItem('lastActivity', Date.now().toString());
-                    window.location.href = 'dashboard.html';
+
+                    // Kalau tadi user dilempar ke sini oleh session.js (misal habis buka
+                    // dokumen-scan.html tapi belum login), balik ke halaman itu. Titipan
+                    // cuma berlaku 10 menit, biar tidak nyasar ke halaman lama kalau
+                    // ternyata baru login lagi jauh setelahnya.
+                    let redirectTarget = 'dashboard.html';
+                    try {
+                        const raw = localStorage.getItem('postLoginRedirect');
+                        if (raw) {
+                            const titipan = JSON.parse(raw);
+                            if (titipan && titipan.page && (Date.now() - titipan.ts) < 10 * 60 * 1000) {
+                                redirectTarget = titipan.page;
+                            }
+                        }
+                    } catch (e) { /* format titipan rusak -> abaikan, pakai default dashboard.html */ }
+                    localStorage.removeItem('postLoginRedirect');
+
+                    window.location.href = redirectTarget;
                 } else {
                     showLoginError(data.message || 'NIP atau password salah.');
                 }
