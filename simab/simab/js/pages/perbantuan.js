@@ -27,6 +27,7 @@
 let pbAllRows = [];
 let pbPegawaiList = [];
 let pbLokasiList = [];
+let pbStatusFilter = 'Dalam Proses'; // default: semua status kecuali "Selesai"
 
 // Daftar Kanpus, Kanwil, dan KPKNL DJKN se-Indonesia — dipakai untuk dropdown
 // "Kantor" (di samping ID Kegiatan) pada popup Tambah Usulan Perbantuan.
@@ -78,8 +79,9 @@ async function initPerbantuanPage() {
         pbPegawaiList = result.pegawai || [];
         pbLokasiList = result.lokasi || [];
 
-        pbRenderTable(pbAllRows);
+        pbApplyFilters();
         pbBindSearch();
+        pbBindStatusFilter();
         pbBindTambahUsulan();
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="9" class="text-center text-red-500 py-10">
@@ -95,23 +97,42 @@ function pbSortByTglMulai(rows) {
     });
 }
 
-function pbBindSearch() {
+function pbFilterByStatus(rows, status) {
+    // "Selesai" = hanya baris berstatus Selesai.
+    // "Dalam Proses" = semua status SELAIN Selesai (Rekam Data, Terlaksana, LPT, Terbayar).
+    if (status === 'Selesai') return rows.filter(r => r.P === 'Selesai');
+    return rows.filter(r => r.P !== 'Selesai');
+}
+
+function pbApplyFilters() {
     const input = document.getElementById('pb-search');
-    if (!input) return;
-    input.oninput = () => {
-        const q = input.value.trim().toLowerCase();
-        if (!q) {
-            pbRenderTable(pbAllRows);
-            return;
-        }
-        const filtered = pbAllRows.filter(r =>
+    const q = input ? input.value.trim().toLowerCase() : '';
+
+    let filtered = pbFilterByStatus(pbAllRows, pbStatusFilter);
+    if (q) {
+        filtered = filtered.filter(r =>
             String(r.B || '').toLowerCase().includes(q) ||
             String(r.C || '').toLowerCase().includes(q) ||
             String(r.D || '').toLowerCase().includes(q) ||
             String(r.E || '').toLowerCase().includes(q)
         );
-        pbRenderTable(filtered);
-    };
+    }
+    pbRenderTable(filtered);
+}
+
+function pbBindSearch() {
+    const input = document.getElementById('pb-search');
+    if (!input) return;
+    input.oninput = () => pbApplyFilters();
+}
+
+function pbBindStatusFilter() {
+    document.querySelectorAll('input[name="pb-statusFilter"]').forEach(rb => {
+        rb.addEventListener('change', function () {
+            pbStatusFilter = this.value;
+            pbApplyFilters();
+        });
+    });
 }
 
 function pbStatusBadge(status) {
