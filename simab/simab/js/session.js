@@ -22,6 +22,14 @@
  * seperti sebelumnya — file ini tidak menimpanya, hanya memanggilnya saat
  * auto-logout idle terdeteksi, supaya perilaku manual logout & auto-logout
  * konsisten (key yang dihapus & halaman tujuan sama).
+ *
+ * "Kembali ke halaman tujuan setelah login": kalau guard ini nendang user
+ * ke index.html karena belum/sudah tidak login, halaman yang tadi mau
+ * dibuka (mis. dokumen-scan.html) dititipkan dulu ke localStorage
+ * (key: postLoginRedirect, kadaluarsa 10 menit). index.html baca titipan
+ * ini setelah login sukses dan redirect ke situ — kalau tidak ada titipan
+ * (atau sudah kadaluarsa/user buka index.html langsung), tetap redirect ke
+ * dashboard.html seperti biasa.
  * -----------------------------------------------------------------------
  */
 
@@ -39,8 +47,22 @@
         localStorage.setItem('lastActivity', Date.now().toString());
     }
 
+    // Titipkan halaman saat ini supaya index.html bisa redirect balik ke sini
+    // setelah login sukses. Cukup nama file-nya saja (bukan path lengkap),
+    // karena semua halaman ada di folder yang sama & saling me-redirect
+    // pakai path relatif juga (lihat window.location.href = 'dashboard.html' dst).
+    function simpanTujuanRedirect() {
+        try {
+            const currentPage = window.location.pathname.split('/').pop();
+            if (currentPage && currentPage !== LOGIN_PAGE) {
+                localStorage.setItem('postLoginRedirect', JSON.stringify({ page: currentPage, ts: Date.now() }));
+            }
+        } catch (e) { /* gagal simpan -> abaikan, nanti fallback ke dashboard.html */ }
+    }
+
     // Guard: kalau halaman ini butuh login tapi user belum/sudah tidak login, tendang ke login.
     if (!isLoggedIn()) {
+        simpanTujuanRedirect();
         window.location.href = LOGIN_PAGE;
         return; // hentikan eksekusi sisa script di halaman ini
     }
@@ -65,6 +87,7 @@
         if (Date.now() - last > IDLE_LIMIT_MS) {
             // Hapus key sesi yang sama persis dengan yang dihapus logout() di common.js,
             // supaya perilaku konsisten, lalu redirect dengan alasan 'idle'.
+            simpanTujuanRedirect();
             ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'lastActivity']
                 .forEach(k => localStorage.removeItem(k));
             window.location.href = LOGIN_PAGE + '?reason=idle';
@@ -75,6 +98,7 @@
     // Sinkron antar tab: kalau di tab lain sesi dihapus (logout manual/idle), tab ini ikut ter-redirect.
     window.addEventListener('storage', (e) => {
         if (e.key === 'nama' && !e.newValue) {
+            simpanTujuanRedirect();
             window.location.href = LOGIN_PAGE;
         }
     });
