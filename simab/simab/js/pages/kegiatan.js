@@ -1195,13 +1195,17 @@ function kgShowDokumenPopup(tr) {
         <h3 class="text-center text-sky-700 font-semibold text-base mb-1"><i class="fa-solid fa-file-pdf mr-2"></i>Dokumen Kegiatan #${id}</h3>
         <p class="text-center text-xs text-slate-400 mb-2">${link ? 'Dokumen sudah tersedia.' : 'Dokumen belum diupload.'}</p>
         <div class="flex items-center justify-center gap-3 py-2">
-            <button id="kg-dokLihat" type="button" ${link ? '' : 'disabled'} class="flex flex-col items-center gap-1 px-5 py-3 rounded-xl border ${link ? 'border-sky-300 text-sky-700 hover:bg-sky-50 cursor-pointer' : 'border-slate-200 text-slate-300 cursor-not-allowed'}">
+            <button id="kg-dokLihat" type="button" ${link ? '' : 'disabled'} class="flex flex-col items-center gap-1 px-4 py-3 rounded-xl border ${link ? 'border-sky-300 text-sky-700 hover:bg-sky-50 cursor-pointer' : 'border-slate-200 text-slate-300 cursor-not-allowed'}">
                 <i class="fa-solid fa-eye text-xl"></i>
                 <span class="text-xs font-medium">Lihat</span>
             </button>
-            <button id="kg-dokUpload" type="button" class="flex flex-col items-center gap-1 px-5 py-3 rounded-xl border border-emerald-300 text-emerald-700 hover:bg-emerald-50 cursor-pointer">
+            <button id="kg-dokUpload" type="button" class="flex flex-col items-center gap-1 px-4 py-3 rounded-xl border border-emerald-300 text-emerald-700 hover:bg-emerald-50 cursor-pointer">
                 <i class="fa-solid fa-upload text-xl"></i>
                 <span class="text-xs font-medium">${link ? 'Ganti File' : 'Upload'}</span>
+            </button>
+            <button id="kg-dokHapus" type="button" ${link ? '' : 'disabled'} class="flex flex-col items-center gap-1 px-4 py-3 rounded-xl border ${link ? 'border-red-300 text-red-600 hover:bg-red-50 cursor-pointer' : 'border-slate-200 text-slate-300 cursor-not-allowed'}">
+                <i class="fa-solid fa-trash text-xl"></i>
+                <span class="text-xs font-medium">Hapus</span>
             </button>
         </div>
         <input id="kg-dokFileInput" type="file" accept="application/pdf,.pdf" class="hidden">
@@ -1216,6 +1220,7 @@ function kgShowDokumenPopup(tr) {
     function wireEvents(link) {
         const btnLihat = popup.querySelector('#kg-dokLihat');
         const btnUpload = popup.querySelector('#kg-dokUpload');
+        const btnHapus = popup.querySelector('#kg-dokHapus');
         const fileInput = popup.querySelector('#kg-dokFileInput');
         const statusEl = popup.querySelector('#kg-dokStatus');
 
@@ -1223,6 +1228,42 @@ function kgShowDokumenPopup(tr) {
 
         if (link) {
             btnLihat.onclick = () => window.open(link, '_blank');
+            btnHapus.onclick = async () => {
+                if (!confirm('Yakin ingin menghapus dokumen ini?')) return;
+
+                statusEl.textContent = 'Menghapus dokumen...';
+                statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
+                btnLihat.disabled = true;
+                btnUpload.disabled = true;
+                btnHapus.disabled = true;
+
+                try {
+                    const result = await apiPost({ action: 'hapusDokumenKegiatan', id: id }, 30000);
+                    if (result.status === 'success') {
+                        rowData.T = '';
+                        const dokBtn = tr.querySelector('.kg-btn-dokumen');
+                        if (dokBtn) {
+                            dokBtn.classList.remove('text-emerald-600');
+                            dokBtn.classList.add('text-slate-400');
+                            dokBtn.title = 'Dokumen PDF (belum ada)';
+                        }
+                        popup.innerHTML = renderContent('');
+                        wireEvents('');
+                    } else {
+                        statusEl.textContent = '❌ ' + (result.message || 'Gagal menghapus dokumen.');
+                        statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
+                        btnLihat.disabled = false;
+                        btnUpload.disabled = false;
+                        btnHapus.disabled = false;
+                    }
+                } catch (e) {
+                    statusEl.textContent = '❌ ' + (e.message || 'Gagal menghapus dokumen.');
+                    statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
+                    btnLihat.disabled = false;
+                    btnUpload.disabled = false;
+                    btnHapus.disabled = false;
+                }
+            };
         }
 
         btnUpload.onclick = () => fileInput.click();
@@ -1247,6 +1288,7 @@ function kgShowDokumenPopup(tr) {
             statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
             btnUpload.disabled = true;
             btnLihat.disabled = true;
+            if (btnHapus) btnHapus.disabled = true;
 
             try {
                 const base64 = await new Promise((resolve, reject) => {
@@ -1278,12 +1320,14 @@ function kgShowDokumenPopup(tr) {
                     statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
                     btnUpload.disabled = false;
                     btnLihat.disabled = !link;
+                    if (btnHapus) btnHapus.disabled = !link;
                 }
             } catch (e) {
                 statusEl.textContent = '❌ ' + (e.message || 'Upload gagal.');
                 statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
                 btnUpload.disabled = false;
                 btnLihat.disabled = !link;
+                if (btnHapus) btnHapus.disabled = !link;
             } finally {
                 this.value = '';
             }
