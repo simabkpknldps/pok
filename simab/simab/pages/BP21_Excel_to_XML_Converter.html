@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Konverter Excel BP21 ke XML</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0f172a;
+    --card:#ffffff;
+    --accent:#2563eb;
+    --accent-dark:#1d4ed8;
+    --text:#1e293b;
+    --muted:#64748b;
+    --border:#e2e8f0;
+    --ok:#16a34a;
+    --err:#dc2626;
+    --warn:#d97706;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Arial,sans-serif;
+    background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);
+    min-height:100vh;
+    padding:32px 16px;
+    color:var(--text);
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+  header{text-align:center;color:#fff;margin-bottom:24px;}
+  header h1{margin:0 0 6px;font-size:26px;}
+  header p{margin:0;color:#cbd5e1;font-size:14px;}
+  .card{
+    background:var(--card);
+    border-radius:14px;
+    padding:28px;
+    box-shadow:0 20px 40px rgba(0,0,0,.25);
+    margin-bottom:20px;
+  }
+  .dropzone{
+    border:2px dashed #94a3b8;
+    border-radius:12px;
+    padding:36px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:.15s;
+    background:#f8fafc;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--accent);
+    background:#eff6ff;
+  }
+  .dropzone svg{width:42px;height:42px;color:var(--accent);margin-bottom:8px;}
+  .dropzone .main-text{font-weight:600;font-size:15px;}
+  .dropzone .sub-text{font-size:12.5px;color:var(--muted);margin-top:4px;}
+  input[type=file]{display:none;}
+  .filepill{
+    display:inline-flex;align-items:center;gap:8px;
+    background:#eff6ff;color:var(--accent-dark);
+    border:1px solid #bfdbfe;padding:6px 12px;border-radius:999px;
+    font-size:13px;margin-top:14px;
+  }
+  .row{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;}
+  .field{flex:1;min-width:160px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px;}
+  .field input, .field select{
+    width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;
+  }
+  button{
+    background:var(--accent);color:#fff;border:none;padding:12px 22px;
+    border-radius:9px;font-size:14.5px;font-weight:600;cursor:pointer;
+    transition:.15s;
+  }
+  button:hover{background:var(--accent-dark);}
+  button:disabled{background:#94a3b8;cursor:not-allowed;}
+  .btnbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;}
+  .btn-secondary{background:#fff;color:var(--accent);border:1px solid var(--accent);}
+  .btn-secondary:hover{background:#eff6ff;}
+  .status{margin-top:16px;font-size:13.5px;padding:12px 14px;border-radius:8px;display:none;}
+  .status.ok{display:block;background:#f0fdf4;color:var(--ok);border:1px solid #bbf7d0;}
+  .status.err{display:block;background:#fef2f2;color:var(--err);border:1px solid #fecaca;}
+  .status.warn{display:block;background:#fffbeb;color:var(--warn);border:1px solid #fde68a;}
+  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12.5px;}
+  th,td{border:1px solid var(--border);padding:6px 8px;text-align:left;white-space:nowrap;}
+  th{background:#f1f5f9;position:sticky;top:0;}
+  .tablewrap{max-height:340px;overflow:auto;border:1px solid var(--border);border-radius:8px;margin-top:8px;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;}
+  .badge.ok{background:#dcfce7;color:#166534;}
+  .badge.bad{background:#fee2e2;color:#991b1b;}
+  .summary{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;}
+  .summary .item{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;}
+  .summary .item b{display:block;font-size:19px;color:var(--accent-dark);}
+  .footer-note{color:#cbd5e1;font-size:12px;text-align:center;margin-top:6px;}
+  pre#xmlPreview{
+    background:#0f172a;color:#e2e8f0;padding:16px;border-radius:10px;
+    font-size:12px;max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+  }
+  h2{font-size:16px;margin:0 0 12px;}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📄 Konverter Excel BP21 → XML</h1>
+    <p>Upload file Excel (sheet <b>DATA</b>) → hasilkan file XML <code>Bp21Bulk</code> sesuai format DJP</p>
+  </header>
+
+  <div class="card">
+    <h2>1. Upload File Excel</h2>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m0 0L7 9m5-5l5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+      <div class="main-text">Klik untuk pilih file, atau drag & drop di sini</div>
+      <div class="sub-text">Format .xlsx dengan sheet bernama "DATA"</div>
+      <div id="fileNameHolder"></div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Nama sheet data</label>
+        <input type="text" id="sheetNameInput" value="DATA">
+      </div>
+      <div class="field">
+        <label>Baris awal data (header di baris ini - 1)</label>
+        <input type="number" id="startRowInput" value="4" min="2">
+      </div>
+      <div class="field">
+        <label>Nama file output XML</label>
+        <input type="text" id="outFileName" placeholder="contoh: 08_21.xml">
+      </div>
+    </div>
+    <div id="status" class="status"></div>
+    <div class="btnbar">
+      <button id="btnConvert" disabled>⚙️ Konversi ke XML</button>
+      <button id="btnDownload" class="btn-secondary" style="display:none;">⬇️ Unduh XML</button>
+      <button id="btnReset" class="btn-secondary" style="display:none;">🔄 Mulai Ulang</button>
+    </div>
+    <div class="hint">
+      Struktur kolom sheet DATA yang dibaca: B=Masa Pajak, C=Tahun Pajak, D=NPWP, E=ID TKU Penerima,
+      F=Status PTKP, G=Fasilitas, H=Kode Objek Pajak, I=Penghasilan, J=Deemed, K=Tarif,
+      L=Jenis Dok. Referensi, M=Nomor Dok. Referensi, N=Tanggal Dok. Referensi, O=ID TKU Pemotong,
+      P=Tanggal Pemotongan. TIN Pemotong diambil dari sel <b>C1</b>. Jika kolom Deemed/Tarif kosong
+      (tidak ada nilai hasil hitung Excel), aplikasi ini akan menghitung otomatis memakai sheet <b>REF</b>
+      dan tabel TER terbaru — sama seperti rumus pada file aslinya.
+    </div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none;">
+    <h2>2. Ringkasan Hasil</h2>
+    <div class="summary" id="summaryBox"></div>
+    <div class="tablewrap"><table id="previewTable"></table></div>
+  </div>
+
+  <div class="card" id="xmlCard" style="display:none;">
+    <h2>3. Pratinjau XML</h2>
+    <pre id="xmlPreview"></pre>
+  </div>
+
+  <p class="footer-note">Diproses sepenuhnya di browser Anda — file tidak dikirim ke server manapun.</p>
+</div>
+
+<script>
+/* ================== TABEL REFERENSI TER (PMK terbaru) ================== */
+/* Setiap array: [batas_atas_DPP, tarif_persen], entri terakhir berlaku untuk DPP > batas sebelumnya (batas=null) */
+const TER_TABLES = {
+"TER_A": [[5400000,0],[5650000,0.25],[5950000,0.5],[6300000,0.75],[6750000,1],[7500000,1.25],[8550000,1.5],[9650000,1.75],[10050000,2],[10350000,2.25],[10700000,2.5],[11050000,3],[11600000,3.5],[12500000,4],[13750000,5],[15100000,6],[16950000,7],[19750000,8],[24150000,9],[26450000,10],[28000000,11],[30050000,12],[32400000,13],[35400000,14],[39100000,15],[43850000,16],[47800000,17],[51400000,18],[56300000,19],[62200000,20],[68600000,21],[77500000,22],[89000000,23],[103000000,24],[125000000,25],[157000000,26],[206000000,27],[337000000,28],[454000000,29],[550000000,30],[695000000,31],[910000000,32],[1400000000,33],[null,34]],
+"TER_B": [[6200000,0],[6500000,0.25],[6850000,0.5],[7300000,0.75],[9200000,1],[10750000,1.5],[11250000,2],[11600000,2.5],[12600000,3],[13600000,4],[14950000,5],[16400000,6],[18450000,7],[21850000,8],[26000000,9],[27700000,10],[29350000,11],[31450000,12],[33950000,13],[37100000,14],[41100000,15],[45800000,16],[49500000,17],[53800000,18],[58500000,19],[64000000,20],[71000000,21],[80000000,22],[93000000,23],[109000000,24],[129000000,25],[163000000,26],[211000000,27],[374000000,28],[459000000,29],[555000000,30],[704000000,31],[957000000,32],[1405000000,33],[null,34]],
+"TER_C": [[6600000,0],[6950000,0.25],[7350000,0.5],[7800000,0.75],[8850000,1],[9800000,1.25],[10950000,1.5],[11200000,1.75],[12050000,2],[12950000,3],[14150000,4],[15550000,5],[17050000,6],[19500000,7],[22700000,8],[26600000,9],[28100000,10],[30100000,11],[32600000,12],[35400000,13],[38900000,14],[43000000,15],[47400000,16],[51200000,17],[55800000,18],[60400000,19],[66700000,20],[74500000,21],[83200000,22],[95600000,23],[110000000,24],[134000000,25],[169000000,26],[221000000,27],[390000000,28],[463000000,29],[561000000,30],[709000000,31],[965000000,32],[1419000000,33],[null,34]]
+};
+const TER_A_STATUS = ['TK/0','TK/1','K/0','HB/0','HB/1'];
+const TER_B_STATUS = ['TK/2','TK/3','K/1','K/2','HB/2','HB/3'];
+
+function bracketLookup(table, dpp){
+  for(const [upper, rate] of table){
+    if(upper === null) return rate;
+    if(dpp <= upper) return rate;
+  }
+  return table[table.length-1][1];
+}
+function terRate(status, dpp){
+  let table;
+  if(TER_A_STATUS.includes(status)) table = TER_TABLES.TER_A;
+  else if(TER_B_STATUS.includes(status)) table = TER_TABLES.TER_B;
+  else table = TER_TABLES.TER_C;
+  return bracketLookup(table, dpp);
+}
+function ps17Rate(dpp){
+  if(dpp<=60000000) return 5;
+  if(dpp<=250000000) return 15;
+  if(dpp<=500000000) return 25;
+  if(dpp<=5000000000) return 30;
+  return 35;
+}
+function harianRate(dpp){
+  if(dpp<=450000) return 0;
+  if(dpp<=2500000) return 0.5;
+  return 0;
+}
+function pesangonRate(dpp){
+  if(dpp<=50000000) return 0;
+  if(dpp<=100000000) return 5;
+  if(dpp<=500000000) return 15;
+  return 25;
+}
+function pensiunRate(dpp){
+  if(dpp<=50000000) return 0;
+  return 5;
+}
+
+/* ================== STATE ================== */
+let workbook = null;
+let convertedRows = [];
+let convertedXml = "";
+let tinPemotong = "";
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const statusBox = document.getElementById('status');
+const btnConvert = document.getElementById('btnConvert');
+const btnDownload = document.getElementById('btnDownload');
+const btnReset = document.getElementById('btnReset');
+const fileNameHolder = document.getElementById('fileNameHolder');
+
+dropzone.addEventListener('click', ()=>fileInput.click());
+dropzone.addEventListener('dragover', e=>{e.preventDefault(); dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e=>{
+  if(e.target.files.length) handleFile(e.target.files[0]);
+});
+
+function showStatus(msg, type){
+  statusBox.className = 'status ' + type;
+  statusBox.innerHTML = msg;
+}
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = new Uint8Array(e.target.result);
+      workbook = XLSX.read(data, {type:'array', cellDates:true});
+      fileNameHolder.innerHTML = `<div class="filepill">📎 ${file.name}</div>`;
+      showStatus(`File berhasil dimuat. Sheet ditemukan: ${workbook.SheetNames.join(', ')}`, 'ok');
+      btnConvert.disabled = false;
+      // suggest output filename based on month/year found later (after convert)
+    }catch(err){
+      showStatus('Gagal membaca file: ' + err.message, 'err');
+      btnConvert.disabled = true;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+btnReset.addEventListener('click', ()=>{
+  workbook = null; convertedRows=[]; convertedXml=""; 
+  fileInput.value=''; fileNameHolder.innerHTML='';
+  document.getElementById('resultCard').style.display='none';
+  document.getElementById('xmlCard').style.display='none';
+  btnDownload.style.display='none';
+  btnReset.style.display='none';
+  btnConvert.disabled = true;
+  statusBox.className='status';
+});
+
+function excelSerialToDateStr(v){
+  if(v instanceof Date){
+    const y=v.getFullYear(), m=String(v.getMonth()+1).padStart(2,'0'), d=String(v.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  if(typeof v === 'number'){
+    const d = XLSX.SSF.parse_date_code(v);
+    if(d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+  }
+  if(typeof v === 'string'){
+    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return v.substring(0,10);
+    const m2 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(m2) return `${m2[3]}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;
+  }
+  return '';
+}
+
+function cellText(cell){
+  if(!cell) return '';
+  if(cell.v === undefined || cell.v === null) return '';
+  return String(cell.v).trim();
+}
+function cellNum(cell){
+  if(!cell || cell.v === undefined || cell.v === null || cell.v === '') return null;
+  const n = Number(cell.v);
+  return isNaN(n) ? null : n;
+}
+
+function buildRefMap(ws){
+  // REF sheet: col A=Kode Objek Pajak, C=Deemed, D=Tarif (number or TER/PS17/HARIAN/PESANGON/PENSIUN)
+  const map = {};
+  if(!ws) return map;
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let r = range.s.r+1; r <= range.e.r; r++){
+    const codeCell = ws[XLSX.utils.encode_cell({r, c:0})];
+    if(!codeCell || !codeCell.v) continue;
+    const code = String(codeCell.v).trim();
+    const deemedCell = ws[XLSX.utils.encode_cell({r, c:2})];
+    const tarifCell = ws[XLSX.utils.encode_cell({r, c:3})];
+    const deemed = deemedCell ? deemedCell.v : null;
+    const tarif = tarifCell ? tarifCell.v : null;
+    map[code] = {deemed, tarif};
+  }
+  return map;
+}
+
+function escapeXml(str){
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+
+document.getElementById('btnConvert').addEventListener('click', ()=>{
+  if(!workbook) return;
+  const sheetName = document.getElementById('sheetNameInput').value.trim() || 'DATA';
+  const startRow = parseInt(document.getElementById('startRowInput').value, 10) || 4;
+
+  const ws = workbook.Sheets[sheetName];
+  if(!ws){
+    showStatus(`Sheet "${sheetName}" tidak ditemukan di file ini. Sheet tersedia: ${workbook.SheetNames.join(', ')}`, 'err');
+    return;
+  }
+  const refWs = workbook.Sheets['REF'];
+  const refMap = buildRefMap(refWs);
+
+  // TIN Pemotong dari C1
+  const tinCell = ws['C1'];
+  tinPemotong = tinCell ? String(tinCell.v).trim() : '';
+  if(!tinPemotong){
+    showStatus('Sel C1 (TIN Pemotong) kosong pada sheet ' + sheetName + '. Proses dibatalkan.', 'err');
+    return;
+  }
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const rows = [];
+  const warnings = [];
+
+  for(let r = startRow - 1; r <= range.e.r; r++){
+    const get = (col) => ws[XLSX.utils.encode_cell({r, c: col})];
+    const npwp = cellText(get(3));      // D
+    const gross = cellNum(get(8));      // I
+    // stop condition: no NPWP and no gross => end of data
+    if(!npwp && (gross===null || gross===0) ){
+      // check if entire row A..P empty
+      let empty = true;
+      for(let c=0;c<=15;c++){ if(cellText(get(c))!==''){empty=false;break;} }
+      if(empty) continue; // skip blank row, keep scanning in case of gaps
+    }
+    if(!npwp) continue; // no counterpart TIN -> not a valid data row
+
+    const masaPajak = cellNum(get(1));       // B
+    const tahunPajak = cellNum(get(2));      // C
+    const idTkuPenerima = cellText(get(4));  // E
+    const statusPtkp = cellText(get(5));     // F
+    const fasilitas = cellText(get(6)) || 'N/A'; // G
+    const kodeObjek = cellText(get(7));      // H
+    let deemed = cellNum(get(9));            // J
+    let rate = cellNum(get(10));             // K
+    const jenisDok = cellText(get(11)) || 'Other'; // L
+    const nomorDok = cellText(get(12));      // M
+    const tglDok = excelSerialToDateStr(get(13) ? get(13).v : null); // N
+    const idTkuPemotong = cellText(get(14)); // O
+    const tglPemotongan = excelSerialToDateStr(get(15) ? get(15).v : null); // P
+
+    // fallback compute Deemed/Rate if missing, using REF sheet
+    if((deemed===null || rate===null) && refMap[kodeObjek]){
+      const ref = refMap[kodeObjek];
+      if(deemed===null) deemed = typeof ref.deemed === 'number' ? ref.deemed : null;
+      if(rate===null){
+        const S = ref.tarif;
+        const dppBase = (gross!==null && deemed!==null) ? (gross*deemed/100) : null;
+        if(typeof S === 'number'){
+          rate = S;
+        } else if(dppBase !== null){
+          const s = String(S).trim().toUpperCase();
+          if(s==='TER') rate = terRate(statusPtkp, dppBase);
+          else if(s==='PS17') rate = ps17Rate(dppBase);
+          else if(s==='HARIAN') rate = harianRate(dppBase);
+          else if(s==='PESANGON') rate = pesangonRate(dppBase);
+          else if(s==='PENSIUN') rate = pensiunRate(dppBase);
+        }
+      }
+    }
+
+    const rowNum = r+1;
+    const rowWarnings = [];
+    if(!kodeObjek) rowWarnings.push('Kode Objek Pajak kosong');
+    if(gross===null) rowWarnings.push('Penghasilan kosong');
+    if(deemed===null) rowWarnings.push('Deemed tidak dapat dihitung');
+    if(rate===null) rowWarnings.push('Tarif tidak dapat dihitung');
+    if(!tglDok) rowWarnings.push('Tanggal Dok. Referensi kosong/format tidak dikenali');
+    if(!tglPemotongan) rowWarnings.push('Tanggal Pemotongan kosong/format tidak dikenali');
+    if(rowWarnings.length) warnings.push(`Baris ${rowNum}: ${rowWarnings.join(', ')}`);
+
+    rows.push({
+      rowNum, npwp, masaPajak, tahunPajak, idTkuPenerima, statusPtkp, fasilitas,
+      kodeObjek, gross, deemed, rate, jenisDok, nomorDok, tglDok, idTkuPemotong, tglPemotongan,
+      valid: rowWarnings.length===0
+    });
+  }
+
+  if(rows.length===0){
+    showStatus('Tidak ada baris data yang terbaca. Periksa nama sheet dan baris awal data.', 'err');
+    return;
+  }
+
+  convertedRows = rows;
+  buildXml(rows);
+  renderResults(rows, warnings);
+});
+
+function buildXml(rows){
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  xml += '<Bp21Bulk xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n';
+  xml += `\t<TIN>${escapeXml(tinPemotong)}</TIN>\n`;
+  xml += '\t<ListOfBp21>\n';
+  for(const row of rows){
+    xml += '\t\t<Bp21>\n';
+    xml += `\t\t\t<TaxPeriodMonth>${row.masaPajak!==null?row.masaPajak:''}</TaxPeriodMonth>\n`;
+    xml += `\t\t\t<TaxPeriodYear>${row.tahunPajak!==null?row.tahunPajak:''}</TaxPeriodYear>\n`;
+    xml += `\t\t\t<CounterpartTin>${escapeXml(row.npwp)}</CounterpartTin>\n`;
+    xml += `\t\t\t<IDPlaceOfBusinessActivityOfIncomeRecipient>${escapeXml(row.idTkuPenerima)}</IDPlaceOfBusinessActivityOfIncomeRecipient>\n`;
+    xml += `\t\t\t<StatusTaxExemption>${escapeXml(row.statusPtkp)}</StatusTaxExemption>\n`;
+    xml += `\t\t\t<TaxCertificate>${escapeXml(row.fasilitas)}</TaxCertificate>\n`;
+    xml += `\t\t\t<TaxObjectCode>${escapeXml(row.kodeObjek)}</TaxObjectCode>\n`;
+    xml += `\t\t\t<Gross>${row.gross!==null?row.gross:''}</Gross>\n`;
+    xml += `\t\t\t<Deemed>${row.deemed!==null?row.deemed:''}</Deemed>\n`;
+    xml += `\t\t\t<Rate>${row.rate!==null?row.rate:''}</Rate>\n`;
+    xml += `\t\t\t<Document>${escapeXml(row.jenisDok)}</Document>\n`;
+    xml += `\t\t\t<DocumentNumber>${escapeXml(row.nomorDok)}</DocumentNumber>\n`;
+    xml += `\t\t\t<DocumentDate>${row.tglDok}</DocumentDate>\n`;
+    xml += `\t\t\t<IDPlaceOfBusinessActivity>${escapeXml(row.idTkuPemotong)}</IDPlaceOfBusinessActivity>\n`;
+    xml += `\t\t\t<WithholdingDate>${row.tglPemotongan}</WithholdingDate>\n`;
+    xml += '\t\t</Bp21>\n';
+  }
+  xml += '\t</ListOfBp21>\n';
+  xml += '</Bp21Bulk>';
+  convertedXml = xml;
+}
+
+function renderResults(rows, warnings){
+  const validCount = rows.filter(r=>r.valid).length;
+  const warnCount = rows.length - validCount;
+
+  document.getElementById('resultCard').style.display='block';
+  document.getElementById('xmlCard').style.display='block';
+  document.getElementById('summaryBox').innerHTML = `
+    <div class="item"><b>${rows.length}</b>Total baris</div>
+    <div class="item"><b style="color:var(--ok)">${validCount}</b>Lengkap</div>
+    <div class="item"><b style="color:${warnCount?'var(--warn)':'var(--ok)'}">${warnCount}</b>Perlu dicek</div>
+    <div class="item"><b>${tinPemotong}</b>TIN Pemotong</div>
+  `;
+
+  const table = document.getElementById('previewTable');
+  let head = '<tr><th>#</th><th>Status</th><th>NPWP</th><th>Masa</th><th>Tahun</th><th>PTKP</th><th>Kode Objek</th><th>Penghasilan</th><th>Deemed</th><th>Tarif</th><th>No. Dok</th><th>Tgl Dok</th><th>Tgl Potong</th></tr>';
+  let body = '';
+  for(const row of rows){
+    body += `<tr>
+      <td>${row.rowNum}</td>
+      <td><span class="badge ${row.valid?'ok':'bad'}">${row.valid?'OK':'Cek'}</span></td>
+      <td>${row.npwp}</td>
+      <td>${row.masaPajak??''}</td>
+      <td>${row.tahunPajak??''}</td>
+      <td>${row.statusPtkp}</td>
+      <td>${row.kodeObjek}</td>
+      <td>${row.gross!==null?row.gross.toLocaleString('id-ID'):''}</td>
+      <td>${row.deemed??''}</td>
+      <td>${row.rate??''}</td>
+      <td>${row.nomorDok}</td>
+      <td>${row.tglDok}</td>
+      <td>${row.tglPemotongan}</td>
+    </tr>`;
+  }
+  table.innerHTML = head + body;
+
+  document.getElementById('xmlPreview').textContent = convertedXml;
+
+  if(warnings.length){
+    showStatus(`Konversi selesai dengan ${warnings.length} peringatan:<br>` + warnings.slice(0,15).join('<br>') + (warnings.length>15?'<br>...':''), 'warn');
+  } else {
+    showStatus(`Konversi berhasil. ${rows.length} baris siap diunduh sebagai XML.`, 'ok');
+  }
+
+  // suggest filename
+  const outInput = document.getElementById('outFileName');
+  if(!outInput.value){
+    const first = rows[0];
+    if(first && first.masaPajak && first.tahunPajak){
+      outInput.value = `${String(first.masaPajak).padStart(2,'0')}_${String(first.tahunPajak).slice(-2)}_21.xml`;
+    } else {
+      outInput.value = 'BP21_output.xml';
+    }
+  }
+
+  btnDownload.style.display='inline-block';
+  btnReset.style.display='inline-block';
+}
+
+btnDownload.addEventListener('click', ()=>{
+  if(!convertedXml) return;
+  let filename = document.getElementById('outFileName').value.trim() || 'BP21_output.xml';
+  if(!filename.toLowerCase().endsWith('.xml')) filename += '.xml';
+  const blob = new Blob([convertedXml], {type:'application/xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
