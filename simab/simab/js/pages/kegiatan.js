@@ -11,7 +11,6 @@
  * P status, R nomorSPM.
  */
 
-
 let kgCurrentTableRowsData = [];
 let kgPegawaiList = [];
 let kgLokasiList = [];
@@ -158,6 +157,17 @@ function kgStatusClasses(status) {
     }
 }
 
+// Tentukan warna & title tombol dokumen berdasarkan kombinasi kuitansi (T) & SPBy (U):
+// abu-abu = belum ada dokumen, kuning = kuitansi saja, biru = SPBy saja, hijau = keduanya sudah ada.
+function kgDokBtnStyle(rowData) {
+    const adaT = !!(rowData && rowData.T);
+    const adaU = !!(rowData && rowData.U);
+    if (adaT && adaU) return { cls: 'text-emerald-600', title: 'Dokumen PDF (kuitansi & SPBy sudah ada)' };
+    if (adaT) return { cls: 'text-amber-500', title: 'Dokumen PDF (kuitansi sudah ada, SPBy belum)' };
+    if (adaU) return { cls: 'text-sky-500', title: 'Dokumen PDF (SPBy sudah ada, kuitansi belum)' };
+    return { cls: 'text-slate-400', title: 'Dokumen PDF (belum ada)' };
+}
+
 function kgRenderTable(rows) {
     kgCurrentTableRowsData = rows;
     const tbody = document.getElementById('kg-dataTableBody');
@@ -195,7 +205,7 @@ function kgRenderTable(rows) {
                     <button class="kg-btn-bayar w-7 h-7 rounded hover:bg-slate-100" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
                     <button class="kg-btn-sp2d w-7 h-7 rounded hover:bg-slate-100" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
                     <button class="kg-btn-detil w-7 h-7 rounded hover:bg-slate-100 text-sky-600" title="Detil"><i class="fa-solid fa-circle-info"></i></button>
-                    <button class="kg-btn-dokumen w-7 h-7 rounded hover:bg-slate-100 ${(r.T || r.U) ? 'text-emerald-600' : 'text-slate-400'}" title="${(r.T || r.U) ? 'Dokumen PDF (sudah ada)' : 'Dokumen PDF (belum ada)'}"><i class="fa-solid fa-file-pdf"></i></button>
+                    <button class="kg-btn-dokumen w-7 h-7 rounded hover:bg-slate-100 ${kgDokBtnStyle(r).cls}" title="${kgDokBtnStyle(r).title}"><i class="fa-solid fa-file-pdf"></i></button>
                     <button class="kg-btn-hapus w-7 h-7 rounded hover:bg-slate-100 text-red-500" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
@@ -1190,16 +1200,16 @@ function kgShowDetilPopup(tr) {
 
 // ---- Dokumen PDF (kuitansi & SPBy, upload/lihat/reupload/hapus ke Google Drive folder simab_doc) ----
 
-// Update warna tombol dokumen di baris tabel (nyala kalau salah satu dari
-// kuitansi/SPBy sudah ada).
+// Update warna tombol dokumen di baris tabel: abu-abu = belum ada, kuning =
+// kuitansi saja, biru = SPBy saja, hijau = kuitansi & SPBy sudah ada.
 function kgUpdateDokBtnColor(trEl, rowData) {
     if (!trEl || !rowData) return;
     const dokBtn = trEl.querySelector('.kg-btn-dokumen');
     if (!dokBtn) return;
-    const ada = !!(rowData.T || rowData.U);
-    dokBtn.classList.toggle('text-emerald-600', ada);
-    dokBtn.classList.toggle('text-slate-400', !ada);
-    dokBtn.title = ada ? 'Dokumen PDF (sudah ada)' : 'Dokumen PDF (belum ada)';
+    const style = kgDokBtnStyle(rowData);
+    dokBtn.classList.remove('text-emerald-600', 'text-amber-500', 'text-sky-500', 'text-slate-400');
+    dokBtn.classList.add(style.cls);
+    dokBtn.title = style.title;
 }
 
 // Terapkan hasil {idKegiatan: link} ke kgCurrentTableRowsData + tombol tabel,
