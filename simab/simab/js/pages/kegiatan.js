@@ -243,6 +243,11 @@ async function kgLoadData(resetPage, forceRefresh) {
             spm: kgQuery.spm,
             page: kgQuery.page,
             pageSize: kgQuery.pageSize,
+            // Dikirim hanya saat dipanggil dari Pencarian Global Dashboard (lihat
+            // dashboard-search.js) untuk membatasi pencarian ke kolom tertentu.
+            // Untuk halaman Kegiatan biasa, kgQuery.searchCols selalu undefined,
+            // jadi baris ini tidak mengubah perilaku pencarian yang sudah ada.
+            searchCols: kgQuery.searchCols,
             includeRef: kgFirstLoad, // daftar pegawai/lokasi cukup diambil sekali di load awal
             forceRefresh: !!forceRefresh
         };
