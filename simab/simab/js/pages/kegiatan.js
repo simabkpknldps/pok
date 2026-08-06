@@ -1430,15 +1430,20 @@ function kgShowDokumenPopup(tr) {
     function wireAll() {
         popup.querySelector('#kg-dokClose').onclick = () => overlay.remove();
 
-        // Nomor SPM (kolom R) dipakai utk auto-jump ke halaman SPBy yang memuat
-        // teks "<No SPM>/PB/" saat dokumen SPBy dibuka.
-        const spmNumber = String(rowData.R || '').trim();
+        // Nomor SPBy diambil dari pola "(SPBy-NNNN)" di Uraian (kolom C), mis.
+        // "(SPBy-0009 / 15-01-2026) ST-0006/KNL.1401/2026" -> "0009". Dipakai
+        // utk auto-jump ke halaman SPBy yang memuat teks "<nomor>/PB/".
+        const spbyMatch = String(rowData.C || '').match(/SPBy-(\d+)/i);
+        const spbyNumber = spbyMatch ? spbyMatch[1] : '';
+        const spbySearchCandidates = spbyNumber
+            ? [`${spbyNumber}/PB/`, `${parseInt(spbyNumber, 10)}/PB/`]
+            : null;
 
         kgWireDokSlot({
             popup, prefix: 'kgDokKuitansi', id, rowData, field: 'T',
             uploadAction: 'uploadDokumenKegiatan',
             deleteAction: 'hapusDokumenKegiatan',
-            allowTempelLink: true,
+            allowTempelLink: false,
             viewTitle: `Kuitansi / Dokumen #${id}`,
             searchTextForView: null,
             rerender
@@ -1449,7 +1454,7 @@ function kgShowDokumenPopup(tr) {
             deleteAction: 'hapusSpbyKegiatan',
             allowTempelLink: false,
             viewTitle: `SPBy #${id}`,
-            searchTextForView: spmNumber ? `${spmNumber}/PB/` : null,
+            searchTextForView: spbySearchCandidates,
             rerender
         });
 
