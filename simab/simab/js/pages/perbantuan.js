@@ -24,7 +24,6 @@
  * -----------------------------------------------------------------------
  */
 
-
 let pbAllRows = [];
 let pbPegawaiList = [];
 let pbLokasiList = [];
@@ -992,13 +991,18 @@ function pbOpenDokumenModal(row, tr) {
     function wireAll() {
         popup.querySelector('#pb-dok-closeBtn').onclick = () => overlay.remove();
 
-        const spmNumber = String(row.R || '').trim();
+        // Nomor SPBy diambil dari pola "(SPBy-NNNN)" di Uraian (kolom C).
+        const spbyMatch = String(row.C || '').match(/SPBy-(\d+)/i);
+        const spbyNumber = spbyMatch ? spbyMatch[1] : '';
+        const spbySearchCandidates = spbyNumber
+            ? [`${spbyNumber}/PB/`, `${parseInt(spbyNumber, 10)}/PB/`]
+            : null;
 
         pbWireDokSlot({
             popup, prefix: 'pbDokKuitansi', id, row, field: 'T',
             uploadAction: 'uploadDokumenKegiatan',
             deleteAction: 'hapusDokumenKegiatan',
-            allowTempelLink: true,
+            allowTempelLink: false,
             viewTitle: `Kuitansi / Dokumen #${id}`,
             searchTextForView: null,
             rerender
@@ -1009,7 +1013,7 @@ function pbOpenDokumenModal(row, tr) {
             deleteAction: 'hapusSpbyKegiatan',
             allowTempelLink: false,
             viewTitle: `SPBy #${id}`,
-            searchTextForView: spmNumber ? `${spmNumber}/PB/` : null,
+            searchTextForView: spbySearchCandidates,
             rerender
         });
 
