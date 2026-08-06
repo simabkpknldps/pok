@@ -162,6 +162,17 @@ function pbEsc(str) {
     }[c]));
 }
 
+// Tentukan warna & title tombol dokumen berdasarkan kombinasi kuitansi (T) & SPBy (U):
+// abu-abu = belum ada dokumen, kuning = kuitansi saja, biru = SPBy saja, hijau = keduanya sudah ada.
+function pbDokBtnStyle(row) {
+    const adaT = !!(row && row.T);
+    const adaU = !!(row && row.U);
+    if (adaT && adaU) return { cls: 'text-emerald-600', title: 'Dokumen PDF (kuitansi & SPBy sudah ada)' };
+    if (adaT) return { cls: 'text-amber-500', title: 'Dokumen PDF (kuitansi sudah ada, SPBy belum)' };
+    if (adaU) return { cls: 'text-sky-500', title: 'Dokumen PDF (SPBy sudah ada, kuitansi belum)' };
+    return { cls: 'text-slate-400', title: 'Dokumen PDF (belum ada)' };
+}
+
 function pbRenderTable(rows) {
     const tbody = document.getElementById('pb-tbody');
     const emptyState = document.getElementById('pb-emptyState');
@@ -177,7 +188,7 @@ function pbRenderTable(rows) {
         // Tombol Ubah & Hapus HANYA muncul untuk baris berstatus "Rekam Data" —
         // berlaku untuk semua user termasuk admin. Selain itu cuma tombol Detil.
         const showFullActions = r.P === 'Rekam Data';
-        const dokBtnHtml = `<button class="pb-btn-dokumen ${(r.T || r.U) ? 'text-emerald-600' : 'text-slate-400'} hover:text-emerald-700" title="${(r.T || r.U) ? 'Dokumen PDF (sudah ada)' : 'Dokumen PDF (belum ada)'}"><i class="fa-solid fa-file-pdf"></i></button>`;
+        const dokBtnHtml = `<button class="pb-btn-dokumen ${pbDokBtnStyle(r).cls} hover:opacity-75" title="${pbDokBtnStyle(r).title}"><i class="fa-solid fa-file-pdf"></i></button>`;
         const actionsHtml = showFullActions ? `
                     <button class="pb-btn-edit hover:text-sky-600" title="Ubah"><i class="fa-solid fa-pencil"></i></button>
                     <button class="pb-btn-detil hover:text-slate-800" title="Detil"><i class="fa-solid fa-eye"></i></button>
@@ -766,10 +777,10 @@ function pbUpdateDokBtnColor(trEl, row) {
     if (!trEl || !row) return;
     const dokBtn = trEl.querySelector('.pb-btn-dokumen');
     if (!dokBtn) return;
-    const ada = !!(row.T || row.U);
-    dokBtn.classList.toggle('text-emerald-600', ada);
-    dokBtn.classList.toggle('text-slate-400', !ada);
-    dokBtn.title = ada ? 'Dokumen PDF (sudah ada)' : 'Dokumen PDF (belum ada)';
+    const style = pbDokBtnStyle(row);
+    dokBtn.classList.remove('text-emerald-600', 'text-amber-500', 'text-sky-500', 'text-slate-400');
+    dokBtn.classList.add(style.cls);
+    dokBtn.title = style.title;
 }
 
 function pbApplyDokLinksToTable(links, field) {
