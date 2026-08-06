@@ -22,6 +22,12 @@
  * - Tanpa paging: pageSize dikunci ke 'all', bar paging disembunyikan
  *   (bukan dihapus dari DOM, supaya kode kegiatan.js yang mengakses
  *   elemen-elemen itu tidak error).
+ * - UI disederhanakan: kotak "Cari data" bebas, tombol "Cari", tombol
+ *   "Refresh", dan radio filter status ikut disembunyikan juga (dengan
+ *   alasan yang sama seperti bar paging di atas — elemen tetap ada di DOM,
+ *   cuma tidak ditampilkan) karena pencarian sudah dilakukan lewat search
+ *   bar global di dashboard. Yang tersisa terlihat: kotak Cari SPM, badge
+ *   Jumlah, Download Excel, dan Cetak Daftar Nominatif.
  * - Ada baris Total Jumlah tambahan di footer tabel (selain badge
  *   "Jumlah (Data Terfilter)" yang sudah ada di kegiatan.js).
  *
@@ -40,7 +46,11 @@ function dashGsBuildPopupHtml() {
             <!-- Filter bar (identik dgn kegiatan.html) -->
             <div class="flex flex-col gap-3">
                 <div class="flex flex-wrap items-center gap-3">
-                    <div class="flex-1 min-w-[200px] flex items-center gap-2">
+                    <!-- Search bebas & Refresh disembunyikan di popup ini (pencarian sudah
+                         dilakukan lewat search bar global di dashboard) — elemen tetap ada
+                         di DOM (bukan dihapus) supaya bindKegiatanEvents() dari kegiatan.js
+                         tidak error saat mem-bind event ke elemen ini. -->
+                    <div class="hidden flex-1 min-w-[200px] flex items-center gap-2">
                         <input id="kg-searchBox" type="text" placeholder="Cari data... (tekan Enter atau klik Cari)"
                             class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
                         <button id="kg-btnSearch"
@@ -62,8 +72,7 @@ function dashGsBuildPopupHtml() {
                         Jumlah (Data Terfilter): <span id="kg-totalJumlahLabel">0</span>
                     </div>
 
-                    <button id="kg-btnRefreshData"
-                        class="flex items-center gap-2 px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-sm font-medium rounded-lg transition">
+                    <button id="kg-btnRefreshData" class="hidden items-center gap-2 px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-sm font-medium rounded-lg transition">
                         <i class="fa-solid fa-arrow-rotate-right"></i> Refresh
                     </button>
                     <button id="kg-btnDownloadExcel"
@@ -76,7 +85,7 @@ function dashGsBuildPopupHtml() {
                     </button>
                 </div>
 
-                <div class="flex items-center gap-4 flex-wrap text-sm text-slate-600">
+                <div class="hidden items-center gap-4 flex-wrap text-sm text-slate-600">
                     <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="Dalam Proses"> Dalam Proses</label>
                     <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="LPT"> LPT</label>
                     <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="Terbayar"> Terbayar</label>
