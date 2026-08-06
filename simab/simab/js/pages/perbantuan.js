@@ -177,7 +177,7 @@ function pbRenderTable(rows) {
         // Tombol Ubah & Hapus HANYA muncul untuk baris berstatus "Rekam Data" —
         // berlaku untuk semua user termasuk admin. Selain itu cuma tombol Detil.
         const showFullActions = r.P === 'Rekam Data';
-        const dokBtnHtml = `<button class="pb-btn-dokumen ${r.T ? 'text-emerald-600' : 'text-slate-400'} hover:text-emerald-700" title="${r.T ? 'Dokumen PDF (sudah ada)' : 'Dokumen PDF (belum ada)'}"><i class="fa-solid fa-file-pdf"></i></button>`;
+        const dokBtnHtml = `<button class="pb-btn-dokumen ${(r.T || r.U) ? 'text-emerald-600' : 'text-slate-400'} hover:text-emerald-700" title="${(r.T || r.U) ? 'Dokumen PDF (sudah ada)' : 'Dokumen PDF (belum ada)'}"><i class="fa-solid fa-file-pdf"></i></button>`;
         const actionsHtml = showFullActions ? `
                     <button class="pb-btn-edit hover:text-sky-600" title="Ubah"><i class="fa-solid fa-pencil"></i></button>
                     <button class="pb-btn-detil hover:text-slate-800" title="Detil"><i class="fa-solid fa-eye"></i></button>
@@ -757,182 +757,265 @@ function pbOpenDetilModal(row) {
 }
 
 // ==========================================
-// Dokumen PDF (upload/lihat/reupload/hapus ke Google Drive folder simab_doc)
-// Sama seperti di halaman Kegiatan: file disimpan dengan nama <ID Kegiatan>.pdf,
-// linknya disimpan ke kolom T sheet Data_Kegiatan_2026. Backend yang dipakai
-// (uploadDokumenKegiatan / hapusDokumenKegiatan) sudah generik berdasarkan ID
-// Kegiatan (kolom A), jadi tinggal dipakai ulang tanpa perlu action baru.
+// Dokumen PDF (kuitansi & SPBy, upload/lihat/reupload/hapus ke Google Drive
+// folder simab_doc). Sama seperti di halaman Kegiatan: backend generik yang
+// dipakai (uploadDokumenKegiatan/hapusDokumenKegiatan utk kuitansi,
+// uploadSpbyKegiatan/hapusSpbyKegiatan utk SPBy) berbasis ID Kegiatan (kolom A).
 // ==========================================
-// Update field T (link dokumen) + warna tombol dokumen untuk semua baris yang
-// lagi tampil di tabel, sesuai map {idKegiatan: link}. Dipakai setelah upload,
-// karena satu upload bisa berlaku utk beberapa baris (Uraian sama, ID beda-beda).
-function pbApplyDokumenLinksToTable(links) {
-    Object.keys(links).forEach(rowId => {
+function pbUpdateDokBtnColor(trEl, row) {
+    if (!trEl || !row) return;
+    const dokBtn = trEl.querySelector('.pb-btn-dokumen');
+    if (!dokBtn) return;
+    const ada = !!(row.T || row.U);
+    dokBtn.classList.toggle('text-emerald-600', ada);
+    dokBtn.classList.toggle('text-slate-400', !ada);
+    dokBtn.title = ada ? 'Dokumen PDF (sudah ada)' : 'Dokumen PDF (belum ada)';
+}
+
+function pbApplyDokLinksToTable(links, field) {
+    Object.keys(links || {}).forEach(rowId => {
         const link = links[rowId];
         const found = pbAllRows.find(r => String(r.A) === String(rowId));
-        if (found) found.T = link;
+        if (found) found[field] = link;
 
-        const tr = document.querySelector(`#pb-tbody tr[data-id="${CSS.escape(String(rowId))}"]`);
-        const dokBtn = tr && tr.querySelector('.pb-btn-dokumen');
-        if (dokBtn) {
-            dokBtn.classList.remove('text-slate-400');
-            dokBtn.classList.add('text-emerald-600');
-            dokBtn.title = 'Dokumen PDF (sudah ada)';
-        }
+        const trEl = document.querySelector(`#pb-tbody tr[data-id="${CSS.escape(String(rowId))}"]`);
+        pbUpdateDokBtnColor(trEl, found);
     });
+}
+
+function pbWireDokSlot(opts) {
+    const { popup, prefix, id, row, field, uploadAction, deleteAction, allowTempelLink, viewTitle, searchTextForView, rerender } = opts;
+
+    const btnLihat = popup.querySelector(`#${prefix}Lihat`);
+    const btnUpload = popup.querySelector(`#${prefix}Upload`);
+    const btnTempelLink = allowTempelLink ? popup.querySelector(`#${prefix}TempelLink`) : null;
+    const btnHapus = popup.querySelector(`#${prefix}Hapus`);
+    const fileInput = popup.querySelector(`#${prefix}FileInput`);
+    const linkForm = allowTempelLink ? popup.querySelector(`#${prefix}LinkForm`) : null;
+    const linkInput = allowTempelLink ? popup.querySelector(`#${prefix}LinkInput`) : null;
+    const btnLinkSimpan = allowTempelLink ? popup.querySelector(`#${prefix}LinkSimpan`) : null;
+    const statusEl = popup.querySelector(`#${prefix}Status`);
+
+    const link = row[field];
+
+    const setBusy = (busy) => {
+        btnLihat.disabled = busy || !row[field];
+        btnUpload.disabled = busy;
+        if (btnTempelLink) btnTempelLink.disabled = busy;
+        btnHapus.disabled = busy || !row[field];
+    };
+
+    if (link) {
+        btnLihat.onclick = () => {
+            window.simabOpenPdfViewer({ title: viewTitle, link: link, searchText: searchTextForView });
+        };
+        btnHapus.onclick = async () => {
+            if (!confirm('Yakin ingin menghapus dokumen ini?')) return;
+            statusEl.textContent = 'Menghapus dokumen...';
+            statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
+            setBusy(true);
+            try {
+                const result = await apiPost({ action: deleteAction, id: id }, 30000);
+                if (result.status === 'success') {
+                    row[field] = '';
+                    pbApplyDokLinksToTable(result.links || { [id]: '' }, field);
+                    showToast('Dokumen berhasil dihapus');
+                    rerender();
+                } else {
+                    statusEl.textContent = '❌ ' + (result.message || 'Gagal menghapus dokumen.');
+                    statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
+                    setBusy(false);
+                }
+            } catch (e) {
+                statusEl.textContent = '❌ ' + (e.message || 'Gagal menghapus dokumen.');
+                statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
+                setBusy(false);
+            }
+        };
+    }
+
+    btnUpload.onclick = () => fileInput.click();
+
+    fileInput.onchange = async function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            alert('File harus berformat PDF.');
+            this.value = '';
+            return;
+        }
+        const maxSizeMB = 10;
+        if (file.size > maxSizeMB * 1024 * 1024) {
+            alert(`Ukuran file maksimal ${maxSizeMB}MB.`);
+            this.value = '';
+            return;
+        }
+
+        statusEl.textContent = 'Mengupload dokumen...';
+        statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
+        setBusy(true);
+
+        try {
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = () => reject(new Error('Gagal membaca file.'));
+                reader.readAsDataURL(file);
+            });
+
+            const result = await apiPost({
+                action: uploadAction,
+                id: id,
+                fileData: base64,
+                fileName: file.name
+            }, 60000);
+
+            if (result.status === 'success') {
+                row[field] = result.link;
+                pbApplyDokLinksToTable(result.links || { [id]: result.link }, field);
+                showToast('Dokumen berhasil diupload');
+                rerender();
+            } else {
+                statusEl.textContent = '❌ ' + (result.message || 'Upload gagal.');
+                statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
+                setBusy(false);
+            }
+        } catch (e) {
+            statusEl.textContent = '❌ ' + (e.message || 'Upload gagal.');
+            statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
+            setBusy(false);
+        } finally {
+            this.value = '';
+        }
+    };
+
+    if (allowTempelLink) {
+        btnTempelLink.onclick = () => {
+            linkForm.classList.toggle('hidden');
+            linkForm.classList.toggle('flex');
+            if (!linkForm.classList.contains('hidden')) linkInput.focus();
+        };
+
+        const simpanLink = async () => {
+            const linkBaru = linkInput.value.trim();
+            if (!linkBaru) {
+                alert('Tempel link dokumen terlebih dahulu.');
+                return;
+            }
+            if (!/^https?:\/\//i.test(linkBaru)) {
+                alert('Link harus diawali http:// atau https://');
+                return;
+            }
+
+            statusEl.textContent = 'Menyimpan link...';
+            statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
+            setBusy(true);
+
+            try {
+                const result = await apiPost({ action: 'simpanLinkDokumenKegiatan', id: id, link: linkBaru }, 30000);
+                if (result.status === 'success') {
+                    row[field] = result.link;
+                    pbApplyDokLinksToTable(result.links || { [id]: result.link }, field);
+                    rerender();
+                } else {
+                    statusEl.textContent = '❌ ' + (result.message || 'Gagal menyimpan link.');
+                    statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
+                    setBusy(false);
+                }
+            } catch (e) {
+                statusEl.textContent = '❌ ' + (e.message || 'Gagal menyimpan link.');
+                statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
+                setBusy(false);
+            }
+        };
+        btnLinkSimpan.onclick = simpanLink;
+        linkInput.onkeydown = (e) => { if (e.key === 'Enter') simpanLink(); };
+    }
 }
 
 function pbOpenDokumenModal(row, tr) {
     const id = row.A;
 
-    const renderContent = (link) => `
+    const slotHtml = (prefix, label, link, allowTempelLink) => `
+        <div class="border border-slate-200 rounded-xl p-3">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-semibold text-slate-700">${label}</span>
+                <span class="text-xs ${link ? 'text-emerald-600' : 'text-slate-400'}">${link ? 'Sudah ada' : 'Belum ada'}</span>
+            </div>
+            <div class="flex items-center justify-center gap-2 flex-wrap">
+                <button id="${prefix}Lihat" type="button" ${link ? '' : 'disabled'} class="flex flex-col items-center gap-1 px-3 py-2 rounded-lg border text-xs font-medium ${link ? 'border-sky-300 text-sky-700 hover:bg-sky-50 cursor-pointer' : 'border-slate-200 text-slate-300 cursor-not-allowed'}">
+                    <i class="fa-solid fa-eye"></i>Lihat
+                </button>
+                <button id="${prefix}Upload" type="button" class="flex flex-col items-center gap-1 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 cursor-pointer text-xs font-medium">
+                    <i class="fa-solid fa-upload"></i>${link ? 'Ganti File' : 'Upload'}
+                </button>
+                ${allowTempelLink ? `
+                <button id="${prefix}TempelLink" type="button" class="flex flex-col items-center gap-1 px-3 py-2 rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50 cursor-pointer text-xs font-medium">
+                    <i class="fa-solid fa-link"></i>${link ? 'Ganti Link' : 'Tempel Link'}
+                </button>` : ''}
+                <button id="${prefix}Hapus" type="button" ${link ? '' : 'disabled'} class="flex flex-col items-center gap-1 px-3 py-2 rounded-lg border text-xs font-medium ${link ? 'border-red-300 text-red-600 hover:bg-red-50 cursor-pointer' : 'border-slate-200 text-slate-300 cursor-not-allowed'}">
+                    <i class="fa-solid fa-trash"></i>Hapus
+                </button>
+            </div>
+            ${allowTempelLink ? `
+            <div id="${prefix}LinkForm" class="hidden gap-2 items-center mt-2">
+                <input id="${prefix}LinkInput" type="url" placeholder="Tempel link dokumen (mis. dari Nadine/Satu Kemenkeu)..."
+                    value="${link && link.includes('drive.google.com') ? '' : (link || '')}"
+                    class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button id="${prefix}LinkSimpan" type="button" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">Simpan</button>
+            </div>` : ''}
+            <input id="${prefix}FileInput" type="file" accept="application/pdf,.pdf" class="hidden">
+            <div id="${prefix}Status" class="text-center text-xs text-slate-400 min-h-[16px] mt-1"></div>
+        </div>
+    `;
+
+    const renderContent = () => `
         <div class="flex items-center justify-between mb-1">
             <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-file-pdf mr-2"></i>Dokumen Kegiatan #${pbEsc(id)}</h3>
             <button id="pb-dok-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <p class="text-center text-xs text-slate-400 mb-1">${link ? 'Dokumen sudah tersedia.' : 'Dokumen belum diupload.'}</p>
-        <div class="flex items-center justify-center gap-3 py-2">
-            <button id="pb-dokLihat" type="button" ${link ? '' : 'disabled'} class="flex flex-col items-center gap-1 px-4 py-3 rounded-xl border ${link ? 'border-sky-300 text-sky-700 hover:bg-sky-50 cursor-pointer' : 'border-slate-200 text-slate-300 cursor-not-allowed'}">
-                <i class="fa-solid fa-eye text-xl"></i>
-                <span class="text-xs font-medium">Lihat</span>
-            </button>
-            <button id="pb-dokUpload" type="button" class="flex flex-col items-center gap-1 px-4 py-3 rounded-xl border border-emerald-300 text-emerald-700 hover:bg-emerald-50 cursor-pointer">
-                <i class="fa-solid fa-upload text-xl"></i>
-                <span class="text-xs font-medium">${link ? 'Ganti File' : 'Upload'}</span>
-            </button>
-            <button id="pb-dokHapus" type="button" ${link ? '' : 'disabled'} class="flex flex-col items-center gap-1 px-4 py-3 rounded-xl border ${link ? 'border-red-300 text-red-600 hover:bg-red-50 cursor-pointer' : 'border-slate-200 text-slate-300 cursor-not-allowed'}">
-                <i class="fa-solid fa-trash text-xl"></i>
-                <span class="text-xs font-medium">Hapus</span>
-            </button>
+        <div class="flex flex-col gap-3">
+            ${slotHtml('pbDokKuitansi', 'Kuitansi / Dokumen', row.T, true)}
+            ${slotHtml('pbDokSpby', 'SPBy', row.U, false)}
         </div>
-        <input id="pb-dokFileInput" type="file" accept="application/pdf,.pdf" class="hidden">
-        <div id="pb-dokStatus" class="text-center text-xs text-slate-400 min-h-[16px]"></div>
     `;
 
-    const { overlay, popup } = commonOpenOverlay(renderContent(row.T), 'max-w-sm');
+    const { overlay, popup } = commonOpenOverlay(renderContent(), 'max-w-md');
 
-    function wireEvents(link) {
-        const btnLihat = popup.querySelector('#pb-dokLihat');
-        const btnUpload = popup.querySelector('#pb-dokUpload');
-        const btnHapus = popup.querySelector('#pb-dokHapus');
-        const fileInput = popup.querySelector('#pb-dokFileInput');
-        const statusEl = popup.querySelector('#pb-dokStatus');
-
-        popup.querySelector('#pb-dok-closeBtn').onclick = () => overlay.remove();
-
-        const updateDokButtonRow = (newLink) => {
-            row.T = newLink;
-            const dokBtn = tr.querySelector('.pb-btn-dokumen');
-            if (dokBtn) {
-                dokBtn.classList.toggle('text-emerald-600', !!newLink);
-                dokBtn.classList.toggle('text-slate-400', !newLink);
-                dokBtn.title = newLink ? 'Dokumen PDF (sudah ada)' : 'Dokumen PDF (belum ada)';
-            }
-        };
-
-        if (link) {
-            btnLihat.onclick = () => window.open(link, '_blank');
-            btnHapus.onclick = async () => {
-                if (!confirm('Yakin ingin menghapus dokumen ini?')) return;
-
-                statusEl.textContent = 'Menghapus dokumen...';
-                statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
-                btnLihat.disabled = true;
-                btnUpload.disabled = true;
-                btnHapus.disabled = true;
-
-                try {
-                    const result = await apiPost({ action: 'hapusDokumenKegiatan', id: id }, 30000);
-                    if (result.status === 'success') {
-                        updateDokButtonRow('');
-                        showToast('Dokumen berhasil dihapus');
-                        popup.innerHTML = renderContent('');
-                        wireEvents('');
-                    } else {
-                        statusEl.textContent = '❌ ' + (result.message || 'Gagal menghapus dokumen.');
-                        statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
-                        btnLihat.disabled = false;
-                        btnUpload.disabled = false;
-                        btnHapus.disabled = false;
-                    }
-                } catch (e) {
-                    statusEl.textContent = '❌ ' + (e.message || 'Gagal menghapus dokumen.');
-                    statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
-                    btnLihat.disabled = false;
-                    btnUpload.disabled = false;
-                    btnHapus.disabled = false;
-                }
-            };
-        }
-
-        btnUpload.onclick = () => fileInput.click();
-
-        fileInput.onchange = async function () {
-            const file = this.files[0];
-            if (!file) return;
-
-            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-                alert('File harus berformat PDF.');
-                this.value = '';
-                return;
-            }
-            const maxSizeMB = 10;
-            if (file.size > maxSizeMB * 1024 * 1024) {
-                alert(`Ukuran file maksimal ${maxSizeMB}MB.`);
-                this.value = '';
-                return;
-            }
-
-            statusEl.textContent = 'Mengupload dokumen...';
-            statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
-            btnUpload.disabled = true;
-            btnLihat.disabled = true;
-            if (btnHapus) btnHapus.disabled = true;
-
-            try {
-                const base64 = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result.split(',')[1]);
-                    reader.onerror = () => reject(new Error('Gagal membaca file.'));
-                    reader.readAsDataURL(file);
-                });
-
-                const result = await apiPost({
-                    action: 'uploadDokumenKegiatan',
-                    id: id,
-                    fileData: base64,
-                    fileName: file.name
-                }, 60000);
-
-                if (result.status === 'success') {
-                    updateDokButtonRow(result.link);
-                    // Upload dari satu baris otomatis berlaku utk SEMUA baris dengan
-                    // Uraian yang sama (backend sudah simpan file terpisah per ID
-                    // Kegiatan) -> update juga baris-baris lain yang lagi tampil di tabel.
-                    pbApplyDokumenLinksToTable(result.links || { [id]: result.link });
-                    showToast('Dokumen berhasil diupload');
-                    popup.innerHTML = renderContent(result.link);
-                    wireEvents(result.link);
-                } else {
-                    statusEl.textContent = '❌ ' + (result.message || 'Upload gagal.');
-                    statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
-                    btnUpload.disabled = false;
-                    btnLihat.disabled = !link;
-                    if (btnHapus) btnHapus.disabled = !link;
-                }
-            } catch (e) {
-                statusEl.textContent = '❌ ' + (e.message || 'Upload gagal.');
-                statusEl.className = 'text-center text-xs text-red-500 min-h-[16px]';
-                btnUpload.disabled = false;
-                btnLihat.disabled = !link;
-                if (btnHapus) btnHapus.disabled = !link;
-            } finally {
-                this.value = '';
-            }
-        };
+    function rerender() {
+        popup.innerHTML = renderContent();
+        wireAll();
     }
 
-    wireEvents(row.T);
+    function wireAll() {
+        popup.querySelector('#pb-dok-closeBtn').onclick = () => overlay.remove();
+
+        const spmNumber = String(row.R || '').trim();
+
+        pbWireDokSlot({
+            popup, prefix: 'pbDokKuitansi', id, row, field: 'T',
+            uploadAction: 'uploadDokumenKegiatan',
+            deleteAction: 'hapusDokumenKegiatan',
+            allowTempelLink: true,
+            viewTitle: `Kuitansi / Dokumen #${id}`,
+            searchTextForView: null,
+            rerender
+        });
+        pbWireDokSlot({
+            popup, prefix: 'pbDokSpby', id, row, field: 'U',
+            uploadAction: 'uploadSpbyKegiatan',
+            deleteAction: 'hapusSpbyKegiatan',
+            allowTempelLink: false,
+            viewTitle: `SPBy #${id}`,
+            searchTextForView: spmNumber ? `${spmNumber}/PB/` : null,
+            rerender
+        });
+
+        pbUpdateDokBtnColor(tr, row);
+    }
+
+    wireAll();
 }
 
 // ==========================================
