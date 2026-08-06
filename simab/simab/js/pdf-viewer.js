@@ -27,7 +27,6 @@
  * -----------------------------------------------------------------------
  */
 
-
 const SIMAB_PDFJS_VERSION = '3.11.174';
 let simabPdfJsLoadPromise = null;
 
