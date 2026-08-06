@@ -220,7 +220,10 @@ function renderTopPerjadin(l) {
 //   Baris 2 -> RPD Berjalan   (satu-satunya baris tetap yang bisa diedit, via Ubah/Simpan)
 //   Baris 3 -> SP2D           (formula otomatis di sheet, read-only)
 //   Baris 4 -> Kekurangan     (formula otomatis di sheet, read-only)
-//   Baris 5-20 -> baris tambahan (bebas tambah/edit/hapus), ditandai warna kuning
+//   Baris 5-8 -> baris tetap read-only tambahan (kolom S ada formula otomatis di sheet)
+//   Baris 9-20 -> baris tambahan (bebas tambah/edit/hapus), ditandai warna kuning
+// Range R2:S8 adalah range TETAP — tidak bisa diubah lewat fitur tambah/edit/hapus
+// baris (itu cuma berlaku utk baris 9-20; sudah divalidasi juga di backend).
 // "Sisa" = Kekurangan - total baris tambahan, dihitung di sisi frontend (tidak disimpan ke sheet).
 // ============================================================
 
@@ -267,6 +270,10 @@ function renderMonitoringRpdBerjalan(data) {
     const rpdBerjalan = data.rpdBerjalan || { rowIndex: null, uraian: 'RPD Berjalan', jumlah: 0 };
     const sp2d = data.sp2d || { rowIndex: null, uraian: 'SP2D', jumlah: 0 };
     const kekurangan = data.kekurangan || { rowIndex: null, uraian: 'Kekurangan', jumlah: 0 };
+    const fixed5 = data.fixed5 || { rowIndex: null, uraian: '', jumlah: 0 };
+    const fixed6 = data.fixed6 || { rowIndex: null, uraian: '', jumlah: 0 };
+    const fixed7 = data.fixed7 || { rowIndex: null, uraian: '', jumlah: 0 };
+    const fixed8 = data.fixed8 || { rowIndex: null, uraian: '', jumlah: 0 };
     const rows = data.rows || [];
     const totalTambahan = rows.reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
     const sisa = kekurangan.jumlah - totalTambahan;
@@ -297,6 +304,10 @@ function renderMonitoringRpdBerjalan(data) {
                     ${renderRpdRowUtama(rpdBerjalan, admin)}
                     ${renderRpdRowReadonly(sp2d)}
                     ${renderRpdRowReadonly(kekurangan)}
+                    ${renderRpdRowReadonly(fixed5)}
+                    ${renderRpdRowReadonly(fixed6)}
+                    ${renderRpdRowReadonly(fixed7)}
+                    ${renderRpdRowReadonly(fixed8)}
                     ${rows.map(r => renderRpdRowTambahan(r, admin)).join('')}
                     ${admin ? `
                     <tr id="row-rpd-tambah">
@@ -355,7 +366,7 @@ function renderRpdRowReadonly(row) {
     </tr>`;
 }
 
-// Baris tambahan (baris 5-20) - bebas diedit inline & dihapus, khusus admin.
+// Baris tambahan (baris 9-20) - bebas diedit inline & dihapus, khusus admin.
 // Untuk non-admin ditampilkan read-only (tanpa input/tombol hapus).
 // Semua baris tambahan (di bawah baris Kekurangan) diberi warna latar kuning
 // agar mudah dibedakan dari baris tetap (RPD Berjalan / SP2D / Kekurangan) di atasnya.
