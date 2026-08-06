@@ -51,15 +51,26 @@ function simabLoadPdfJs() {
     return simabPdfJsLoadPromise;
 }
 
-// Cari halaman PERTAMA (1-indexed) yang mengandung teks tertentu (case-insensitive).
-// Return null kalau tidak ketemu di halaman manapun.
-async function simabFindPageWithText(pdfDoc, searchText) {
-    const target = String(searchText).toLowerCase();
+// Hilangkan semua whitespace supaya pencarian tidak gagal gara-gara pdf.js
+// menyisipkan spasi di tempat yang salah saat menggabungkan potongan teks.
+function simabNormalizeForSearch(s) {
+    return String(s || '').replace(/\s+/g, '').toLowerCase();
+}
+
+// Cari halaman PERTAMA (1-indexed) yang mengandung SALAH SATU dari beberapa
+// kandidat teks (case/whitespace-insensitive). searchTexts boleh string
+// tunggal atau array of string. Return null kalau tidak ketemu di halaman manapun.
+async function simabFindPageWithText(pdfDoc, searchTexts) {
+    const targets = (Array.isArray(searchTexts) ? searchTexts : [searchTexts])
+        .filter(Boolean)
+        .map(simabNormalizeForSearch);
+    if (!targets.length) return null;
+
     for (let i = 1; i <= pdfDoc.numPages; i++) {
         const page = await pdfDoc.getPage(i);
         const content = await page.getTextContent();
-        const pageText = content.items.map(it => it.str).join(' ').toLowerCase();
-        if (pageText.includes(target)) return i;
+        const pageText = simabNormalizeForSearch(content.items.map(it => it.str).join(' '));
+        if (targets.some(t => pageText.includes(t))) return i;
     }
     return null;
 }
@@ -128,7 +139,8 @@ async function simabOpenPdfViewer(opts) {
                 console.error('Gagal mencari teks di dokumen:', e);
             }
             if (!page) {
-                noteEl.textContent = `Teks "${searchText}" tidak ditemukan di dokumen — menampilkan dari halaman 1.`;
+                const shown = Array.isArray(searchText) ? searchText[0] : searchText;
+                noteEl.textContent = `Teks "${shown}" tidak ditemukan di dokumen — menampilkan dari halaman 1.`;
                 noteEl.classList.remove('hidden');
             }
         }
