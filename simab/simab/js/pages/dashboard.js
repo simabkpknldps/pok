@@ -224,7 +224,8 @@ function renderTopPerjadin(l) {
 //   Baris 9-20 -> baris tambahan (bebas tambah/edit/hapus), ditandai warna kuning
 // Range R2:S8 adalah range TETAP — tidak bisa diubah lewat fitur tambah/edit/hapus
 // baris (itu cuma berlaku utk baris 9-20; sudah divalidasi juga di backend).
-// "Sisa" = Kekurangan - total baris tambahan, dihitung di sisi frontend (tidak disimpan ke sheet).
+// "Sisa" = Kekurangan - (fixed5+fixed6+fixed7+fixed8) - total baris tambahan,
+// dihitung di sisi frontend (tidak disimpan ke sheet).
 // ============================================================
 
 function escapeHtml(str) {
@@ -246,7 +247,7 @@ function isAdminUser() {
     return val === 'true' || val === '1' || val === 'ya' || val === 'yes' || val === 'admin';
 }
 
-// Hitung "Sisa" (kekurangan - total baris tambahan) sekaligus status warna:
+// Hitung "Sisa" (kekurangan - fixed5..fixed8 - total baris tambahan) sekaligus status warna:
 // hijau kalau (SP2D + total semua baris tambahan) berada di antara 95%-105%
 // dari nilai RPD Berjalan; merah kalau di luar rentang itu.
 function hitungStatusSisaRpdBerjalan() {
@@ -255,10 +256,12 @@ function hitungStatusSisaRpdBerjalan() {
     const kekurangan = Number(rpdBerjalanCache.kekurangan?.jumlah) || 0;
     const sp2d = Number(rpdBerjalanCache.sp2d?.jumlah) || 0;
     const rpdBerjalanJumlah = Number(rpdBerjalanCache.rpdBerjalan?.jumlah) || 0;
+    const totalFixed = ['fixed5', 'fixed6', 'fixed7', 'fixed8']
+        .reduce((sum, key) => sum + (Number(rpdBerjalanCache[key]?.jumlah) || 0), 0);
     const totalTambahan = (rpdBerjalanCache.rows || []).reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
 
-    const sisa = kekurangan - totalTambahan;
-    const totalSp2dTambahan = sp2d + totalTambahan;
+    const sisa = kekurangan - totalFixed - totalTambahan;
+    const totalSp2dTambahan = sp2d + totalFixed + totalTambahan;
     const isHijau = rpdBerjalanJumlah !== 0
         ? (totalSp2dTambahan >= rpdBerjalanJumlah * 0.95 && totalSp2dTambahan <= rpdBerjalanJumlah * 1.05)
         : totalSp2dTambahan === 0;
@@ -275,9 +278,10 @@ function renderMonitoringRpdBerjalan(data) {
     const fixed7 = data.fixed7 || { rowIndex: null, uraian: '', jumlah: 0 };
     const fixed8 = data.fixed8 || { rowIndex: null, uraian: '', jumlah: 0 };
     const rows = data.rows || [];
+    const totalFixed = (Number(fixed5.jumlah) || 0) + (Number(fixed6.jumlah) || 0) + (Number(fixed7.jumlah) || 0) + (Number(fixed8.jumlah) || 0);
     const totalTambahan = rows.reduce((sum, r) => sum + (parseFloat(r.jumlah) || 0), 0);
-    const sisa = kekurangan.jumlah - totalTambahan;
-    const totalSp2dTambahan = (Number(sp2d.jumlah) || 0) + totalTambahan;
+    const sisa = kekurangan.jumlah - totalFixed - totalTambahan;
+    const totalSp2dTambahan = (Number(sp2d.jumlah) || 0) + totalFixed + totalTambahan;
     const rpdBerjalanJumlah = Number(rpdBerjalan.jumlah) || 0;
     const isHijau = rpdBerjalanJumlah !== 0
         ? (totalSp2dTambahan >= rpdBerjalanJumlah * 0.95 && totalSp2dTambahan <= rpdBerjalanJumlah * 1.05)
