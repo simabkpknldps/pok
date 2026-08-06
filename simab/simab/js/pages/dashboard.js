@@ -81,6 +81,7 @@ async function initDashboardPage() {
     try {
         container.innerHTML = buildDashboardHtml(data, rpdData, rpdError);
         initCharts(data);
+        bindGlobalSearchBar();
         // Mulai auto-refresh diam-diam (tanpa loading) setiap 1 menit
         startDashboardAutoRefresh();
     } catch (e) {
@@ -96,6 +97,20 @@ async function initDashboardPage() {
 function buildDashboardHtml(data, rpdData, rpdError) {
     return `
         <div class="space-y-8">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input id="dash-globalSearchBox" type="text"
+                            placeholder="Cari kegiatan (uraian/No ST, pelaksana, tujuan, tanggal, status, atau nomor SPM)..."
+                            class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <button id="dash-btnGlobalSearch"
+                        class="flex items-center gap-2 px-4 py-2.5 bg-sky-700 hover:bg-sky-800 text-white text-sm font-medium rounded-lg transition whitespace-nowrap">
+                        <i class="fa-solid fa-magnifying-glass"></i> Cari
+                    </button>
+                </div>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div>
@@ -189,6 +204,7 @@ async function refreshDashboardInBackground() {
 
         container.innerHTML = buildDashboardHtml(data, rpdData, rpdError);
         initCharts(data);
+        bindGlobalSearchBar();
     } catch (e) {
         console.error('Gagal auto-refresh dashboard di background:', e);
     }
@@ -594,3 +610,30 @@ async function bukaDetilAkun(kode) {
 }
 
 window.initDashboardPage = initDashboardPage;
+
+// ============================================================
+// Global search (di atas kartu-kartu dashboard) — cari kegiatan di sheet
+// Data_Kegiatan_2026, lalu tampilkan hasilnya di popup yang identik dengan
+// halaman Kegiatan (lihat dashboard-search.js untuk isi popup-nya).
+// ============================================================
+function bindGlobalSearchBar() {
+    const box = document.getElementById('dash-globalSearchBox');
+    const btn = document.getElementById('dash-btnGlobalSearch');
+    if (!box || !btn) return;
+
+    const runGlobalSearch = () => {
+        const term = box.value.trim();
+        if (!term) {
+            alert('Masukkan kata kunci pencarian terlebih dahulu.');
+            return;
+        }
+        if (typeof window.bukaPencarianKegiatanGlobal === 'function') {
+            window.bukaPencarianKegiatanGlobal(term);
+        } else {
+            console.error('bukaPencarianKegiatanGlobal() tidak ditemukan — pastikan dashboard-search.js dimuat.');
+        }
+    };
+
+    btn.onclick = runGlobalSearch;
+    box.onkeydown = (e) => { if (e.key === 'Enter') runGlobalSearch(); };
+}
