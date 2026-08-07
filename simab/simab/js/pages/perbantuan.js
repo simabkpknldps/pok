@@ -987,7 +987,7 @@ function pbOpenDokumenModal(row, tr) {
             <button id="pb-dok-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="flex flex-col gap-3">
-            ${slotHtml('pbDokKuitansi', 'Kuitansi / Dokumen', row.T, true)}
+            ${slotHtml('pbDokKuitansi', 'Kuitansi / Dokumen', row.T, false)}
             ${slotHtml('pbDokSpby', 'SPBy', row.U, false)}
         </div>
     `;
