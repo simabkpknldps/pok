@@ -10,6 +10,7 @@
  * F(Tgl ST/ND) G(Tgl Mulai) H(Tgl Selesai) I(Tgl LPT) J(Tgl Bayar)
  * M(Jumlah - rata kanan) P(Status - berwarna).
  *
+ 
  * Aksi per baris: pencil (ubah), pegawai (assign pelaksana), detil, hapus.
  * Di atas tabel: search bar + tombol "Tambah Usulan".
  *
