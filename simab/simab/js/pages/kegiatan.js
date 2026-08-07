@@ -1423,7 +1423,7 @@ function kgShowDokumenPopup(tr) {
     const renderContent = () => `
         <h3 class="text-center text-sky-700 font-semibold text-base mb-2"><i class="fa-solid fa-file-pdf mr-2"></i>Dokumen Kegiatan #${id}</h3>
         <div class="flex flex-col gap-3">
-            ${slotHtml('kgDokKuitansi', 'Kuitansi / Dokumen', rowData.T, true)}
+            ${slotHtml('kgDokKuitansi', 'Kuitansi / Dokumen', rowData.T, false)}
             ${slotHtml('kgDokSpby', 'SPBy', rowData.U, false)}
         </div>
         <div class="flex justify-end mt-1">
