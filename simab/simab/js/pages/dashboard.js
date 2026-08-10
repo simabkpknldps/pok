@@ -197,7 +197,7 @@ function renderMonitoringDokumen(data) {
                 ${rows.map(r => `
                     <tr class="border-b border-slate-100 last:border-b-0">
                         <td class="py-1.5 pr-2 text-slate-700 font-medium">${escapeHtml(r.uraian)}</td>
-                        <td class="py-1.5 pr-2 text-right text-slate-700 font-semibold">${formatAngka(r.jumlah)}</td>
+                        <td class="py-1.5 pr-2 text-right text-slate-700 font-semibold">${(Number(r.jumlah || 0) * 100).toFixed(2)}%</td>
                     </tr>
                 `).join('')}
             </tbody>
