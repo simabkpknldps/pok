@@ -946,6 +946,19 @@ function pbWireDokSlot(opts) {
     }
 }
 
+// Deteksi tag dokumen (SPBy / KKP / LS) dari Uraian (kolom C) — cermin dari
+// kgParseDokumenTag_ di backend (GAS).
+function pbParseDokumenTagClient(uraian) {
+    const u = String(uraian || '');
+    let m = u.match(/SPBy-(\d+)/i);
+    if (m) return { nomor: m[1], suffix: 'SPBy', label: 'SPBy' };
+    m = u.match(/Kkp-(\d+)/i);
+    if (m) return { nomor: m[1], suffix: 'KKP', label: 'DRPP (KKP)' };
+    m = u.match(/SPM-(\d+)/i);
+    if (m) return { nomor: m[1], suffix: 'LS', label: 'DRPP (LS)' };
+    return null;
+}
+
 function pbOpenDokumenModal(row, tr) {
     const id = row.A;
 
@@ -982,6 +995,9 @@ function pbOpenDokumenModal(row, tr) {
         </div>
     `;
 
+    const dokTag = pbParseDokumenTagClient(row.C);
+    const slotKeduaLabel = dokTag ? dokTag.label : 'DRPP';
+
     const renderContent = () => `
         <div class="flex items-center justify-between mb-1">
             <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-file-pdf mr-2"></i>Dokumen Kegiatan #${pbEsc(id)}</h3>
@@ -989,7 +1005,7 @@ function pbOpenDokumenModal(row, tr) {
         </div>
         <div class="flex flex-col gap-3">
             ${slotHtml('pbDokKuitansi', 'Kuitansi / Dokumen', row.T, false)}
-            ${slotHtml('pbDokSpby', 'SPBy', row.U, false)}
+            ${slotHtml('pbDokSpby', slotKeduaLabel, row.U, false)}
         </div>
     `;
 
@@ -1003,11 +1019,10 @@ function pbOpenDokumenModal(row, tr) {
     function wireAll() {
         popup.querySelector('#pb-dok-closeBtn').onclick = () => overlay.remove();
 
-        // Nomor SPBy diambil dari pola "(SPBy-NNNN)" di Uraian (kolom C).
-        const spbyMatch = String(row.C || '').match(/SPBy-(\d+)/i);
-        const spbyNumber = spbyMatch ? spbyMatch[1] : '';
-        const spbySearchCandidates = spbyNumber
-            ? [`${spbyNumber}/PB/`, `${parseInt(spbyNumber, 10)}/PB/`]
+        // Auto-jump ke halaman yang memuat teks "<nomor>/PB/" cuma berlaku utk
+        // dokumen SPBy (bukan DRPP-KKP/DRPP-LS, karena polanya belum diketahui).
+        const spbySearchCandidates = (dokTag && dokTag.suffix === 'SPBy')
+            ? [`${dokTag.nomor}/PB/`, `${parseInt(dokTag.nomor, 10)}/PB/`]
             : null;
 
         pbWireDokSlot({
@@ -1024,7 +1039,7 @@ function pbOpenDokumenModal(row, tr) {
             uploadAction: 'uploadSpbyKegiatan',
             deleteAction: 'hapusSpbyKegiatan',
             allowTempelLink: false,
-            viewTitle: `SPBy #${id}`,
+            viewTitle: `${slotKeduaLabel} #${id}`,
             searchTextForView: spbySearchCandidates,
             rerender
         });
