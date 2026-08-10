@@ -46,6 +46,27 @@ async function fetchRpdBerjalanData() {
     }
 }
 
+// Ambil data Monitoring Dokumen Terupload dari sheet dash_bulanan_2026 (range T24:U25).
+// Backend mengembalikan: { rows: [{uraian, jumlah}, {uraian, jumlah}] }
+let dokumenMonitoringCache = null;
+async function fetchDokumenMonitoringData() {
+    try {
+        const data = await apiPost({ action: 'getDokumenMonitoringData' });
+        if (!data || typeof data !== 'object') {
+            throw new Error('Format data monitoring dokumen tidak valid');
+        }
+        if (!Array.isArray(data.rows)) data.rows = [];
+        dokumenMonitoringCache = data;
+        return data;
+    } catch (e) {
+        console.error('Error loading monitoring dokumen:', e);
+        const errorMsg = e.name === 'AbortError'
+            ? 'Timeout: Server tidak merespons (>30 detik)'
+            : e.message || 'Gagal memuat data monitoring dokumen';
+        throw new Error(errorMsg);
+    }
+}
+
 async function initDashboardPage() {
     const container = document.getElementById('dashboard-content');
     if (!container) return;
@@ -56,14 +77,16 @@ async function initDashboardPage() {
     // Selalu refresh setiap masuk halaman ini (perilaku sama seperti versi lama)
     dashboardDataCache = null;
     rpdBerjalanCache = null;
+    dokumenMonitoringCache = null;
     rpdEditModeUtama = false;
     container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
 
-    // Ambil data dashboard utama & data RPD Berjalan secara paralel.
+    // Ambil data dashboard utama, data RPD Berjalan, & data monitoring dokumen secara paralel.
     // Pakai allSettled supaya kalau salah satu gagal, yang lain tetap bisa tampil.
-    const [dashResult, rpdResult] = await Promise.allSettled([
+    const [dashResult, rpdResult, dokResult] = await Promise.allSettled([
         fetchDashboardData(),
-        fetchRpdBerjalanData()
+        fetchRpdBerjalanData(),
+        fetchDokumenMonitoringData()
     ]);
 
     if (dashResult.status !== 'fulfilled') {
@@ -77,9 +100,13 @@ async function initDashboardPage() {
     const rpdError = rpdResult.status !== 'fulfilled'
         ? (rpdResult.reason && rpdResult.reason.message ? rpdResult.reason.message : 'Gagal memuat data RPD Berjalan')
         : null;
+    const dokData = dokResult.status === 'fulfilled' ? dokResult.value : null;
+    const dokError = dokResult.status !== 'fulfilled'
+        ? (dokResult.reason && dokResult.reason.message ? dokResult.reason.message : 'Gagal memuat data monitoring dokumen')
+        : null;
 
     try {
-        container.innerHTML = buildDashboardHtml(data, rpdData, rpdError);
+        container.innerHTML = buildDashboardHtml(data, rpdData, rpdError, dokData, dokError);
         initCharts(data);
         bindGlobalSearchBar();
         // Mulai auto-refresh diam-diam (tanpa loading) setiap 1 menit
@@ -94,7 +121,7 @@ async function initDashboardPage() {
 // Bangun HTML utama dashboard. Dipakai baik saat load pertama (initDashboardPage)
 // maupun saat auto-refresh diam-diam di background (refreshDashboardInBackground),
 // supaya keduanya konsisten dan tidak duplikasi kode.
-function buildDashboardHtml(data, rpdData, rpdError) {
+function buildDashboardHtml(data, rpdData, rpdError, dokData, dokError) {
     return `
         <div class="space-y-8">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
@@ -123,6 +150,11 @@ function buildDashboardHtml(data, rpdData, rpdError) {
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
             </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" id="card-dokumen-monitoring">
+                ${dokError
+                    ? `<h3 class="font-semibold text-slate-700 mb-4">Monitoring Dokumen Terupload</h3><div class="text-sm text-red-500">❌ ${dokError}</div>`
+                    : renderMonitoringDokumen(dokData)}
+            </div>
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200" id="card-rpd-berjalan">
                 ${rpdError
                     ? `<h3 class="font-semibold text-slate-700 mb-4">Monitoring RPD Berjalan</h3><div class="text-sm text-red-500">❌ ${rpdError}</div>`
@@ -145,6 +177,25 @@ function buildDashboardHtml(data, rpdData, rpdError) {
                 </div>
             </div>
         </div>
+    `;
+}
+
+// Card: Monitoring Dokumen Terupload — 2 baris label:jumlah dari sheet
+// dash_bulanan_2026 range T24:U25 (kolom T = uraian/label, kolom U = jumlah).
+function renderMonitoringDokumen(data) {
+    const rows = (data && data.rows) || [];
+    return `
+        <h3 class="font-semibold text-slate-700 mb-4">Monitoring Dokumen Terupload</h3>
+        <table class="w-full text-sm">
+            <tbody>
+                ${rows.map(r => `
+                    <tr class="border-b border-slate-100 last:border-b-0">
+                        <td class="py-1.5 pr-2 text-slate-700 font-medium">${escapeHtml(r.uraian)}</td>
+                        <td class="py-1.5 pr-2 text-right text-slate-700 font-semibold">${formatAngka(r.jumlah)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
     `;
 }
 
@@ -183,9 +234,10 @@ async function refreshDashboardInBackground() {
     if (rpdEditModeUtama) return;
 
     try {
-        const [dashResult, rpdResult] = await Promise.allSettled([
+        const [dashResult, rpdResult, dokResult] = await Promise.allSettled([
             fetchDashboardData(),
-            fetchRpdBerjalanData()
+            fetchRpdBerjalanData(),
+            fetchDokumenMonitoringData()
         ]);
 
         if (dashResult.status !== 'fulfilled') {
@@ -198,11 +250,15 @@ async function refreshDashboardInBackground() {
         const rpdError = rpdResult.status !== 'fulfilled'
             ? (rpdResult.reason && rpdResult.reason.message ? rpdResult.reason.message : 'Gagal memuat data RPD Berjalan')
             : null;
+        const dokData = dokResult.status === 'fulfilled' ? dokResult.value : null;
+        const dokError = dokResult.status !== 'fulfilled'
+            ? (dokResult.reason && dokResult.reason.message ? dokResult.reason.message : 'Gagal memuat data monitoring dokumen')
+            : null;
 
         // Cek ulang, siapa tahu baris utama masuk mode edit persis saat fetch berlangsung
         if (rpdEditModeUtama) return;
 
-        container.innerHTML = buildDashboardHtml(data, rpdData, rpdError);
+        container.innerHTML = buildDashboardHtml(data, rpdData, rpdError, dokData, dokError);
         initCharts(data);
         bindGlobalSearchBar();
     } catch (e) {
