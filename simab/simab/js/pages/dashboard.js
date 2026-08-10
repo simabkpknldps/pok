@@ -55,6 +55,9 @@ async function fetchDokumenMonitoringData() {
         if (!data || typeof data !== 'object') {
             throw new Error('Format data monitoring dokumen tidak valid');
         }
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Backend belum mengenali action getDokumenMonitoringData (kemungkinan Apps Script belum di-deploy ulang).');
+        }
         if (!Array.isArray(data.rows)) data.rows = [];
         dokumenMonitoringCache = data;
         return data;
@@ -184,8 +187,11 @@ function buildDashboardHtml(data, rpdData, rpdError, dokData, dokError) {
 // dash_bulanan_2026 range T24:U25 (kolom T = uraian/label, kolom U = jumlah).
 function renderMonitoringDokumen(data) {
     const rows = (data && data.rows) || [];
+    const hasContent = rows.some(r => r.uraian || r.jumlah);
+
     return `
         <h3 class="font-semibold text-slate-700 mb-4">Monitoring Dokumen Terupload</h3>
+        ${hasContent ? `
         <table class="w-full text-sm">
             <tbody>
                 ${rows.map(r => `
@@ -196,6 +202,7 @@ function renderMonitoringDokumen(data) {
                 `).join('')}
             </tbody>
         </table>
+        ` : `<div class="text-sm text-slate-400 text-center py-2">Belum ada data (cek sheet dash_bulanan_2026 range T24:U25).</div>`}
     `;
 }
 
