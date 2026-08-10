@@ -1380,6 +1380,21 @@ function kgWireDokSlot(opts) {
     }
 }
 
+// Deteksi tag dokumen (SPBy / KKP / LS) dari Uraian (kolom C) — cermin dari
+// kgParseDokumenTag_ di backend (GAS), dipakai utk menentukan label slot
+// dokumen kedua di popup ("SPBy" / "DRPP (KKP)" / "DRPP (LS)" / "DRPP") dan
+// utk auto-jump ke halaman yang tepat saat Lihat SPBy diklik.
+function kgParseDokumenTagClient(uraian) {
+    const u = String(uraian || '');
+    let m = u.match(/SPBy-(\d+)/i);
+    if (m) return { nomor: m[1], suffix: 'SPBy', label: 'SPBy' };
+    m = u.match(/Kkp-(\d+)/i);
+    if (m) return { nomor: m[1], suffix: 'KKP', label: 'DRPP (KKP)' };
+    m = u.match(/SPM-(\d+)/i);
+    if (m) return { nomor: m[1], suffix: 'LS', label: 'DRPP (LS)' };
+    return null;
+}
+
 function kgShowDokumenPopup(tr) {
     const id = tr.dataset.id;
     const rowData = kgCurrentTableRowsData.find(r => String(r.A) === String(id));
@@ -1421,11 +1436,14 @@ function kgShowDokumenPopup(tr) {
         </div>
     `;
 
+    const dokTag = kgParseDokumenTagClient(rowData.C);
+    const slotKeduaLabel = dokTag ? dokTag.label : 'DRPP';
+
     const renderContent = () => `
         <h3 class="text-center text-sky-700 font-semibold text-base mb-2"><i class="fa-solid fa-file-pdf mr-2"></i>Dokumen Kegiatan #${id}</h3>
         <div class="flex flex-col gap-3">
             ${slotHtml('kgDokKuitansi', 'Kuitansi / Dokumen', rowData.T, false)}
-            ${slotHtml('kgDokSpby', 'SPBy', rowData.U, false)}
+            ${slotHtml('kgDokSpby', slotKeduaLabel, rowData.U, false)}
         </div>
         <div class="flex justify-end mt-1">
             <button id="kg-dokClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button>
@@ -1442,13 +1460,10 @@ function kgShowDokumenPopup(tr) {
     function wireAll() {
         popup.querySelector('#kg-dokClose').onclick = () => overlay.remove();
 
-        // Nomor SPBy diambil dari pola "(SPBy-NNNN)" di Uraian (kolom C), mis.
-        // "(SPBy-0009 / 15-01-2026) ST-0006/KNL.1401/2026" -> "0009". Dipakai
-        // utk auto-jump ke halaman SPBy yang memuat teks "<nomor>/PB/".
-        const spbyMatch = String(rowData.C || '').match(/SPBy-(\d+)/i);
-        const spbyNumber = spbyMatch ? spbyMatch[1] : '';
-        const spbySearchCandidates = spbyNumber
-            ? [`${spbyNumber}/PB/`, `${parseInt(spbyNumber, 10)}/PB/`]
+        // Auto-jump ke halaman yang memuat teks "<nomor>/PB/" cuma berlaku utk
+        // dokumen SPBy (bukan DRPP-KKP/DRPP-LS, karena polanya belum diketahui).
+        const spbySearchCandidates = (dokTag && dokTag.suffix === 'SPBy')
+            ? [`${dokTag.nomor}/PB/`, `${parseInt(dokTag.nomor, 10)}/PB/`]
             : null;
 
         kgWireDokSlot({
@@ -1465,7 +1480,7 @@ function kgShowDokumenPopup(tr) {
             uploadAction: 'uploadSpbyKegiatan',
             deleteAction: 'hapusSpbyKegiatan',
             allowTempelLink: false,
-            viewTitle: `SPBy #${id}`,
+            viewTitle: `${slotKeduaLabel} #${id}`,
             searchTextForView: spbySearchCandidates,
             rerender
         });
