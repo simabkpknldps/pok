@@ -1,0 +1,79 @@
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-4">
+
+    <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-slate-700">
+            <i class="fa-solid fa-file-arrow-up mr-2 text-sky-500"></i> Upload POK (Kertas Kerja)
+        </h3>
+    </div>
+
+    <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 text-sm text-sky-800">
+        Upload file PDF Kertas Kerja RKAKL. Sistem akan mengekstrak baris rincian detail
+        (Kode, Uraian, Vol, Pagu, SD, BA, Es I, Prog) secara otomatis. <strong>Cek & koreksi dulu</strong>
+        hasilnya di tabel preview di bawah sebelum disimpan — kolom Kode/Uraian/Vol/Pagu bisa diedit langsung.
+    </div>
+
+    <!-- Upload -->
+    <div class="flex flex-wrap items-center gap-3">
+        <input id="pku-fileInput" type="file" accept="application/pdf,.pdf"
+            class="text-sm border border-slate-300 rounded-lg px-3 py-2 flex-1 min-w-[240px]">
+        <button id="pku-btnParse" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+            <i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Parse PDF
+        </button>
+        <button id="pku-btnToggleDebug" class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 rounded-lg text-sm font-medium">
+            <i class="fa-solid fa-code mr-1"></i> Lihat Teks Mentah
+        </button>
+    </div>
+
+    <div id="pku-status" class="text-sm text-slate-400"></div>
+
+    <!-- Debug: teks mentah hasil ekstraksi pdf.js, buat bantu kalibrasi parser -->
+    <div id="pku-debugBox" class="hidden">
+        <label class="text-xs font-semibold text-slate-500 mb-1 block">Teks mentah per baris hasil ekstraksi PDF (buat debugging kalau hasil parsing meleset):</label>
+        <textarea id="pku-debugText" readonly rows="10" class="w-full text-xs font-mono border border-slate-300 rounded-lg p-2 bg-slate-50"></textarea>
+    </div>
+
+    <!-- Pilihan Seksi (multi-select, berlaku utk semua baris) -->
+    <div id="pku-seksiBox" class="hidden border border-slate-200 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-semibold text-slate-700">Seksi (pilih 1 atau lebih — data akan diduplikasi per Seksi yang dipilih)</label>
+        </div>
+        <div id="pku-seksiChecklist" class="flex flex-wrap gap-3 mb-3"></div>
+        <div class="flex items-center gap-2">
+            <input id="pku-seksiBaruInput" type="text" placeholder="Tambah Seksi baru..."
+                class="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+            <button id="pku-btnTambahSeksi" class="px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-xs font-medium">
+                <i class="fa-solid fa-plus mr-1"></i> Tambah
+            </button>
+        </div>
+    </div>
+
+    <!-- Preview -->
+    <div id="pku-previewWrap" class="hidden">
+        <div class="flex items-center justify-between mb-2">
+            <h4 class="text-sm font-semibold text-slate-700">
+                Preview Hasil Parsing (<span id="pku-jumlahBaris">0</span> baris)
+            </h4>
+            <button id="pku-btnSimpan" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan ke POK
+            </button>
+        </div>
+        <div class="overflow-auto max-h-[55vh] border border-slate-200 rounded-xl">
+            <table class="w-full text-xs border-collapse">
+                <thead class="bg-slate-100 sticky top-0 z-10">
+                    <tr>
+                        <th class="p-2 text-left font-semibold whitespace-nowrap">Kode</th>
+                        <th class="p-2 text-left font-semibold">Uraian</th>
+                        <th class="p-2 text-left font-semibold whitespace-nowrap">Vol</th>
+                        <th class="p-2 text-right font-semibold whitespace-nowrap">Pagu</th>
+                        <th class="p-2 text-center font-semibold whitespace-nowrap">SD</th>
+                        <th class="p-2 text-center font-semibold whitespace-nowrap">BA</th>
+                        <th class="p-2 text-center font-semibold whitespace-nowrap">Es I</th>
+                        <th class="p-2 text-center font-semibold whitespace-nowrap">Prog</th>
+                        <th class="p-2 text-center font-semibold whitespace-nowrap">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="pku-previewBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
