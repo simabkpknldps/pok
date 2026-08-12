@@ -545,26 +545,25 @@ function kgShowEditPopup(tr) {
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({
-                action: 'updateKegiatanDetail',
-                kantor: localStorage.getItem('kantor'),
-                id: idKegiatan,
-                mak: document.getElementById('kg-editMak').value,
+            const makBaru = document.getElementById('kg-editMak').value;
+            const updateFields = {
                 uraian: document.getElementById('kg-editUraian').value,
                 pelaksana: document.getElementById('kg-editPelaksana').value,
                 tujuan: document.getElementById('kg-editTujuan').value,
                 tglST: document.getElementById('kg-editTglST').value,
                 jumlah: Number(document.getElementById('kg-editJumlah').value) || 0
-            });
-            if (result.status === 'success') {
-                overlay.remove();
-                showToast('Kegiatan berhasil diubah');
-                kgLoadData(false);
-            } else {
-                alert('Gagal update: ' + result.message);
-            }
+            };
+            // MAK cuma diikutkan kalau memang ada isinya (mis. diubah lewat popup "Pilih MAK dari POK")
+            if (makBaru) updateFields.mak = makBaru;
+
+            await waitFirebaseAuthReady();
+            await db.collection('kegiatan').doc(idKegiatan).update(updateFields);
+
+            overlay.remove();
+            showToast('Kegiatan berhasil diubah');
+            kgLoadData(true);
         } catch (e) {
-            alert('Gagal update: ' + e.message);
+            alert('Gagal update: ' + (e.message || e));
         } finally {
             kgShowLoading(false);
             btn.disabled = false;
