@@ -20,14 +20,20 @@
         <h3 class="text-lg font-semibold text-slate-700">
             <i class="fa-solid fa-file-arrow-up mr-2 text-sky-500"></i> Upload POK (Kertas Kerja)
         </h3>
+        <button id="pku-btnViewUpload" class="px-3 py-1.5 border border-sky-300 text-sky-700 hover:bg-sky-50 rounded-lg text-xs font-medium">
+            <i class="fa-solid fa-eye mr-1"></i> Lihat Data di pok_upload
+        </button>
     </div>
 
     <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 text-sm text-sky-800">
         Upload file <strong>Excel (.xls) Kertas Kerja RKAKL</strong> (hasil export dari sistem RKA-KL/SAKTI).
-        Sistem akan mengekstrak baris rincian detail (Kode, Uraian, Vol, Pagu, SD, BA, Es I, Prog) secara
-        otomatis. <strong>Cek & koreksi dulu</strong> hasilnya di tabel preview di bawah — kolom
-        Kode/Uraian/Vol/Pagu bisa diedit langsung. Data yang dikirim akan masuk ke sheet
-        <strong>pok_upload</strong> dulu sebagai antrean review (belum langsung masuk ke <code>pok_sumber_2026</code>).
+        Sistem akan mengekstrak <strong>seluruh baris</strong> (Kegiatan, RO, Komponen, SubKomponen, Huruf,
+        Akun, sampai Detail — bukan cuma level Detail) beserta Kode, Uraian, Vol, Pagu, SD, BA, Es I, Prog.
+        <strong>Cek & koreksi dulu</strong> hasilnya di tabel preview — kolom Kode/Uraian/Vol/Pagu bisa
+        diedit langsung, dan tiap baris wajib ditandai Seksi-nya (boleh lebih dari 1 Seksi, nanti diduplikasi).
+        Data yang dikirim akan masuk ke sheet <strong>pok_upload</strong> dulu sebagai antrean review —
+        klik <em>"Lihat Data di pok_upload"</em> di atas kapan saja untuk cek ulang & kirim ke
+        <code>pok_sumber_2026</code>.
     </div>
 
     <!-- Upload -->
@@ -69,10 +75,10 @@
     <div id="pku-previewWrap" class="hidden">
         <div class="flex items-center justify-between mb-2">
             <h4 class="text-sm font-semibold text-slate-700">
-                Preview Hasil Parsing (<span id="pku-jumlahBaris">0</span> baris)
+                Preview Hasil Parsing (<span id="pku-jumlahBaris">0</span> baris — semua level hierarki)
             </h4>
             <button id="pku-btnSimpan" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
-                <i class="fa-solid fa-floppy-disk mr-1"></i> Kirim ke Sheet pok_upload (Review)
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Kirim ke Sheet pok_upload
             </button>
         </div>
         <div class="overflow-auto max-h-[55vh] border border-slate-200 rounded-xl">
