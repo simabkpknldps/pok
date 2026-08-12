@@ -354,6 +354,34 @@ function kgOpenOverlay(innerHtml, widthClass) {
 }
 
 const kgInputClass = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500';
+
+// Status dulu dihitung otomatis via formula sheet:
+// =IF(Q<>"","Selesai",IF(J<>"","Terbayar",IF(I<>"","LPT",IF(TODAY()-H<0,"Rekam Data","Terlaksana"))))
+// Firestore tidak punya formula hidup, jadi status dihitung ulang di client
+// tiap kali salah satu field tanggal terkait (tglMulai/tglLPT/tglBayar/tglSP2D)
+// berubah, lalu disimpan sebagai field biasa.
+function kgComputeStatus(tglMulai, tglLPT, tglBayar, tglSP2D) {
+    if (tglSP2D) return 'Selesai';
+    if (tglBayar) return 'Terbayar';
+    if (tglLPT) return 'LPT';
+    if (tglMulai) {
+        const mulai = new Date(tglMulai);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        mulai.setHours(0, 0, 0, 0);
+        if (!isNaN(mulai.getTime()) && mulai.getTime() > today.getTime()) return 'Rekam Data';
+    }
+    return 'Terlaksana';
+}
+
+// ID dokumen kegiatan baru (dipakai popup Pelaksana yg generate baris baru per
+// pelaksana) — sama persis pola generateRandomId(10) yg dulu dipakai backend.
+function kgGenerateRandomId(len) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let id = '';
+    for (let i = 0; i < len; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
+    return id;
+}
 const kgLabelClass = 'text-sm font-medium text-slate-600';
 
 // ---- Salin Uraian ----
@@ -887,27 +915,47 @@ function kgShowPelaksanaPopup(tr) {
             });
         });
 
+        if (dataPelaksana.length === 0) {
+            alert('Tidak ada data pelaksana.');
+            kgShowLoading(false);
+            btn.disabled = false;
+            return;
+        }
+
         try {
-            const result = await apiPost({
-                action: 'updatePelaksanaKegiatan',
-                kantor: localStorage.getItem('kantor'),
-                idKegiatanLama: idKegiatan,
-                mak: mak,
-                uraian: popup.querySelector('#kg-pelUraian').value,
-                tujuan: tujuan,
-                tglSt: popup.querySelector('#kg-pelTglST').value,
-                userLogin: localStorage.getItem('nama') || user,
-                pelaksanaData: dataPelaksana
+            await waitFirebaseAuthReady();
+
+            const uraianVal = popup.querySelector('#kg-pelUraian').value;
+            const tglStVal = popup.querySelector('#kg-pelTglST').value;
+            const namaUser = localStorage.getItem('nama') || user;
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const batch = db.batch();
+
+            // 1. Hapus dokumen lama
+            batch.delete(db.collection('kegiatan').doc(idKegiatan));
+
+            // 2. Buat 1 dokumen baru per pelaksana (ID baru masing2, sama seperti pola lama)
+            dataPelaksana.forEach(p => {
+                const newId = kgGenerateRandomId(10);
+                const status = kgComputeStatus(p.tglMulai, '', '', '');
+                batch.set(db.collection('kegiatan').doc(newId), {
+                    mak, uraian: uraianVal, pelaksana: p.nama, tujuan,
+                    tglST: tglStVal, tglMulai: p.tglMulai, tglSelesai: p.tglSelesai,
+                    tglLPT: '', tglBayar: '', jumlah: p.jumlah,
+                    user: namaUser, status, tglSP2D: '', nomorSPM: '',
+                    dokumenLink: '', spbyLink: '', tglRekam: todayStr,
+                    perbantuan: false
+                });
             });
-            if (result.status === 'success') {
-                overlay.remove();
-                showToast('Pelaksana berhasil disimpan');
-                kgLoadData(false);
-            } else {
-                alert('Gagal: ' + result.message);
-            }
+
+            await batch.commit();
+
+            overlay.remove();
+            showToast('Pelaksana berhasil disimpan');
+            kgLoadData(true);
         } catch (e) {
-            alert('Gagal: ' + e.message);
+            alert('Gagal: ' + (e.message || e));
         } finally {
             kgShowLoading(false);
             btn.disabled = false;
@@ -960,23 +1008,26 @@ function kgShowLPTPopup(tr) {
         if (!tanggal) { alert('Tanggal LPT harus diisi!'); return; }
 
         const rows = popup.querySelectorAll('#kg-lptTableBody tr');
-        const dataLPT = [];
-        rows.forEach(r => dataLPT.push({ id: r.cells[0].textContent, lptDate: tanggal }));
+        const ids = Array.from(rows).map(r => r.cells[0].textContent);
 
         const btn = this;
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({ action: 'updateLPT', kantor: localStorage.getItem('kantor'), rows: dataLPT });
-            if (result.status === 'success') {
-                overlay.remove();
-                showToast('LPT berhasil disimpan');
-                kgLoadData(false);
-            } else {
-                alert('Gagal update LPT: ' + result.message);
-            }
+            await waitFirebaseAuthReady();
+            const batch = db.batch();
+            ids.forEach(id => {
+                const rowData = kgAllRows.find(r => String(r.A) === String(id));
+                const status = kgComputeStatus(rowData?.G, tanggal, rowData?.J, rowData?.Q);
+                batch.update(db.collection('kegiatan').doc(id), { tglLPT: tanggal, status });
+            });
+            await batch.commit();
+
+            overlay.remove();
+            showToast('LPT berhasil disimpan');
+            kgLoadData(true);
         } catch (e) {
-            alert('Gagal update LPT: ' + e.message);
+            alert('Gagal update LPT: ' + (e.message || e));
         } finally {
             kgShowLoading(false);
             btn.disabled = false;
@@ -1033,23 +1084,26 @@ function kgShowBayarPopup(tr) {
         if (!tglBayar) { alert('Tanggal Bayar harus diisi!'); return; }
 
         const rows = popup.querySelectorAll('#kg-bayarTableBody tr');
-        const tblData = [];
-        rows.forEach(r => tblData.push({ id: r.dataset.id, pelaksana: r.cells[1].textContent, uraian: uraianValue, tglBayar }));
+        const ids = Array.from(rows).map(r => r.dataset.id);
 
         const btn = this;
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({ action: 'updateBayarMultiple', kantor: localStorage.getItem('kantor'), data: tblData });
-            if (result.status === 'success') {
-                overlay.remove();
-                showToast('Pembayaran berhasil disimpan');
-                kgLoadData(false);
-            } else {
-                alert('Gagal: ' + result.message);
-            }
+            await waitFirebaseAuthReady();
+            const batch = db.batch();
+            ids.forEach(id => {
+                const rowData = kgAllRows.find(r => String(r.A) === String(id));
+                const status = kgComputeStatus(rowData?.G, rowData?.I, tglBayar, rowData?.Q);
+                batch.update(db.collection('kegiatan').doc(id), { uraian: uraianValue, tglBayar, status });
+            });
+            await batch.commit();
+
+            overlay.remove();
+            showToast('Pembayaran berhasil disimpan');
+            kgLoadData(true);
         } catch (e) {
-            alert('Gagal: ' + e.message);
+            alert('Gagal: ' + (e.message || e));
         } finally {
             kgShowLoading(false);
             btn.disabled = false;
@@ -1121,23 +1175,26 @@ function kgShowSP2DPopup(tr) {
         if (!nomorSPM || !tglSP2D) { alert('Nomor SPM dan Tanggal SP2D harus diisi!'); return; }
 
         const rows = popup.querySelectorAll('#kg-sp2dTableBody tr');
-        const dataSP2D = [];
-        rows.forEach(r => dataSP2D.push({ id: r.cells[0].textContent, nomorSPM, tglSP2D }));
+        const ids = Array.from(rows).map(r => r.cells[0].textContent);
 
         const btn = this;
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({ action: 'saveSP2D', kantor: localStorage.getItem('kantor'), rows: dataSP2D });
-            if (result.status === 'success') {
-                overlay.remove();
-                showToast('SP2D berhasil disimpan');
-                kgLoadData(false);
-            } else {
-                alert('Gagal: ' + result.message);
-            }
+            await waitFirebaseAuthReady();
+            const batch = db.batch();
+            ids.forEach(id => {
+                const rowData = kgAllRows.find(r => String(r.A) === String(id));
+                const status = kgComputeStatus(rowData?.G, rowData?.I, rowData?.J, tglSP2D);
+                batch.update(db.collection('kegiatan').doc(id), { tglSP2D, nomorSPM, status });
+            });
+            await batch.commit();
+
+            overlay.remove();
+            showToast('SP2D berhasil disimpan');
+            kgLoadData(true);
         } catch (e) {
-            alert('Gagal: ' + e.message);
+            alert('Gagal: ' + (e.message || e));
         } finally {
             kgShowLoading(false);
             btn.disabled = false;
@@ -1220,10 +1277,36 @@ function kgApplyDokLinksToTable(links, field) {
         const link = links[rowId];
         const found = kgCurrentTableRowsData.find(r => String(r.A) === String(rowId));
         if (found) found[field] = link;
+        // kgAllRows juga diupdate (sumber "master" client-side) supaya konsisten
+        // kalau user ganti filter tanpa Refresh dulu.
+        const foundAll = kgAllRows.find(r => String(r.A) === String(rowId));
+        if (foundAll) foundAll[field] = link;
 
         const trEl = document.querySelector(`#kg-dataTableBody tr[data-id="${CSS.escape(String(rowId))}"]`);
         kgUpdateDokBtnColor(trEl, found);
     });
+}
+
+// File dokumen tetap di-upload lewat GAS (butuh akses Drive server-side), tapi
+// link hasilnya (result.links dari GAS, sudah berisi semua baris terkait —
+// misal semua baris dgn tag SPBy/No.SPM yang sama) disinkronkan juga ke
+// Firestore di sini, supaya field dokumenLink/spbyLink konsisten di kedua
+// tempat (Sheet lewat GAS, Firestore lewat batch write ini).
+async function kgSyncDokLinksToFirestore(links, field) {
+    const fsField = field === 'T' ? 'dokumenLink' : 'spbyLink';
+    const ids = Object.keys(links || {});
+    if (ids.length === 0) return;
+
+    try {
+        await waitFirebaseAuthReady();
+        const batch = db.batch();
+        ids.forEach(id => {
+            batch.update(db.collection('kegiatan').doc(id), { [fsField]: links[id] });
+        });
+        await batch.commit();
+    } catch (e) {
+        console.error('Gagal sinkron link dokumen ke Firestore:', e);
+    }
 }
 
 // Wire satu "slot" dokumen (kuitansi ATAU SPBy) di dalam popup Dokumen.
@@ -1263,8 +1346,10 @@ function kgWireDokSlot(opts) {
             try {
                 const result = await apiPost({ action: deleteAction, id: id }, 30000);
                 if (result.status === 'success') {
+                    const links = result.links || { [id]: '' };
                     rowData[field] = '';
-                    kgApplyDokLinksToTable(result.links || { [id]: '' }, field);
+                    kgApplyDokLinksToTable(links, field);
+                    await kgSyncDokLinksToFirestore(links, field);
                     rerender();
                 } else {
                     statusEl.textContent = '❌ ' + (result.message || 'Gagal menghapus dokumen.');
@@ -1317,8 +1402,10 @@ function kgWireDokSlot(opts) {
             }, 60000);
 
             if (result.status === 'success') {
+                const links = result.links || { [id]: result.link };
                 rowData[field] = result.link;
-                kgApplyDokLinksToTable(result.links || { [id]: result.link }, field);
+                kgApplyDokLinksToTable(links, field);
+                await kgSyncDokLinksToFirestore(links, field);
                 rerender();
             } else {
                 statusEl.textContent = '❌ ' + (result.message || 'Upload gagal.');
@@ -1510,16 +1597,14 @@ function kgShowDeletePopup(tr) {
         this.disabled = true;
         kgShowLoading(true);
         try {
-            const result = await apiPost({ action: 'deleteKegiatan', kantor: localStorage.getItem('kantor'), id: idKegiatan });
-            if (result.status === 'success') {
-                overlay.remove();
-                showToast('Kegiatan berhasil dihapus');
-                kgLoadData(false);
-            } else {
-                alert('Gagal hapus: ' + result.message);
-            }
+            await waitFirebaseAuthReady();
+            await db.collection('kegiatan').doc(idKegiatan).delete();
+
+            overlay.remove();
+            showToast('Kegiatan berhasil dihapus');
+            kgLoadData(true);
         } catch (e) {
-            alert('Gagal hapus: ' + e.message);
+            alert('Gagal hapus: ' + (e.message || e));
         } finally {
             kgShowLoading(false);
         }
