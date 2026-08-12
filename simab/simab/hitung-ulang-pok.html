@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hitung Ulang Blokir/Realisasi POK — SiMAB</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1e293b; }
+        h1 { font-size: 20px; }
+        p.desc { color: #64748b; font-size: 14px; }
+        .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 16px; }
+        button { padding: 10px 18px; border-radius: 8px; border: none; background: #0369a1; color: white; font-size: 14px; cursor: pointer; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        #progressBarWrap { background: #f1f5f9; border-radius: 8px; height: 10px; margin-top: 12px; overflow: hidden; }
+        #progressBar { background: #0369a1; height: 100%; width: 0%; transition: width .2s; }
+        #status { margin-top: 10px; font-size: 14px; }
+        #log { margin-top: 12px; font-size: 12px; white-space: pre-wrap; font-family: monospace; background: #f8fafc; padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto; }
+        .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🧮 Hitung Ulang Blokir / Realisasi / Sisa (POK)</h1>
+    <p class="desc">
+        Untuk tiap dokumen di koleksi <code>pok</code>: <strong>Realisasi</strong> = jumlah semua dokumen
+        <code>kegiatan</code> yang field <code>mak</code>-nya sama dengan <code>kode</code> POK ini.
+        <strong>Blokir</strong> = field <code>nilai</code> dari dokumen <code>blokir</code> dengan id yang sama.
+        <strong>Sisa</strong> = Pagu − Blokir − Realisasi. Menggantikan formula SUMIF yang dulu ada di sheet.
+    </p>
+
+    <div class="warn">
+        ⚠️ Pastikan Security Rules Firestore sudah dibuka sementara (baca <code>kegiatan</code>/<code>blokir</code>,
+        tulis <code>pok</code>) dan kamu sudah login di SiMAB sebelum klik tombol di bawah.
+    </div>
+
+    <div class="card">
+        <button id="btnHitung">Hitung Ulang & Simpan</button>
+        <div id="progressBarWrap"><div id="progressBar"></div></div>
+        <div id="status"></div>
+    </div>
+
+    <div id="log"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <script>
+        const logEl = document.getElementById('log');
+        function log(msg) {
+            logEl.textContent += msg + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        document.getElementById('btnHitung').onclick = async function () {
+            const btn = this;
+            const statusEl = document.getElementById('status');
+            const progressBar = document.getElementById('progressBar');
+
+            btn.disabled = true;
+            statusEl.textContent = 'Membaca koleksi kegiatan...';
+            statusEl.style.color = '#0369a1';
+
+            try {
+                // 1. Ambil semua kegiatan, jumlahkan per MAK
+                const kegiatanSnap = await db.collection('kegiatan').get();
+                const realisasiByMak = {};
+                kegiatanSnap.forEach(doc => {
+                    const d = doc.data();
+                    const mak = String(d.mak || '').trim();
+                    if (!mak) return;
+                    realisasiByMak[mak] = (realisasiByMak[mak] || 0) + (Number(d.jumlah) || 0);
+                });
+                log(`✅ ${kegiatanSnap.size} dokumen kegiatan dibaca, ${Object.keys(realisasiByMak).length} MAK unik.`);
+
+                // 2. Ambil semua blokir (id dokumen = kode)
+                statusEl.textContent = 'Membaca koleksi blokir...';
+                const blokirSnap = await db.collection('blokir').get();
+                const blokirByKode = {};
+                blokirSnap.forEach(doc => {
+                    blokirByKode[doc.id] = Number(doc.data().nilai) || 0;
+                });
+                log(`✅ ${blokirSnap.size} dokumen blokir dibaca.`);
+
+                // 3. Ambil semua pok, hitung ulang, tulis balik
+                statusEl.textContent = 'Membaca koleksi pok...';
+                const pokSnap = await db.collection('pok').get();
+                log(`✅ ${pokSnap.size} dokumen pok dibaca. Mulai hitung ulang & simpan...`);
+
+                const docs = pokSnap.docs;
+                const BATCH_SIZE = 450;
+                let diupdate = 0;
+
+                for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+                    const chunk = docs.slice(i, i + BATCH_SIZE);
+                    const batch = db.batch();
+
+                    chunk.forEach(docSnap => {
+                        const kode = docSnap.id;
+                        const d = docSnap.data();
+                        const pagu = Number(d.pagu) || 0;
+                        const blokir = blokirByKode[kode] || 0;
+                        const realisasi = realisasiByMak[kode] || 0;
+                        const sisa = pagu - blokir - realisasi;
+
+                        batch.update(docSnap.ref, { blokir, realisasi, sisa });
+                        diupdate++;
+                    });
+
+                    await batch.commit();
+                    const persen = Math.round((Math.min(i + BATCH_SIZE, docs.length) / docs.length) * 100);
+                    progressBar.style.width = persen + '%';
+                    statusEl.textContent = `Menyimpan... ${diupdate}/${docs.length} (${persen}%)`;
+                    log(`Batch selesai: ${Math.min(i + BATCH_SIZE, docs.length)}/${docs.length}`);
+                }
+
+                statusEl.textContent = `✅ Selesai! ${diupdate} dokumen pok diperbarui.`;
+                statusEl.style.color = '#15803d';
+                log(`\n🎉 SELESAI. ${diupdate} dokumen pok diperbarui.`);
+            } catch (e) {
+                statusEl.textContent = '❌ ' + (e.message || e);
+                statusEl.style.color = '#dc2626';
+                log('❌ Error: ' + (e.message || e));
+            } finally {
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
