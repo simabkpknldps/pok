@@ -1288,6 +1288,41 @@ function kgUpdateDokBtnColor(trEl, rowData) {
 // untuk field tertentu ('T' = kuitansi, 'U' = SPBy). Dipakai setelah
 // upload/tempel-link/hapus, karena satu aksi bisa berlaku ke beberapa baris
 // sekaligus (kuitansi: Uraian sama; SPBy: No. SPM sama).
+// Deteksi tag SPBy-XXXX / Kkp-XXXX / SPM-XXXX di teks Uraian — sama persis
+// pola yang dulu dipakai backend (kgParseDokumenTag_), dipindah ke client
+// karena sekarang backend tidak lagi tahu isi Uraian (data sumbernya Firestore).
+function kgFindDokTagMatchText(uraian) {
+    const u = String(uraian || '');
+    let m = u.match(/SPBy-\d+/i); if (m) return m[0];
+    m = u.match(/Kkp-\d+/i); if (m) return m[0];
+    m = u.match(/SPM-\d+/i); if (m) return m[0];
+    return null;
+}
+
+// Cari SEMUA id kegiatan (dari kgAllRows, sumber Firestore) yang harus ikut
+// dapat link dokumen yang sama dengan baris sumber (rowData) — menggantikan
+// logic pencarian-baris yang dulu dilakukan backend lewat scan Sheet:
+// - Kuitansi (field T): baris lain dgn tag SPBy/KKP/SPM yg sama di Uraian,
+//   fallback ke Uraian identik persis kalau tidak ada tag sama sekali.
+// - SPBy (field U): baris lain dengan No. SPM (kolom R) yang sama.
+function kgFindTargetIdsForDokLink(field, rowData) {
+    if (field === 'U') {
+        const spmTarget = String(rowData.R || '').trim();
+        if (spmTarget) {
+            return kgAllRows.filter(r => String(r.R || '').trim() === spmTarget).map(r => r.A);
+        }
+        return [rowData.A];
+    }
+
+    const uraianSource = String(rowData.C || '').trim();
+    const tagMatch = kgFindDokTagMatchText(uraianSource);
+    if (tagMatch) {
+        const tagLower = tagMatch.toLowerCase();
+        return kgAllRows.filter(r => String(r.C || '').toLowerCase().includes(tagLower)).map(r => r.A);
+    }
+    return kgAllRows.filter(r => String(r.C || '').trim() === uraianSource).map(r => r.A);
+}
+
 function kgApplyDokLinksToTable(links, field) {
     Object.keys(links || {}).forEach(rowId => {
         const link = links[rowId];
@@ -1365,9 +1400,11 @@ function kgWireDokSlot(opts) {
             statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
             setBusy(true);
             try {
-                const result = await apiPost({ action: deleteAction, id: id }, 30000);
+                const result = await apiPost({ action: deleteAction, id: id, uraian: rowData.C, nomorSPM: rowData.R }, 30000);
                 if (result.status === 'success') {
-                    const links = result.links || { [id]: '' };
+                    const targetIds = kgFindTargetIdsForDokLink(field, rowData);
+                    const links = {};
+                    targetIds.forEach(tid => { links[tid] = ''; });
                     rowData[field] = '';
                     kgApplyDokLinksToTable(links, field);
                     await kgSyncDokLinksToFirestore(links, field);
@@ -1419,11 +1456,15 @@ function kgWireDokSlot(opts) {
                 action: uploadAction,
                 id: id,
                 fileData: base64,
-                fileName: file.name
+                fileName: file.name,
+                uraian: rowData.C,
+                nomorSPM: rowData.R
             }, 60000);
 
             if (result.status === 'success') {
-                const links = result.links || { [id]: result.link };
+                const targetIds = kgFindTargetIdsForDokLink(field, rowData);
+                const links = {};
+                targetIds.forEach(tid => { links[tid] = result.link; });
                 rowData[field] = result.link;
                 kgApplyDokLinksToTable(links, field);
                 await kgSyncDokLinksToFirestore(links, field);
