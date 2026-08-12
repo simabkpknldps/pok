@@ -100,7 +100,9 @@
                         const d = docSnap.data();
                         const pagu = Number(d.pagu) || 0;
                         const blokir = blokirByKode[kode] || 0;
-                        const realisasi = realisasiByMak[kode] || 0;
+                        // Realisasi TIDAK dihitung di sini lagi (selalu 0) — sekarang
+                        // dihitung LIVE di pok.js tiap kali halaman POK dibuka.
+                        const realisasi = 0;
                         const sisa = pagu - blokir - realisasi;
 
                         batch.update(docSnap.ref, { blokir, realisasi, sisa });
