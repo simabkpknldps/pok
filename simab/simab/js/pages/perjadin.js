@@ -57,7 +57,16 @@ async function pjLoadData() {
     tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>`;
 
     try {
-        const data = await apiPost({ action: 'getKegiatanData', kantor: localStorage.getItem('kantor') });
+        // statusFilter WAJIB 'Semua' -> backend getKegiatanData defaultnya cuma kirim
+        // status "Dalam Proses" (Rekam Data + Terlaksana) kalau tidak diisi, padahal
+        // halaman ini butuh SEMUA status (LPT/Terbayar/Selesai juga) karena filter
+        // status yang sesungguhnya dilakukan di sini (client), bukan di server.
+        const data = await apiPost({
+            action: 'getKegiatanData',
+            kantor: localStorage.getItem('kantor'),
+            statusFilter: 'Semua',
+            pageSize: 'all'
+        });
 
         if (!data || data.status !== 'success') {
             tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">Gagal memuat data perjadin.</td></tr>`;
