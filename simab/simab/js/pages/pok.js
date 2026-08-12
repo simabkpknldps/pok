@@ -621,39 +621,47 @@ async function simpanData() {
     const namaUser = localStorage.getItem('nama') || "Guest";
     const scrollPos = document.querySelector('.overflow-y-auto')?.scrollTop;
 
-    const payload = {
-        action: 'simpanKegiatan',
-        idKegiatan: document.getElementById("idUsulan").value,
-        mak: document.getElementById("mak").value,
-        uraian: document.getElementById("uraianKegiatan").value,
-        tujuan: document.getElementById("inputTujuan").value,
-        tglSt: document.getElementById("tglSt").value,
-        estimasi: document.getElementById("estimasiBiaya").value.replace(/\./g, ''),
-        userLogin: namaUser,
-        tglRekam: new Date().toISOString().split('T')[0],
-        perbantuan: document.getElementById("perbantuanToggle")?.dataset.on === '1' ? 1 : 0
-    };
+    const idKegiatan = document.getElementById("idUsulan").value;
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menyimpan...';
 
     try {
-        const result = await apiPost(payload);
+        // Tulis LANGSUNG ke Firestore (koleksi 'kegiatan') — bukan lagi lewat GAS.
+        // Struktur field mengikuti pola simpanKegiatan yg lama (kolom D/G-L kosong,
+        // status selalu "Rekam Data" utk kegiatan baru).
+        await waitFirebaseAuthReady();
+        await db.collection('kegiatan').doc(idKegiatan).set({
+            mak: document.getElementById("mak").value,
+            uraian: document.getElementById("uraianKegiatan").value,
+            pelaksana: '',
+            tujuan: document.getElementById("inputTujuan").value,
+            tglST: document.getElementById("tglSt").value,
+            tglMulai: '',
+            tglSelesai: '',
+            tglLPT: '',
+            tglBayar: '',
+            jumlah: Number(document.getElementById("estimasiBiaya").value.replace(/\./g, '')) || 0,
+            user: namaUser,
+            status: 'Rekam Data',
+            tglSP2D: '',
+            nomorSPM: '',
+            dokumenLink: '',
+            spbyLink: '',
+            tglRekam: new Date().toISOString().split('T')[0],
+            perbantuan: document.getElementById("perbantuanToggle")?.dataset.on === '1'
+        });
 
-        if (result.status === "success") {
-            closeRekamModal();
-            showToast("Simpan kegiatan berhasil!");
-            await loadPokData();
-            setTimeout(() => {
-                const scrollEl = document.querySelector('.overflow-y-auto');
-                if (scrollEl) scrollEl.scrollTop = scrollPos;
-            }, 100);
-        } else {
-            alert("Gagal: " + result.message);
-        }
+        closeRekamModal();
+        showToast("Simpan kegiatan berhasil!");
+        await loadPokData();
+        setTimeout(() => {
+            const scrollEl = document.querySelector('.overflow-y-auto');
+            if (scrollEl) scrollEl.scrollTop = scrollPos;
+        }, 100);
     } catch (e) {
         console.error(e);
-        alert("Error koneksi ke server.");
+        alert("Error koneksi ke server: " + (e.message || e));
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i> Simpan';
