@@ -51,18 +51,6 @@ async function initPokPage() {
 // ditembak sebelum ini selesai, request.auth masih kosong -> ditolak Rules
 // ("insufficient permissions") walau sebenarnya user sudah login. Fungsi ini
 // nunggu sampai Firebase Auth benar2 siap (auth state ready) dulu.
-let _firebaseAuthReadyPromise = null;
-function waitFirebaseAuthReady() {
-    if (!_firebaseAuthReadyPromise) {
-        _firebaseAuthReadyPromise = new Promise(resolve => {
-            const unsub = firebase.auth().onAuthStateChanged(user => {
-                unsub();
-                resolve(user);
-            });
-        });
-    }
-    return _firebaseAuthReadyPromise;
-}
 
 async function loadPokData() {
     const tbody = document.getElementById('pok-tbody');
