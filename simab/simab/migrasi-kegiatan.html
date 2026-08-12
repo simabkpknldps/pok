@@ -3,169 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migrasi Data Kegiatan → Firestore — SiMAB</title>
+    <title>Migrasi Data Lainnya → Firestore — SiMAB</title>
     <style>
-        body { font-family: -apple-system, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1e293b; }
+        body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #1e293b; }
         h1 { font-size: 20px; }
         p.desc { color: #64748b; font-size: 14px; }
         .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 16px; }
-        .card h2 { font-size: 15px; margin: 0 0 8px; }
-        button { padding: 10px 18px; border-radius: 8px; border: none; background: #0369a1; color: white; font-size: 14px; cursor: pointer; }
+        .card h2 { font-size: 15px; margin: 0 0 4px; }
+        .card .ket { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
+        button { padding: 9px 16px; border-radius: 8px; border: none; background: #0369a1; color: white; font-size: 13px; cursor: pointer; margin-right: 8px; }
         button:disabled { background: #cbd5e1; cursor: not-allowed; }
-        #progressBarWrap { background: #f1f5f9; border-radius: 8px; height: 10px; margin-top: 12px; overflow: hidden; display: none; }
-        #progressBar { background: #0369a1; height: 100%; width: 0%; transition: width .2s; }
-        #log { margin-top: 12px; font-size: 13px; white-space: pre-wrap; font-family: monospace; background: #f8fafc; padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto; }
+        .status { margin-top: 10px; font-size: 13px; }
         .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 16px; }
     </style>
 </head>
 <body>
-    <h1>🔄 Migrasi Data Kegiatan → Firestore</h1>
-    <p class="desc">Ambil seluruh data dari sheet <code>Data_Kegiatan_2026</code> (lewat backend GAS yang sekarang), lalu tulis ke koleksi <code>kegiatan</code> di Firestore.</p>
+    <h1>🔄 Migrasi Data Lainnya → Firestore</h1>
+    <p class="desc">Migrasi 4 sheet: <code>ref_pegawai</code>, <code>pok_sumber_2026</code>, <code>data_blokir_2026</code>, <code>ref_sbm</code>. Tiap kartu independen — jalankan satu-satu, urutan bebas.</p>
 
     <div class="warn">
-        ⚠️ Halaman ini HARUS dibuka setelah kamu login normal di SiMAB (di tab lain), supaya sesi login (<code>realUrl</code>) sudah tersimpan di browser. Kalau belum login, langkah 1 akan gagal.
+        ⚠️ Login dulu di SiMAB (tab lain) sebelum pakai halaman ini, supaya sesi (<code>realUrl</code>) sudah tersimpan.
     </div>
 
+    <!-- 1. ref_pegawai -->
     <div class="card">
-        <h2>Langkah 1 — Ambil Data dari GAS</h2>
-        <button id="btnAmbil">Ambil Data dari Sheet</button>
-        <div id="statusAmbil" style="margin-top:10px; font-size:14px;"></div>
+        <h2>1. Pegawai (<code>ref_pegawai</code> → koleksi <code>pegawai</code>)</h2>
+        <div class="ket">Id dokumen = NIP. Termasuk password apa adanya (masih plaintext, sama seperti di sheet — nanti perlu dipikirkan ulang cara amanin ini kalau sudah pindah total).</div>
+        <button data-m="pegawai" class="btnAmbil">Ambil Data</button>
+        <button data-m="pegawai" class="btnTulis" disabled>Tulis ke Firestore</button>
+        <div class="status" id="status-pegawai"></div>
     </div>
 
+    <!-- 2. pok_sumber_2026 -->
     <div class="card">
-        <h2>Langkah 2 — Tulis ke Firestore</h2>
-        <button id="btnTulis" disabled>Tulis ke Firestore</button>
-        <div id="progressBarWrap"><div id="progressBar"></div></div>
-        <div id="statusTulis" style="margin-top:10px; font-size:14px;"></div>
+        <h2>2. POK (<code>pok_sumber_2026</code> → koleksi <code>pok</code>)</h2>
+        <div class="ket">Id dokumen = Kode.</div>
+        <button data-m="pok" class="btnAmbil">Ambil Data</button>
+        <button data-m="pok" class="btnTulis" disabled>Tulis ke Firestore</button>
+        <div class="status" id="status-pok"></div>
     </div>
 
-    <div id="log"></div>
+    <!-- 3. data_blokir_2026 -->
+    <div class="card">
+        <h2>3. Blokir (<code>data_blokir_2026</code> → koleksi <code>blokir</code>)</h2>
+        <div class="ket">Id dokumen = Kode. (Backend baru pertama kali baca sheet ini langsung — cek hasilnya sesuai atau tidak.)</div>
+        <button data-m="blokir" class="btnAmbil">Ambil Data</button>
+        <button data-m="blokir" class="btnTulis" disabled>Tulis ke Firestore</button>
+        <div class="status" id="status-blokir"></div>
+    </div>
+
+    <!-- 4. ref_sbm -->
+    <div class="card">
+        <h2>4. SBM Uang Harian (<code>ref_sbm</code> → koleksi <code>sbm</code>)</h2>
+        <div class="ket">Id dokumen = nama Kabupaten/Kota.</div>
+        <button data-m="sbm" class="btnAmbil">Ambil Data</button>
+        <button data-m="sbm" class="btnTulis" disabled>Tulis ke Firestore</button>
+        <div class="status" id="status-sbm"></div>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/api.js"></script>
     <script>
-        let dataMentah = [];
-        const logEl = document.getElementById('log');
+        // Konfigurasi tiap migrasi: action GAS yang dipanggil, nama koleksi Firestore,
+        // cara ambil id dokumen dari 1 baris, dan cara petakan baris -> field Firestore.
+        const KONFIG = {
+            pegawai: {
+                action: 'getAllPegawaiData',
+                koleksi: 'pegawai',
+                getId: r => r.nip,
+                mapField: r => ({
+                    nama: r.nama, jabatan: r.jabatan, pangkat: r.pangkat,
+                    kepeg: r.kepeg, admin: r.admin,
+                    aksesMenu: r.aksesMenu, namaBank: r.namaBank, noRekening: r.noRekening
+                })
+            },
+            pok: {
+                action: 'getPOKData',
+                koleksi: 'pok',
+                rawArray: true, // action ini return array langsung (bukan {status,rows})
+                paginated: true, // ambil per-halaman (500 baris), gabung di client
+                getId: r => r.kode,
+                mapField: r => ({
+                    uraian: r.uraian || '', vol: r.vol || '',
+                    pagu: Number(r.pagu) || 0, blokir: Number(r.blokir) || 0,
+                    realisasi: Number(r.realisasi) || 0, sisa: Number(r.sisa) || 0,
+                    sd: r.sumber || '', seksi: r.bidang || '',
+                    ba: r.ba || '', esI: r.es1 || '', prog: r.prog || ''
+                })
+            },
+            blokir: {
+                action: 'getDataBlokir',
+                koleksi: 'blokir',
+                paginated: true, // ambil per-halaman (500 baris), gabung di client
+                getId: r => r.kode,
+                mapField: r => ({ keterangan: r.keterangan || '', nilai: Number(r.nilai) || 0 })
+            },
+            sbm: {
+                action: 'getRefSbmData',
+                koleksi: 'sbm',
+                dataKey: 'data', // action ini return {status, data:[...]} bukan {status, rows:[...]}
+                getId: r => r.kabupaten,
+                mapField: r => ({ luarKota: r.luarKota || 0, dalamKota: r.dalamKota || 0, diklat: r.diklat || 0 })
+            }
+        };
 
-        function log(msg) {
-            logEl.textContent += msg + '\n';
-            logEl.scrollTop = logEl.scrollHeight;
+        const dataStore = {}; // hasil "Ambil Data" per migrasi, sebelum ditulis
+
+        function setStatus(m, msg, warna) {
+            const el = document.getElementById('status-' + m);
+            el.textContent = msg;
+            el.style.color = warna || '#0369a1';
         }
 
-        // ---- Langkah 1: ambil data dari GAS ----
-        document.getElementById('btnAmbil').onclick = async function () {
-            const btn = this;
-            const statusEl = document.getElementById('statusAmbil');
+        document.querySelectorAll('.btnAmbil').forEach(btn => {
+            btn.onclick = async function () {
+                const m = this.dataset.m;
+                const cfg = KONFIG[m];
 
-            if (!localStorage.getItem('nama') || !localStorage.getItem('realUrl')) {
-                statusEl.textContent = '❌ Belum login. Buka index.html di tab lain, login dulu, lalu balik ke sini.';
-                statusEl.style.color = '#dc2626';
-                return;
-            }
-
-            btn.disabled = true;
-            statusEl.textContent = 'Mengambil data dari server (bisa beberapa detik untuk data besar)...';
-            statusEl.style.color = '#0369a1';
-            log('Mulai ambil data dari GAS...');
-
-            try {
-                const data = await apiPost({
-                    action: 'getKegiatanData',
-                    kantor: localStorage.getItem('kantor'),
-                    statusFilter: 'Semua',
-                    pageSize: 'all'
-                }, 120000); // timeout lebih panjang, data besar
-
-                if (!data || data.status !== 'success') {
-                    throw new Error((data && data.message) || 'Gagal mengambil data.');
+                if (!localStorage.getItem('nama') || !localStorage.getItem('realUrl')) {
+                    setStatus(m, '❌ Belum login. Login dulu di index.html.', '#dc2626');
+                    return;
                 }
 
-                dataMentah = data.rows || [];
-                statusEl.textContent = `✅ Berhasil ambil ${dataMentah.length} baris dari sheet.`;
-                statusEl.style.color = '#15803d';
-                log(`✅ ${dataMentah.length} baris berhasil diambil.`);
-                document.getElementById('btnTulis').disabled = dataMentah.length === 0;
-            } catch (e) {
-                statusEl.textContent = '❌ ' + (e.message || 'Gagal mengambil data.');
-                statusEl.style.color = '#dc2626';
-                log('❌ Error: ' + (e.message || e));
-            } finally {
-                btn.disabled = false;
-            }
-        };
+                this.disabled = true;
+                setStatus(m, 'Mengambil data...', '#0369a1');
 
-        // ---- Langkah 2: tulis ke Firestore (batch, maks 450 operasi per batch) ----
-        document.getElementById('btnTulis').onclick = async function () {
-            const btn = this;
-            const statusEl = document.getElementById('statusTulis');
-            const progressWrap = document.getElementById('progressBarWrap');
-            const progressBar = document.getElementById('progressBar');
+                try {
+                    let rows;
 
-            if (dataMentah.length === 0) {
-                statusEl.textContent = '❌ Belum ada data. Jalankan Langkah 1 dulu.';
-                statusEl.style.color = '#dc2626';
-                return;
-            }
+                    if (cfg.paginated) {
+                        // Ambil per-halaman (500 baris), gabung di client — hindari 1 respons
+                        // Apps Script kebesaran (itu penyebab error 404/echo yang tadi terjadi).
+                        const PAGE_SIZE = 500;
+                        rows = [];
+                        let page = 1;
+                        while (true) {
+                            setStatus(m, `Mengambil data... (halaman ${page}, ${rows.length} baris terkumpul)`, '#0369a1');
+                            const result = await apiPost({
+                                action: cfg.action,
+                                kantor: localStorage.getItem('kantor'),
+                                page: page,
+                                pageSize: PAGE_SIZE
+                            }, 60000);
 
-            btn.disabled = true;
-            progressWrap.style.display = 'block';
-            log('\nMulai menulis ke Firestore...');
+                            let hal;
+                            if (cfg.rawArray) {
+                                hal = Array.isArray(result) ? result : [];
+                            } else {
+                                if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
+                                hal = result.rows || [];
+                            }
 
-            const BATCH_SIZE = 450; // aman di bawah limit 500 operasi/batch Firestore
-            let ditulis = 0, dilewati = 0;
+                            rows = rows.concat(hal);
+                            if (hal.length < PAGE_SIZE) break; // halaman terakhir
+                            page++;
+                        }
+                    } else {
+                        const result = await apiPost({ action: cfg.action, kantor: localStorage.getItem('kantor') }, 60000);
 
-            try {
-                for (let i = 0; i < dataMentah.length; i += BATCH_SIZE) {
-                    const chunk = dataMentah.slice(i, i + BATCH_SIZE);
-                    const batch = db.batch();
+                        if (cfg.rawArray) {
+                            rows = Array.isArray(result) ? result : [];
+                        } else if (cfg.dataKey) {
+                            if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
+                            rows = result[cfg.dataKey] || [];
+                        } else {
+                            if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
+                            rows = result.rows || [];
+                        }
+                    }
 
-                    chunk.forEach(r => {
-                        const id = String(r.A || '').trim();
-                        if (!id) { dilewati++; return; }
+                    dataStore[m] = rows;
+                    setStatus(m, `✅ ${rows.length} baris berhasil diambil.`, '#15803d');
+                    document.querySelector(`.btnTulis[data-m="${m}"]`).disabled = rows.length === 0;
+                } catch (e) {
+                    setStatus(m, '❌ ' + (e.message || e), '#dc2626');
+                } finally {
+                    this.disabled = false;
+                }
+            };
+        });
 
-                        const docRef = db.collection('kegiatan').doc(id);
-                        batch.set(docRef, {
-                            mak: r.B || '',
-                            uraian: r.C || '',
-                            pelaksana: r.D || '',
-                            tujuan: r.E || '',
-                            tglST: r.F || '',
-                            tglMulai: r.G || '',
-                            tglSelesai: r.H || '',
-                            tglLPT: r.I || '',
-                            tglBayar: r.J || '',
-                            jumlah: Number(r.M) || 0,
-                            user: r.N || '',
-                            status: r.P || '',
-                            tglSP2D: r.Q || '',
-                            nomorSPM: r.R || '',
-                            dokumenLink: r.T || '',
-                            spbyLink: r.U || ''
+        document.querySelectorAll('.btnTulis').forEach(btn => {
+            btn.onclick = async function () {
+                const m = this.dataset.m;
+                const cfg = KONFIG[m];
+                const rows = dataStore[m] || [];
+
+                if (rows.length === 0) {
+                    setStatus(m, '❌ Belum ada data. Klik "Ambil Data" dulu.', '#dc2626');
+                    return;
+                }
+
+                this.disabled = true;
+                setStatus(m, `Menulis 0/${rows.length}...`, '#0369a1');
+
+                const BATCH_SIZE = 450;
+                let ditulis = 0, dilewati = 0;
+
+                try {
+                    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+                        const chunk = rows.slice(i, i + BATCH_SIZE);
+                        const batch = db.batch();
+
+                        chunk.forEach(r => {
+                            const id = String(cfg.getId(r) || '').trim();
+                            if (!id) { dilewati++; return; }
+                            const docRef = db.collection(cfg.koleksi).doc(id);
+                            batch.set(docRef, cfg.mapField(r));
+                            ditulis++;
                         });
-                        ditulis++;
-                    });
 
-                    await batch.commit();
+                        await batch.commit();
+                        setStatus(m, `Menulis ${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length}...`, '#0369a1');
+                    }
 
-                    const persen = Math.round((Math.min(i + BATCH_SIZE, dataMentah.length) / dataMentah.length) * 100);
-                    progressBar.style.width = persen + '%';
-                    statusEl.textContent = `Menulis... ${ditulis}/${dataMentah.length} baris (${persen}%)`;
-                    log(`Batch selesai: ${Math.min(i + BATCH_SIZE, dataMentah.length)}/${dataMentah.length}`);
+                    setStatus(m, `✅ Selesai! ${ditulis} baris tertulis${dilewati > 0 ? `, ${dilewati} dilewati (id kosong)` : ''}.`, '#15803d');
+                } catch (e) {
+                    setStatus(m, '❌ Gagal di tengah proses: ' + (e.message || e), '#dc2626');
+                } finally {
+                    this.disabled = false;
                 }
-
-                statusEl.textContent = `✅ Selesai! ${ditulis} baris tertulis ke Firestore${dilewati > 0 ? `, ${dilewati} baris dilewati (ID kosong)` : ''}.`;
-                statusEl.style.color = '#15803d';
-                log(`\n🎉 MIGRASI SELESAI. ${ditulis} baris tertulis, ${dilewati} dilewati.`);
-            } catch (e) {
-                statusEl.textContent = '❌ Gagal di tengah proses: ' + (e.message || e);
-                statusEl.style.color = '#dc2626';
-                log('❌ Error: ' + (e.message || e));
-            } finally {
-                btn.disabled = false;
-            }
-        };
+            };
+        });
     </script>
 </body>
 </html>
