@@ -57,24 +57,43 @@ async function loadPokData() {
     try {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
 
-        // Baca langsung dari Firestore (koleksi 'pok') — bukan lagi dari GAS/sheet.
-        // Nama field di Firestore beda dikit dari yang dipakai di seluruh file ini
-        // (sd->sumber, seksi->bidang, esI->es1), jadi dipetakan ulang di sini SAJA
-        // supaya sisa kode di bawah (render, export, dll) tidak perlu diubah apapun.
         // Pastikan Firebase Auth sudah selesai memuat ulang sesi login sebelum
         // query ke Firestore (lihat komentar waitFirebaseAuthReady di atas).
         await waitFirebaseAuthReady();
 
-        const snap = await db.collection('pok').get();
-        const data = snap.docs.map(doc => {
+        // Ambil pok & kegiatan BARENGAN — kegiatan dipakai utk hitung Realisasi
+        // LIVE (bukan lagi field statis hasil hitung-ulang-pok.html yang gampang
+        // basi begitu ada kegiatan baru/berubah), sekaligus di-cache global
+        // (window.kegiatanRowsCache) supaya fetchLokasiData/loadRefPegawai tidak
+        // perlu baca ulang koleksi kegiatan dari nol lagi.
+        const [pokSnap, kegiatanSnap] = await Promise.all([
+            db.collection('pok').get(),
+            db.collection('kegiatan').get()
+        ]);
+
+        window.kegiatanRowsCache = kegiatanSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Realisasi = jumlah semua kegiatan yang MAK-nya sama dengan Kode POK ini.
+        const realisasiByMak = {};
+        window.kegiatanRowsCache.forEach(d => {
+            const mak = String(d.mak || '').trim();
+            if (!mak) return;
+            realisasiByMak[mak] = (realisasiByMak[mak] || 0) + (Number(d.jumlah) || 0);
+        });
+
+        // Nama field di Firestore beda dikit dari yang dipakai di seluruh file ini
+        // (sd->sumber, seksi->bidang, esI->es1), jadi dipetakan ulang di sini SAJA
+        // supaya sisa kode di bawah (render, export, dll) tidak perlu diubah apapun.
+        const data = pokSnap.docs.map(doc => {
             const d = doc.data();
+            const pagu = d.pagu || 0;
+            const blokir = d.blokir || 0;
+            const realisasi = realisasiByMak[doc.id] || 0; // LIVE, bukan dari field Firestore lagi
+            const sisa = pagu - blokir - realisasi;
             return {
                 kode: doc.id,
                 uraian: d.uraian || '',
-                pagu: d.pagu || 0,
-                blokir: d.blokir || 0,
-                realisasi: d.realisasi || 0,
-                sisa: d.sisa || 0,
+                pagu, blokir, realisasi, sisa,
                 sumber: d.sd || '',
                 bidang: d.seksi || '',
                 ba: d.ba || '',
@@ -207,6 +226,60 @@ async function copyTextToClipboard(text) {
     }
 }
 
+function openEditPokModal(kode) {
+    const item = window.rawPokData.find(r => String(r.kode) === String(kode));
+    if (!item) { alert('Data tidak ditemukan.'); return; }
+
+    const uraianEsc = String(item.uraian || '').replace(/"/g, '&quot;');
+
+    const { overlay, popup } = commonOpenOverlay(`
+        <h3 class="text-base font-semibold text-sky-700 mb-1"><i class="fa-solid fa-pen mr-2"></i>Ubah POK</h3>
+        <p class="text-xs text-slate-400 mb-3 font-mono">${kode}</p>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Uraian</label>
+                <input id="pok-editUraian" type="text" value="${uraianEsc}" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Pagu</label>
+                <input id="pok-editPagu" type="text" value="${Number(item.pagu || 0).toLocaleString('id-ID')}"
+                    oninput="this.value = formatRibuan(this.value)"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 text-right">
+            </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-4">
+            <button id="pok-editCancel" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Batal</button>
+            <button id="pok-editSave" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+            </button>
+        </div>
+    `, 'max-w-md');
+
+    popup.querySelector('#pok-editCancel').onclick = () => overlay.remove();
+    popup.querySelector('#pok-editSave').onclick = async function () {
+        const btn = this;
+        const uraianBaru = popup.querySelector('#pok-editUraian').value.trim();
+        const paguBaru = Number(popup.querySelector('#pok-editPagu').value.replace(/\./g, '')) || 0;
+
+        if (!uraianBaru) { alert('Uraian tidak boleh kosong.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+        try {
+            await waitFirebaseAuthReady();
+            await db.collection('pok').doc(kode).update({ uraian: uraianBaru, pagu: paguBaru });
+            overlay.remove();
+            showToast('POK berhasil diubah');
+            await loadPokData();
+        } catch (e) {
+            alert('Gagal menyimpan: ' + (e.message || e));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+window.openEditPokModal = openEditPokModal;
+
 function renderPok() {
     const tbody = document.getElementById('pok-tbody');
     if (!tbody || !window.rawPokData || window.rawPokData.length === 0) return;
@@ -301,8 +374,12 @@ function renderPok() {
                         <i class="fa-solid fa-exclamation text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                     <button onclick="event.stopPropagation();copyKodeAkun(${window.rawPokData.indexOf(i)})"
-                        class="bg-amber-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-amber-700" title="Salin kode akun lengkap">
+                        class="bg-amber-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-amber-700 mr-1" title="Salin kode akun lengkap">
                         <i class="fa-solid fa-copy text-[11px] leading-none w-[11px] text-center"></i>
+                    </button>
+                    <button onclick="event.stopPropagation();openEditPokModal('${c}')"
+                        class="bg-slate-500 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-slate-600" title="Ubah Uraian/Pagu">
+                        <i class="fa-solid fa-pen text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                 ` : ''}
             </td>
@@ -572,13 +649,19 @@ async function fetchLokasiData() {
     if (datalist && datalist.children.length > 0) return;
 
     try {
-        // Daftar Tujuan diturunkan dari nilai unik field 'tujuan' di koleksi
-        // kegiatan Firestore — bukan lagi action GAS terpisah.
+        // Pakai cache dari loadPokData kalau sudah ada (dimuat sekali pas halaman
+        // POK dibuka) — hindari baca ulang koleksi kegiatan dari nol.
         await waitFirebaseAuthReady();
-        const snap = await db.collection('kegiatan').get();
+        let rows = window.kegiatanRowsCache;
+        if (!rows) {
+            const snap = await db.collection('kegiatan').get();
+            rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.kegiatanRowsCache = rows;
+        }
+
         const set = new Set();
-        snap.forEach(doc => {
-            const t = String(doc.data().tujuan || '').trim();
+        rows.forEach(d => {
+            const t = String(d.tujuan || '').trim();
             if (t) set.add(t);
         });
         const data = Array.from(set).sort();
@@ -676,14 +759,20 @@ async function openDetilModal(mak) {
     tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><i class="fa-solid fa-spinner fa-spin mr-2 text-sky-600"></i><span class="text-slate-500">Memuat...</span></div>`;
 
     try {
-        // Query LANGSUNG ke Firestore (koleksi kegiatan, filter field mak) — bukan
-        // lagi action GAS terpisah.
+        // Filter dari cache kalau sudah ada (dimuat pas loadPokData), kalau belum
+        // baru query Firestore.
         await waitFirebaseAuthReady();
-        const snap = await db.collection('kegiatan').where('mak', '==', mak).get();
-        const result = snap.docs.map(doc => {
-            const d = doc.data();
-            return {
-                idKegiatan: doc.id,
+        let rows = window.kegiatanRowsCache;
+        if (!rows) {
+            const snap = await db.collection('kegiatan').get();
+            rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.kegiatanRowsCache = rows;
+        }
+
+        const result = rows
+            .filter(d => String(d.mak || '').trim() === String(mak || '').trim())
+            .map(d => ({
+                idKegiatan: d.id,
                 mak: d.mak || '',
                 uraian: d.uraian || '',
                 pelaksana_kegiatan: d.pelaksana || '',
@@ -694,8 +783,7 @@ async function openDetilModal(mak) {
                 status: d.status || '',
                 nomorSPM: d.nomorSPM || '',
                 perbantuan: d.perbantuan || false
-            };
-        });
+            }));
 
         window.detilKegiatanData = result;
         renderDetilTable(result);
@@ -910,15 +998,18 @@ async function loadRefPegawai() {
         const datalist = document.getElementById('listPelaksana');
         if (!datalist) return;
 
-        // Daftar nama pelaksana diturunkan dari nilai unik field 'pelaksana' di
-        // koleksi kegiatan Firestore — BUKAN baca koleksi 'pegawai' langsung,
-        // karena Security Rules 'pegawai' sengaja dibatasi cuma boleh baca
-        // dokumen milik sendiri (ada data rekening bank di situ).
+        // Sama seperti fetchLokasiData: pakai cache kalau sudah ada.
         await waitFirebaseAuthReady();
-        const snap = await db.collection('kegiatan').get();
+        let rows = window.kegiatanRowsCache;
+        if (!rows) {
+            const snap = await db.collection('kegiatan').get();
+            rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.kegiatanRowsCache = rows;
+        }
+
         const set = new Set();
-        snap.forEach(doc => {
-            const p = String(doc.data().pelaksana || '').trim();
+        rows.forEach(d => {
+            const p = String(d.pelaksana || '').trim();
             if (p) set.add(p);
         });
         const data = Array.from(set).sort();
