@@ -1,32 +1,26 @@
 /**
  * Halaman Upload POK (Kertas Kerja)
  * -----------------------------------------------------------------------
- * Upload PDF Kertas Kerja RKAKL -> ekstrak baris rincian detail -> preview
- * (bisa diedit manual) -> pilih Seksi (bisa >1, data terduplikasi per
- * Seksi) -> simpan ke sheet pok_sumber_2026 (backend: simpanPOKDataUpload).
+ * Upload file Excel Kertas Kerja RKAKL (format .xls hasil export, isinya
+ * sebenarnya tabel HTML — lihat contoh KertasKerja.xls) -> ekstrak baris
+ * rincian detail -> preview (bisa diedit manual) -> pilih Seksi (bisa >1,
+ * data terduplikasi per Seksi) -> simpan ke sheet pok_upload untuk direview
+ * (backend: simpanPOKDataUpload).
  *
- * ======================= CATATAN PENTING =======================
- * Aturan transformasi KODE (lihat pkuTransformLeafRows) sudah pasti/exact
- * sesuai spesifikasi yang diberikan — itu murni logic teks, tidak
- * tergantung PDF.
- *
- * Yang MASIH PERLU DIUJI dengan PDF asli adalah bagian EKSTRAKSI TEKS DARI
- * PDF (pkuExtractLinesFromPdf + pkuParseLine/pkuSplitRestIntoFields) —
- * karena posisi kolom (Vol/Harga Satuan/Jumlah) di PDF asli belum pernah
- * saya lihat langsung, cuma dari contoh & versi HTML/xls kertas kerja yang
- * mirip. Kalau hasil parsing meleset, klik "Lihat Teks Mentah" utk lihat
- * apa yang benar-benar diekstrak dari PDF-nya, lalu kirim itu supaya
- * logic pemisahan kolomnya bisa disesuaikan.
+ * Setiap baris tabel di file Excel-nya punya format:
+ *   <td> <span style="display:none">538065.015.09.CD.4796...00001||</span> 4796.AEF...(label) </td>
+ *   <td>Uraian...</td> <td>Vol</td> <td>Harga Satuan</td> <td>Jumlah</td> <td></td> <td>SD/CP</td>
+ * Kode penuh (di dalam span tersembunyi) itulah yang dipakai utk transformasi
+ * kode pendek — lihat pkuTransformLeafRows.
  *
  * Semua baris preview BISA DIEDIT MANUAL sebelum disimpan, sebagai jaring
- * pengaman terhadap kemungkinan parsing yang belum sempurna.
+ * pengaman terhadap kemungkinan format file yang sedikit beda.
  * -----------------------------------------------------------------------
  */
 
-
 let pkuParsedRows = [];   // hasil transformasi kode, sebelum duplikasi Seksi
 let pkuSeksiList = [];    // daftar Seksi (checkbox)
-let pkuRawLines = [];     // teks mentah per baris hasil ekstraksi pdf.js (debug)
+let pkuRawLeaf = [];      // baris detail mentah hasil ekstraksi tabel (debug)
 
 async function initPokUploadPage() {
     const btnParse = document.getElementById('pku-btnParse');
@@ -36,7 +30,7 @@ async function initPokUploadPage() {
     if (!btnParse) return; // fragment belum ter-render
 
     pkuParsedRows = [];
-    pkuRawLines = [];
+    pkuRawLeaf = [];
     document.getElementById('pku-previewWrap').classList.add('hidden');
     document.getElementById('pku-seksiBox').classList.add('hidden');
     document.getElementById('pku-debugBox').classList.add('hidden');
@@ -59,61 +53,45 @@ async function initPokUploadPage() {
 }
 
 // ==========================================================
-// 1) EKSTRAKSI TEKS DARI PDF (pdf.js) — lihat catatan di kepala file
+// 1) EKSTRAKSI DARI FILE EXCEL (isinya tabel HTML) — jauh lebih presisi
+//    dibanding PDF karena strukturnya sudah jelas per sel tabel.
 // ==========================================================
-async function pkuExtractLinesFromPdf(file) {
-    const pdfjsLib = await simabLoadPdfJs(); // sudah tersedia global dari pdf-viewer.js
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+// Baca file sebagai teks (walau ekstensinya .xls, isinya HTML biasa),
+// lalu parse pakai DOMParser, ambil semua <tr> yang punya kode di kolom
+// pertama (dalam <span style="display:none">...||</span>), dan HANYA
+// baris DETAIL (14 segmen kode, segmen terakhir 5 digit angka).
+async function pkuExtractLeafInputsFromExcel(file) {
+    const text = await file.text();
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    const trs = doc.querySelectorAll('tr');
 
-    const lines = [];
+    const leafInputs = [];
 
-    for (let p = 1; p <= pdfDoc.numPages; p++) {
-        const page = await pdfDoc.getPage(p);
-        const content = await page.getTextContent();
+    trs.forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length < 5) return;
 
-        // Kelompokkan text item jadi baris berdasarkan koordinat Y (toleransi kecil
-        // krn variasi rendering font), lalu urutkan tiap baris berdasarkan X.
-        const rows = [];
-        content.items.forEach(it => {
-            if (!it.str || !it.str.trim()) return;
-            const x = it.transform[4];
-            const y = Math.round(it.transform[5]);
-            let row = rows.find(r => Math.abs(r.y - y) <= 2);
-            if (!row) { row = { y, items: [] }; rows.push(row); }
-            row.items.push({ str: it.str, x });
-        });
+        const span = tds[0].querySelector('span');
+        if (!span) return;
 
-        rows.sort((a, b) => b.y - a.y); // Y besar = lebih atas di halaman PDF
-        rows.forEach(r => {
-            r.items.sort((a, b) => a.x - b.x);
-            const lineText = r.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
-            if (lineText) lines.push(lineText);
-        });
-    }
+        const fullCode = span.textContent.replace(/\|\|\s*$/, '').trim();
+        if (!fullCode) return;
 
-    return lines;
-}
+        const segCount = fullCode.split('.').length;
+        if (segCount < 14) return; // bukan baris detail (00001 dst) -> lewati
 
-// Cari pola "<kode penuh>||" di awal baris teks.
-function pkuParseLine(line) {
-    const m = line.match(/([0-9A-Za-z.]+)\|\|\s*(.*)$/);
-    if (!m) return null;
-    return { fullCode: m[1], rest: m[2] || '' };
-}
+        const uraian = tds[1] ? tds[1].textContent.replace(/\s+/g, ' ').trim() : '';
+        if (!uraian) return;
 
-// Pisahkan sisa teks (`rest`) jadi { uraian, jumlah }: ambil SEMUA token angka
-// format Indonesia (mis. "1.234.567" atau "2,00"), anggap token angka
-// TERAKHIR sebagai Jumlah (Pagu), sisanya (dgn angka2 dibuang) jadi Uraian.
-function pkuSplitRestIntoFields(rest) {
-    const numMatches = [...rest.matchAll(/-?\d{1,3}(?:\.\d{3})*(?:,\d+)?/g)];
-    const jumlah = numMatches.length ? pkuParseAngka(numMatches[numMatches.length - 1][0]) : 0;
+        const vol = tds[2] ? tds[2].textContent.replace(/\s+/g, ' ').trim() : '';
+        // Kolom "Jumlah" ada di td index ke-4 (Kode=0, Uraian=1, Vol=2, Harga Satuan=3, Jumlah=4)
+        const jumlahText = tds[4] ? tds[4].textContent.replace(/\s+/g, ' ').trim() : '';
+        const jumlah = pkuParseAngka(jumlahText);
 
-    let uraian = rest;
-    numMatches.forEach(mm => { uraian = uraian.replace(mm[0], ' '); });
-    uraian = uraian.replace(/\s{2,}/g, ' ').trim();
+        leafInputs.push({ fullCode, uraian, jumlah, vol });
+    });
 
-    return { uraian, jumlah };
+    return leafInputs;
 }
 
 function pkuParseAngka(v) {
@@ -243,36 +221,29 @@ async function pkuHandleParse() {
     const file = fileInput.files[0];
 
     if (!file) {
-        alert('Pilih file PDF terlebih dahulu.');
+        alert('Pilih file Excel Kertas Kerja terlebih dahulu.');
         return;
     }
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-        alert('File harus berformat PDF.');
+    const namaLower = file.name.toLowerCase();
+    if (!namaLower.endsWith('.xls') && !namaLower.endsWith('.xlsx') && !namaLower.endsWith('.html') && !namaLower.endsWith('.htm')) {
+        alert('File harus hasil export Kertas Kerja (.xls).');
         return;
     }
 
-    statusEl.textContent = 'Membaca & mengekstrak teks dari PDF...';
+    statusEl.textContent = 'Membaca & mengekstrak data dari file...';
     statusEl.className = 'text-sm text-sky-600';
 
     try {
-        pkuRawLines = await pkuExtractLinesFromPdf(file);
-        document.getElementById('pku-debugText').value = pkuRawLines.join('\n');
-
-        const leafInputs = [];
-        pkuRawLines.forEach(line => {
-            const parsed = pkuParseLine(line);
-            if (!parsed) return;
-            const segCount = parsed.fullCode.split('.').length;
-            if (segCount < 14) return; // bukan baris detail (00001 dst), lewati
-            const { uraian, jumlah } = pkuSplitRestIntoFields(parsed.rest);
-            if (!uraian) return; // baris kode tanpa label -> lewati (kemungkinan noise ekstraksi)
-            leafInputs.push({ fullCode: parsed.fullCode, uraian, jumlah, vol: '' });
-        });
+        const leafInputs = await pkuExtractLeafInputsFromExcel(file);
+        pkuRawLeaf = leafInputs;
+        document.getElementById('pku-debugText').value = leafInputs
+            .map(l => `${l.fullCode}|| ${l.uraian}  [Vol: ${l.vol || '-'}]  [Jumlah: ${l.jumlah}]`)
+            .join('\n');
 
         pkuParsedRows = pkuTransformLeafRows(leafInputs);
 
         if (pkuParsedRows.length === 0) {
-            statusEl.textContent = '⚠️ Tidak ada baris detail yang berhasil diparsing. Klik "Lihat Teks Mentah" untuk cek hasil ekstraksi PDF-nya.';
+            statusEl.textContent = '⚠️ Tidak ada baris detail yang berhasil diparsing. Klik "Lihat Data Mentah" untuk cek hasil ekstraksinya, atau pastikan file yang diupload benar (hasil export Kertas Kerja).';
             statusEl.className = 'text-sm text-amber-600';
             document.getElementById('pku-debugBox').classList.remove('hidden');
             document.getElementById('pku-previewWrap').classList.add('hidden');
@@ -288,8 +259,8 @@ async function pkuHandleParse() {
         document.getElementById('pku-previewWrap').classList.remove('hidden');
 
     } catch (e) {
-        console.error('Gagal parsing PDF:', e);
-        statusEl.textContent = '❌ ' + (e.message || 'Gagal memproses PDF.');
+        console.error('Gagal parsing file:', e);
+        statusEl.textContent = '❌ ' + (e.message || 'Gagal memproses file.');
         statusEl.className = 'text-sm text-red-500';
     }
 }
