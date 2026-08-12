@@ -23,30 +23,30 @@
     </div>
 
     <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 text-sm text-sky-800">
-        Upload file PDF Kertas Kerja RKAKL. Sistem akan mengekstrak baris rincian detail
-        (Kode, Uraian, Vol, Pagu, SD, BA, Es I, Prog) secara otomatis. <strong>Cek & koreksi dulu</strong>
-        hasilnya di tabel preview di bawah — kolom Kode/Uraian/Vol/Pagu bisa diedit langsung.
-        Data yang dikirim akan masuk ke sheet <strong>pok_upload</strong> dulu sebagai antrean review
-        (belum langsung masuk ke <code>pok_sumber_2026</code>).
+        Upload file <strong>Excel (.xls) Kertas Kerja RKAKL</strong> (hasil export dari sistem RKA-KL/SAKTI).
+        Sistem akan mengekstrak baris rincian detail (Kode, Uraian, Vol, Pagu, SD, BA, Es I, Prog) secara
+        otomatis. <strong>Cek & koreksi dulu</strong> hasilnya di tabel preview di bawah — kolom
+        Kode/Uraian/Vol/Pagu bisa diedit langsung. Data yang dikirim akan masuk ke sheet
+        <strong>pok_upload</strong> dulu sebagai antrean review (belum langsung masuk ke <code>pok_sumber_2026</code>).
     </div>
 
     <!-- Upload -->
     <div class="flex flex-wrap items-center gap-3">
-        <input id="pku-fileInput" type="file" accept="application/pdf,.pdf"
+        <input id="pku-fileInput" type="file" accept=".xls,.xlsx,.html,.htm,application/vnd.ms-excel"
             class="text-sm border border-slate-300 rounded-lg px-3 py-2 flex-1 min-w-[240px]">
         <button id="pku-btnParse" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
-            <i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Parse PDF
+            <i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Parse Excel
         </button>
         <button id="pku-btnToggleDebug" class="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 rounded-lg text-sm font-medium">
-            <i class="fa-solid fa-code mr-1"></i> Lihat Teks Mentah
+            <i class="fa-solid fa-code mr-1"></i> Lihat Data Mentah
         </button>
     </div>
 
     <div id="pku-status" class="text-sm text-slate-400"></div>
 
-    <!-- Debug: teks mentah hasil ekstraksi pdf.js, buat bantu kalibrasi parser -->
+    <!-- Debug: baris detail mentah hasil ekstraksi tabel, buat bantu troubleshooting -->
     <div id="pku-debugBox" class="hidden">
-        <label class="text-xs font-semibold text-slate-500 mb-1 block">Teks mentah per baris hasil ekstraksi PDF (buat debugging kalau hasil parsing meleset):</label>
+        <label class="text-xs font-semibold text-slate-500 mb-1 block">Baris detail mentah hasil ekstraksi (buat debugging kalau hasil parsing meleset):</label>
         <textarea id="pku-debugText" readonly rows="10" class="w-full text-xs font-mono border border-slate-300 rounded-lg p-2 bg-slate-50"></textarea>
     </div>
 
@@ -99,7 +99,6 @@
 
     <script src="../js/common.js"></script>
     <script src="../js/api.js"></script>
-    <script src="../js/pdf-viewer.js"></script>
     <script src="../js/pages/pok_upload.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
