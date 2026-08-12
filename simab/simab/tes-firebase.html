@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Tes Koneksi Firebase — SiMAB</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; color: #1e293b; }
+        h1 { font-size: 20px; }
+        #hasil { margin-top: 20px; padding: 16px; border-radius: 10px; font-size: 14px; white-space: pre-wrap; }
+        .loading { background: #f0f9ff; color: #0369a1; }
+        .sukses { background: #f0fdf4; color: #15803d; }
+        .gagal { background: #fef2f2; color: #dc2626; }
+        button { margin-top: 16px; padding: 10px 18px; border-radius: 8px; border: none; background: #0369a1; color: white; font-size: 14px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔥 Tes Koneksi Firebase — SiMAB</h1>
+    <p>Halaman ini nulis 1 dokumen tes ke Firestore, baca lagi, lalu hapus — buat pastikan koneksi & aturan akses sudah benar sebelum kita lanjut bangun data sungguhan.</p>
+    <button id="btnTes">Jalankan Tes</button>
+    <div id="hasil"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script>
+        document.getElementById('btnTes').onclick = async function () {
+            const hasilEl = document.getElementById('hasil');
+            hasilEl.className = 'loading';
+            hasilEl.textContent = 'Menulis dokumen tes ke Firestore...';
+
+            try {
+                const ref = db.collection('_tes_koneksi').doc('tes1');
+
+                await ref.set({ pesan: 'Halo dari SiMAB', waktu: new Date().toISOString() });
+                hasilEl.textContent += '\n✅ Berhasil menulis.';
+
+                const snap = await ref.get();
+                hasilEl.textContent += '\n✅ Berhasil membaca kembali: ' + JSON.stringify(snap.data());
+
+                await ref.delete();
+                hasilEl.textContent += '\n✅ Berhasil menghapus dokumen tes.';
+
+                hasilEl.className = 'sukses';
+                hasilEl.textContent += '\n\n🎉 KONEKSI FIREBASE BERHASIL! Firestore siap dipakai.';
+            } catch (e) {
+                hasilEl.className = 'gagal';
+                hasilEl.textContent = '❌ GAGAL: ' + (e.message || e) +
+                    '\n\nKalau errornya soal "permission" / "insufficient permissions", itu tandanya Security Rules Firestore masih default (menolak semua akses) — perlu diatur dulu.';
+            }
+        };
+    </script>
+</body>
+</html>
