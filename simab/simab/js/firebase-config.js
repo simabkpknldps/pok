@@ -11,15 +11,16 @@
  * <head> atau paling atas <body>, SEBELUM script ini):
  *
  *   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+ *   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
  *   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
  *   <script src="js/firebase-config.js"></script>
  *
- * Setelah file ini jalan, tersedia 1 variabel global baru: `window.db`
- * (objek Firestore), dipakai oleh file lain nanti buat baca/tulis data,
- * mis: db.collection('kegiatan').get()
+ * Setelah file ini jalan, tersedia 2 hal global baru:
+ * - window.db          -> objek Firestore, mis: db.collection('kegiatan').get()
+ * - waitFirebaseAuthReady() -> WAJIB di-await sebelum query Firestore pertama
+ *   di halaman manapun (lihat komentar fungsinya sendiri di bawah).
  * -----------------------------------------------------------------------
  */
-
 
 const firebaseConfig = {
     apiKey: "AIzaSyDxNYS3ffqz1dxf0_KnEjXfuaB_tHMmO8Y",
@@ -32,3 +33,22 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 window.db = firebase.firestore();
+
+// Firebase Auth butuh waktu (async) buat "menghidupkan ulang" sesi login yang
+// tersimpan tiap kali halaman dibuka/di-refresh. Kalau query Firestore langsung
+// ditembak sebelum ini selesai, request.auth masih kosong -> ditolak Security
+// Rules ("insufficient permissions") walau sebenarnya user sudah login. Panggil
+// & await fungsi ini SEBELUM query Firestore pertama kali di halaman manapun.
+let _firebaseAuthReadyPromise = null;
+function waitFirebaseAuthReady() {
+    if (!_firebaseAuthReadyPromise) {
+        _firebaseAuthReadyPromise = new Promise(resolve => {
+            const unsub = firebase.auth().onAuthStateChanged(user => {
+                unsub();
+                resolve(user);
+            });
+        });
+    }
+    return _firebaseAuthReadyPromise;
+}
+window.waitFirebaseAuthReady = waitFirebaseAuthReady;
