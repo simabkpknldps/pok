@@ -105,11 +105,16 @@ async function loadPokData() {
 async function fetchRefCoaData() {
     if (window.refCoaData) return window.refCoaData;
     try {
-        const data = await apiGet('getRefCoa');
-        if (data && !data.error) {
-            window.refCoaData = data;
+        // Kode Satker/Unit itu cuma 2 nilai statis yang jarang berubah — disimpan
+        // di 1 dokumen kecil Firestore (config/refCoa), bukan action GAS lagi.
+        // Dokumen ini perlu dibuat manual sekali di Firestore Console dengan
+        // field kodeSatker & kodeUnit, isinya samakan dgn sheet ref_coa B1/B2.
+        await waitFirebaseAuthReady();
+        const snap = await db.collection('config').doc('refCoa').get();
+        if (snap.exists) {
+            window.refCoaData = snap.data();
         } else {
-            console.error('Error dari API getRefCoa:', data && data.error);
+            console.error('Dokumen config/refCoa belum ada di Firestore.');
         }
     } catch (e) {
         console.error('Gagal memuat data ref_coa:', e);
@@ -567,11 +572,17 @@ async function fetchLokasiData() {
     if (datalist && datalist.children.length > 0) return;
 
     try {
-        const data = await apiGet('loadLokasi');
-        if (data.error) {
-            console.error("Error dari API:", data.error);
-            return;
-        }
+        // Daftar Tujuan diturunkan dari nilai unik field 'tujuan' di koleksi
+        // kegiatan Firestore — bukan lagi action GAS terpisah.
+        await waitFirebaseAuthReady();
+        const snap = await db.collection('kegiatan').get();
+        const set = new Set();
+        snap.forEach(doc => {
+            const t = String(doc.data().tujuan || '').trim();
+            if (t) set.add(t);
+        });
+        const data = Array.from(set).sort();
+
         if (datalist) {
             datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
             console.log("Data lokasi berhasil dimuat:", data.length, "item");
@@ -665,15 +676,29 @@ async function openDetilModal(mak) {
     tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><i class="fa-solid fa-spinner fa-spin mr-2 text-sky-600"></i><span class="text-slate-500">Memuat...</span></div>`;
 
     try {
-        const result = await apiGet('getDetil', { mak });
+        // Query LANGSUNG ke Firestore (koleksi kegiatan, filter field mak) — bukan
+        // lagi action GAS terpisah.
+        await waitFirebaseAuthReady();
+        const snap = await db.collection('kegiatan').where('mak', '==', mak).get();
+        const result = snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+                idKegiatan: doc.id,
+                mak: d.mak || '',
+                uraian: d.uraian || '',
+                pelaksana_kegiatan: d.pelaksana || '',
+                tujuan: d.tujuan || '',
+                tglSt: d.tglST || '',
+                estimasi: d.jumlah || 0,
+                userLogin: d.user || '',
+                status: d.status || '',
+                nomorSPM: d.nomorSPM || '',
+                perbantuan: d.perbantuan || false
+            };
+        });
 
-        if (Array.isArray(result)) {
-            window.detilKegiatanData = result;
-            renderDetilTable(result);
-        } else {
-            console.error("Respon Error:", result);
-            tbody.innerHTML = `<div class="p-4 text-center text-red-500">❌ ${result.message || 'Data tidak ditemukan'}</div>`;
-        }
+        window.detilKegiatanData = result;
+        renderDetilTable(result);
     } catch (e) {
         console.error("Fetch Error:", e);
         const errorMsg = e.name === 'AbortError' 
@@ -885,14 +910,21 @@ async function loadRefPegawai() {
         const datalist = document.getElementById('listPelaksana');
         if (!datalist) return;
 
-        const data = await apiGet('loadRefPegawai');
+        // Daftar nama pelaksana diturunkan dari nilai unik field 'pelaksana' di
+        // koleksi kegiatan Firestore — BUKAN baca koleksi 'pegawai' langsung,
+        // karena Security Rules 'pegawai' sengaja dibatasi cuma boleh baca
+        // dokumen milik sendiri (ada data rekening bank di situ).
+        await waitFirebaseAuthReady();
+        const snap = await db.collection('kegiatan').get();
+        const set = new Set();
+        snap.forEach(doc => {
+            const p = String(doc.data().pelaksana || '').trim();
+            if (p) set.add(p);
+        });
+        const data = Array.from(set).sort();
 
-        if (Array.isArray(data)) {
-            datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
-            console.log("Ref pegawai dimuat:", data.length, "orang");
-        } else if (data.error) {
-            console.error("API Error:", data.error);
-        }
+        datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
+        console.log("Ref pegawai dimuat:", data.length, "orang");
     } catch (e) {
         console.error("Gagal load ref pegawai:", e);
     }
@@ -981,37 +1013,50 @@ async function simpanPelaksana() {
         const appContainer = document.getElementById('app');
         const scrollPos = appContainer ? appContainer.scrollTop : 0;
 
-        const payload = {
-            action: 'updatePelaksanaKegiatan',
-            idKegiatanLama: window.pelaksanaCurrentData.idKegiatan,
-            mak: window.pelaksanaCurrentData.mak,
-            uraian: window.pelaksanaCurrentData.uraian,
-            tujuan: window.pelaksanaCurrentData.tujuan,
-            tglSt: window.pelaksanaCurrentData.tglSt,
-            userLogin: localStorage.getItem('nama') || "Guest",
-            pelaksanaData: window.pelaksanaTableData,
-            perbantuan: document.getElementById('pelaksanaPerbantuanToggle')?.dataset.on === '1' ? 1 : 0
-        };
+        const idLama = window.pelaksanaCurrentData.idKegiatan;
+        const mak = window.pelaksanaCurrentData.mak;
+        const uraian = window.pelaksanaCurrentData.uraian;
+        const tujuan = window.pelaksanaCurrentData.tujuan;
+        const tglSt = window.pelaksanaCurrentData.tglSt;
+        const namaUser = localStorage.getItem('nama') || "Guest";
+        const todayStr = new Date().toISOString().split('T')[0];
+        const isPerbantuan = document.getElementById('pelaksanaPerbantuanToggle')?.dataset.on === '1';
 
-        const result = await apiPost(payload);
+        // Tulis LANGSUNG ke Firestore: hapus dokumen kegiatan lama, buat 1
+        // dokumen baru per pelaksana (sama persis pola yg dipakai kegiatan.js).
+        await waitFirebaseAuthReady();
+        const batch = db.batch();
 
-        if (result.status === "success") {
-            // Close modals (silent, no toast)
-            closePelaksanaModal();
-            document.getElementById("detilModal").classList.replace("flex", "hidden");
-            
-            // Refresh POK data & restore scroll position
-            await loadPokData();
-            
-            // Restore scroll position
-            setTimeout(() => {
-                if (appContainer) {
-                    appContainer.scrollTop = scrollPos;
-                }
-            }, 50);
-        } else {
-            alert("Gagal: " + result.message);
-        }
+        batch.delete(db.collection('kegiatan').doc(idLama));
+
+        window.pelaksanaTableData.forEach(p => {
+            const newId = kgGenerateRandomId(10);
+            const status = kgComputeStatus(p.tglMulai, '', '', '');
+            batch.set(db.collection('kegiatan').doc(newId), {
+                mak, uraian, pelaksana: p.nama, tujuan,
+                tglST: tglSt, tglMulai: p.tglMulai || '', tglSelesai: p.tglSelesai || '',
+                tglLPT: '', tglBayar: '', jumlah: Number(p.jumlah) || 0,
+                user: namaUser, status, tglSP2D: '', nomorSPM: '',
+                dokumenLink: '', spbyLink: '', tglRekam: todayStr,
+                perbantuan: isPerbantuan
+            });
+        });
+
+        await batch.commit();
+
+        // Close modals (silent, no toast)
+        closePelaksanaModal();
+        document.getElementById("detilModal").classList.replace("flex", "hidden");
+
+        // Refresh POK data & restore scroll position
+        await loadPokData();
+
+        // Restore scroll position
+        setTimeout(() => {
+            if (appContainer) {
+                appContainer.scrollTop = scrollPos;
+            }
+        }, 50);
     } catch (e) {
         console.error("Save Error:", e);
         alert("Error koneksi: " + (e.message || "Tidak diketahui"));
