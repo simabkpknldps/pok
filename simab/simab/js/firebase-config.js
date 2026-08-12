@@ -20,6 +20,7 @@
  * -----------------------------------------------------------------------
  */
 
+
 const firebaseConfig = {
     apiKey: "AIzaSyDxNYS3ffqz1dxf0_KnEjXfuaB_tHMmO8Y",
     authDomain: "v4simab.firebaseapp.com",
