@@ -45,6 +45,24 @@ async function initPokPage() {
     await loadPokData();
 }
 
+// Firebase Auth butuh waktu (async) buat "menghidupkan ulang" sesi login yang
+// tersimpan tiap kali halaman dibuka/di-refresh. Kalau query Firestore langsung
+// ditembak sebelum ini selesai, request.auth masih kosong -> ditolak Rules
+// ("insufficient permissions") walau sebenarnya user sudah login. Fungsi ini
+// nunggu sampai Firebase Auth benar2 siap (auth state ready) dulu.
+let _firebaseAuthReadyPromise = null;
+function waitFirebaseAuthReady() {
+    if (!_firebaseAuthReadyPromise) {
+        _firebaseAuthReadyPromise = new Promise(resolve => {
+            const unsub = firebase.auth().onAuthStateChanged(user => {
+                unsub();
+                resolve(user);
+            });
+        });
+    }
+    return _firebaseAuthReadyPromise;
+}
+
 async function loadPokData() {
     const tbody = document.getElementById('pok-tbody');
     try {
@@ -54,6 +72,10 @@ async function loadPokData() {
         // Nama field di Firestore beda dikit dari yang dipakai di seluruh file ini
         // (sd->sumber, seksi->bidang, esI->es1), jadi dipetakan ulang di sini SAJA
         // supaya sisa kode di bawah (render, export, dll) tidak perlu diubah apapun.
+        // Pastikan Firebase Auth sudah selesai memuat ulang sesi login sebelum
+        // query ke Firestore (lihat komentar waitFirebaseAuthReady di atas).
+        await waitFirebaseAuthReady();
+
         const snap = await db.collection('pok').get();
         const data = snap.docs.map(doc => {
             const d = doc.data();
