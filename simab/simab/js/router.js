@@ -20,7 +20,6 @@ const PAGE_INIT = {
     rpd: () => window.initRpdPage && window.initRpdPage(),
     referensi: () => window.initReferensiPage && window.initReferensiPage(),
     perbantuan: () => window.initPerbantuanPage && window.initPerbantuanPage(),
-    plugin: () => window.initPluginPage && window.initPluginPage(),
 };
 
 // Menu yang boleh diakses user dengan akses terbatas (ref_pegawai kolom H = 0).
