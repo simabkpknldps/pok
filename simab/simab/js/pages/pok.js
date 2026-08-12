@@ -2,6 +2,7 @@
  * Halaman POK
  */
 
+
 window.rawPokData = [];
 window.expandedCodes = new Set();
 window.expandedSeksi = new Set(); // Seksi (grup) yang sedang dibuka
