@@ -218,7 +218,10 @@ function renderMonitoringDokumen(data) {
 
 function startDashboardAutoRefresh() {
     stopDashboardAutoRefresh();
-    dashboardAutoRefreshInterval = setInterval(refreshDashboardInBackground, 60 * 1000);
+    // Auto-refresh dimatikan sementara (dashboard tidak lagi otomatis fetch ulang
+    // tiap 1 menit) — data cuma dimuat sekali saat halaman dibuka/navigasi.
+    // Aktifkan lagi dengan hapus komentar baris di bawah kalau dibutuhkan lagi.
+    // dashboardAutoRefreshInterval = setInterval(refreshDashboardInBackground, 60 * 1000);
 }
 
 function stopDashboardAutoRefresh() {
