@@ -83,6 +83,7 @@
                 action: 'getPOKData',
                 koleksi: 'pok',
                 rawArray: true, // action ini return array langsung (bukan {status,rows})
+                paginated: true, // ambil per-halaman (500 baris), gabung di client
                 getId: r => r.kode,
                 mapField: r => ({
                     uraian: r.uraian || '', vol: r.vol || '',
@@ -95,6 +96,7 @@
             blokir: {
                 action: 'getDataBlokir',
                 koleksi: 'blokir',
+                paginated: true, // ambil per-halaman (500 baris), gabung di client
                 getId: r => r.kode,
                 mapField: r => ({ keterangan: r.keterangan || '', nilai: Number(r.nilai) || 0 })
             },
@@ -129,17 +131,47 @@
                 setStatus(m, 'Mengambil data...', '#0369a1');
 
                 try {
-                    const result = await apiPost({ action: cfg.action, kantor: localStorage.getItem('kantor') }, 60000);
-
                     let rows;
-                    if (cfg.rawArray) {
-                        rows = Array.isArray(result) ? result : [];
-                    } else if (cfg.dataKey) {
-                        if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
-                        rows = result[cfg.dataKey] || [];
+
+                    if (cfg.paginated) {
+                        // Ambil per-halaman (500 baris), gabung di client — hindari 1 respons
+                        // Apps Script kebesaran (itu penyebab error 404/echo yang tadi terjadi).
+                        const PAGE_SIZE = 500;
+                        rows = [];
+                        let page = 1;
+                        while (true) {
+                            setStatus(m, `Mengambil data... (halaman ${page}, ${rows.length} baris terkumpul)`, '#0369a1');
+                            const result = await apiPost({
+                                action: cfg.action,
+                                kantor: localStorage.getItem('kantor'),
+                                page: page,
+                                pageSize: PAGE_SIZE
+                            }, 60000);
+
+                            let hal;
+                            if (cfg.rawArray) {
+                                hal = Array.isArray(result) ? result : [];
+                            } else {
+                                if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
+                                hal = result.rows || [];
+                            }
+
+                            rows = rows.concat(hal);
+                            if (hal.length < PAGE_SIZE) break; // halaman terakhir
+                            page++;
+                        }
                     } else {
-                        if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
-                        rows = result.rows || [];
+                        const result = await apiPost({ action: cfg.action, kantor: localStorage.getItem('kantor') }, 60000);
+
+                        if (cfg.rawArray) {
+                            rows = Array.isArray(result) ? result : [];
+                        } else if (cfg.dataKey) {
+                            if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
+                            rows = result[cfg.dataKey] || [];
+                        } else {
+                            if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
+                            rows = result.rows || [];
+                        }
                     }
 
                     dataStore[m] = rows;
