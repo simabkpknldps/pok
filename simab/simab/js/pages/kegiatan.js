@@ -650,8 +650,24 @@ async function kgOpenPilihMakPopup(onPilih) {
     popup.querySelector('#kg-mak-search').oninput = () => kgRenderMakTable(overlay);
 
     try {
-        const data = await apiPost({ action: 'getPOKData' });
-        if (!data || !Array.isArray(data)) throw new Error('Format data tidak valid');
+        await waitFirebaseAuthReady();
+        const snap = await db.collection('pok').get();
+        const data = snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+                kode: doc.id,
+                uraian: d.uraian || '',
+                pagu: d.pagu || 0,
+                blokir: d.blokir || 0,
+                realisasi: d.realisasi || 0,
+                sisa: d.sisa || 0,
+                sumber: d.sd || '',
+                bidang: d.seksi || '',
+                ba: d.ba || '',
+                es1: d.esI || '',
+                prog: d.prog || ''
+            };
+        });
         kgMakPokData = data;
         kgRenderMakTable(overlay);
     } catch (e) {
@@ -1301,7 +1317,12 @@ async function kgSyncDokLinksToFirestore(links, field) {
         await waitFirebaseAuthReady();
         const batch = db.batch();
         ids.forEach(id => {
-            batch.update(db.collection('kegiatan').doc(id), { [fsField]: links[id] });
+            // set(..., {merge:true}) dipakai (bukan update()) supaya tetap aman kalau
+            // dokumennya ternyata belum ada di Firestore (mis. baris lama yang belum
+            // sempat ke-migrasi) — update() akan GAGAL TOTAL (seluruh batch ikut gagal)
+            // kalau salah satu dokumen target tidak ditemukan, sedangkan set+merge
+            // otomatis membuatnya kalau belum ada.
+            batch.set(db.collection('kegiatan').doc(id), { [fsField]: links[id] }, { merge: true });
         });
         await batch.commit();
     } catch (e) {
