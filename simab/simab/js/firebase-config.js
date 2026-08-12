@@ -52,3 +52,35 @@ function waitFirebaseAuthReady() {
     return _firebaseAuthReadyPromise;
 }
 window.waitFirebaseAuthReady = waitFirebaseAuthReady;
+
+// Status kegiatan dulu dihitung otomatis via formula sheet:
+// =IF(Q<>"","Selesai",IF(J<>"","Terbayar",IF(I<>"","LPT",IF(TODAY()-H<0,"Rekam Data","Terlaksana"))))
+// Firestore tidak punya formula hidup, jadi status dihitung ulang di client
+// tiap kali salah satu field tanggal terkait (tglMulai/tglLPT/tglBayar/tglSP2D)
+// berubah, lalu disimpan sebagai field biasa. Dipakai bersama oleh kegiatan.js
+// & pok.js (keduanya sama-sama punya fitur Pelaksana Kegiatan).
+function kgComputeStatus(tglMulai, tglLPT, tglBayar, tglSP2D) {
+    if (tglSP2D) return 'Selesai';
+    if (tglBayar) return 'Terbayar';
+    if (tglLPT) return 'LPT';
+    if (tglMulai) {
+        const mulai = new Date(tglMulai);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        mulai.setHours(0, 0, 0, 0);
+        if (!isNaN(mulai.getTime()) && mulai.getTime() > today.getTime()) return 'Rekam Data';
+    }
+    return 'Terlaksana';
+}
+window.kgComputeStatus = kgComputeStatus;
+
+// ID dokumen kegiatan baru (dipakai fitur Pelaksana Kegiatan yg generate baris
+// baru per pelaksana) — sama persis pola generateRandomId(10) yg dulu dipakai
+// backend. Dipakai bersama oleh kegiatan.js & pok.js.
+function kgGenerateRandomId(len) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let id = '';
+    for (let i = 0; i < len; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
+    return id;
+}
+window.kgGenerateRandomId = kgGenerateRandomId;
