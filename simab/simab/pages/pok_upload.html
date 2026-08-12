@@ -50,12 +50,12 @@
         <textarea id="pku-debugText" readonly rows="10" class="w-full text-xs font-mono border border-slate-300 rounded-lg p-2 bg-slate-50"></textarea>
     </div>
 
-    <!-- Pilihan Seksi (multi-select, berlaku utk semua baris) -->
+    <!-- Kelola daftar Seksi (pilihan tiap baris ada di kolom "Seksi" pada tabel preview) -->
     <div id="pku-seksiBox" class="hidden border border-slate-200 rounded-xl p-4">
-        <div class="flex items-center justify-between mb-2">
-            <label class="text-sm font-semibold text-slate-700">Seksi (pilih 1 atau lebih — data akan diduplikasi per Seksi yang dipilih)</label>
-        </div>
-        <div id="pku-seksiChecklist" class="flex flex-wrap gap-3 mb-3"></div>
+        <label class="text-sm font-semibold text-slate-700 mb-2 block">
+            Daftar Seksi — pilih Seksi untuk MASING-MASING baris lewat kolom "Seksi" di tabel preview di bawah.
+            Belum ada pilihan yang cocok? Tambahkan dulu di sini:
+        </label>
         <div class="flex items-center gap-2">
             <input id="pku-seksiBaruInput" type="text" placeholder="Tambah Seksi baru..."
                 class="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
@@ -84,6 +84,7 @@
                         <th class="p-2 text-left font-semibold whitespace-nowrap">Vol</th>
                         <th class="p-2 text-right font-semibold whitespace-nowrap">Pagu</th>
                         <th class="p-2 text-center font-semibold whitespace-nowrap">SD</th>
+                        <th class="p-2 text-center font-semibold whitespace-nowrap">Seksi</th>
                         <th class="p-2 text-center font-semibold whitespace-nowrap">BA</th>
                         <th class="p-2 text-center font-semibold whitespace-nowrap">Es I</th>
                         <th class="p-2 text-center font-semibold whitespace-nowrap">Prog</th>
