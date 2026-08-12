@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrasi Data Kegiatan → Firestore — SiMAB</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1e293b; }
+        h1 { font-size: 20px; }
+        p.desc { color: #64748b; font-size: 14px; }
+        .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 16px; }
+        .card h2 { font-size: 15px; margin: 0 0 8px; }
+        button { padding: 10px 18px; border-radius: 8px; border: none; background: #0369a1; color: white; font-size: 14px; cursor: pointer; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        #progressBarWrap { background: #f1f5f9; border-radius: 8px; height: 10px; margin-top: 12px; overflow: hidden; display: none; }
+        #progressBar { background: #0369a1; height: 100%; width: 0%; transition: width .2s; }
+        #log { margin-top: 12px; font-size: 13px; white-space: pre-wrap; font-family: monospace; background: #f8fafc; padding: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto; }
+        .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Migrasi Data Kegiatan → Firestore</h1>
+    <p class="desc">Ambil seluruh data dari sheet <code>Data_Kegiatan_2026</code> (lewat backend GAS yang sekarang), lalu tulis ke koleksi <code>kegiatan</code> di Firestore.</p>
+
+    <div class="warn">
+        ⚠️ Halaman ini HARUS dibuka setelah kamu login normal di SiMAB (di tab lain), supaya sesi login (<code>realUrl</code>) sudah tersimpan di browser. Kalau belum login, langkah 1 akan gagal.
+    </div>
+
+    <div class="card">
+        <h2>Langkah 1 — Ambil Data dari GAS</h2>
+        <button id="btnAmbil">Ambil Data dari Sheet</button>
+        <div id="statusAmbil" style="margin-top:10px; font-size:14px;"></div>
+    </div>
+
+    <div class="card">
+        <h2>Langkah 2 — Tulis ke Firestore</h2>
+        <button id="btnTulis" disabled>Tulis ke Firestore</button>
+        <div id="progressBarWrap"><div id="progressBar"></div></div>
+        <div id="statusTulis" style="margin-top:10px; font-size:14px;"></div>
+    </div>
+
+    <div id="log"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let dataMentah = [];
+        const logEl = document.getElementById('log');
+
+        function log(msg) {
+            logEl.textContent += msg + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // ---- Langkah 1: ambil data dari GAS ----
+        document.getElementById('btnAmbil').onclick = async function () {
+            const btn = this;
+            const statusEl = document.getElementById('statusAmbil');
+
+            if (!localStorage.getItem('nama') || !localStorage.getItem('realUrl')) {
+                statusEl.textContent = '❌ Belum login. Buka index.html di tab lain, login dulu, lalu balik ke sini.';
+                statusEl.style.color = '#dc2626';
+                return;
+            }
+
+            btn.disabled = true;
+            statusEl.textContent = 'Mengambil data dari server (bisa beberapa detik untuk data besar)...';
+            statusEl.style.color = '#0369a1';
+            log('Mulai ambil data dari GAS...');
+
+            try {
+                const data = await apiPost({
+                    action: 'getKegiatanData',
+                    kantor: localStorage.getItem('kantor'),
+                    statusFilter: 'Semua',
+                    pageSize: 'all'
+                }, 120000); // timeout lebih panjang, data besar
+
+                if (!data || data.status !== 'success') {
+                    throw new Error((data && data.message) || 'Gagal mengambil data.');
+                }
+
+                dataMentah = data.rows || [];
+                statusEl.textContent = `✅ Berhasil ambil ${dataMentah.length} baris dari sheet.`;
+                statusEl.style.color = '#15803d';
+                log(`✅ ${dataMentah.length} baris berhasil diambil.`);
+                document.getElementById('btnTulis').disabled = dataMentah.length === 0;
+            } catch (e) {
+                statusEl.textContent = '❌ ' + (e.message || 'Gagal mengambil data.');
+                statusEl.style.color = '#dc2626';
+                log('❌ Error: ' + (e.message || e));
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        // ---- Langkah 2: tulis ke Firestore (batch, maks 450 operasi per batch) ----
+        document.getElementById('btnTulis').onclick = async function () {
+            const btn = this;
+            const statusEl = document.getElementById('statusTulis');
+            const progressWrap = document.getElementById('progressBarWrap');
+            const progressBar = document.getElementById('progressBar');
+
+            if (dataMentah.length === 0) {
+                statusEl.textContent = '❌ Belum ada data. Jalankan Langkah 1 dulu.';
+                statusEl.style.color = '#dc2626';
+                return;
+            }
+
+            btn.disabled = true;
+            progressWrap.style.display = 'block';
+            log('\nMulai menulis ke Firestore...');
+
+            const BATCH_SIZE = 450; // aman di bawah limit 500 operasi/batch Firestore
+            let ditulis = 0, dilewati = 0;
+
+            try {
+                for (let i = 0; i < dataMentah.length; i += BATCH_SIZE) {
+                    const chunk = dataMentah.slice(i, i + BATCH_SIZE);
+                    const batch = db.batch();
+
+                    chunk.forEach(r => {
+                        const id = String(r.A || '').trim();
+                        if (!id) { dilewati++; return; }
+
+                        const docRef = db.collection('kegiatan').doc(id);
+                        batch.set(docRef, {
+                            mak: r.B || '',
+                            uraian: r.C || '',
+                            pelaksana: r.D || '',
+                            tujuan: r.E || '',
+                            tglST: r.F || '',
+                            tglMulai: r.G || '',
+                            tglSelesai: r.H || '',
+                            tglLPT: r.I || '',
+                            tglBayar: r.J || '',
+                            jumlah: Number(r.M) || 0,
+                            user: r.N || '',
+                            status: r.P || '',
+                            tglSP2D: r.Q || '',
+                            nomorSPM: r.R || '',
+                            dokumenLink: r.T || '',
+                            spbyLink: r.U || ''
+                        });
+                        ditulis++;
+                    });
+
+                    await batch.commit();
+
+                    const persen = Math.round((Math.min(i + BATCH_SIZE, dataMentah.length) / dataMentah.length) * 100);
+                    progressBar.style.width = persen + '%';
+                    statusEl.textContent = `Menulis... ${ditulis}/${dataMentah.length} baris (${persen}%)`;
+                    log(`Batch selesai: ${Math.min(i + BATCH_SIZE, dataMentah.length)}/${dataMentah.length}`);
+                }
+
+                statusEl.textContent = `✅ Selesai! ${ditulis} baris tertulis ke Firestore${dilewati > 0 ? `, ${dilewati} baris dilewati (ID kosong)` : ''}.`;
+                statusEl.style.color = '#15803d';
+                log(`\n🎉 MIGRASI SELESAI. ${ditulis} baris tertulis, ${dilewati} dilewati.`);
+            } catch (e) {
+                statusEl.textContent = '❌ Gagal di tengah proses: ' + (e.message || e);
+                statusEl.style.color = '#dc2626';
+                log('❌ Error: ' + (e.message || e));
+            } finally {
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
