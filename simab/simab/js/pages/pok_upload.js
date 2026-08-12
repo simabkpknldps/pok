@@ -401,15 +401,19 @@ async function pkuSimpanKeServer() {
     const btn = document.getElementById('pku-btnSimpan');
     const statusEl = document.getElementById('pku-status');
     btn.disabled = true;
-    statusEl.textContent = `Menyimpan ${finalRows.length} baris ke POK...`;
+    statusEl.textContent = `Mengirim ${finalRows.length} baris ke sheet pok_upload untuk direview...`;
     statusEl.className = 'text-sm text-sky-600';
 
     try {
-        const result = await apiPost({ action: 'simpanPOKDataUpload', rows: finalRows }, 60000);
+        const result = await apiPost({
+            action: 'simpanPOKDataUpload',
+            rows: finalRows,
+            userLogin: localStorage.getItem('nama') || ''
+        }, 60000);
         if (result.status === 'success') {
-            statusEl.textContent = `✅ Tersimpan: ${result.jumlahBaru} baris baru, ${result.jumlahUpdate} baris diperbarui.`;
+            statusEl.textContent = `✅ ${result.jumlah} baris berhasil masuk ke sheet pok_upload. Silakan review manual di sheet sebelum disubmit ke pok_sumber_2026.`;
             statusEl.className = 'text-sm text-emerald-600';
-            showToast('Data POK berhasil disimpan');
+            showToast('Data berhasil dikirim untuk direview');
         } else {
             statusEl.textContent = '❌ ' + (result.message || 'Gagal menyimpan.');
             statusEl.className = 'text-sm text-red-500';
