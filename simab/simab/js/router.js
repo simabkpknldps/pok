@@ -9,9 +9,11 @@
  * Selesai. Tidak perlu sentuh file lain.
  */
 
+
 const PAGE_INIT = {
     dashboard: () => window.initDashboardPage && window.initDashboardPage(),
     pok: () => window.initPokPage && window.initPokPage(),
+    pok_upload: () => window.initPokUploadPage && window.initPokUploadPage(),
     kegiatan: () => window.initKegiatanPage && window.initKegiatanPage(),
     perjadin: () => window.initPerjadinPage && window.initPerjadinPage(),
     kalender: () => window.initKalenderPage && window.initKalenderPage(),
@@ -19,7 +21,6 @@ const PAGE_INIT = {
     rpd: () => window.initRpdPage && window.initRpdPage(),
     referensi: () => window.initReferensiPage && window.initReferensiPage(),
     perbantuan: () => window.initPerbantuanPage && window.initPerbantuanPage(),
-    plugin: () => window.initPluginPage && window.initPluginPage(),
 };
 
 // Menu yang boleh diakses user dengan akses terbatas (ref_pegawai kolom H = 0).
