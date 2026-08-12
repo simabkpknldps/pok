@@ -531,9 +531,9 @@
                     // fitur2 lain yg masih baca dari situ tidak rusak), sekalian bikinkan akun
                     // Firebase Auth + profil Firestore-nya juga, supaya BISA LANGSUNG login
                     // pakai sistem baru tanpa perlu proses migrasi manual terpisah lagi.
-                    // Password default SAMA dgn yg dipakai GAS di atas: "123456".
+                    // Password default SAMA dgn yg dipakai GAS di atas: NIP itu sendiri.
                     try {
-                        await secondaryAuthDaftar.createUserWithEmailAndPassword(nipToEmail(nip), '123456');
+                        await secondaryAuthDaftar.createUserWithEmailAndPassword(nipToEmail(nip), nip);
                         await secondaryDbDaftar.collection('pegawai').doc(nip).set({
                             nama, jabatan, pangkat,
                             kepeg: status,
