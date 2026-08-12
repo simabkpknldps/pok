@@ -49,18 +49,38 @@ async function loadPokData() {
     const tbody = document.getElementById('pok-tbody');
     try {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
-        
-        const data = await apiPost({ action: 'getPOKData' });
-        
+
+        // Baca langsung dari Firestore (koleksi 'pok') — bukan lagi dari GAS/sheet.
+        // Nama field di Firestore beda dikit dari yang dipakai di seluruh file ini
+        // (sd->sumber, seksi->bidang, esI->es1), jadi dipetakan ulang di sini SAJA
+        // supaya sisa kode di bawah (render, export, dll) tidak perlu diubah apapun.
+        const snap = await db.collection('pok').get();
+        const data = snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+                kode: doc.id,
+                uraian: d.uraian || '',
+                pagu: d.pagu || 0,
+                blokir: d.blokir || 0,
+                realisasi: d.realisasi || 0,
+                sisa: d.sisa || 0,
+                sumber: d.sd || '',
+                bidang: d.seksi || '',
+                ba: d.ba || '',
+                es1: d.esI || '',
+                prog: d.prog || ''
+            };
+        });
+
         if (!data || !Array.isArray(data)) {
             throw new Error('Format data tidak valid');
         }
-        
+
         window.rawPokData = data;
         renderPok();
     } catch (e) {
         console.error('Error loading POK data:', e);
-        const errorMsg = e.name === 'AbortError' 
+        const errorMsg = e.name === 'AbortError'
             ? 'Timeout: Server tidak merespons (>30 detik)'
             : e.message || 'Gagal memuat data';
         tbody.innerHTML = `<tr><td colspan="8" class="text-red-500 p-4 text-center">❌ ${errorMsg}</td></tr>`;
