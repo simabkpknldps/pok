@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrasi Data Lainnya → Firestore — SiMAB</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #1e293b; }
+        h1 { font-size: 20px; }
+        p.desc { color: #64748b; font-size: 14px; }
+        .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 16px; }
+        .card h2 { font-size: 15px; margin: 0 0 4px; }
+        .card .ket { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
+        button { padding: 9px 16px; border-radius: 8px; border: none; background: #0369a1; color: white; font-size: 13px; cursor: pointer; margin-right: 8px; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .status { margin-top: 10px; font-size: 13px; }
+        .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Migrasi Data Lainnya → Firestore</h1>
+    <p class="desc">Migrasi 4 sheet: <code>ref_pegawai</code>, <code>pok_sumber_2026</code>, <code>data_blokir_2026</code>, <code>ref_sbm</code>. Tiap kartu independen — jalankan satu-satu, urutan bebas.</p>
+
+    <div class="warn">
+        ⚠️ Login dulu di SiMAB (tab lain) sebelum pakai halaman ini, supaya sesi (<code>realUrl</code>) sudah tersimpan.
+    </div>
+
+    <!-- 1. ref_pegawai -->
+    <div class="card">
+        <h2>1. Pegawai (<code>ref_pegawai</code> → koleksi <code>pegawai</code>)</h2>
+        <div class="ket">Id dokumen = NIP. Termasuk password apa adanya (masih plaintext, sama seperti di sheet — nanti perlu dipikirkan ulang cara amanin ini kalau sudah pindah total).</div>
+        <button data-m="pegawai" class="btnAmbil">Ambil Data</button>
+        <button data-m="pegawai" class="btnTulis" disabled>Tulis ke Firestore</button>
+        <div class="status" id="status-pegawai"></div>
+    </div>
+
+    <!-- 2. pok_sumber_2026 -->
+    <div class="card">
+        <h2>2. POK (<code>pok_sumber_2026</code> → koleksi <code>pok</code>)</h2>
+        <div class="ket">Id dokumen = Kode.</div>
+        <button data-m="pok" class="btnAmbil">Ambil Data</button>
+        <button data-m="pok" class="btnTulis" disabled>Tulis ke Firestore</button>
+        <div class="status" id="status-pok"></div>
+    </div>
+
+    <!-- 3. data_blokir_2026 -->
+    <div class="card">
+        <h2>3. Blokir (<code>data_blokir_2026</code> → koleksi <code>blokir</code>)</h2>
+        <div class="ket">Id dokumen = Kode. (Backend baru pertama kali baca sheet ini langsung — cek hasilnya sesuai atau tidak.)</div>
+        <button data-m="blokir" class="btnAmbil">Ambil Data</button>
+        <button data-m="blokir" class="btnTulis" disabled>Tulis ke Firestore</button>
+        <div class="status" id="status-blokir"></div>
+    </div>
+
+    <!-- 4. ref_sbm -->
+    <div class="card">
+        <h2>4. SBM Uang Harian (<code>ref_sbm</code> → koleksi <code>sbm</code>)</h2>
+        <div class="ket">Id dokumen = nama Kabupaten/Kota.</div>
+        <button data-m="sbm" class="btnAmbil">Ambil Data</button>
+        <button data-m="sbm" class="btnTulis" disabled>Tulis ke Firestore</button>
+        <div class="status" id="status-sbm"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        // Konfigurasi tiap migrasi: action GAS yang dipanggil, nama koleksi Firestore,
+        // cara ambil id dokumen dari 1 baris, dan cara petakan baris -> field Firestore.
+        const KONFIG = {
+            pegawai: {
+                action: 'getAllPegawaiData',
+                koleksi: 'pegawai',
+                getId: r => r.nip,
+                mapField: r => ({
+                    nama: r.nama, jabatan: r.jabatan, pangkat: r.pangkat,
+                    kepeg: r.kepeg, admin: r.admin, password: r.password,
+                    aksesMenu: r.aksesMenu, namaBank: r.namaBank, noRekening: r.noRekening
+                })
+            },
+            pok: {
+                action: 'getPOKData',
+                koleksi: 'pok',
+                rawArray: true, // action ini return array langsung (bukan {status,rows})
+                getId: r => r.kode,
+                mapField: r => ({
+                    uraian: r.uraian || '', vol: r.vol || '',
+                    pagu: Number(r.pagu) || 0, blokir: Number(r.blokir) || 0,
+                    realisasi: Number(r.realisasi) || 0, sisa: Number(r.sisa) || 0,
+                    sd: r.sumber || '', seksi: r.bidang || '',
+                    ba: r.ba || '', esI: r.es1 || '', prog: r.prog || ''
+                })
+            },
+            blokir: {
+                action: 'getDataBlokir',
+                koleksi: 'blokir',
+                getId: r => r.kode,
+                mapField: r => ({ keterangan: r.keterangan || '', nilai: Number(r.nilai) || 0 })
+            },
+            sbm: {
+                action: 'getRefSbmData',
+                koleksi: 'sbm',
+                dataKey: 'data', // action ini return {status, data:[...]} bukan {status, rows:[...]}
+                getId: r => r.kabupaten,
+                mapField: r => ({ luarKota: r.luarKota || 0, dalamKota: r.dalamKota || 0, diklat: r.diklat || 0 })
+            }
+        };
+
+        const dataStore = {}; // hasil "Ambil Data" per migrasi, sebelum ditulis
+
+        function setStatus(m, msg, warna) {
+            const el = document.getElementById('status-' + m);
+            el.textContent = msg;
+            el.style.color = warna || '#0369a1';
+        }
+
+        document.querySelectorAll('.btnAmbil').forEach(btn => {
+            btn.onclick = async function () {
+                const m = this.dataset.m;
+                const cfg = KONFIG[m];
+
+                if (!localStorage.getItem('nama') || !localStorage.getItem('realUrl')) {
+                    setStatus(m, '❌ Belum login. Login dulu di index.html.', '#dc2626');
+                    return;
+                }
+
+                this.disabled = true;
+                setStatus(m, 'Mengambil data...', '#0369a1');
+
+                try {
+                    const result = await apiPost({ action: cfg.action, kantor: localStorage.getItem('kantor') }, 60000);
+
+                    let rows;
+                    if (cfg.rawArray) {
+                        rows = Array.isArray(result) ? result : [];
+                    } else if (cfg.dataKey) {
+                        if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
+                        rows = result[cfg.dataKey] || [];
+                    } else {
+                        if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data.');
+                        rows = result.rows || [];
+                    }
+
+                    dataStore[m] = rows;
+                    setStatus(m, `✅ ${rows.length} baris berhasil diambil.`, '#15803d');
+                    document.querySelector(`.btnTulis[data-m="${m}"]`).disabled = rows.length === 0;
+                } catch (e) {
+                    setStatus(m, '❌ ' + (e.message || e), '#dc2626');
+                } finally {
+                    this.disabled = false;
+                }
+            };
+        });
+
+        document.querySelectorAll('.btnTulis').forEach(btn => {
+            btn.onclick = async function () {
+                const m = this.dataset.m;
+                const cfg = KONFIG[m];
+                const rows = dataStore[m] || [];
+
+                if (rows.length === 0) {
+                    setStatus(m, '❌ Belum ada data. Klik "Ambil Data" dulu.', '#dc2626');
+                    return;
+                }
+
+                this.disabled = true;
+                setStatus(m, `Menulis 0/${rows.length}...`, '#0369a1');
+
+                const BATCH_SIZE = 450;
+                let ditulis = 0, dilewati = 0;
+
+                try {
+                    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+                        const chunk = rows.slice(i, i + BATCH_SIZE);
+                        const batch = db.batch();
+
+                        chunk.forEach(r => {
+                            const id = String(cfg.getId(r) || '').trim();
+                            if (!id) { dilewati++; return; }
+                            const docRef = db.collection(cfg.koleksi).doc(id);
+                            batch.set(docRef, cfg.mapField(r));
+                            ditulis++;
+                        });
+
+                        await batch.commit();
+                        setStatus(m, `Menulis ${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length}...`, '#0369a1');
+                    }
+
+                    setStatus(m, `✅ Selesai! ${ditulis} baris tertulis${dilewati > 0 ? `, ${dilewati} dilewati (id kosong)` : ''}.`, '#15803d');
+                } catch (e) {
+                    setStatus(m, '❌ Gagal di tengah proses: ' + (e.message || e), '#dc2626');
+                } finally {
+                    this.disabled = false;
+                }
+            };
+        });
+    </script>
+</body>
+</html>
