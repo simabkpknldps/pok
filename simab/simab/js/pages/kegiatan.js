@@ -13,20 +13,17 @@
 
 
 let kgCurrentTableRowsData = [];
+let kgAllRows = [];       // SEMUA data dari Firestore (dimuat sekali per masuk halaman/Refresh)
 let kgPegawaiList = [];
 let kgLokasiList = [];
 let kgFirstLoad = true;
 
-// State query aktif — dikirim ke backend tiap request (search, filter status,
-// nomor SPM, halaman, dan jumlah baris per halaman semuanya diproses di server,
-// bukan lagi filter di client, supaya payload & render tetap ringan walau data
-// sudah ribuan baris).
+// State filter aktif — sekarang semua difilter di CLIENT (dari kgAllRows),
+// karena tanpa paginasi semua data sudah dimuat sekali di awal.
 let kgQuery = {
     statusFilter: 'Dalam Proses',
     search: '',
-    spm: '',
-    page: 1,
-    pageSize: '25'
+    spm: ''
 };
 
 async function initKegiatanPage() {
@@ -35,8 +32,9 @@ async function initKegiatanPage() {
 
     // reset state setiap masuk halaman
     kgCurrentTableRowsData = [];
+    kgAllRows = [];
     kgFirstLoad = true;
-    kgQuery = { statusFilter: 'Dalam Proses', search: '', spm: '', page: 1, pageSize: '25' };
+    kgQuery = { statusFilter: 'Dalam Proses', search: '', spm: '' };
 
     bindKegiatanEvents();
     await kgLoadData(true);
@@ -50,7 +48,7 @@ function bindKegiatanEvents() {
         btn.classList.add('opacity-70', 'cursor-not-allowed');
         icon.classList.add('fa-spin');
         try {
-            await kgLoadData(false, true);
+            await kgLoadData(true); // forceRefresh: ambil ulang dari Firestore
         } finally {
             icon.classList.remove('fa-spin');
             btn.classList.remove('opacity-70', 'cursor-not-allowed');
@@ -63,8 +61,7 @@ function bindKegiatanEvents() {
     const runSearch = () => {
         kgQuery.search = document.getElementById('kg-searchBox').value.trim();
         kgQuery.spm = ''; // pencarian bebas membatalkan mode pencarian SPM
-        kgQuery.page = 1;
-        kgLoadData(true);
+        kgApplyFilterAndRender();
     };
     document.getElementById('kg-btnSearch').onclick = runSearch;
     document.getElementById('kg-searchBox').addEventListener('keydown', function (e) {
@@ -80,38 +77,17 @@ function bindKegiatanEvents() {
         kgQuery.spm = valBox;
         kgQuery.search = '';
         document.getElementById('kg-searchBox').value = '';
-        kgQuery.page = 1;
-        kgQuery.pageSize = 'all'; // hasil pencarian SPM biasanya sedikit & dipakai utk cetak nominatif/excel, jadi tampilkan semua sekaligus
-        document.getElementById('kg-pageSizeSelect').value = 'all';
         document.querySelector('input[name="kg-statusFilter"][value="Semua"]').checked = true;
-        kgLoadData(true);
+        kgApplyFilterAndRender();
     };
 
     document.querySelectorAll('input[name="kg-statusFilter"]').forEach(rb => {
         rb.addEventListener('change', function () {
             kgQuery.statusFilter = this.value;
             kgQuery.spm = ''; // ganti filter status membatalkan mode pencarian SPM
-            kgQuery.page = 1;
-            kgLoadData(true);
+            kgApplyFilterAndRender();
         });
     });
-
-    document.getElementById('kg-pageSizeSelect').onchange = function () {
-        kgQuery.pageSize = this.value;
-        kgQuery.page = 1;
-        kgLoadData(true);
-    };
-
-    document.getElementById('kg-btnPrevPage').onclick = () => {
-        if (kgQuery.page > 1) {
-            kgQuery.page -= 1;
-            kgLoadData(false);
-        }
-    };
-    document.getElementById('kg-btnNextPage').onclick = () => {
-        kgQuery.page += 1;
-        kgLoadData(false);
-    };
 
     document.getElementById('kg-dataTableBody').addEventListener('click', function (e) {
         const btn = e.target.closest('button');
@@ -236,9 +212,18 @@ function kgPopulateDatalist() {
     });
 }
 
-async function kgLoadData(resetPage, forceRefresh) {
+// Ambil SEMUA data dari Firestore (koleksi 'kegiatan') — cuma dipanggil sekali
+// pas masuk halaman, atau saat tombol Refresh diklik. Sesudahnya, ganti
+// filter/pencarian/SPM cukup filter ulang kgAllRows di client (kgApplyFilterAndRender),
+// TANPA fetch ulang ke Firestore — makanya nggak perlu paginasi lagi, semua
+// data (yang lolos filter status) langsung tampil sekaligus.
+async function kgLoadData(forceRefresh) {
     const container = document.getElementById('kg-dataTableBody');
-    if (resetPage) kgQuery.page = 1;
+
+    if (!forceRefresh && kgAllRows.length > 0) {
+        kgApplyFilterAndRender();
+        return;
+    }
 
     try {
         if (kgFirstLoad) {
@@ -247,47 +232,33 @@ async function kgLoadData(resetPage, forceRefresh) {
             kgShowLoading(true);
         }
 
-        const payload = {
-            action: 'getKegiatanData',
-            kantor: localStorage.getItem('kantor'),
-            statusFilter: kgQuery.statusFilter,
-            search: kgQuery.search,
-            spm: kgQuery.spm,
-            page: kgQuery.page,
-            pageSize: kgQuery.pageSize,
-            // Dikirim hanya saat dipanggil dari Pencarian Global Dashboard (lihat
-            // dashboard-search.js) untuk membatasi pencarian ke kolom tertentu.
-            // Untuk halaman Kegiatan biasa, kgQuery.searchCols selalu undefined,
-            // jadi baris ini tidak mengubah perilaku pencarian yang sudah ada.
-            searchCols: kgQuery.searchCols,
-            includeRef: kgFirstLoad, // daftar pegawai/lokasi cukup diambil sekali di load awal
-            forceRefresh: !!forceRefresh
-        };
+        await waitFirebaseAuthReady();
+        const snap = await db.collection('kegiatan').get();
 
-        const data = await apiPost(payload);
+        kgAllRows = snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+                A: doc.id,
+                B: d.mak || '', C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
+                F: d.tglST || '', G: d.tglMulai || '', H: d.tglSelesai || '',
+                I: d.tglLPT || '', J: d.tglBayar || '',
+                M: Number(d.jumlah) || 0, N: d.user || '', O: d.tglRekam || '',
+                P: d.status || '', Q: d.tglSP2D || '', R: d.nomorSPM || '',
+                T: d.dokumenLink || '', U: d.spbyLink || ''
+            };
+        });
+
         kgShowLoading(false);
 
-        if (!data || data.status !== 'success') {
-            container.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-red-500">Gagal memuat data kegiatan.</td></tr>`;
-            return;
-        }
-
         if (kgFirstLoad) {
-            kgPegawaiList = data.pegawai || [];
-            kgLokasiList = data.lokasi || [];
+            // Daftar Pegawai/Lokasi utk datalist diturunkan dari data yang ada
+            // (nilai unik kolom Pelaksana/Tujuan) — bukan lagi action terpisah.
+            kgPegawaiList = [...new Set(kgAllRows.map(r => r.D).filter(Boolean))].sort();
+            kgLokasiList = [...new Set(kgAllRows.map(r => r.E).filter(Boolean))].sort();
             kgPopulateDatalist();
         }
 
-        kgCurrentTableRowsData = data.rows || [];
-        kgRenderTable(kgCurrentTableRowsData);
-        kgSetTotalJumlahLabel(data.totalJumlah);
-        kgQuery.page = data.page || 1;
-        kgRenderPaginationInfo(data);
-
-        if (kgQuery.spm && kgCurrentTableRowsData.length === 0) {
-            alert('Data dengan Nomor SPM ' + kgQuery.spm + ' tidak ditemukan.');
-        }
-
+        kgApplyFilterAndRender();
         kgFirstLoad = false;
     } catch (e) {
         kgShowLoading(false);
@@ -296,19 +267,47 @@ async function kgLoadData(resetPage, forceRefresh) {
     }
 }
 
-function kgRenderPaginationInfo(data) {
-    const totalRows = data.totalRows || 0;
-    const totalPages = data.totalPages || 1;
-    const page = data.page || 1;
-    const isAll = data.pageSize === 'all';
+// Filter kgAllRows (SPM / status+search) sesuai kgQuery, lalu render — semua
+// di client, tanpa fetch ulang. searchCols dipakai oleh Pencarian Global
+// Dashboard (lihat dashboard-search.js) utk batasi kolom pencarian.
+function kgApplyFilterAndRender() {
+    let rows = kgAllRows;
 
-    document.getElementById('kg-totalRowsLabel').textContent = totalRows.toLocaleString('id-ID');
-    document.getElementById('kg-pageInfo').textContent = isAll ? `1 dari 1` : `${page} dari ${totalPages}`;
+    const spmQuery = String(kgQuery.spm || '').trim();
+    if (spmQuery) {
+        rows = rows.filter(r => {
+            const spmRow = String(r.R || '').trim();
+            return spmRow === spmQuery || parseInt(spmRow, 10) === parseInt(spmQuery, 10);
+        });
+    } else {
+        const statusMap = {
+            'Dalam Proses': ['Rekam Data', 'Terlaksana'],
+            'LPT': ['LPT'],
+            'Terbayar': ['Terbayar'],
+            'Selesai': ['Selesai'],
+            'Semua': ['Rekam Data', 'Terlaksana', 'LPT', 'Terbayar', 'Selesai']
+        };
+        const allowedStatus = statusMap[kgQuery.statusFilter] || statusMap['Dalam Proses'];
+        rows = rows.filter(r => allowedStatus.includes(r.P));
 
-    const btnPrev = document.getElementById('kg-btnPrevPage');
-    const btnNext = document.getElementById('kg-btnNextPage');
-    btnPrev.disabled = isAll || page <= 1;
-    btnNext.disabled = isAll || page >= totalPages;
+        const search = String(kgQuery.search || '').trim().toLowerCase();
+        if (search) {
+            const cols = Array.isArray(kgQuery.searchCols) && kgQuery.searchCols.length
+                ? kgQuery.searchCols
+                : ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'M', 'N', 'O', 'P', 'Q', 'R', 'T', 'U'];
+            rows = rows.filter(r => cols.some(k => String(r[k] || '').toLowerCase().includes(search)));
+        }
+    }
+
+    kgCurrentTableRowsData = rows;
+    kgRenderTable(rows);
+
+    const totalJumlah = rows.reduce((sum, r) => sum + (Number(r.M) || 0), 0);
+    kgSetTotalJumlahLabel(totalJumlah);
+
+    if (spmQuery && rows.length === 0) {
+        alert('Data dengan Nomor SPM ' + spmQuery + ' tidak ditemukan.');
+    }
 }
 
 // ==========================================
