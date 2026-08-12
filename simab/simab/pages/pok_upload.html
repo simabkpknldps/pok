@@ -1,3 +1,19 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload POK - SiMAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/app.css">
+</head>
+<body class="bg-slate-50 min-h-screen p-6">
+
+    <!-- Notifikasi toast (dipakai showToast() dari common.js) -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2"></div>
+
+    <div class="max-w-6xl mx-auto">
 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-4">
 
     <div class="flex items-center justify-between">
@@ -79,3 +95,16 @@
         </div>
     </div>
 </div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/pdf-viewer.js"></script>
+    <script src="../js/pages/pok_upload.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.initPokUploadPage) window.initPokUploadPage();
+        });
+    </script>
+</body>
+</html>
