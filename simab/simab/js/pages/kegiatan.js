@@ -11,6 +11,7 @@
  * P status, R nomorSPM.
  */
 
+
 let kgCurrentTableRowsData = [];
 let kgAllRows = [];       // SEMUA data dari Firestore (dimuat sekali per masuk halaman/Refresh)
 let kgPegawaiList = [];
@@ -354,33 +355,11 @@ function kgOpenOverlay(innerHtml, widthClass) {
 
 const kgInputClass = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500';
 
-// Status dulu dihitung otomatis via formula sheet:
-// =IF(Q<>"","Selesai",IF(J<>"","Terbayar",IF(I<>"","LPT",IF(TODAY()-H<0,"Rekam Data","Terlaksana"))))
-// Firestore tidak punya formula hidup, jadi status dihitung ulang di client
-// tiap kali salah satu field tanggal terkait (tglMulai/tglLPT/tglBayar/tglSP2D)
-// berubah, lalu disimpan sebagai field biasa.
-function kgComputeStatus(tglMulai, tglLPT, tglBayar, tglSP2D) {
-    if (tglSP2D) return 'Selesai';
-    if (tglBayar) return 'Terbayar';
-    if (tglLPT) return 'LPT';
-    if (tglMulai) {
-        const mulai = new Date(tglMulai);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        mulai.setHours(0, 0, 0, 0);
-        if (!isNaN(mulai.getTime()) && mulai.getTime() > today.getTime()) return 'Rekam Data';
-    }
-    return 'Terlaksana';
-}
-
-// ID dokumen kegiatan baru (dipakai popup Pelaksana yg generate baris baru per
-// pelaksana) — sama persis pola generateRandomId(10) yg dulu dipakai backend.
-function kgGenerateRandomId(len) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let id = '';
-    for (let i = 0; i < len; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
-    return id;
-}
+// kgComputeStatus() & kgGenerateRandomId() sekarang didefinisikan di
+// firebase-config.js (dipakai bersama dengan pok.js, yang juga punya fitur
+// Pelaksana Kegiatan sendiri) — lihat file itu, jangan didefinisikan ulang
+// di sini supaya tidak terulang bug "identifier already declared" seperti
+// kasus waitFirebaseAuthReady sebelumnya.
 const kgLabelClass = 'text-sm font-medium text-slate-600';
 
 // ---- Salin Uraian ----
