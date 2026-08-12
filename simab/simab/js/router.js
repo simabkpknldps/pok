@@ -13,7 +13,6 @@
 const PAGE_INIT = {
     dashboard: () => window.initDashboardPage && window.initDashboardPage(),
     pok: () => window.initPokPage && window.initPokPage(),
-    pok_upload: () => window.initPokUploadPage && window.initPokUploadPage(),
     kegiatan: () => window.initKegiatanPage && window.initKegiatanPage(),
     perjadin: () => window.initPerjadinPage && window.initPerjadinPage(),
     kalender: () => window.initKalenderPage && window.initKalenderPage(),
