@@ -92,11 +92,12 @@
                 getId: r => `${r.kode}__${r.bidang || 'default'}`,
                 mapField: r => ({
                     kode: r.kode || '', // field eksplisit -- WAJIB, krn ID dokumen sekarang bukan lagi Kode murni
-                    uraian: r.uraian || '', vol: r.vol || '',
+                    uraian: r.uraian || '',
                     pagu: Number(r.pagu) || 0, blokir: Number(r.blokir) || 0,
                     realisasi: Number(r.realisasi) || 0, sisa: Number(r.sisa) || 0,
                     sd: r.sumber || '', seksi: r.bidang || '',
-                    ba: r.ba || '', esI: r.es1 || '', prog: r.prog || ''
+                    ba: r.ba || '', esI: r.es1 || '', prog: r.prog || '',
+                    satker: r.satker || '', kppn: r.kppn || ''
                 })
             },
             blokir: {
