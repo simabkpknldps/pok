@@ -55,23 +55,24 @@ async function loadPokData() {
     try {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
 
-        // Pastikan Firebase Auth sudah selesai memuat ulang sesi login sebelum
-        // query ke Firestore (lihat komentar waitFirebaseAuthReady di atas).
-        await waitFirebaseAuthReady();
+        // Pastikan Supabase Auth sudah selesai memuat ulang sesi login sebelum
+        // query ke database (lihat komentar waitSupabaseAuthReady di supabase-config.js).
+        await waitSupabaseAuthReady();
 
         // Ambil pok, kegiatan, & blokir BARENGAN — kegiatan dipakai utk hitung
-        // Realisasi LIVE, blokir dipakai utk hitung Blokir LIVE (dua-duanya BUKAN
-        // lagi field statis hasil hitung-ulang-pok.html yang gampang basi begitu
-        // ada kegiatan/blokir baru) — sekaligus kegiatan di-cache global
-        // (window.kegiatanRowsCache) supaya fetchLokasiData/loadRefPegawai tidak
-        // perlu baca ulang koleksi kegiatan dari nol lagi.
-        const [pokSnap, kegiatanSnap, blokirSnap] = await Promise.all([
-            db.collection('pok').get(),
-            db.collection('kegiatan').get(),
-            db.collection('blokir').get()
+        // Realisasi LIVE, blokir dipakai utk hitung Blokir LIVE — sekaligus kegiatan
+        // di-cache global (window.kegiatanRowsCache) supaya fetchLokasiData/
+        // loadRefPegawai tidak perlu baca ulang tabel kegiatan dari nol lagi.
+        const [pokRes, kegiatanRes, blokirRes] = await Promise.all([
+            sb.from('pok').select('*'),
+            sb.from('kegiatan').select('*'),
+            sb.from('blokir').select('*')
         ]);
+        if (pokRes.error) throw new Error(pokRes.error.message);
+        if (kegiatanRes.error) throw new Error(kegiatanRes.error.message);
+        if (blokirRes.error) throw new Error(blokirRes.error.message);
 
-        window.kegiatanRowsCache = kegiatanSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        window.kegiatanRowsCache = kegiatanRes.data || [];
 
         // Realisasi = jumlah semua kegiatan yang MAK-nya sama dengan Kode POK ini.
         const realisasiByMak = {};
@@ -81,33 +82,32 @@ async function loadPokData() {
             realisasiByMak[mak] = (realisasiByMak[mak] || 0) + (Number(d.jumlah) || 0);
         });
 
-        // Blokir = field 'nilai' dari dokumen blokir dengan id yang sama dgn Kode.
-        window.blokirRowsCache = blokirSnap.docs.map(doc => ({ id: doc.id, nilai: Number(doc.data().nilai) || 0 }));
+        // Blokir = kolom 'nilai' dari baris blokir dengan id yang sama dgn Kode.
+        window.blokirRowsCache = (blokirRes.data || []).map(d => ({ id: d.id, nilai: Number(d.nilai) || 0 }));
         const blokirByKode = {};
         window.blokirRowsCache.forEach(d => { blokirByKode[d.id] = d.nilai; });
 
-        // Nama field di Firestore beda dikit dari yang dipakai di seluruh file ini
-        // (sd->sumber, seksi->bidang, esI->es1), jadi dipetakan ulang di sini SAJA
-        // supaya sisa kode di bawah (render, export, dll) tidak perlu diubah apapun.
-        // 'kode' sekarang field eksplisit (BUKAN doc.id lagi -- ID dokumen sekarang
-        // komposit Kode+Seksi, supaya kode akun yg sama tp beda Seksi tidak saling
-        // menimpa). 'docId' disimpan terpisah, dipakai fitur Ubah POK.
-        const data = pokSnap.docs.map(doc => {
-            const d = doc.data();
-            const kode = d.kode || doc.id; // fallback ke doc.id kalau data lama blm ada field kode
+        // Nama kolom di Supabase pakai snake_case & beda dikit dari yang dipakai di
+        // seluruh file ini (sd->sumber, seksi->bidang, es_i->es1), jadi dipetakan
+        // ulang di sini SAJA supaya sisa kode di bawah (render, export, dll) tidak
+        // perlu diubah apapun. 'kode' field eksplisit (BUKAN id baris lagi -- id
+        // baris sekarang komposit Kode+Seksi). 'docId' = id baris Supabase, dipakai
+        // fitur Ubah POK.
+        const data = (pokRes.data || []).map(d => {
+            const kode = d.kode || d.id; // fallback ke id kalau data lama blm ada kolom kode
             const pagu = d.pagu || 0;
             const blokir = blokirByKode[kode] || 0; // LIVE, dikunci per Kode
             const realisasi = realisasiByMak[kode] || 0; // LIVE, dikunci per Kode
             const sisa = pagu - blokir - realisasi;
             return {
-                docId: doc.id,
+                docId: d.id,
                 kode,
                 uraian: d.uraian || '',
                 pagu, blokir, realisasi, sisa,
                 sumber: d.sd || '',
                 bidang: d.seksi || '',
                 ba: d.ba || '',
-                es1: d.esI || '',
+                es1: d.es_i || '',
                 prog: d.prog || '',
                 satker: d.satker || '',
                 kppn: d.kppn || ''
@@ -137,15 +137,16 @@ async function fetchRefCoaData() {
     if (window.refCoaData) return window.refCoaData;
     try {
         // Kode Satker/Unit itu cuma 2 nilai statis yang jarang berubah — disimpan
-        // di 1 dokumen kecil Firestore (config/refCoa), bukan action GAS lagi.
-        // Dokumen ini perlu dibuat manual sekali di Firestore Console dengan
-        // field kodeSatker & kodeUnit, isinya samakan dgn sheet ref_coa B1/B2.
-        await waitFirebaseAuthReady();
-        const snap = await db.collection('config').doc('refCoa').get();
-        if (snap.exists) {
-            window.refCoaData = snap.data();
+        // di 1 baris kecil tabel config (id='refCoa', kolom data jsonb berisi
+        // {kodeSatker, kodeUnit}). CATATAN: sekarang buildKodeSalin() default
+        // pakai field satker/kppn dari baris POK-nya sendiri (lebih akurat), jadi
+        // fungsi ini praktis cuma fallback & jarang dipanggil.
+        await waitSupabaseAuthReady();
+        const { data, error } = await sb.from('config').select('data').eq('id', 'refCoa').single();
+        if (!error && data) {
+            window.refCoaData = data.data;
         } else {
-            console.error('Dokumen config/refCoa belum ada di Firestore.');
+            console.error('Baris config/refCoa belum ada di Supabase.', error);
         }
     } catch (e) {
         console.error('Gagal memuat data ref_coa:', e);
@@ -273,11 +274,12 @@ function openEditPokModal(idx) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
         try {
-            await waitFirebaseAuthReady();
-            // Target update pakai docId (ID dokumen Firestore = Kode+Seksi), BUKAN
-            // 'kode' murni lagi -- soalnya 1 Kode bisa punya beberapa dokumen kalau
+            await waitSupabaseAuthReady();
+            // Target update pakai docId (id baris Supabase = Kode+Seksi), BUKAN
+            // 'kode' murni lagi -- soalnya 1 Kode bisa punya beberapa baris kalau
             // Seksi-nya beda.
-            await db.collection('pok').doc(item.docId).update({ uraian: uraianBaru, pagu: paguBaru });
+            const { error } = await sb.from('pok').update({ uraian: uraianBaru, pagu: paguBaru }).eq('id', item.docId);
+            if (error) throw new Error(error.message);
             overlay.remove();
             showToast('POK berhasil diubah');
             await loadPokData();
@@ -660,12 +662,13 @@ async function fetchLokasiData() {
 
     try {
         // Pakai cache dari loadPokData kalau sudah ada (dimuat sekali pas halaman
-        // POK dibuka) — hindari baca ulang koleksi kegiatan dari nol.
-        await waitFirebaseAuthReady();
+        // POK dibuka) — hindari baca ulang tabel kegiatan dari nol.
+        await waitSupabaseAuthReady();
         let rows = window.kegiatanRowsCache;
         if (!rows) {
-            const snap = await db.collection('kegiatan').get();
-            rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const { data: kegiatanData, error } = await sb.from('kegiatan').select('*');
+            if (error) throw new Error(error.message);
+            rows = kegiatanData || [];
             window.kegiatanRowsCache = rows;
         }
 
@@ -720,30 +723,32 @@ async function simpanData() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menyimpan...';
 
     try {
-        // Tulis LANGSUNG ke Firestore (koleksi 'kegiatan') — bukan lagi lewat GAS.
+        // Tulis LANGSUNG ke Supabase (tabel 'kegiatan') — bukan lagi lewat GAS.
         // Struktur field mengikuti pola simpanKegiatan yg lama (kolom D/G-L kosong,
         // status selalu "Rekam Data" utk kegiatan baru).
-        await waitFirebaseAuthReady();
-        await db.collection('kegiatan').doc(idKegiatan).set({
+        await waitSupabaseAuthReady();
+        const { error } = await sb.from('kegiatan').insert({
+            id: idKegiatan,
             mak: document.getElementById("mak").value,
             uraian: document.getElementById("uraianKegiatan").value,
             pelaksana: '',
             tujuan: document.getElementById("inputTujuan").value,
-            tglST: document.getElementById("tglSt").value,
-            tglMulai: '',
-            tglSelesai: '',
-            tglLPT: '',
-            tglBayar: '',
+            tgl_st: normDate(document.getElementById("tglSt").value),
+            tgl_mulai: null,
+            tgl_selesai: null,
+            tgl_lpt: null,
+            tgl_bayar: null,
             jumlah: Number(document.getElementById("estimasiBiaya").value.replace(/\./g, '')) || 0,
             user: namaUser,
             status: 'Rekam Data',
-            tglSP2D: '',
-            nomorSPM: '',
-            dokumenLink: '',
-            spbyLink: '',
-            tglRekam: new Date().toISOString().split('T')[0],
+            tgl_sp2d: null,
+            nomor_spm: '',
+            dokumen_link: '',
+            spby_link: '',
+            tgl_rekam: normDate(new Date().toISOString().split('T')[0]),
             perbantuan: document.getElementById("perbantuanToggle")?.dataset.on === '1'
         });
+        if (error) throw new Error(error.message);
 
         closeRekamModal();
         showToast("Simpan kegiatan berhasil!");
@@ -770,12 +775,13 @@ async function openDetilModal(mak) {
 
     try {
         // Filter dari cache kalau sudah ada (dimuat pas loadPokData), kalau belum
-        // baru query Firestore.
-        await waitFirebaseAuthReady();
+        // baru query Supabase.
+        await waitSupabaseAuthReady();
         let rows = window.kegiatanRowsCache;
         if (!rows) {
-            const snap = await db.collection('kegiatan').get();
-            rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const { data: kegiatanData, error } = await sb.from('kegiatan').select('*');
+            if (error) throw new Error(error.message);
+            rows = kegiatanData || [];
             window.kegiatanRowsCache = rows;
         }
 
@@ -787,11 +793,11 @@ async function openDetilModal(mak) {
                 uraian: d.uraian || '',
                 pelaksana_kegiatan: d.pelaksana || '',
                 tujuan: d.tujuan || '',
-                tglSt: d.tglST || '',
+                tglSt: d.tgl_st || '',
                 estimasi: d.jumlah || 0,
                 userLogin: d.user || '',
                 status: d.status || '',
-                nomorSPM: d.nomorSPM || '',
+                nomorSPM: d.nomor_spm || '',
                 perbantuan: d.perbantuan || false
             }));
 
@@ -1009,11 +1015,12 @@ async function loadRefPegawai() {
         if (!datalist) return;
 
         // Sama seperti fetchLokasiData: pakai cache kalau sudah ada.
-        await waitFirebaseAuthReady();
+        await waitSupabaseAuthReady();
         let rows = window.kegiatanRowsCache;
         if (!rows) {
-            const snap = await db.collection('kegiatan').get();
-            rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const { data: kegiatanData, error } = await sb.from('kegiatan').select('*');
+            if (error) throw new Error(error.message);
+            rows = kegiatanData || [];
             window.kegiatanRowsCache = rows;
         }
 
@@ -1123,27 +1130,30 @@ async function simpanPelaksana() {
         const todayStr = new Date().toISOString().split('T')[0];
         const isPerbantuan = document.getElementById('pelaksanaPerbantuanToggle')?.dataset.on === '1';
 
-        // Tulis LANGSUNG ke Firestore: hapus dokumen kegiatan lama, buat 1
-        // dokumen baru per pelaksana (sama persis pola yg dipakai kegiatan.js).
-        await waitFirebaseAuthReady();
-        const batch = db.batch();
+        // Tulis LANGSUNG ke Supabase: hapus baris kegiatan lama, buat 1 baris
+        // baru per pelaksana (sama persis pola yg dipakai kegiatan.js).
+        // kgGenerateRandomId & kgComputeStatus masih dari firebase-config.js
+        // (helper generik, tidak spesifik-Firebase, tetap dipakai bersama).
+        await waitSupabaseAuthReady();
 
-        batch.delete(db.collection('kegiatan').doc(idLama));
+        const { error: delError } = await sb.from('kegiatan').delete().eq('id', idLama);
+        if (delError) throw new Error(delError.message);
 
-        window.pelaksanaTableData.forEach(p => {
-            const newId = kgGenerateRandomId(10);
+        const rowsBaru = window.pelaksanaTableData.map(p => {
             const status = kgComputeStatus(p.tglMulai, '', '', '');
-            batch.set(db.collection('kegiatan').doc(newId), {
+            return {
+                id: kgGenerateRandomId(10),
                 mak, uraian, pelaksana: p.nama, tujuan,
-                tglST: tglSt, tglMulai: p.tglMulai || '', tglSelesai: p.tglSelesai || '',
-                tglLPT: '', tglBayar: '', jumlah: Number(p.jumlah) || 0,
-                user: namaUser, status, tglSP2D: '', nomorSPM: '',
-                dokumenLink: '', spbyLink: '', tglRekam: todayStr,
+                tgl_st: normDate(tglSt), tgl_mulai: normDate(p.tglMulai), tgl_selesai: normDate(p.tglSelesai),
+                tgl_lpt: null, tgl_bayar: null, jumlah: Number(p.jumlah) || 0,
+                user: namaUser, status, tgl_sp2d: null, nomor_spm: '',
+                dokumen_link: '', spby_link: '', tgl_rekam: normDate(todayStr),
                 perbantuan: isPerbantuan
-            });
+            };
         });
 
-        await batch.commit();
+        const { error: insError } = await sb.from('kegiatan').insert(rowsBaru);
+        if (insError) throw new Error(insError.message);
 
         // Close modals (silent, no toast)
         closePelaksanaModal();
