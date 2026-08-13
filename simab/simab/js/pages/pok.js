@@ -63,16 +63,13 @@ async function loadPokData() {
         // Realisasi LIVE, blokir dipakai utk hitung Blokir LIVE — sekaligus kegiatan
         // di-cache global (window.kegiatanRowsCache) supaya fetchLokasiData/
         // loadRefPegawai tidak perlu baca ulang tabel kegiatan dari nol lagi.
-        const [pokRes, kegiatanRes, blokirRes] = await Promise.all([
-            sb.from('pok').select('*'),
-            sb.from('kegiatan').select('*'),
-            sb.from('blokir').select('*')
+        const [pokRows, kegiatanRows, blokirRows] = await Promise.all([
+            sbFetchAll('pok'),
+            sbFetchAll('kegiatan'),
+            sbFetchAll('blokir')
         ]);
-        if (pokRes.error) throw new Error(pokRes.error.message);
-        if (kegiatanRes.error) throw new Error(kegiatanRes.error.message);
-        if (blokirRes.error) throw new Error(blokirRes.error.message);
 
-        window.kegiatanRowsCache = kegiatanRes.data || [];
+        window.kegiatanRowsCache = kegiatanRows || [];
 
         // Realisasi = jumlah semua kegiatan yang MAK-nya sama dengan Kode POK ini.
         const realisasiByMak = {};
@@ -83,7 +80,7 @@ async function loadPokData() {
         });
 
         // Blokir = kolom 'nilai' dari baris blokir dengan id yang sama dgn Kode.
-        window.blokirRowsCache = (blokirRes.data || []).map(d => ({ id: d.id, nilai: Number(d.nilai) || 0 }));
+        window.blokirRowsCache = (blokirRows || []).map(d => ({ id: d.id, nilai: Number(d.nilai) || 0 }));
         const blokirByKode = {};
         window.blokirRowsCache.forEach(d => { blokirByKode[d.id] = d.nilai; });
 
@@ -93,7 +90,7 @@ async function loadPokData() {
         // perlu diubah apapun. 'kode' field eksplisit (BUKAN id baris lagi -- id
         // baris sekarang komposit Kode+Seksi). 'docId' = id baris Supabase, dipakai
         // fitur Ubah POK.
-        const data = (pokRes.data || []).map(d => {
+        const data = (pokRows || []).map(d => {
             const kode = d.kode || d.id; // fallback ke id kalau data lama blm ada kolom kode
             const pagu = d.pagu || 0;
             const blokir = blokirByKode[kode] || 0; // LIVE, dikunci per Kode
@@ -666,9 +663,7 @@ async function fetchLokasiData() {
         await waitSupabaseAuthReady();
         let rows = window.kegiatanRowsCache;
         if (!rows) {
-            const { data: kegiatanData, error } = await sb.from('kegiatan').select('*');
-            if (error) throw new Error(error.message);
-            rows = kegiatanData || [];
+            rows = await sbFetchAll('kegiatan');
             window.kegiatanRowsCache = rows;
         }
 
@@ -779,9 +774,7 @@ async function openDetilModal(mak) {
         await waitSupabaseAuthReady();
         let rows = window.kegiatanRowsCache;
         if (!rows) {
-            const { data: kegiatanData, error } = await sb.from('kegiatan').select('*');
-            if (error) throw new Error(error.message);
-            rows = kegiatanData || [];
+            rows = await sbFetchAll('kegiatan');
             window.kegiatanRowsCache = rows;
         }
 
@@ -1018,9 +1011,7 @@ async function loadRefPegawai() {
         await waitSupabaseAuthReady();
         let rows = window.kegiatanRowsCache;
         if (!rows) {
-            const { data: kegiatanData, error } = await sb.from('kegiatan').select('*');
-            if (error) throw new Error(error.message);
-            rows = kegiatanData || [];
+            rows = await sbFetchAll('kegiatan');
             window.kegiatanRowsCache = rows;
         }
 
