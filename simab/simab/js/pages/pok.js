@@ -41,8 +41,6 @@ async function initPokPage() {
     window.expandedSeksi = new Set();
     window.searchResults = [];
     window.selectedKode = "";
-    // Load di background, tidak perlu ditunggu supaya tidak menghambat render tabel POK
-    fetchRefCoaData();
     await loadPokData();
 }
 
@@ -84,14 +82,19 @@ async function loadPokData() {
         // Nama field di Firestore beda dikit dari yang dipakai di seluruh file ini
         // (sd->sumber, seksi->bidang, esI->es1), jadi dipetakan ulang di sini SAJA
         // supaya sisa kode di bawah (render, export, dll) tidak perlu diubah apapun.
+        // 'kode' sekarang field eksplisit (BUKAN doc.id lagi -- ID dokumen sekarang
+        // komposit Kode+Seksi, supaya kode akun yg sama tp beda Seksi tidak saling
+        // menimpa). 'docId' disimpan terpisah, dipakai fitur Ubah POK.
         const data = pokSnap.docs.map(doc => {
             const d = doc.data();
+            const kode = d.kode || doc.id; // fallback ke doc.id kalau data lama blm ada field kode
             const pagu = d.pagu || 0;
             const blokir = d.blokir || 0;
-            const realisasi = realisasiByMak[doc.id] || 0; // LIVE, bukan dari field Firestore lagi
+            const realisasi = realisasiByMak[kode] || 0; // LIVE, dikunci per Kode (bukan per dokumen)
             const sisa = pagu - blokir - realisasi;
             return {
-                kode: doc.id,
+                docId: doc.id,
+                kode,
                 uraian: d.uraian || '',
                 pagu, blokir, realisasi, sisa,
                 sumber: d.sd || '',
@@ -143,11 +146,12 @@ async function fetchRefCoaData() {
 
 // Susun string kode salin sesuai format:
 // {kodeSatker}.{kodeUnit}.{kodeAkun}.{BA}{Es1}{Prog}.{gabungan4digit+seksi}.{prefix}000000001.00000.2.2251.2.000000.000000
-function buildKodeSalin(item) {
-    const refCoa = window.refCoaData || {};
-    const kodeSatker = String(refCoa.kodeSatker || '').trim();
-    const kodeUnit = String(refCoa.kodeUnit || '').trim();
+// Kode Satker & KPPN SEMENTARA statis (bukan dari Firestore config/refCoa lagi)
+// — BA, Es I, Program tetap ikut data baris POK-nya sendiri (item.ba/es1/prog).
+const POK_KODE_SATKER = '538065';
+const POK_KODE_KPPN = '037';
 
+function buildKodeSalin(item) {
     const c = String(item.kode || '');
     const parts = c.split('.');
     // Kode akun = segmen kedua dari belakang, contoh: 4798.FAE.007.100.A.524111.01 -> 524111
@@ -159,16 +163,16 @@ function buildKodeSalin(item) {
         const s = String(val ?? '').trim();
         return (/^\d+$/.test(s) && s.length < len) ? s.padStart(len, '0') : s;
     };
-    const ba = pad(item.ba, 3);   // kolom J, contoh: 015
-    const es1 = pad(item.es1, 2); // kolom K, contoh: 09
-    const prog = String(item.prog || '').trim(); // kolom L, contoh: CD
+    const ba = pad(item.ba, 3);   // ikut data baris (kolom J dulu, sekarang field ba)
+    const es1 = pad(item.es1, 2); // ikut data baris (kolom K dulu, sekarang field esI)
+    const prog = String(item.prog || '').trim(); // ikut data baris (kolom L dulu, sekarang field prog)
 
     // RM -> A, PNBP -> D
     const prefix = String(item.sumber || '').toUpperCase() === 'PNBP' ? 'D' : 'A';
 
     return [
-        kodeSatker,
-        kodeUnit,
+        POK_KODE_SATKER,
+        POK_KODE_KPPN,
         kodeAkun,
         ba + es1 + prog,
         gabungan,
@@ -185,14 +189,6 @@ function buildKodeSalin(item) {
 async function copyKodeAkun(idx) {
     const item = window.rawPokData[idx];
     if (!item) return;
-
-    if (!window.refCoaData) {
-        await fetchRefCoaData();
-    }
-    if (!window.refCoaData) {
-        alert('Gagal memuat data ref_coa (kode satker/unit), tidak bisa membuat kode.');
-        return;
-    }
 
     const kode = buildKodeSalin(item);
     await copyTextToClipboard(kode);
@@ -226,15 +222,15 @@ async function copyTextToClipboard(text) {
     }
 }
 
-function openEditPokModal(kode) {
-    const item = window.rawPokData.find(r => String(r.kode) === String(kode));
+function openEditPokModal(idx) {
+    const item = window.rawPokData[idx];
     if (!item) { alert('Data tidak ditemukan.'); return; }
 
     const uraianEsc = String(item.uraian || '').replace(/"/g, '&quot;');
 
     const { overlay, popup } = commonOpenOverlay(`
         <h3 class="text-base font-semibold text-sky-700 mb-1"><i class="fa-solid fa-pen mr-2"></i>Ubah POK</h3>
-        <p class="text-xs text-slate-400 mb-3 font-mono">${kode}</p>
+        <p class="text-xs text-slate-400 mb-3 font-mono">${item.kode} <span class="text-slate-300">(${item.bidang || '-'})</span></p>
         <div class="space-y-3">
             <div>
                 <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Uraian</label>
@@ -267,7 +263,10 @@ function openEditPokModal(kode) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
         try {
             await waitFirebaseAuthReady();
-            await db.collection('pok').doc(kode).update({ uraian: uraianBaru, pagu: paguBaru });
+            // Target update pakai docId (ID dokumen Firestore = Kode+Seksi), BUKAN
+            // 'kode' murni lagi -- soalnya 1 Kode bisa punya beberapa dokumen kalau
+            // Seksi-nya beda.
+            await db.collection('pok').doc(item.docId).update({ uraian: uraianBaru, pagu: paguBaru });
             overlay.remove();
             showToast('POK berhasil diubah');
             await loadPokData();
@@ -377,7 +376,7 @@ function renderPok() {
                         class="bg-amber-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-amber-700 mr-1" title="Salin kode akun lengkap">
                         <i class="fa-solid fa-copy text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
-                    <button onclick="event.stopPropagation();openEditPokModal('${c}')"
+                    <button onclick="event.stopPropagation();openEditPokModal(${window.rawPokData.indexOf(i)})"
                         class="bg-slate-500 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-slate-600" title="Ubah Uraian/Pagu">
                         <i class="fa-solid fa-pen text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
