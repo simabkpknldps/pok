@@ -393,8 +393,8 @@ function openSettings() {
             alert('Konfirmasi password baru tidak cocok!');
             return;
         }
-        if (pwBaru.length < 4) {
-            alert('Password baru minimal 4 karakter!');
+        if (pwBaru.length < 6) {
+            alert('Password baru minimal 6 karakter!');
             return;
         }
 
@@ -402,21 +402,38 @@ function openSettings() {
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
 
+        const email = `${nipVal}@simab.local`;
+
         try {
-            const result = await apiPost({
-                action: 'gantiPassword',
-                nip: nipVal,
-                passwordLama: pwLama,
-                passwordBaru: pwBaru
-            });
-            if (result.status === 'success') {
-                showToast('Password berhasil diubah');
-                overlay.remove();
-            } else {
-                alert('Gagal: ' + (result.message || 'Password lama salah.'));
+            // 1. Verifikasi password lama BENAR dulu di Supabase (sign-in ulang
+            //    dgn password lama) — kalau salah, akan otomatis error di sini
+            //    dan tidak lanjut ke langkah berikutnya.
+            const { error: verifyError } = await sb.auth.signInWithPassword({ email, password: pwLama });
+            if (verifyError) throw new Error('Password lama salah.');
+
+            // 2. Update password di Supabase Auth (sesi sekarang sudah pasti
+            //    valid dari langkah verifikasi di atas).
+            const { error: updateSbError } = await sb.auth.updateUser({ password: pwBaru });
+            if (updateSbError) throw new Error(updateSbError.message);
+
+            // 3. Update password di Firebase Auth juga (dual-auth, masih dipakai
+            //    halaman yang belum dikonversi ke Supabase) — verifikasi ulang
+            //    dgn password lama dulu (Firebase mewajibkan re-auth utk ganti
+            //    password), baru update.
+            try {
+                await firebase.auth().signInWithEmailAndPassword(email, pwLama);
+                await firebase.auth().currentUser.updatePassword(pwBaru);
+            } catch (fbErr) {
+                console.error('Gagal update password Firebase:', fbErr);
+                // Tidak menghentikan proses -- Supabase (sumber utama sekarang)
+                // sudah berhasil diupdate. User tetap dianggap berhasil ganti
+                // password, cuma dicatat di console kalau Firebase-nya gagal.
             }
+
+            showToast('Password berhasil diubah');
+            overlay.remove();
         } catch (e) {
-            alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
+            alert('Gagal: ' + (e.message || 'Password lama salah.'));
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;
@@ -464,29 +481,27 @@ function csBindProfilButtons(popup) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
 
         try {
-            const result = await apiPost({
-                action: 'updateProfilData',
-                nip, jabatan, pangkat, kepeg
-            });
-            if (result.status === 'success') {
-                showToast('Profil berhasil diubah');
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('pegawai')
+                .update({ jabatan, pangkat, kepeg })
+                .eq('id', nip);
+            if (error) throw new Error(error.message);
 
-                localStorage.setItem('jabatan', jabatan);
-                localStorage.setItem('pangkat', pangkat);
-                localStorage.setItem('kepeg', kepeg);
+            showToast('Profil berhasil diubah');
 
-                jabatanInput.setAttribute('readonly', 'readonly');
-                jabatanInput.classList.add('bg-slate-100');
-                pangkatSelect.disabled = true;
-                pangkatSelect.classList.add('bg-slate-100');
-                kepegInput.setAttribute('readonly', 'readonly');
-                kepegInput.classList.add('bg-slate-100');
+            localStorage.setItem('jabatan', jabatan);
+            localStorage.setItem('pangkat', pangkat);
+            localStorage.setItem('kepeg', kepeg);
 
-                btnSimpan.classList.add('hidden');
-                btnUbah.classList.remove('hidden');
-            } else {
-                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
-            }
+            jabatanInput.setAttribute('readonly', 'readonly');
+            jabatanInput.classList.add('bg-slate-100');
+            pangkatSelect.disabled = true;
+            pangkatSelect.classList.add('bg-slate-100');
+            kepegInput.setAttribute('readonly', 'readonly');
+            kepegInput.classList.add('bg-slate-100');
+
+            btnSimpan.classList.add('hidden');
+            btnUbah.classList.remove('hidden');
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
         } finally {
@@ -508,19 +523,18 @@ async function csLoadRekeningData(popup) {
     const nip = localStorage.getItem('nip') || '';
 
     try {
-        const result = await apiPost({ action: 'getRekeningData', nip });
-        if (result.status === 'success') {
-            popup.querySelector('#cs-rekBank').value = result.namaBank || '';
-            popup.querySelector('#cs-rekNorek').value = result.norek || '';
+        await waitSupabaseAuthReady();
+        const { data, error } = await sb.from('pegawai').select('nama_bank, no_rekening').eq('id', nip).single();
+        if (error) throw new Error(error.message);
 
-            loadingEl.classList.add('hidden');
-            formEl.classList.remove('hidden');
-            formEl.classList.add('flex');
+        popup.querySelector('#cs-rekBank').value = data?.nama_bank || '';
+        popup.querySelector('#cs-rekNorek').value = data?.no_rekening || '';
 
-            csBindRekeningButtons(popup);
-        } else {
-            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data rekening'}</span>`;
-        }
+        loadingEl.classList.add('hidden');
+        formEl.classList.remove('hidden');
+        formEl.classList.add('flex');
+
+        csBindRekeningButtons(popup);
     } catch (e) {
         loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data rekening'}</span>`;
     }
@@ -559,26 +573,25 @@ function csBindRekeningButtons(popup) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
 
         try {
-            const result = await apiPost({
-                action: 'updateRekeningData',
-                nip, namaBank, norek
-            });
-            if (result.status === 'success') {
-                showToast('Data rekening berhasil diubah');
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('pegawai')
+                .update({ nama_bank: namaBank, no_rekening: norek })
+                .eq('id', nip);
+            if (error) throw new Error(error.message);
 
-                bankSelect.disabled = true;
-                bankSelect.classList.add('bg-slate-100');
-                norekInput.setAttribute('readonly', 'readonly');
-                norekInput.classList.add('bg-slate-100');
+            showToast('Data rekening berhasil diubah');
 
-                btnSimpan.classList.add('hidden');
-                btnUbah.classList.remove('hidden');
+            bankSelect.disabled = true;
+            bankSelect.classList.add('bg-slate-100');
+            norekInput.setAttribute('readonly', 'readonly');
+            norekInput.classList.add('bg-slate-100');
 
-                // Muncul notifikasi baru di sheet -> refresh lonceng notifikasi
-                if (typeof refreshNotifikasi === 'function') refreshNotifikasi();
-            } else {
-                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
-            }
+            btnSimpan.classList.add('hidden');
+            btnUbah.classList.remove('hidden');
+
+            // Muncul notifikasi baru di sheet -> refresh lonceng notifikasi
+            // (sistem notifikasi masih GAS/Sheet, belum dikonversi)
+            if (typeof refreshNotifikasi === 'function') refreshNotifikasi();
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
         } finally {
