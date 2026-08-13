@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Tes Koneksi Supabase — SiMAB</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; color: #1e293b; }
+        h1 { font-size: 20px; }
+        #hasil { margin-top: 20px; padding: 16px; border-radius: 10px; font-size: 14px; white-space: pre-wrap; }
+        .loading { background: #f0f9ff; color: #0369a1; }
+        .sukses { background: #f0fdf4; color: #15803d; }
+        .gagal { background: #fef2f2; color: #dc2626; }
+        button { margin-top: 16px; padding: 10px 18px; border-radius: 8px; border: none; background: #3ecf8e; color: white; font-size: 14px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>⚡ Tes Koneksi Supabase — SiMAB</h1>
+    <p>Halaman ini coba hubungi Supabase (belum ada tabel, jadi wajarnya muncul error "tabel tidak ditemukan" — itu artinya JUSTRU koneksinya berhasil sampai ke database).</p>
+    <button id="btnTes">Jalankan Tes</button>
+    <div id="hasil"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script>
+        document.getElementById('btnTes').onclick = async function () {
+            const hasilEl = document.getElementById('hasil');
+            hasilEl.className = 'loading';
+            hasilEl.textContent = 'Menghubungi Supabase...';
+
+            try {
+                const { data, error } = await sb.from('_tes_koneksi_tidak_ada').select('*').limit(1);
+
+                if (error) {
+                    // Error "relation does not exist" / kode 42P01 itu JUSTRU tanda bagus:
+                    // artinya request berhasil sampai ke database Postgres-nya.
+                    if (error.code === '42P01' || (error.message || '').includes('does not exist')) {
+                        hasilEl.className = 'sukses';
+                        hasilEl.textContent = '🎉 KONEKSI SUPABASE BERHASIL!\n\n(Error "tabel tidak ditemukan" ini normal & diharapkan — kita memang belum bikin tabel apapun. Yang penting request-nya sampai ke database.)\n\nDetail: ' + error.message;
+                    } else {
+                        hasilEl.className = 'gagal';
+                        hasilEl.textContent = '❌ GAGAL (bukan soal tabel): ' + error.message + '\n\nKode: ' + (error.code || '-');
+                    }
+                } else {
+                    hasilEl.className = 'sukses';
+                    hasilEl.textContent = '🎉 KONEKSI BERHASIL (dan tabelnya somehow sudah ada?): ' + JSON.stringify(data);
+                }
+            } catch (e) {
+                hasilEl.className = 'gagal';
+                hasilEl.textContent = '❌ GAGAL total (kemungkinan URL/key salah, atau soal jaringan): ' + (e.message || e);
+            }
+        };
+    </script>
+</body>
+</html>
