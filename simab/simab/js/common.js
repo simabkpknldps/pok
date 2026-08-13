@@ -235,6 +235,11 @@ function openSettings() {
                 <option value="0">0 - Bukan Admin</option>
                 <option value="1">1 - Admin</option>
             </select>
+            <label class="${csLabelClass}">Akses Menu</label>
+            <select id="cs-tpAksesMenu" class="${csInputClass}">
+                <option value="0">0 - Terbatas (Perbantuan/Perjadinku/Referensi saja)</option>
+                <option value="1">1 - Penuh (semua halaman)</option>
+            </select>
             <div class="flex justify-end mt-2">
                 <button id="cs-btnSimpanTambahPegawai" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
                     <i class="fa-solid fa-user-plus mr-1"></i> Simpan
@@ -303,6 +308,7 @@ function openSettings() {
         const pangkat = popup.querySelector('#cs-tpPangkat').value;
         const kepeg = popup.querySelector('#cs-tpKepeg').value.trim();
         const admin = popup.querySelector('#cs-tpAdmin').value;
+        const aksesMenu = popup.querySelector('#cs-tpAksesMenu').value;
 
         if (!nama || !nip || !jabatan || !pangkat) {
             alert('Nama, NIP, Jabatan, dan Pangkat harus diisi!');
@@ -314,21 +320,55 @@ function openSettings() {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
 
         try {
-            const result = await apiPost({
-                action: 'tambahPegawai',
-                nama, nip, jabatan, pangkat, kepeg, admin
+            await waitSupabaseAuthReady();
+
+            // 1. Insert baris pegawai baru ke Supabase. Password default = NIP
+            //    itu sendiri (dibuatkan akun Auth-nya di langkah 2 di bawah).
+            const { error: insError } = await sb.from('pegawai').insert({
+                id: nip, nama, jabatan, pangkat, kepeg, admin, akses_menu: aksesMenu,
+                nama_bank: '', no_rekening: ''
             });
-            if (result.status === 'success') {
-                showToast('Pegawai baru berhasil ditambahkan');
-                popup.querySelector('#cs-tpNama').value = '';
-                popup.querySelector('#cs-tpNip').value = '';
-                popup.querySelector('#cs-tpJabatan').value = '';
-                popup.querySelector('#cs-tpPangkat').value = '';
-                popup.querySelector('#cs-tpKepeg').value = '1';
-                popup.querySelector('#cs-tpAdmin').value = '0';
-            } else {
-                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+            if (insError) throw new Error(insError.message);
+
+            // 2. Bikinkan akun Firebase Auth + Supabase Auth (password = NIP),
+            //    pakai instance KEDUA (secondaryAuthDaftar/secondaryAuthSbDaftar)
+            //    supaya sesi login admin yang sedang buka Settings ini TIDAK
+            //    ikut ke-logout/ke-ganti (createUser/signUp otomatis "login sbg
+            //    user baru itu" kalau dipakai di instance utama).
+            const emailBaru = `${nip}@simab.local`;
+            try {
+                if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+                    const secondaryAppTp = firebase.initializeApp(firebase.app().options, 'SecondaryTambahPegawai_' + Date.now());
+                    const secondaryAuthTp = secondaryAppTp.auth();
+                    try { await secondaryAuthTp.createUserWithEmailAndPassword(emailBaru, nip); }
+                    catch (fbErr) { if (fbErr.code !== 'auth/email-already-in-use') console.error('Gagal bikin akun Firebase:', fbErr); }
+                    finally { try { await secondaryAuthTp.signOut(); } catch (e2) { /* abaikan */ } }
+                }
+            } catch (fbOuterErr) {
+                console.error('Firebase tidak tersedia / gagal:', fbOuterErr);
             }
+
+            try {
+                const secondaryDbTp = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: { storageKey: 'sb-secondary-tambahpegawai-' + Date.now() }
+                });
+                const { error: signUpError } = await secondaryDbTp.auth.signUp({ email: emailBaru, password: nip });
+                if (signUpError && !(signUpError.message || '').toLowerCase().includes('already registered')) {
+                    console.error('Gagal bikin akun Supabase:', signUpError);
+                }
+                try { await secondaryDbTp.auth.signOut(); } catch (e2) { /* abaikan */ }
+            } catch (sbOuterErr) {
+                console.error('Gagal bikin akun Supabase:', sbOuterErr);
+            }
+
+            showToast(`Pegawai baru berhasil ditambahkan. Password default login: ${nip}`);
+            popup.querySelector('#cs-tpNama').value = '';
+            popup.querySelector('#cs-tpNip').value = '';
+            popup.querySelector('#cs-tpJabatan').value = '';
+            popup.querySelector('#cs-tpPangkat').value = '';
+            popup.querySelector('#cs-tpKepeg').value = '1';
+            popup.querySelector('#cs-tpAdmin').value = '0';
+            popup.querySelector('#cs-tpAksesMenu').value = '0';
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
         } finally {
@@ -558,21 +598,20 @@ async function csLoadPejabatData(popup) {
     formEl.classList.add('hidden');
 
     try {
-        const result = await apiPost({ action: 'getPejabatData' });
-        if (result.status === 'success') {
-            popup.querySelector('#cs-ppkNama').value = result.ppkNama || '';
-            popup.querySelector('#cs-ppkNip').value = result.ppkNip || '';
-            popup.querySelector('#cs-bendaharaNama').value = result.bendaharaNama || '';
-            popup.querySelector('#cs-bendaharaNip').value = result.bendaharaNip || '';
+        await waitSupabaseAuthReady();
+        const { data, error } = await sb.from('pejabat').select('*').eq('id', 'main').single();
+        if (error) throw new Error(error.message);
 
-            loadingEl.classList.add('hidden');
-            formEl.classList.remove('hidden');
-            formEl.classList.add('flex');
+        popup.querySelector('#cs-ppkNama').value = data?.ppk_nama || '';
+        popup.querySelector('#cs-ppkNip').value = data?.ppk_nip || '';
+        popup.querySelector('#cs-bendaharaNama').value = data?.bendahara_nama || '';
+        popup.querySelector('#cs-bendaharaNip').value = data?.bendahara_nip || '';
 
-            csBindPejabatButtons(popup);
-        } else {
-            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data pejabat'}</span>`;
-        }
+        loadingEl.classList.add('hidden');
+        formEl.classList.remove('hidden');
+        formEl.classList.add('flex');
+
+        csBindPejabatButtons(popup);
     } catch (e) {
         loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data pejabat'}</span>`;
     }
@@ -610,21 +649,19 @@ function csBindPejabatButtons(popup) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
 
         try {
-            const result = await apiPost({
-                action: 'updatePejabatData',
-                ppkNama, ppkNip, bendaharaNama, bendaharaNip
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('pejabat')
+                .update({ ppk_nama: ppkNama, ppk_nip: ppkNip, bendahara_nama: bendaharaNama, bendahara_nip: bendaharaNip })
+                .eq('id', 'main');
+            if (error) throw new Error(error.message);
+
+            showToast('Data pejabat berhasil diubah');
+            inputs.forEach(inp => {
+                inp.setAttribute('readonly', 'readonly');
+                inp.classList.add('bg-slate-100');
             });
-            if (result.status === 'success') {
-                showToast('Data pejabat berhasil diubah');
-                inputs.forEach(inp => {
-                    inp.setAttribute('readonly', 'readonly');
-                    inp.classList.add('bg-slate-100');
-                });
-                btnSimpan.classList.add('hidden');
-                btnUbah.classList.remove('hidden');
-            } else {
-                alert('Gagal: ' + result.message);
-            }
+            btnSimpan.classList.add('hidden');
+            btnUbah.classList.remove('hidden');
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
         } finally {
