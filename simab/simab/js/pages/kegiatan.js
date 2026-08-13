@@ -11,6 +11,7 @@
  * P status, R nomorSPM.
  */
 
+
 let kgCurrentTableRowsData = [];
 let kgAllRows = [];       // SEMUA data dari Firestore (dimuat sekali per masuk halaman/Refresh)
 let kgPegawaiList = [];
@@ -232,21 +233,18 @@ async function kgLoadData(forceRefresh) {
             kgShowLoading(true);
         }
 
-        await waitFirebaseAuthReady();
-        const snap = await db.collection('kegiatan').get();
+        await waitSupabaseAuthReady();
+        const rows = await sbFetchAll('kegiatan');
 
-        kgAllRows = snap.docs.map(doc => {
-            const d = doc.data();
-            return {
-                A: doc.id,
-                B: d.mak || '', C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
-                F: d.tglST || '', G: d.tglMulai || '', H: d.tglSelesai || '',
-                I: d.tglLPT || '', J: d.tglBayar || '',
-                M: Number(d.jumlah) || 0, N: d.user || '', O: d.tglRekam || '',
-                P: d.status || '', Q: d.tglSP2D || '', R: d.nomorSPM || '',
-                T: d.dokumenLink || '', U: d.spbyLink || ''
-            };
-        });
+        kgAllRows = rows.map(d => ({
+            A: d.id,
+            B: d.mak || '', C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
+            F: d.tgl_st || '', G: d.tgl_mulai || '', H: d.tgl_selesai || '',
+            I: d.tgl_lpt || '', J: d.tgl_bayar || '',
+            M: Number(d.jumlah) || 0, N: d.user || '', O: d.tgl_rekam || '',
+            P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '',
+            T: d.dokumen_link || '', U: d.spby_link || ''
+        }));
 
         kgShowLoading(false);
 
@@ -616,22 +614,24 @@ function kgOpenTambahKegiatanPopup() {
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
         try {
-            await waitFirebaseAuthReady();
+            await waitSupabaseAuthReady();
             const namaUser = localStorage.getItem('nama') || 'Guest';
-            await db.collection('kegiatan').doc(idKegiatan).set({
+            const { error } = await sb.from('kegiatan').insert({
+                id: idKegiatan,
                 mak: makTerpilih.kode,
                 uraian,
                 pelaksana: '',
                 tujuan: popup.querySelector('#tk-tujuan').value,
-                tglST: popup.querySelector('#tk-tglSt').value,
-                tglMulai: '', tglSelesai: '', tglLPT: '', tglBayar: '',
+                tgl_st: normDate(popup.querySelector('#tk-tglSt').value),
+                tgl_mulai: null, tgl_selesai: null, tgl_lpt: null, tgl_bayar: null,
                 jumlah: Number(estimasiInput.value.replace(/\./g, '')) || 0,
                 user: namaUser,
                 status: 'Rekam Data',
-                tglSP2D: '', nomorSPM: '', dokumenLink: '', spbyLink: '',
-                tglRekam: new Date().toISOString().split('T')[0],
+                tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
+                tgl_rekam: normDate(new Date().toISOString().split('T')[0]),
                 perbantuan: false
             });
+            if (error) throw new Error(error.message);
 
             overlay.remove();
             showToast('Kegiatan berhasil disimpan');
@@ -697,14 +697,15 @@ function kgShowEditPopup(tr) {
                 uraian: document.getElementById('kg-editUraian').value,
                 pelaksana: document.getElementById('kg-editPelaksana').value,
                 tujuan: document.getElementById('kg-editTujuan').value,
-                tglST: document.getElementById('kg-editTglST').value,
+                tgl_st: normDate(document.getElementById('kg-editTglST').value),
                 jumlah: Number(document.getElementById('kg-editJumlah').value) || 0
             };
             // MAK cuma diikutkan kalau memang ada isinya (mis. diubah lewat popup "Pilih MAK dari POK")
             if (makBaru) updateFields.mak = makBaru;
 
-            await waitFirebaseAuthReady();
-            await db.collection('kegiatan').doc(idKegiatan).update(updateFields);
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('kegiatan').update(updateFields).eq('id', idKegiatan);
+            if (error) throw new Error(error.message);
 
             overlay.remove();
             showToast('Kegiatan berhasil diubah');
@@ -769,29 +770,27 @@ async function kgOpenPilihMakPopup(onPilih) {
     popup.querySelector('#kg-mak-search').oninput = () => kgRenderMakTable(overlay);
 
     try {
-        await waitFirebaseAuthReady();
+        await waitSupabaseAuthReady();
 
         // Ambil pok, kegiatan, & blokir BARENGAN (pakai cache kalau sudah ada dari
         // halaman lain, spy hemat baca) — Realisasi & Blokir dihitung LIVE persis
-        // sama seperti di halaman POK (pok.js loadPokData), BUKAN baca field
-        // realisasi/blokir/sisa yang tersimpan statis di Firestore (itu gampang basi).
+        // sama seperti di halaman POK (pok.js loadPokData), BUKAN baca kolom
+        // realisasi/blokir/sisa yang tersimpan statis.
         let kegiatanRows = window.kegiatanRowsCache;
         let blokirRows = window.blokirRowsCache;
-        const fetchKegiatan = kegiatanRows ? Promise.resolve(null) : db.collection('kegiatan').get();
-        const fetchBlokir = blokirRows ? Promise.resolve(null) : db.collection('blokir').get();
 
-        const [pokSnap, kegiatanSnap, blokirSnap] = await Promise.all([
-            db.collection('pok').get(),
-            fetchKegiatan,
-            fetchBlokir
+        const [pokRows, kegiatanRowsFetched, blokirRowsFetched] = await Promise.all([
+            sbFetchAll('pok'),
+            kegiatanRows ? Promise.resolve(null) : sbFetchAll('kegiatan'),
+            blokirRows ? Promise.resolve(null) : sbFetchAll('blokir')
         ]);
 
-        if (kegiatanSnap) {
-            kegiatanRows = kegiatanSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (kegiatanRowsFetched) {
+            kegiatanRows = kegiatanRowsFetched;
             window.kegiatanRowsCache = kegiatanRows;
         }
-        if (blokirSnap) {
-            blokirRows = blokirSnap.docs.map(doc => ({ id: doc.id, nilai: Number(doc.data().nilai) || 0 }));
+        if (blokirRowsFetched) {
+            blokirRows = blokirRowsFetched.map(d => ({ id: d.id, nilai: Number(d.nilai) || 0 }));
             window.blokirRowsCache = blokirRows;
         }
 
@@ -805,22 +804,21 @@ async function kgOpenPilihMakPopup(onPilih) {
         const blokirByKode = {};
         blokirRows.forEach(d => { blokirByKode[d.id] = d.nilai; });
 
-        const data = pokSnap.docs.map(doc => {
-            const d = doc.data();
-            const kode = d.kode || doc.id; // fallback ke doc.id kalau data lama blm ada field kode
+        const data = pokRows.map(d => {
+            const kode = d.kode || d.id; // fallback ke id kalau data lama blm ada kolom kode
             const pagu = d.pagu || 0;
             const blokir = blokirByKode[kode] || 0; // LIVE, dikunci per Kode
             const realisasi = realisasiByMak[kode] || 0; // LIVE, dikunci per Kode
             const sisa = pagu - blokir - realisasi; // LIVE
             return {
-                docId: doc.id,
+                docId: d.id,
                 kode,
                 uraian: d.uraian || '',
                 pagu, blokir, realisasi, sisa,
                 sumber: d.sd || '',
                 bidang: d.seksi || '',
                 ba: d.ba || '',
-                es1: d.esI || '',
+                es1: d.es_i || '',
                 prog: d.prog || ''
             };
         });
@@ -1095,33 +1093,33 @@ function kgShowPelaksanaPopup(tr) {
         }
 
         try {
-            await waitFirebaseAuthReady();
+            await waitSupabaseAuthReady();
 
             const uraianVal = popup.querySelector('#kg-pelUraian').value;
             const tglStVal = popup.querySelector('#kg-pelTglST').value;
             const namaUser = localStorage.getItem('nama') || user;
             const todayStr = new Date().toISOString().split('T')[0];
 
-            const batch = db.batch();
+            // 1. Hapus baris lama
+            const { error: delError } = await sb.from('kegiatan').delete().eq('id', idKegiatan);
+            if (delError) throw new Error(delError.message);
 
-            // 1. Hapus dokumen lama
-            batch.delete(db.collection('kegiatan').doc(idKegiatan));
-
-            // 2. Buat 1 dokumen baru per pelaksana (ID baru masing2, sama seperti pola lama)
-            dataPelaksana.forEach(p => {
-                const newId = kgGenerateRandomId(10);
+            // 2. Buat 1 baris baru per pelaksana (ID baru masing2, sama seperti pola lama)
+            const rowsBaru = dataPelaksana.map(p => {
                 const status = kgComputeStatus(p.tglMulai, '', '', '');
-                batch.set(db.collection('kegiatan').doc(newId), {
+                return {
+                    id: kgGenerateRandomId(10),
                     mak, uraian: uraianVal, pelaksana: p.nama, tujuan,
-                    tglST: tglStVal, tglMulai: p.tglMulai, tglSelesai: p.tglSelesai,
-                    tglLPT: '', tglBayar: '', jumlah: p.jumlah,
-                    user: namaUser, status, tglSP2D: '', nomorSPM: '',
-                    dokumenLink: '', spbyLink: '', tglRekam: todayStr,
+                    tgl_st: normDate(tglStVal), tgl_mulai: normDate(p.tglMulai), tgl_selesai: normDate(p.tglSelesai),
+                    tgl_lpt: null, tgl_bayar: null, jumlah: p.jumlah,
+                    user: namaUser, status, tgl_sp2d: null, nomor_spm: '',
+                    dokumen_link: '', spby_link: '', tgl_rekam: normDate(todayStr),
                     perbantuan: false
-                });
+                };
             });
 
-            await batch.commit();
+            const { error: insError } = await sb.from('kegiatan').insert(rowsBaru);
+            if (insError) throw new Error(insError.message);
 
             overlay.remove();
             showToast('Pelaksana berhasil disimpan');
@@ -1186,14 +1184,14 @@ function kgShowLPTPopup(tr) {
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            await waitFirebaseAuthReady();
-            const batch = db.batch();
-            ids.forEach(id => {
+            await waitSupabaseAuthReady();
+            const results = await Promise.all(ids.map(id => {
                 const rowData = kgAllRows.find(r => String(r.A) === String(id));
                 const status = kgComputeStatus(rowData?.G, tanggal, rowData?.J, rowData?.Q);
-                batch.update(db.collection('kegiatan').doc(id), { tglLPT: tanggal, status });
-            });
-            await batch.commit();
+                return sb.from('kegiatan').update({ tgl_lpt: normDate(tanggal), status }).eq('id', id);
+            }));
+            const gagal = results.find(r => r.error);
+            if (gagal) throw new Error(gagal.error.message);
 
             overlay.remove();
             showToast('LPT berhasil disimpan');
@@ -1262,14 +1260,14 @@ function kgShowBayarPopup(tr) {
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            await waitFirebaseAuthReady();
-            const batch = db.batch();
-            ids.forEach(id => {
+            await waitSupabaseAuthReady();
+            const results = await Promise.all(ids.map(id => {
                 const rowData = kgAllRows.find(r => String(r.A) === String(id));
                 const status = kgComputeStatus(rowData?.G, rowData?.I, tglBayar, rowData?.Q);
-                batch.update(db.collection('kegiatan').doc(id), { uraian: uraianValue, tglBayar, status });
-            });
-            await batch.commit();
+                return sb.from('kegiatan').update({ uraian: uraianValue, tgl_bayar: normDate(tglBayar), status }).eq('id', id);
+            }));
+            const gagal = results.find(r => r.error);
+            if (gagal) throw new Error(gagal.error.message);
 
             overlay.remove();
             showToast('Pembayaran berhasil disimpan');
@@ -1353,14 +1351,14 @@ function kgShowSP2DPopup(tr) {
         btn.disabled = true;
         kgShowLoading(true);
         try {
-            await waitFirebaseAuthReady();
-            const batch = db.batch();
-            ids.forEach(id => {
+            await waitSupabaseAuthReady();
+            const results = await Promise.all(ids.map(id => {
                 const rowData = kgAllRows.find(r => String(r.A) === String(id));
                 const status = kgComputeStatus(rowData?.G, rowData?.I, rowData?.J, tglSP2D);
-                batch.update(db.collection('kegiatan').doc(id), { tglSP2D, nomorSPM, status });
-            });
-            await batch.commit();
+                return sb.from('kegiatan').update({ tgl_sp2d: normDate(tglSP2D), nomor_spm: nomorSPM, status }).eq('id', id);
+            }));
+            const gagal = results.find(r => r.error);
+            if (gagal) throw new Error(gagal.error.message);
 
             overlay.remove();
             showToast('SP2D berhasil disimpan');
@@ -1497,27 +1495,23 @@ function kgApplyDokLinksToTable(links, field) {
 // File dokumen tetap di-upload lewat GAS (butuh akses Drive server-side), tapi
 // link hasilnya (result.links dari GAS, sudah berisi semua baris terkait —
 // misal semua baris dgn tag SPBy/No.SPM yang sama) disinkronkan juga ke
-// Firestore di sini, supaya field dokumenLink/spbyLink konsisten di kedua
-// tempat (Sheet lewat GAS, Firestore lewat batch write ini).
-async function kgSyncDokLinksToFirestore(links, field) {
-    const fsField = field === 'T' ? 'dokumenLink' : 'spbyLink';
+// Supabase di sini.
+async function kgSyncDokLinksToDb(links, field) {
+    const dbField = field === 'T' ? 'dokumen_link' : 'spby_link';
     const ids = Object.keys(links || {});
     if (ids.length === 0) return;
 
     try {
-        await waitFirebaseAuthReady();
-        const batch = db.batch();
-        ids.forEach(id => {
-            // set(..., {merge:true}) dipakai (bukan update()) supaya tetap aman kalau
-            // dokumennya ternyata belum ada di Firestore (mis. baris lama yang belum
-            // sempat ke-migrasi) — update() akan GAGAL TOTAL (seluruh batch ikut gagal)
-            // kalau salah satu dokumen target tidak ditemukan, sedangkan set+merge
-            // otomatis membuatnya kalau belum ada.
-            batch.set(db.collection('kegiatan').doc(id), { [fsField]: links[id] }, { merge: true });
-        });
-        await batch.commit();
+        await waitSupabaseAuthReady();
+        // upsert (bukan update biasa) supaya tetap aman kalau barisnya ternyata
+        // belum ada di tabel (mis. baris lama yang belum sempat ke-migrasi) —
+        // update() akan diam-diam skip (0 baris kena) kalau id tidak ditemukan,
+        // sedangkan upsert otomatis membuatnya kalau belum ada.
+        const rows = ids.map(id => ({ id, [dbField]: links[id] }));
+        const { error } = await sb.from('kegiatan').upsert(rows, { onConflict: 'id' });
+        if (error) throw new Error(error.message);
     } catch (e) {
-        console.error('Gagal sinkron link dokumen ke Firestore:', e);
+        console.error('Gagal sinkron link dokumen ke Supabase:', e);
     }
 }
 
@@ -1563,7 +1557,7 @@ function kgWireDokSlot(opts) {
                     targetIds.forEach(tid => { links[tid] = ''; });
                     rowData[field] = '';
                     kgApplyDokLinksToTable(links, field);
-                    await kgSyncDokLinksToFirestore(links, field);
+                    await kgSyncDokLinksToDb(links, field);
                     rerender();
                 } else {
                     statusEl.textContent = '❌ ' + (result.message || 'Gagal menghapus dokumen.');
@@ -1623,7 +1617,7 @@ function kgWireDokSlot(opts) {
                 targetIds.forEach(tid => { links[tid] = result.link; });
                 rowData[field] = result.link;
                 kgApplyDokLinksToTable(links, field);
-                await kgSyncDokLinksToFirestore(links, field);
+                await kgSyncDokLinksToDb(links, field);
                 rerender();
             } else {
                 statusEl.textContent = '❌ ' + (result.message || 'Upload gagal.');
@@ -1815,8 +1809,9 @@ function kgShowDeletePopup(tr) {
         this.disabled = true;
         kgShowLoading(true);
         try {
-            await waitFirebaseAuthReady();
-            await db.collection('kegiatan').doc(idKegiatan).delete();
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('kegiatan').delete().eq('id', idKegiatan);
+            if (error) throw new Error(error.message);
 
             overlay.remove();
             showToast('Kegiatan berhasil dihapus');
