@@ -27,7 +27,6 @@
  * -----------------------------------------------------------------------
  */
 
-
 const SIMAB_PDFJS_VERSION = '3.11.174';
 let simabPdfJsLoadPromise = null;
 
@@ -96,11 +95,14 @@ async function simabOpenPdfViewer(opts) {
         return;
     }
 
+    const fileIdMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    const fileId = fileIdMatch ? fileIdMatch[1] : null;
+
     const { overlay, popup } = kgOpenOverlay(`
         <div class="flex items-center justify-between mb-1 gap-3">
             <h3 class="text-base font-semibold text-sky-700 truncate"><i class="fa-solid fa-file-pdf mr-2"></i>${title || 'Dokumen'}</h3>
             <div class="flex items-center gap-3 shrink-0">
-                <a id="simab-pdfDownload" href="#" class="hidden text-slate-400 hover:text-sky-600 text-sm"><i class="fa-solid fa-download mr-1"></i>Download</a>
+                <a id="simab-pdfDownload" href="#" target="_blank" class="hidden text-slate-400 hover:text-sky-600 text-sm"><i class="fa-solid fa-download mr-1"></i>Download</a>
                 <button id="simab-pdfClose" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </div>
@@ -116,6 +118,48 @@ async function simabOpenPdfViewer(opts) {
     const downloadEl = popup.querySelector('#simab-pdfDownload');
     const noteEl = popup.querySelector('#simab-pdfNote');
 
+    // Tampilkan lewat iframe PREVIEW BAWAAN DRIVE langsung — TIDAK lewat GAS
+    // sama sekali (file kita sudah "Anyone with link", jadi iframe ini boleh
+    // nge-load-nya langsung, tanpa kena CORS krn iframe beda aturan dgn fetch).
+    // Dipakai sbg jalur utama kalau tidak butuh auto-jump ke halaman tertentu,
+    // ATAU sbg fallback kalau jalur base64+GAS (di bawah) gagal (mis. karena
+    // ukuran file kebesaran buat direspon Apps Script — persis kasus 404 yg
+    // pernah terjadi).
+    function showDrivePreviewFallback(noteMsg) {
+        if (!fileId) {
+            bodyEl.innerHTML = `
+                <div class="text-center text-red-500 text-sm px-4">
+                    Link dokumen tidak valid.<br>
+                    <a href="${link}" target="_blank" class="text-sky-600 underline mt-2 inline-block">Buka link asli di tab baru</a>
+                </div>`;
+            return;
+        }
+        if (noteMsg) {
+            noteEl.textContent = noteMsg;
+            noteEl.classList.remove('hidden');
+        }
+        downloadEl.href = link;
+        downloadEl.classList.remove('hidden');
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'w-full h-full rounded-lg';
+        iframe.title = title || 'Dokumen PDF';
+        iframe.src = `https://drive.google.com/file/d/${fileId}/preview`;
+        bodyEl.innerHTML = '';
+        bodyEl.appendChild(iframe);
+    }
+
+    // Tanpa searchText -> tidak perlu cari halaman tertentu, langsung pakai
+    // preview Drive (paling cepat, paling hemat, tidak sentuh GAS sama sekali).
+    if (!searchText) {
+        showDrivePreviewFallback();
+        return;
+    }
+
+    // Ada searchText -> WAJIB ambil bytes mentah dulu (lewat GAS) supaya bisa
+    // dicari teksnya pakai pdf.js utk auto-jump ke halaman yang tepat. Kalau
+    // ini gagal (mis. dokumen kebesaran), fallback ke preview Drive biasa
+    // (tetap bisa dilihat, cuma tanpa auto-jump).
     try {
         const result = await apiPost({ action: 'getDokumenFileBase64', link: link }, 60000);
         if (result.status !== 'success' || !result.base64) {
@@ -131,19 +175,17 @@ async function simabOpenPdfViewer(opts) {
         downloadEl.classList.remove('hidden');
 
         let page = null;
-        if (searchText) {
-            try {
-                const pdfjsLib = await simabLoadPdfJs();
-                const pdfDoc = await pdfjsLib.getDocument({ data: byteArray.slice() }).promise;
-                page = await simabFindPageWithText(pdfDoc, searchText);
-            } catch (e) {
-                console.error('Gagal mencari teks di dokumen:', e);
-            }
-            if (!page) {
-                const shown = Array.isArray(searchText) ? searchText[0] : searchText;
-                noteEl.textContent = `Teks "${shown}" tidak ditemukan di dokumen — menampilkan dari halaman 1.`;
-                noteEl.classList.remove('hidden');
-            }
+        try {
+            const pdfjsLib = await simabLoadPdfJs();
+            const pdfDoc = await pdfjsLib.getDocument({ data: byteArray.slice() }).promise;
+            page = await simabFindPageWithText(pdfDoc, searchText);
+        } catch (e) {
+            console.error('Gagal mencari teks di dokumen:', e);
+        }
+        if (!page) {
+            const shown = Array.isArray(searchText) ? searchText[0] : searchText;
+            noteEl.textContent = `Teks "${shown}" tidak ditemukan di dokumen — menampilkan dari halaman 1.`;
+            noteEl.classList.remove('hidden');
         }
 
         const iframe = document.createElement('iframe');
@@ -154,11 +196,8 @@ async function simabOpenPdfViewer(opts) {
         bodyEl.appendChild(iframe);
 
     } catch (e) {
-        bodyEl.innerHTML = `
-            <div class="text-center text-red-500 text-sm px-4">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i> ${e.message || 'Gagal memuat dokumen.'}<br>
-                <a href="${link}" target="_blank" class="text-sky-600 underline mt-2 inline-block">Buka link asli di tab baru</a>
-            </div>`;
+        console.error('Gagal ambil dokumen via GAS, fallback ke preview Drive biasa:', e);
+        showDrivePreviewFallback(`Tidak bisa lompat otomatis ke halaman terkait (${e.message || 'gagal memuat via server'}) — dokumen tetap ditampilkan apa adanya.`);
     }
 }
 
