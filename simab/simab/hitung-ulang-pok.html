@@ -96,8 +96,8 @@
                     const batch = db.batch();
 
                     chunk.forEach(docSnap => {
-                        const kode = docSnap.id;
                         const d = docSnap.data();
+                        const kode = d.kode || docSnap.id; // field 'kode' eksplisit (ID dokumen sekarang Kode+Seksi)
                         const pagu = Number(d.pagu) || 0;
                         const blokir = blokirByKode[kode] || 0;
                         // Realisasi TIDAK dihitung di sini lagi (selalu 0) — sekarang
