@@ -108,7 +108,9 @@ async function loadPokData() {
                 bidang: d.seksi || '',
                 ba: d.ba || '',
                 es1: d.esI || '',
-                prog: d.prog || ''
+                prog: d.prog || '',
+                satker: d.satker || '',
+                kppn: d.kppn || ''
             };
         });
 
@@ -153,10 +155,10 @@ async function fetchRefCoaData() {
 
 // Susun string kode salin sesuai format:
 // {kodeSatker}.{kodeUnit}.{kodeAkun}.{BA}{Es1}{Prog}.{gabungan4digit+seksi}.{prefix}000000001.00000.2.2251.2.000000.000000
-// Kode Satker & KPPN SEMENTARA statis (bukan dari Firestore config/refCoa lagi)
-// — BA, Es I, Program tetap ikut data baris POK-nya sendiri (item.ba/es1/prog).
-const POK_KODE_SATKER = '538065';
-const POK_KODE_KPPN = '037';
+// Nilai fallback KALAU baris POK belum punya field satker/kppn (mis. data lama
+// yang belum sempat di-migrasi ulang dari sheet yang sudah ada kolom Satker/KPPN).
+const POK_KODE_SATKER_FALLBACK = '538065';
+const POK_KODE_KPPN_FALLBACK = '037';
 
 function buildKodeSalin(item) {
     const c = String(item.kode || '');
@@ -170,16 +172,18 @@ function buildKodeSalin(item) {
         const s = String(val ?? '').trim();
         return (/^\d+$/.test(s) && s.length < len) ? s.padStart(len, '0') : s;
     };
-    const ba = pad(item.ba, 3);   // ikut data baris (kolom J dulu, sekarang field ba)
-    const es1 = pad(item.es1, 2); // ikut data baris (kolom K dulu, sekarang field esI)
-    const prog = String(item.prog || '').trim(); // ikut data baris (kolom L dulu, sekarang field prog)
+    const ba = pad(item.ba, 3);   // ikut data baris (kolom I)
+    const es1 = pad(item.es1, 2); // ikut data baris (kolom J)
+    const prog = String(item.prog || '').trim(); // ikut data baris (kolom K)
+    const kodeSatker = String(item.satker || '').trim() || POK_KODE_SATKER_FALLBACK; // kolom L
+    const kodeKppn = String(item.kppn || '').trim() || POK_KODE_KPPN_FALLBACK;       // kolom M
 
     // RM -> A, PNBP -> D
     const prefix = String(item.sumber || '').toUpperCase() === 'PNBP' ? 'D' : 'A';
 
     return [
-        POK_KODE_SATKER,
-        POK_KODE_KPPN,
+        kodeSatker,
+        kodeKppn,
         kodeAkun,
         ba + es1 + prog,
         gabungan,
