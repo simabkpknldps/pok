@@ -108,8 +108,10 @@
                     }
                 }
 
-                // Jeda kecil antar-akun, jaga2 supaya tidak kena rate-limit Supabase Auth.
-                await new Promise(res => setTimeout(res, 400));
+                // Jeda antar-akun diperlambat (2 detik) — Supabase pakai token bucket,
+                // jadi biar total jatah per jam sudah dinaikkan, tetap bisa ditolak
+                // kalau request-nya numpuk terlalu cepat berturut-turut.
+                await new Promise(res => setTimeout(res, 2000));
             }
 
             // Keluar dari sesi user TERAKHIR yang sempat dibuat (signUp otomatis
