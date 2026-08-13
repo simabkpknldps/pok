@@ -71,12 +71,10 @@ async function initPerbantuanPage() {
     try {
         await waitSupabaseAuthReady();
 
-        // Tabel utama + daftar Tujuan: dari Supabase (pakai cache kalau sudah ada
-        // dari halaman lain, hemat baca). Daftar Pegawai (butuh NIP+bank): tetap
-        // dari GAS (getAllPegawaiData) — TAPI sekarang di-cache juga
-        // (window.pegawaiListCache), supaya kunjungan berikutnya ke halaman ini
-        // dalam sesi yang sama tidak perlu nunggu GAS lagi (GAS jauh lebih lambat
-        // dari Supabase, itu penyebab utama loading lama).
+        // Tabel utama + daftar Tujuan + daftar Pegawai: SEMUA dari Supabase (pakai
+        // cache kalau sudah ada dari halaman lain, hemat baca). Sekarang RLS tabel
+        // 'pegawai' sudah dibuka utk yang admin ATAU aksesMenu=1 (lihat migrasi RLS
+        // 3-tier), jadi bisa langsung baca tanpa lewat GAS lagi.
         const [kegiatanRows, pegawaiRows] = await Promise.all([
             (async () => {
                 let rows = window.kegiatanRowsCache;
@@ -89,8 +87,7 @@ async function initPerbantuanPage() {
             (async () => {
                 if (window.pegawaiListCache) return window.pegawaiListCache;
                 try {
-                    const result = await apiPost({ action: 'getAllPegawaiData' });
-                    const rows = result.status === 'success' ? (result.rows || []) : [];
+                    const rows = await sbFetchAll('pegawai');
                     window.pegawaiListCache = rows;
                     return rows;
                 } catch (e) {
@@ -118,7 +115,7 @@ async function initPerbantuanPage() {
         // sudah dipakai di seluruh file ini, namaBank/noRekening dipetakan ke
         // namaBank/norek.
         pbPegawaiList = pegawaiRows
-            .map(p => ({ nama: p.nama, nip: p.nip, status: p.kepeg, namaBank: p.namaBank, norek: p.noRekening }));
+            .map(p => ({ nama: p.nama, nip: p.id, status: p.kepeg, namaBank: p.nama_bank, norek: p.no_rekening }));
 
         // Daftar Tujuan diturunkan dari nilai unik kolom 'tujuan' di kegiatan
         // Supabase — bukan lagi bagian dari action GAS terpisah.
