@@ -25,7 +25,6 @@
  * -----------------------------------------------------------------------
  */
 
-
 // Ambil segmen 6-digit dari kode MAK (itu adalah kode Akun) — dipakai utk
 // menentukan kategori 52 (Belanja Barang) / 53 (Belanja Modal).
 function getAkunFromMak(mak) {
@@ -66,7 +65,7 @@ function computeDashboardData(kegiatanRows, pokRows) {
             realisasiMP += jumlah;
         }
 
-        if (k.tglMulai === todayStr) {
+        if (k.tgl_mulai === todayStr) {
             kegiatanHariIni.push(k);
         }
 
@@ -74,7 +73,7 @@ function computeDashboardData(kegiatanRows, pokRows) {
             const nama = String(k.pelaksana || '').trim();
             if (nama) perjadinCount[nama] = (perjadinCount[nama] || 0) + 1;
 
-            const d = new Date(k.tglMulai);
+            const d = new Date(k.tgl_mulai);
             if (!isNaN(d.getTime())) {
                 grafikPerBulan[d.getMonth()].rupiah += jumlah;
                 grafikPerBulan[d.getMonth()].frekuensi += 1;
@@ -101,19 +100,18 @@ async function initDashboardPage() {
     container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
 
     try {
-        await waitFirebaseAuthReady();
+        await waitSupabaseAuthReady();
 
-        // 1x baca koleksi kegiatan + 1x baca koleksi pok, dijalankan bareng.
-        const [kegiatanSnap, pokSnap] = await Promise.all([
-            db.collection('kegiatan').get(),
-            db.collection('pok').get()
+        // 1x baca tabel kegiatan + 1x baca tabel pok, dijalankan bareng.
+        // sbFetchAll dipakai (bukan select('*') polos) supaya tidak kena limit
+        // 1000 baris default Supabase/PostgREST.
+        const [kegiatanRows, pokRows] = await Promise.all([
+            sbFetchAll('kegiatan'),
+            sbFetchAll('pok')
         ]);
 
-        const kegiatanRows = kegiatanSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const pokRows = pokSnap.docs.map(doc => ({ kode: doc.id, ...doc.data() }));
-
         // Cache dipakai juga oleh pok.js (popup Detil/Rekam/Pelaksana) supaya
-        // TIDAK perlu baca ulang koleksi kegiatan lagi kalau user lanjut buka
+        // TIDAK perlu baca ulang tabel kegiatan lagi kalau user lanjut buka
         // halaman POK sesudah ini dalam sesi yang sama.
         window.kegiatanRowsCache = kegiatanRows;
 
