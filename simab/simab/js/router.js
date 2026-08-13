@@ -22,14 +22,30 @@ const PAGE_INIT = {
     perbantuan: () => window.initPerbantuanPage && window.initPerbantuanPage(),
 };
 
-// Menu yang boleh diakses user dengan akses terbatas (ref_pegawai kolom H = 0).
-// Selain ini akan ditolak & diarahkan ke halaman Perbantuan.
+// Tingkat akses (diisi ke localStorage saat login, kolom 'admin' & 'aksesMenu'
+// tabel pegawai) — 3 tingkat:
+//   'admin'     : localStorage.admin === '1'      -> akses semua halaman +
+//                 tab Data Rekening & kolom Admin di Referensi
+//   'aksesMenu' : localStorage.aksesMenu === '1'   -> akses semua halaman,
+//                 tapi di Referensi cuma tab SBM+Pegawai (tanpa Rekening,
+//                 tanpa kolom Admin)
+//   'biasa'     : (keduanya kosong)                -> cuma boleh buka
+//                 Perjadinku, Perbantuan, Referensi (Referensi cuma tab SBM)
+function getAksesLevel() {
+    if (localStorage.getItem('admin') === '1') return 'admin';
+    if (localStorage.getItem('aksesMenu') === '1') return 'aksesMenu';
+    return 'biasa';
+}
+window.getAksesLevel = getAksesLevel;
+
+// Menu yang boleh diakses user tingkat 'biasa'. Selain ini akan ditolak &
+// diarahkan ke halaman Perbantuan.
 const RESTRICTED_ALLOWED_PAGES = ['perjadin', 'referensi', 'perbantuan'];
 const RESTRICTED_DEFAULT_PAGE = 'perbantuan';
 
 async function navigate(page) {
-    // Guard akses menu terbatas (kolom H ref_pegawai = 0)
-    if (window.isAksesTerbatas && window.isAksesTerbatas() && !RESTRICTED_ALLOWED_PAGES.includes(page)) {
+    // Guard akses menu tingkat 'biasa'
+    if (getAksesLevel() === 'biasa' && !RESTRICTED_ALLOWED_PAGES.includes(page)) {
         alert('Anda tidak memiliki akses ke menu ini.');
         if (page !== RESTRICTED_DEFAULT_PAGE) {
             navigate(RESTRICTED_DEFAULT_PAGE);
@@ -74,6 +90,6 @@ async function navigate(page) {
 window.navigate = navigate;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const startPage = (window.isAksesTerbatas && window.isAksesTerbatas()) ? RESTRICTED_DEFAULT_PAGE : 'dashboard';
+    const startPage = (getAksesLevel() === 'biasa') ? RESTRICTED_DEFAULT_PAGE : 'dashboard';
     navigate(startPage);
 });
