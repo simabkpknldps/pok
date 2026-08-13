@@ -48,3 +48,23 @@ function normDate(v) {
     return s ? s : null;
 }
 window.normDate = normDate;
+
+// Supabase/PostgREST DIAM-DIAM membatasi select('*') polos ke MAKSIMAL 1000
+// BARIS per request (tanpa error!) — kalau tabel (mis. kegiatan, pok) lebih
+// dari itu, sisanya "hilang" begitu saja. Helper ini ambil SEMUA baris,
+// per-1000, digabung otomatis. WAJIB dipakai (bukan sb.from().select('*')
+// polos) utk tabel yang berpotensi >1000 baris.
+async function sbFetchAll(table, selectCols) {
+    const PAGE_SIZE = 1000;
+    let allRows = [];
+    let from = 0;
+    while (true) {
+        const { data, error } = await sb.from(table).select(selectCols || '*').range(from, from + PAGE_SIZE - 1);
+        if (error) throw new Error(error.message);
+        allRows = allRows.concat(data || []);
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+    }
+    return allRows;
+}
+window.sbFetchAll = sbFetchAll;
