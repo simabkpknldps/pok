@@ -11,6 +11,7 @@
  * P status, R nomorSPM.
  */
 
+
 let kgCurrentTableRowsData = [];
 let kgAllRows = [];       // SEMUA data dari Firestore (dimuat sekali per masuk halaman/Refresh)
 let kgPegawaiList = [];
@@ -771,23 +772,28 @@ async function kgOpenPilihMakPopup(onPilih) {
     try {
         await waitFirebaseAuthReady();
 
-        // Ambil pok & kegiatan BARENGAN (pakai cache kegiatan kalau sudah ada dari
-        // halaman lain, spy hemat baca) — Realisasi/Sisa dihitung LIVE persis sama
-        // seperti di halaman POK (pok.js loadPokData), BUKAN baca field
-        // realisasi/sisa yang tersimpan statis di Firestore (itu gampang basi).
+        // Ambil pok, kegiatan, & blokir BARENGAN (pakai cache kalau sudah ada dari
+        // halaman lain, spy hemat baca) — Realisasi & Blokir dihitung LIVE persis
+        // sama seperti di halaman POK (pok.js loadPokData), BUKAN baca field
+        // realisasi/blokir/sisa yang tersimpan statis di Firestore (itu gampang basi).
         let kegiatanRows = window.kegiatanRowsCache;
-        const fetchKegiatan = kegiatanRows
-            ? Promise.resolve(null)
-            : db.collection('kegiatan').get();
+        let blokirRows = window.blokirRowsCache;
+        const fetchKegiatan = kegiatanRows ? Promise.resolve(null) : db.collection('kegiatan').get();
+        const fetchBlokir = blokirRows ? Promise.resolve(null) : db.collection('blokir').get();
 
-        const [pokSnap, kegiatanSnap] = await Promise.all([
+        const [pokSnap, kegiatanSnap, blokirSnap] = await Promise.all([
             db.collection('pok').get(),
-            fetchKegiatan
+            fetchKegiatan,
+            fetchBlokir
         ]);
 
         if (kegiatanSnap) {
             kegiatanRows = kegiatanSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             window.kegiatanRowsCache = kegiatanRows;
+        }
+        if (blokirSnap) {
+            blokirRows = blokirSnap.docs.map(doc => ({ id: doc.id, nilai: Number(doc.data().nilai) || 0 }));
+            window.blokirRowsCache = blokirRows;
         }
 
         const realisasiByMak = {};
@@ -797,11 +803,14 @@ async function kgOpenPilihMakPopup(onPilih) {
             realisasiByMak[mak] = (realisasiByMak[mak] || 0) + (Number(d.jumlah) || 0);
         });
 
+        const blokirByKode = {};
+        blokirRows.forEach(d => { blokirByKode[d.id] = d.nilai; });
+
         const data = pokSnap.docs.map(doc => {
             const d = doc.data();
             const kode = d.kode || doc.id; // fallback ke doc.id kalau data lama blm ada field kode
             const pagu = d.pagu || 0;
-            const blokir = d.blokir || 0;
+            const blokir = blokirByKode[kode] || 0; // LIVE, dikunci per Kode
             const realisasi = realisasiByMak[kode] || 0; // LIVE, dikunci per Kode
             const sisa = pagu - blokir - realisasi; // LIVE
             return {
