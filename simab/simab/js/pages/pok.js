@@ -115,6 +115,12 @@ async function loadPokData() {
             throw new Error('Format data tidak valid');
         }
 
+        // Postgres TIDAK menjamin urutan baris tetap sama antar-query (beda dari
+        // Sheet yang selalu urut dari atas ke bawah) — jadi diurutkan eksplisit di
+        // sini berdasarkan Kode, supaya tampilan tabel selalu konsisten & rapi
+        // walau ada baris yang baru saja diedit.
+        data.sort((a, b) => String(a.kode).localeCompare(String(b.kode)));
+
         window.rawPokData = data;
         renderPok();
     } catch (e) {
