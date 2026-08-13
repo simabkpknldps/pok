@@ -59,14 +59,16 @@ async function loadPokData() {
         // query ke Firestore (lihat komentar waitFirebaseAuthReady di atas).
         await waitFirebaseAuthReady();
 
-        // Ambil pok & kegiatan BARENGAN — kegiatan dipakai utk hitung Realisasi
-        // LIVE (bukan lagi field statis hasil hitung-ulang-pok.html yang gampang
-        // basi begitu ada kegiatan baru/berubah), sekaligus di-cache global
+        // Ambil pok, kegiatan, & blokir BARENGAN — kegiatan dipakai utk hitung
+        // Realisasi LIVE, blokir dipakai utk hitung Blokir LIVE (dua-duanya BUKAN
+        // lagi field statis hasil hitung-ulang-pok.html yang gampang basi begitu
+        // ada kegiatan/blokir baru) — sekaligus kegiatan di-cache global
         // (window.kegiatanRowsCache) supaya fetchLokasiData/loadRefPegawai tidak
         // perlu baca ulang koleksi kegiatan dari nol lagi.
-        const [pokSnap, kegiatanSnap] = await Promise.all([
+        const [pokSnap, kegiatanSnap, blokirSnap] = await Promise.all([
             db.collection('pok').get(),
-            db.collection('kegiatan').get()
+            db.collection('kegiatan').get(),
+            db.collection('blokir').get()
         ]);
 
         window.kegiatanRowsCache = kegiatanSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -79,6 +81,11 @@ async function loadPokData() {
             realisasiByMak[mak] = (realisasiByMak[mak] || 0) + (Number(d.jumlah) || 0);
         });
 
+        // Blokir = field 'nilai' dari dokumen blokir dengan id yang sama dgn Kode.
+        window.blokirRowsCache = blokirSnap.docs.map(doc => ({ id: doc.id, nilai: Number(doc.data().nilai) || 0 }));
+        const blokirByKode = {};
+        window.blokirRowsCache.forEach(d => { blokirByKode[d.id] = d.nilai; });
+
         // Nama field di Firestore beda dikit dari yang dipakai di seluruh file ini
         // (sd->sumber, seksi->bidang, esI->es1), jadi dipetakan ulang di sini SAJA
         // supaya sisa kode di bawah (render, export, dll) tidak perlu diubah apapun.
@@ -89,8 +96,8 @@ async function loadPokData() {
             const d = doc.data();
             const kode = d.kode || doc.id; // fallback ke doc.id kalau data lama blm ada field kode
             const pagu = d.pagu || 0;
-            const blokir = d.blokir || 0;
-            const realisasi = realisasiByMak[kode] || 0; // LIVE, dikunci per Kode (bukan per dokumen)
+            const blokir = blokirByKode[kode] || 0; // LIVE, dikunci per Kode
+            const realisasi = realisasiByMak[kode] || 0; // LIVE, dikunci per Kode
             const sisa = pagu - blokir - realisasi;
             return {
                 docId: doc.id,
