@@ -510,13 +510,18 @@ function refBindPegawaiRow(tr) {
         const admin = adminCheckbox.checked ? '1' : '0';
         const status = statusCheckbox.checked ? '1' : '0';
 
+        // Pegawai yang dinonaktifkan (status=0) otomatis kehilangan akses_menu
+        // (nonaktif tidak boleh tetap punya akses penuh ke semua halaman).
+        const updatePayload = { nama, jabatan, pangkat, kepeg, admin, status };
+        if (status === '0') updatePayload.akses_menu = '';
+
         btnSave.disabled = true;
         const originalIcon = btnSave.innerHTML;
         btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         try {
             await waitSupabaseAuthReady();
             const { error } = await sb.from('pegawai')
-                .update({ nama, jabatan, pangkat, kepeg, admin, status })
+                .update(updatePayload)
                 .eq('id', rowId);
             if (error) throw new Error(error.message);
 
@@ -529,7 +534,7 @@ function refBindPegawaiRow(tr) {
                 item.admin = admin;
                 item.status = status;
             }
-            showToast('Data pegawai berhasil diubah');
+            showToast('Data pegawai berhasil diubah' + (status === '0' ? ' (akses menu ikut dicabut)' : ''));
             setEditing(false);
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
