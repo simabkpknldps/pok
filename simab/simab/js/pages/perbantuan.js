@@ -1,17 +1,20 @@
 /**
  * js/pages/perbantuan.js
  * -----------------------------------------------------------------------
- * Halaman "Perbantuan".
+ * Halaman "Perbantuan" — FULL Supabase (baca & tulis semuanya).
  *
- * Sumber data TABEL UTAMA: Firestore koleksi 'kegiatan', hanya dokumen yang
- * field perbantuan = true (pakai cache window.kegiatanRowsCache kalau sudah
+ * Sumber data TABEL UTAMA: Supabase tabel 'kegiatan', hanya baris yang
+ * kolom perbantuan = true (pakai cache window.kegiatanRowsCache kalau sudah
  * ada dari halaman lain, hemat baca). Daftar Tujuan diturunkan dari data yang
- * sama (nilai unik field tujuan).
+ * sama (nilai unik kolom tujuan).
  *
- * Daftar Pegawai (dipakai popup Tambah Usulan, butuh NIP + rekening bank)
- * TETAP lewat GAS (action getAllPegawaiData) — koleksi 'pegawai' di Firestore
- * sengaja dikunci cuma-baca-punya-sendiri (ada data rekening di situ), jadi
- * tidak bisa dibaca client langsung utk semua pegawai.
+ * Daftar Pegawai (dipakai popup Tambah Usulan/Ubah, butuh NIP + rekening
+ * bank) TETAP lewat GAS (action getAllPegawaiData) — tabel 'pegawai' di
+ * Supabase sengaja dikunci RLS-nya cuma boleh baca/tulis punya sendiri (ada
+ * data rekening di situ), jadi tidak bisa dibaca/ditulis client utk pegawai
+ * lain. Sinkronisasi data bank pegawai baru ke ref_pegawai (Sheet) JUGA
+ * tetap lewat GAS untuk alasan yang sama (client tidak bisa menulis baris
+ * pegawai lain di Supabase).
  *
  * Kolom yang ditampilkan: B(MAK) C(Uraian) D(Pelaksana) E(Tujuan)
  * F(Tgl ST/ND) G(Tgl Mulai) H(Tgl Selesai) I(Tgl LPT) J(Tgl Bayar)
@@ -19,10 +22,6 @@
  *
  * Aksi per baris: pencil (ubah), pegawai (assign pelaksana), detil, hapus.
  * Di atas tabel: search bar + tombol "Tambah Usulan".
- *
- * CATATAN: fitur TULIS (Tambah Usulan, Ubah, Hapus, Dokumen) MASIH lewat GAS
- * (belum dipindah ke Firestore) — cuma bagian BACA tabel utama yang dikonversi
- * di sesi ini.
  * -----------------------------------------------------------------------
  */
 
@@ -70,9 +69,9 @@ async function initPerbantuanPage() {
         </td></tr>`;
 
     try {
-        await waitFirebaseAuthReady();
+        await waitSupabaseAuthReady();
 
-        // Tabel utama + daftar Tujuan: dari Firestore (pakai cache kalau sudah ada
+        // Tabel utama + daftar Tujuan: dari Supabase (pakai cache kalau sudah ada
         // dari halaman lain, hemat baca). Daftar Pegawai (butuh NIP+bank): tetap
         // dari GAS (getAllPegawaiData) — dijalankan BARENGAN biar tidak nunggu
         // 2x berurutan.
@@ -80,8 +79,7 @@ async function initPerbantuanPage() {
             (async () => {
                 let rows = window.kegiatanRowsCache;
                 if (!rows) {
-                    const snap = await db.collection('kegiatan').get();
-                    rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    rows = await sbFetchAll('kegiatan');
                     window.kegiatanRowsCache = rows;
                 }
                 return rows;
@@ -96,10 +94,10 @@ async function initPerbantuanPage() {
             .filter(r => r.perbantuan === true)
             .map(r => ({
                 A: r.id, B: r.mak || '', C: r.uraian || '', D: r.pelaksana || '', E: r.tujuan || '',
-                F: r.tglST || '', G: r.tglMulai || '', H: r.tglSelesai || '',
-                I: r.tglLPT || '', J: r.tglBayar || '',
+                F: r.tgl_st || '', G: r.tgl_mulai || '', H: r.tgl_selesai || '',
+                I: r.tgl_lpt || '', J: r.tgl_bayar || '',
                 M: Number(r.jumlah) || 0, N: r.user || '', P: r.status || '',
-                T: r.dokumenLink || '', U: r.spbyLink || ''
+                T: r.dokumen_link || '', U: r.spby_link || ''
             }));
 
         pbAllRows = pbSortByTglMulai(perbantuanRows);
@@ -111,8 +109,8 @@ async function initPerbantuanPage() {
         pbPegawaiList = (pegawaiResult.status === 'success' ? pegawaiResult.rows || [] : [])
             .map(p => ({ nama: p.nama, nip: p.nip, status: p.kepeg, namaBank: p.namaBank, norek: p.noRekening }));
 
-        // Daftar Tujuan diturunkan dari nilai unik field 'tujuan' di kegiatan
-        // Firestore — bukan lagi bagian dari action GAS terpisah.
+        // Daftar Tujuan diturunkan dari nilai unik kolom 'tujuan' di kegiatan
+        // Supabase — bukan lagi bagian dari action GAS terpisah.
         pbLokasiList = [...new Set(kegiatanRows.map(r => String(r.tujuan || '').trim()).filter(Boolean))].sort();
 
         pbApplyFilters();
@@ -509,23 +507,49 @@ function pbOpenTambahUsulanModal() {
             const namaUser = localStorage.getItem('nama') || '';
             const kantor = popup.querySelector('#pb-tu-kantor').value.trim();
 
-            const result = await apiPost({
-                action: 'simpanPerbantuan',
-                idKegiatan, kantor, noSt, tglSt, tglMulai, tglSelesai, tujuan,
-                userLogin: namaUser,
-                pelaksanaData
-            });
+            // 1. Tulis LANGSUNG ke Supabase: 1 baris kegiatan per pegawai, semuanya
+            //    perbantuan=true. Uraian gabungan: "(ID: <idKegiatan> | <kantor>) <No ST>"
+            //    — sama persis pola lama, supaya baris2 dari 1 usulan yang sama tetap
+            //    bisa dikelompokkan lewat kesamaan teks Uraian (dipakai popup Ubah).
+            const kantorTrim = kantor;
+            const uraianGabungan = kantorTrim
+                ? `(ID: ${idKegiatan} | ${kantorTrim}) ${noSt}`
+                : `(ID: ${idKegiatan}) ${noSt}`;
+            const todayStr = new Date().toISOString().split('T')[0];
 
-            if (result.status === 'success') {
-                showToast('Usulan perbantuan berhasil ditambahkan');
-                if (Array.isArray(result.refPegawaiErrors) && result.refPegawaiErrors.length > 0) {
-                    alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disinkronkan ke ref_pegawai:\n\n' + result.refPegawaiErrors.join('\n'));
+            await waitSupabaseAuthReady();
+            const rowsBaru = pelaksanaData.map(p => ({
+                id: kgGenerateRandomId(10),
+                mak: '', uraian: uraianGabungan, pelaksana: p.nama, tujuan,
+                tgl_st: normDate(tglSt), tgl_mulai: normDate(tglMulai), tgl_selesai: normDate(tglSelesai),
+                tgl_lpt: null, tgl_bayar: null, jumlah: Number(p.jumlah) || 0,
+                user: namaUser, status: 'Rekam Data', tgl_sp2d: null, nomor_spm: '',
+                dokumen_link: '', spby_link: '', tgl_rekam: normDate(todayStr),
+                perbantuan: true
+            }));
+            const { error: insError } = await sb.from('kegiatan').insert(rowsBaru);
+            if (insError) throw new Error(insError.message);
+
+            // 2. Sinkron data bank pegawai (KHUSUS yg belum ada di ref_pegawai) tetap
+            //    lewat GAS -> Sheet — TIDAK bisa langsung ke tabel 'pegawai' Supabase
+            //    dari sini karena RLS-nya sengaja dibatasi cuma boleh tulis punya
+            //    sendiri (client tidak berhak nulis data bank pegawai LAIN).
+            let refPegawaiErrors = [];
+            try {
+                const syncResult = await apiPost({ action: 'syncPegawaiBank', pelaksanaData });
+                if (syncResult.status === 'success' && Array.isArray(syncResult.refPegawaiErrors)) {
+                    refPegawaiErrors = syncResult.refPegawaiErrors;
                 }
-                overlay.remove();
-                initPerbantuanPage();
-            } else {
-                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+            } catch (syncErr) {
+                console.error('Gagal sinkron data bank pegawai ke ref_pegawai:', syncErr);
             }
+
+            showToast('Usulan perbantuan berhasil ditambahkan');
+            if (refPegawaiErrors.length > 0) {
+                alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disinkronkan ke ref_pegawai:\n\n' + refPegawaiErrors.join('\n'));
+            }
+            overlay.remove();
+            initPerbantuanPage();
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
         } finally {
@@ -729,26 +753,50 @@ function pbOpenEditModal(row) {
 
         try {
             const namaUser = localStorage.getItem('nama') || '';
+            const todayStr = new Date().toISOString().split('T')[0];
 
-            const result = await apiPost({
-                action: 'updatePerbantuan',
-                mak: makAwal,
-                oldUraianGabungan: row.C,
-                noSt, tglSt, tglMulai, tglSelesai, tujuan,
-                userLogin: namaUser,
-                pelaksanaData
-            });
+            // Uraian gabungan dibangun ulang dgn No ST yang mungkin baru diubah,
+            // format sama persis dgn Tambah Usulan "(ID: .. | Kantor) NoST" — MAK
+            // tetap dipertahankan dari sebelumnya (field ini disabled di form).
+            const uraianBaru = row.C.replace(/\)\s*.*/, `) ${noSt}`) || noSt;
 
-            if (result.status === 'success') {
-                showToast('Data perbantuan berhasil diubah');
-                if (Array.isArray(result.refPegawaiErrors) && result.refPegawaiErrors.length > 0) {
-                    alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disinkronkan ke ref_pegawai:\n\n' + result.refPegawaiErrors.join('\n'));
+            await waitSupabaseAuthReady();
+
+            // 1. Hapus SEMUA baris di grup lama (mungkin ada pegawai yg dihapus di form)
+            const idsLama = groupRows.map(r => r.A);
+            const { error: delError } = await sb.from('kegiatan').delete().in('id', idsLama);
+            if (delError) throw new Error(delError.message);
+
+            // 2. Insert baris baru sesuai isian form sekarang (mungkin ada pegawai baru)
+            const rowsBaru = pelaksanaData.map(p => ({
+                id: kgGenerateRandomId(10),
+                mak: makAwal, uraian: uraianBaru, pelaksana: p.nama, tujuan,
+                tgl_st: normDate(tglSt), tgl_mulai: normDate(tglMulai), tgl_selesai: normDate(tglSelesai),
+                tgl_lpt: null, tgl_bayar: null, jumlah: Number(p.jumlah) || 0,
+                user: namaUser, status: 'Rekam Data', tgl_sp2d: null, nomor_spm: '',
+                dokumen_link: '', spby_link: '', tgl_rekam: normDate(todayStr),
+                perbantuan: true
+            }));
+            const { error: insError } = await sb.from('kegiatan').insert(rowsBaru);
+            if (insError) throw new Error(insError.message);
+
+            // 3. Sinkron data bank pegawai tetap lewat GAS (lihat catatan di Tambah Usulan)
+            let refPegawaiErrors = [];
+            try {
+                const syncResult = await apiPost({ action: 'syncPegawaiBank', pelaksanaData });
+                if (syncResult.status === 'success' && Array.isArray(syncResult.refPegawaiErrors)) {
+                    refPegawaiErrors = syncResult.refPegawaiErrors;
                 }
-                overlay.remove();
-                initPerbantuanPage();
-            } else {
-                alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+            } catch (syncErr) {
+                console.error('Gagal sinkron data bank pegawai ke ref_pegawai:', syncErr);
             }
+
+            showToast('Data perbantuan berhasil diubah');
+            if (refPegawaiErrors.length > 0) {
+                alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disinkronkan ke ref_pegawai:\n\n' + refPegawaiErrors.join('\n'));
+            }
+            overlay.remove();
+            initPerbantuanPage();
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
         } finally {
@@ -830,6 +878,53 @@ function pbApplyDokLinksToTable(links, field) {
     });
 }
 
+// Deteksi tag SPBy-XXXX / Kkp-XXXX / SPM-XXXX di teks Uraian — sama pola
+// dengan kgFindDokTagMatchText di kegiatan.js.
+function pbFindDokTagMatchText(uraian) {
+    const u = String(uraian || '');
+    let m = u.match(/SPBy-\d+/i); if (m) return m[0];
+    m = u.match(/Kkp-\d+/i); if (m) return m[0];
+    m = u.match(/SPM-\d+/i); if (m) return m[0];
+    return null;
+}
+
+// Cari SEMUA id kegiatan (dari pbAllRows) yang harus ikut dapat link dokumen
+// yang sama dengan baris sumber — sama pola dgn kgFindTargetIdsForDokLink.
+function pbFindTargetIdsForDokLink(field, row) {
+    if (field === 'U') {
+        const spmTarget = String(row.R || '').trim();
+        if (spmTarget) {
+            return pbAllRows.filter(r => String(r.R || '').trim() === spmTarget).map(r => r.A);
+        }
+        return [row.A];
+    }
+
+    const uraianSource = String(row.C || '').trim();
+    const tagMatch = pbFindDokTagMatchText(uraianSource);
+    if (tagMatch) {
+        const tagLower = tagMatch.toLowerCase();
+        return pbAllRows.filter(r => String(r.C || '').toLowerCase().includes(tagLower)).map(r => r.A);
+    }
+    return pbAllRows.filter(r => String(r.C || '').trim() === uraianSource).map(r => r.A);
+}
+
+// File dokumen tetap di-upload lewat GAS (butuh akses Drive server-side), tapi
+// link hasilnya disinkronkan ke Supabase di sini.
+async function pbSyncDokLinksToDb(links, field) {
+    const dbField = field === 'T' ? 'dokumen_link' : 'spby_link';
+    const ids = Object.keys(links || {});
+    if (ids.length === 0) return;
+
+    try {
+        await waitSupabaseAuthReady();
+        const rows = ids.map(id => ({ id, [dbField]: links[id] }));
+        const { error } = await sb.from('kegiatan').upsert(rows, { onConflict: 'id' });
+        if (error) throw new Error(error.message);
+    } catch (e) {
+        console.error('Gagal sinkron link dokumen ke Supabase:', e);
+    }
+}
+
 function pbWireDokSlot(opts) {
     const { popup, prefix, id, row, field, uploadAction, deleteAction, allowTempelLink, viewTitle, searchTextForView, rerender } = opts;
 
@@ -862,10 +957,14 @@ function pbWireDokSlot(opts) {
             statusEl.className = 'text-center text-xs text-sky-600 min-h-[16px]';
             setBusy(true);
             try {
-                const result = await apiPost({ action: deleteAction, id: id }, 30000);
+                const result = await apiPost({ action: deleteAction, id: id, uraian: row.C, nomorSPM: row.R }, 30000);
                 if (result.status === 'success') {
+                    const targetIds = pbFindTargetIdsForDokLink(field, row);
+                    const links = {};
+                    targetIds.forEach(tid => { links[tid] = ''; });
                     row[field] = '';
-                    pbApplyDokLinksToTable(result.links || { [id]: '' }, field);
+                    pbApplyDokLinksToTable(links, field);
+                    await pbSyncDokLinksToDb(links, field);
                     showToast('Dokumen berhasil dihapus');
                     rerender();
                 } else {
@@ -915,12 +1014,18 @@ function pbWireDokSlot(opts) {
                 action: uploadAction,
                 id: id,
                 fileData: base64,
-                fileName: file.name
+                fileName: file.name,
+                uraian: row.C,
+                nomorSPM: row.R
             }, 60000);
 
             if (result.status === 'success') {
+                const targetIds = pbFindTargetIdsForDokLink(field, row);
+                const links = {};
+                targetIds.forEach(tid => { links[tid] = result.link; });
                 row[field] = result.link;
-                pbApplyDokLinksToTable(result.links || { [id]: result.link }, field);
+                pbApplyDokLinksToTable(links, field);
+                await pbSyncDokLinksToDb(links, field);
                 showToast('Dokumen berhasil diupload');
                 rerender();
             } else {
@@ -1116,16 +1221,13 @@ function pbHapusRow(row) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menghapus...';
 
         try {
-            const result = await apiPost({ action: 'deleteKegiatan', id: row.A });
-            if (result.status === 'success') {
-                overlay.remove();
-                showToast('Data berhasil dihapus');
-                initPerbantuanPage();
-            } else {
-                alert('Gagal menghapus: ' + (result.message || 'Terjadi kesalahan.'));
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('kegiatan').delete().eq('id', row.A);
+            if (error) throw new Error(error.message);
+
+            overlay.remove();
+            showToast('Data berhasil dihapus');
+            initPerbantuanPage();
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
             btn.disabled = false;
