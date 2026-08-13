@@ -85,8 +85,13 @@
                 koleksi: 'pok',
                 rawArray: true, // action ini return array langsung (bukan {status,rows})
                 paginated: true, // ambil per-halaman (500 baris), gabung di client
-                getId: r => r.kode,
+                // ID dokumen = Kode+Seksi (BUKAN Kode doang) — di sheet, kode akun yang
+                // sama bisa muncul berkali-kali dibedakan per Seksi (mis. "4798.AAH.002"
+                // ada versi PN & versi Penilaian). Kalau ID cuma Kode, baris kedua akan
+                // MENIMPA baris pertama yang Seksi-nya beda -> data hilang.
+                getId: r => `${r.kode}__${r.bidang || 'default'}`,
                 mapField: r => ({
+                    kode: r.kode || '', // field eksplisit -- WAJIB, krn ID dokumen sekarang bukan lagi Kode murni
                     uraian: r.uraian || '', vol: r.vol || '',
                     pagu: Number(r.pagu) || 0, blokir: Number(r.blokir) || 0,
                     realisasi: Number(r.realisasi) || 0, sisa: Number(r.sisa) || 0,
