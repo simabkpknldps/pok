@@ -284,9 +284,9 @@ function openSettings() {
     tabBtnPassword.onclick = () => csActivateTab('password');
     tabBtnTambahPegawai.onclick = () => csActivateTab('tambahPegawai');
 
-    // User dengan akses terbatas (ref_pegawai kolom H = 0) tidak boleh melihat
-    // atau mengakses tab Pejabat sama sekali.
-    if (window.isAksesTerbatas && window.isAksesTerbatas()) {
+    // User tingkat 'biasa' (lihat router.js getAksesLevel()) tidak boleh
+    // melihat atau mengakses tab Pejabat sama sekali.
+    if ((typeof window.getAksesLevel === 'function' ? window.getAksesLevel() : 'biasa') === 'biasa') {
         tabBtnPejabat.remove();
         tabPejabat.remove();
     }
