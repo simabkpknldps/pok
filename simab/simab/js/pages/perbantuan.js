@@ -3,25 +3,26 @@
  * -----------------------------------------------------------------------
  * Halaman "Perbantuan".
  *
- * Sumber data: sheet Data_Kegiatan_2026, hanya baris yang kolom S = 1
- * (difilter di backend GAS lewat action 'getPerbantuanData').
+ * Sumber data TABEL UTAMA: Firestore koleksi 'kegiatan', hanya dokumen yang
+ * field perbantuan = true (pakai cache window.kegiatanRowsCache kalau sudah
+ * ada dari halaman lain, hemat baca). Daftar Tujuan diturunkan dari data yang
+ * sama (nilai unik field tujuan).
+ *
+ * Daftar Pegawai (dipakai popup Tambah Usulan, butuh NIP + rekening bank)
+ * TETAP lewat GAS (action getAllPegawaiData) — koleksi 'pegawai' di Firestore
+ * sengaja dikunci cuma-baca-punya-sendiri (ada data rekening di situ), jadi
+ * tidak bisa dibaca client langsung utk semua pegawai.
  *
  * Kolom yang ditampilkan: B(MAK) C(Uraian) D(Pelaksana) E(Tujuan)
  * F(Tgl ST/ND) G(Tgl Mulai) H(Tgl Selesai) I(Tgl LPT) J(Tgl Bayar)
  * M(Jumlah - rata kanan) P(Status - berwarna).
  *
- 
  * Aksi per baris: pencil (ubah), pegawai (assign pelaksana), detil, hapus.
  * Di atas tabel: search bar + tombol "Tambah Usulan".
  *
- * Backend GAS yang dipakai (lihat file tambahan gas_perbantuan_additions.txt):
- *   - getPerbantuanData   -> load data (filter kolom S = 1)
- *   - simpanPerbantuan    -> tambah usulan baru (set kolom S = 1)
- *   - updateKegiatanDetail-> dipakai tombol pencil (sudah ada di backend)
- *   - updatePelaksanaKegiatan (+ flag isPerbantuan) -> dipakai tombol pegawai
- *   - deleteKegiatan      -> dipakai tombol hapus (sudah ada di backend)
- *   - getDetil (doGet)    -> dipakai tombol detil, menampilkan semua baris
- *                            dengan MAK yang sama (sudah ada di backend)
+ * CATATAN: fitur TULIS (Tambah Usulan, Ubah, Hapus, Dokumen) MASIH lewat GAS
+ * (belum dipindah ke Firestore) — cuma bagian BACA tabel utama yang dikonversi
+ * di sesi ini.
  * -----------------------------------------------------------------------
  */
 
@@ -69,16 +70,50 @@ async function initPerbantuanPage() {
         </td></tr>`;
 
     try {
-        const result = await apiPost({ action: 'getPerbantuanData' });
-        if (result.status !== 'success') {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-red-500 py-10">
-                Gagal memuat data: ${result.message || 'Terjadi kesalahan.'}</td></tr>`;
-            return;
-        }
+        await waitFirebaseAuthReady();
 
-        pbAllRows = pbSortByTglMulai(result.rows || []);
-        pbPegawaiList = result.pegawai || [];
-        pbLokasiList = result.lokasi || [];
+        // Tabel utama + daftar Tujuan: dari Firestore (pakai cache kalau sudah ada
+        // dari halaman lain, hemat baca). Daftar Pegawai (butuh NIP+bank): tetap
+        // dari GAS (getAllPegawaiData) — dijalankan BARENGAN biar tidak nunggu
+        // 2x berurutan.
+        const [kegiatanRows, pegawaiResult] = await Promise.all([
+            (async () => {
+                let rows = window.kegiatanRowsCache;
+                if (!rows) {
+                    const snap = await db.collection('kegiatan').get();
+                    rows = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    window.kegiatanRowsCache = rows;
+                }
+                return rows;
+            })(),
+            apiPost({ action: 'getAllPegawaiData' }).catch(e => {
+                console.error('Gagal memuat daftar pegawai:', e);
+                return { status: 'error', rows: [] };
+            })
+        ]);
+
+        const perbantuanRows = kegiatanRows
+            .filter(r => r.perbantuan === true)
+            .map(r => ({
+                A: r.id, B: r.mak || '', C: r.uraian || '', D: r.pelaksana || '', E: r.tujuan || '',
+                F: r.tglST || '', G: r.tglMulai || '', H: r.tglSelesai || '',
+                I: r.tglLPT || '', J: r.tglBayar || '',
+                M: Number(r.jumlah) || 0, N: r.user || '', P: r.status || '',
+                T: r.dokumenLink || '', U: r.spbyLink || ''
+            }));
+
+        pbAllRows = pbSortByTglMulai(perbantuanRows);
+
+        // Daftar Pegawai: dari GAS (nama+nip+kepeg+bank, dibutuhkan popup Tambah
+        // Usulan) — field kepeg (1=PNS/0=PPNPN) dipetakan ke nama 'status' yang
+        // sudah dipakai di seluruh file ini, namaBank/noRekening dipetakan ke
+        // namaBank/norek.
+        pbPegawaiList = (pegawaiResult.status === 'success' ? pegawaiResult.rows || [] : [])
+            .map(p => ({ nama: p.nama, nip: p.nip, status: p.kepeg, namaBank: p.namaBank, norek: p.noRekening }));
+
+        // Daftar Tujuan diturunkan dari nilai unik field 'tujuan' di kegiatan
+        // Firestore — bukan lagi bagian dari action GAS terpisah.
+        pbLokasiList = [...new Set(kegiatanRows.map(r => String(r.tujuan || '').trim()).filter(Boolean))].sort();
 
         pbApplyFilters();
         pbBindSearch();
