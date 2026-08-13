@@ -57,6 +57,7 @@ function bindKegiatanEvents() {
     };
     document.getElementById('kg-btnDownloadExcel').onclick = kgDownloadExcel;
     document.getElementById('kg-btnOpenNominatif').onclick = kgOpenNominatifPopup;
+    document.getElementById('kg-btnTambahKegiatan').onclick = kgOpenTambahKegiatanPopup;
 
     const runSearch = () => {
         kgQuery.search = document.getElementById('kg-searchBox').value.trim();
@@ -503,6 +504,147 @@ function kgShowPegawaiDetilPopup(nama) {
         }
     })();
 }
+
+// ---- Tambah Kegiatan (dari halaman Kegiatan / popup Search global) ----
+// Field & alurnya sengaja dibuat MIRIP "Rekam Kegiatan" di halaman POK, tapi
+// MAK-nya dipilih lewat popup "Pilih MAK dari POK" (kgOpenPilihMakPopup, sudah
+// ada) — jadi tidak perlu bolak-balik buka halaman POK dulu buat klik barisnya.
+function kgOpenTambahKegiatanPopup() {
+    const idKegiatan = kgGenerateRandomId(10);
+
+    const { overlay, popup } = kgOpenOverlay(`
+        <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Tambah Kegiatan Baru</h3>
+        <label class="${kgLabelClass}">ID Usulan</label>
+        <input id="tk-idUsulan" type="text" readonly value="${idKegiatan}" class="${kgInputClass} bg-slate-100 text-slate-500 cursor-not-allowed">
+
+        <label class="${kgLabelClass}">No ST/ND / Uraian Kegiatan</label>
+        <input id="tk-uraian" type="text" class="${kgInputClass}">
+
+        <label class="${kgLabelClass}">Tgl ST/ND</label>
+        <input id="tk-tglSt" type="date" class="${kgInputClass}">
+
+        <label class="${kgLabelClass}">Tujuan</label>
+        <input id="tk-tujuan" type="text" list="kg-listLokasi" class="${kgInputClass}">
+
+        <label class="${kgLabelClass}">MAK</label>
+        <div class="flex gap-2">
+            <input id="tk-mak" type="text" readonly placeholder="Belum dipilih" class="${kgInputClass} bg-slate-100 text-slate-500 cursor-not-allowed flex-1">
+            <button id="tk-btnPilihMak" type="button" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium shrink-0 whitespace-nowrap">
+                <i class="fa-solid fa-list-check mr-1"></i> Pilih MAK
+            </button>
+        </div>
+        <label class="${kgLabelClass}">Uraian MAK</label>
+        <input id="tk-uraianMak" type="text" readonly class="${kgInputClass} bg-slate-100 text-slate-500">
+
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="${kgLabelClass}">Pagu</label>
+                <input id="tk-pagu" type="text" readonly class="${kgInputClass} bg-slate-100 text-slate-500">
+            </div>
+            <div>
+                <label class="${kgLabelClass}">Blokir</label>
+                <input id="tk-blokir" type="text" readonly class="${kgInputClass} bg-slate-100 text-slate-500">
+            </div>
+            <div>
+                <label class="${kgLabelClass}">Realisasi</label>
+                <input id="tk-realisasi" type="text" readonly class="${kgInputClass} bg-slate-100 text-slate-500">
+            </div>
+            <div>
+                <label class="${kgLabelClass}">Sisa</label>
+                <input id="tk-sisa" type="text" readonly class="${kgInputClass} bg-slate-100 text-slate-500">
+            </div>
+        </div>
+
+        <label class="${kgLabelClass}">Estimasi Biaya</label>
+        <input id="tk-estimasi" type="text" class="${kgInputClass}">
+
+        <label class="${kgLabelClass}">Status Kecukupan Dana</label>
+        <input id="tk-statusDana" readonly value="Dana Tersedia" class="${kgInputClass}">
+
+        <div class="flex justify-end gap-2 mt-3">
+            <button id="tk-cancel" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Batal</button>
+            <button id="tk-simpan" class="px-4 py-2 bg-sky-500 text-white rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+            </button>
+        </div>
+    `, 'max-w-lg');
+
+    let makTerpilih = null;
+    const estimasiInput = popup.querySelector('#tk-estimasi');
+    const statusEl = popup.querySelector('#tk-statusDana');
+
+    function cekEstimasi() {
+        const sisa = makTerpilih ? Number(makTerpilih.sisa) || 0 : 0;
+        const estimasi = Number(estimasiInput.value.replace(/\./g, '')) || 0;
+        if (makTerpilih && estimasi > sisa) {
+            statusEl.value = 'Dana Tidak Cukup';
+            statusEl.className = `${kgInputClass} border-red-300 bg-red-50 text-red-700 font-bold`;
+        } else if (estimasi === 0) {
+            statusEl.value = 'Dana Tersedia';
+            statusEl.className = kgInputClass;
+        } else {
+            statusEl.value = 'Dana Tersedia';
+            statusEl.className = `${kgInputClass} border-green-300 bg-green-50 text-green-700 font-bold`;
+        }
+    }
+    estimasiInput.addEventListener('input', () => {
+        estimasiInput.value = formatRibuan(estimasiInput.value);
+        cekEstimasi();
+    });
+
+    popup.querySelector('#tk-btnPilihMak').onclick = () => {
+        kgOpenPilihMakPopup((kode) => {
+            const item = kgMakPokData.find(r => String(r.kode) === String(kode));
+            if (!item) return;
+            makTerpilih = item;
+            popup.querySelector('#tk-mak').value = item.kode;
+            popup.querySelector('#tk-uraianMak').value = item.uraian;
+            popup.querySelector('#tk-pagu').value = Number(item.pagu || 0).toLocaleString('id-ID');
+            popup.querySelector('#tk-blokir').value = Number(item.blokir || 0).toLocaleString('id-ID');
+            popup.querySelector('#tk-realisasi').value = Number(item.realisasi || 0).toLocaleString('id-ID');
+            popup.querySelector('#tk-sisa').value = Number(item.sisa || 0).toLocaleString('id-ID');
+            cekEstimasi();
+        });
+    };
+
+    popup.querySelector('#tk-cancel').onclick = () => overlay.remove();
+    popup.querySelector('#tk-simpan').onclick = async function () {
+        const btn = this;
+        if (!makTerpilih) { alert('Pilih MAK terlebih dahulu.'); return; }
+        const uraian = popup.querySelector('#tk-uraian').value.trim();
+        if (!uraian) { alert('Uraian tidak boleh kosong.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+        try {
+            await waitFirebaseAuthReady();
+            const namaUser = localStorage.getItem('nama') || 'Guest';
+            await db.collection('kegiatan').doc(idKegiatan).set({
+                mak: makTerpilih.kode,
+                uraian,
+                pelaksana: '',
+                tujuan: popup.querySelector('#tk-tujuan').value,
+                tglST: popup.querySelector('#tk-tglSt').value,
+                tglMulai: '', tglSelesai: '', tglLPT: '', tglBayar: '',
+                jumlah: Number(estimasiInput.value.replace(/\./g, '')) || 0,
+                user: namaUser,
+                status: 'Rekam Data',
+                tglSP2D: '', nomorSPM: '', dokumenLink: '', spbyLink: '',
+                tglRekam: new Date().toISOString().split('T')[0],
+                perbantuan: false
+            });
+
+            overlay.remove();
+            showToast('Kegiatan berhasil disimpan');
+            kgLoadData(true);
+        } catch (e) {
+            alert('Gagal menyimpan: ' + (e.message || e));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+window.kgOpenTambahKegiatanPopup = kgOpenTambahKegiatanPopup;
 
 // ---- Ubah Kegiatan ----
 function kgShowEditPopup(tr) {
