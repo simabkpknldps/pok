@@ -73,9 +73,11 @@ async function initPerbantuanPage() {
 
         // Tabel utama + daftar Tujuan: dari Supabase (pakai cache kalau sudah ada
         // dari halaman lain, hemat baca). Daftar Pegawai (butuh NIP+bank): tetap
-        // dari GAS (getAllPegawaiData) — dijalankan BARENGAN biar tidak nunggu
-        // 2x berurutan.
-        const [kegiatanRows, pegawaiResult] = await Promise.all([
+        // dari GAS (getAllPegawaiData) — TAPI sekarang di-cache juga
+        // (window.pegawaiListCache), supaya kunjungan berikutnya ke halaman ini
+        // dalam sesi yang sama tidak perlu nunggu GAS lagi (GAS jauh lebih lambat
+        // dari Supabase, itu penyebab utama loading lama).
+        const [kegiatanRows, pegawaiRows] = await Promise.all([
             (async () => {
                 let rows = window.kegiatanRowsCache;
                 if (!rows) {
@@ -84,10 +86,18 @@ async function initPerbantuanPage() {
                 }
                 return rows;
             })(),
-            apiPost({ action: 'getAllPegawaiData' }).catch(e => {
-                console.error('Gagal memuat daftar pegawai:', e);
-                return { status: 'error', rows: [] };
-            })
+            (async () => {
+                if (window.pegawaiListCache) return window.pegawaiListCache;
+                try {
+                    const result = await apiPost({ action: 'getAllPegawaiData' });
+                    const rows = result.status === 'success' ? (result.rows || []) : [];
+                    window.pegawaiListCache = rows;
+                    return rows;
+                } catch (e) {
+                    console.error('Gagal memuat daftar pegawai:', e);
+                    return [];
+                }
+            })()
         ]);
 
         const perbantuanRows = kegiatanRows
@@ -97,6 +107,7 @@ async function initPerbantuanPage() {
                 F: r.tgl_st || '', G: r.tgl_mulai || '', H: r.tgl_selesai || '',
                 I: r.tgl_lpt || '', J: r.tgl_bayar || '',
                 M: Number(r.jumlah) || 0, N: r.user || '', P: r.status || '',
+                Q: r.tgl_sp2d || '', R: r.nomor_spm || '',
                 T: r.dokumen_link || '', U: r.spby_link || ''
             }));
 
@@ -106,7 +117,7 @@ async function initPerbantuanPage() {
         // Usulan) — field kepeg (1=PNS/0=PPNPN) dipetakan ke nama 'status' yang
         // sudah dipakai di seluruh file ini, namaBank/noRekening dipetakan ke
         // namaBank/norek.
-        pbPegawaiList = (pegawaiResult.status === 'success' ? pegawaiResult.rows || [] : [])
+        pbPegawaiList = pegawaiRows
             .map(p => ({ nama: p.nama, nip: p.nip, status: p.kepeg, namaBank: p.namaBank, norek: p.noRekening }));
 
         // Daftar Tujuan diturunkan dari nilai unik kolom 'tujuan' di kegiatan
