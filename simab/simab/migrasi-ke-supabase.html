@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrasi Firestore → Supabase — SiMAB</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #1e293b; }
+        h1 { font-size: 20px; }
+        p.desc { color: #64748b; font-size: 14px; }
+        .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 16px; }
+        .card h2 { font-size: 15px; margin: 0 0 4px; }
+        .card .ket { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
+        button { padding: 9px 16px; border-radius: 8px; border: none; background: #3ecf8e; color: white; font-size: 13px; cursor: pointer; margin-right: 8px; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .status { margin-top: 10px; font-size: 13px; }
+        .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Migrasi Firestore → Supabase</h1>
+    <p class="desc">Ambil data dari Firestore (yang sudah kita migrasi sebelumnya), tulis ke tabel Supabase. Tiap kartu independen, urutan bebas.</p>
+
+    <div class="warn">
+        ⚠️ Pastikan RLS Supabase sudah dibuka sementara (jalankan <code>supabase-rls-open-temp.sql</code> dulu), dan kamu sudah login di SiMAB (buat akses Firestore).
+    </div>
+
+    <!-- 1. Pegawai -->
+    <div class="card">
+        <h2>1. Pegawai</h2>
+        <div class="ket">Firestore koleksi 'pegawai' → tabel pegawai. Id = NIP.</div>
+        <button data-m="pegawai" class="btnAmbil">Ambil dari Firestore</button>
+        <button data-m="pegawai" class="btnTulis" disabled>Tulis ke Supabase</button>
+        <div class="status" id="status-pegawai"></div>
+    </div>
+
+    <!-- 2. Kegiatan -->
+    <div class="card">
+        <h2>2. Kegiatan</h2>
+        <div class="ket">Firestore koleksi 'kegiatan' → tabel kegiatan. Id = id kegiatan (sama seperti Firestore).</div>
+        <button data-m="kegiatan" class="btnAmbil">Ambil dari Firestore</button>
+        <button data-m="kegiatan" class="btnTulis" disabled>Tulis ke Supabase</button>
+        <div class="status" id="status-kegiatan"></div>
+    </div>
+
+    <!-- 3. POK -->
+    <div class="card">
+        <h2>3. POK</h2>
+        <div class="ket">Firestore koleksi 'pok' → tabel pok. Id = Kode+Seksi (sama seperti Firestore).</div>
+        <button data-m="pok" class="btnAmbil">Ambil dari Firestore</button>
+        <button data-m="pok" class="btnTulis" disabled>Tulis ke Supabase</button>
+        <div class="status" id="status-pok"></div>
+    </div>
+
+    <!-- 4. Blokir -->
+    <div class="card">
+        <h2>4. Blokir</h2>
+        <div class="ket">Firestore koleksi 'blokir' → tabel blokir. Id = Kode.</div>
+        <button data-m="blokir" class="btnAmbil">Ambil dari Firestore</button>
+        <button data-m="blokir" class="btnTulis" disabled>Tulis ke Supabase</button>
+        <div class="status" id="status-blokir"></div>
+    </div>
+
+    <!-- 5. SBM -->
+    <div class="card">
+        <h2>5. SBM Uang Harian</h2>
+        <div class="ket">Firestore koleksi 'sbm' → tabel sbm. Id = nama Kabupaten/Kota.</div>
+        <button data-m="sbm" class="btnAmbil">Ambil dari Firestore</button>
+        <button data-m="sbm" class="btnTulis" disabled>Tulis ke Supabase</button>
+        <div class="status" id="status-sbm"></div>
+    </div>
+
+    <!-- Firebase (sumber baca) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <!-- Supabase (tujuan tulis) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+
+    <script>
+        // Ubah tanggal string kosong/invalid jadi null (kolom 'date' Postgres
+        // menolak string kosong, harus null).
+        function normDate(v) {
+            const s = String(v || '').trim();
+            return s ? s : null;
+        }
+
+        const KONFIG = {
+            pegawai: {
+                tabel: 'pegawai',
+                koleksiFirestore: 'pegawai',
+                mapRow: (id, d) => ({
+                    id, nama: d.nama || '', jabatan: d.jabatan || '', pangkat: d.pangkat || '',
+                    kepeg: d.kepeg || '', admin: d.admin || '', akses_menu: d.aksesMenu || '',
+                    nama_bank: d.namaBank || '', no_rekening: d.noRekening || ''
+                })
+            },
+            kegiatan: {
+                tabel: 'kegiatan',
+                koleksiFirestore: 'kegiatan',
+                mapRow: (id, d) => ({
+                    id, mak: d.mak || '', uraian: d.uraian || '', pelaksana: d.pelaksana || '',
+                    tujuan: d.tujuan || '', tgl_st: normDate(d.tglST), tgl_mulai: normDate(d.tglMulai),
+                    tgl_selesai: normDate(d.tglSelesai), tgl_lpt: normDate(d.tglLPT), tgl_bayar: normDate(d.tglBayar),
+                    jumlah: Number(d.jumlah) || 0, user: d.user || '', status: d.status || '',
+                    tgl_sp2d: normDate(d.tglSP2D), nomor_spm: d.nomorSPM || '',
+                    dokumen_link: d.dokumenLink || '', spby_link: d.spbyLink || '',
+                    tgl_rekam: normDate(d.tglRekam), perbantuan: !!d.perbantuan
+                })
+            },
+            pok: {
+                tabel: 'pok',
+                koleksiFirestore: 'pok',
+                mapRow: (id, d) => ({
+                    id, kode: d.kode || id, uraian: d.uraian || '', pagu: Number(d.pagu) || 0,
+                    sd: d.sd || '', seksi: d.seksi || '', ba: d.ba || '', es_i: d.esI || '',
+                    prog: d.prog || '', satker: d.satker || '', kppn: d.kppn || ''
+                })
+            },
+            blokir: {
+                tabel: 'blokir',
+                koleksiFirestore: 'blokir',
+                mapRow: (id, d) => ({ id, keterangan: d.keterangan || '', nilai: Number(d.nilai) || 0 })
+            },
+            sbm: {
+                tabel: 'sbm',
+                koleksiFirestore: 'sbm',
+                mapRow: (id, d) => ({
+                    id, luar_kota: Number(d.luarKota) || 0, dalam_kota: Number(d.dalamKota) || 0,
+                    diklat: Number(d.diklat) || 0
+                })
+            }
+        };
+
+        const dataStore = {};
+
+        function setStatus(m, msg, warna) {
+            const el = document.getElementById('status-' + m);
+            el.textContent = msg;
+            el.style.color = warna || '#0369a1';
+        }
+
+        document.querySelectorAll('.btnAmbil').forEach(btn => {
+            btn.onclick = async function () {
+                const m = this.dataset.m;
+                const cfg = KONFIG[m];
+
+                if (!localStorage.getItem('nama') || !localStorage.getItem('realUrl')) {
+                    setStatus(m, '❌ Belum login di SiMAB.', '#dc2626');
+                    return;
+                }
+
+                this.disabled = true;
+                setStatus(m, 'Mengambil data dari Firestore...', '#0369a1');
+
+                try {
+                    await waitFirebaseAuthReady();
+                    const snap = await db.collection(cfg.koleksiFirestore).get();
+                    const rows = snap.docs.map(doc => cfg.mapRow(doc.id, doc.data()));
+
+                    dataStore[m] = rows;
+                    setStatus(m, `✅ ${rows.length} baris berhasil diambil.`, '#15803d');
+                    document.querySelector(`.btnTulis[data-m="${m}"]`).disabled = rows.length === 0;
+                } catch (e) {
+                    setStatus(m, '❌ ' + (e.message || e), '#dc2626');
+                } finally {
+                    this.disabled = false;
+                }
+            };
+        });
+
+        document.querySelectorAll('.btnTulis').forEach(btn => {
+            btn.onclick = async function () {
+                const m = this.dataset.m;
+                const cfg = KONFIG[m];
+                const rows = dataStore[m] || [];
+
+                if (rows.length === 0) {
+                    setStatus(m, '❌ Belum ada data. Klik "Ambil dari Firestore" dulu.', '#dc2626');
+                    return;
+                }
+
+                this.disabled = true;
+                setStatus(m, `Menulis 0/${rows.length}...`, '#0369a1');
+
+                const BATCH_SIZE = 500;
+                let ditulis = 0;
+
+                try {
+                    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+                        const chunk = rows.slice(i, i + BATCH_SIZE);
+                        const { error } = await sb.from(cfg.tabel).upsert(chunk, { onConflict: 'id' });
+                        if (error) throw new Error(error.message);
+
+                        ditulis += chunk.length;
+                        setStatus(m, `Menulis ${ditulis}/${rows.length}...`, '#0369a1');
+                    }
+
+                    setStatus(m, `✅ Selesai! ${ditulis} baris tertulis ke Supabase.`, '#15803d');
+                } catch (e) {
+                    setStatus(m, '❌ Gagal di tengah proses: ' + (e.message || e), '#dc2626');
+                } finally {
+                    this.disabled = false;
+                }
+            };
+        });
+    </script>
+</body>
+</html>
