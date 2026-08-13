@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Perbaiki Flag Perbantuan — SiMAB</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 650px; margin: 60px auto; padding: 0 20px; color: #1e293b; }
+        h1 { font-size: 20px; }
+        #hasil { margin-top: 20px; padding: 16px; border-radius: 10px; font-size: 13px; white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; }
+        .loading { background: #f0f9ff; color: #0369a1; }
+        .sukses { background: #f0fdf4; color: #15803d; }
+        .gagal { background: #fef2f2; color: #dc2626; }
+        button { margin-top: 16px; padding: 10px 18px; border-radius: 8px; border: none; background: #dc2626; color: white; font-size: 14px; cursor: pointer; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🩹 Perbaiki Flag Perbantuan (Sekali Pakai)</h1>
+    <p>Sinkron ulang kolom <code>perbantuan</code> di tabel <code>kegiatan</code> (Supabase) dari kolom S sheet <code>Data_Kegiatan_2026</code> — migrasi paling awal kelewat kolom ini. HANYA baris yang perbantuan-nya <strong>TRUE</strong> di sheet yang akan diupdate (baris lain dibiarkan, tidak menimpa data yang sudah benar/sudah diedit lewat aplikasi).</p>
+
+    <div class="warn">⚠️ Login dulu di SiMAB (tab lain) sebelum pakai halaman ini.</div>
+
+    <button id="btnJalankan">Jalankan Perbaikan</button>
+    <div id="hasil"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.getElementById('btnJalankan').onclick = async function () {
+            const btn = this;
+            const hasilEl = document.getElementById('hasil');
+
+            if (!localStorage.getItem('nama') || !localStorage.getItem('realUrl')) {
+                hasilEl.className = 'gagal';
+                hasilEl.textContent = '❌ Belum login di SiMAB.';
+                return;
+            }
+
+            btn.disabled = true;
+            hasilEl.className = 'loading';
+            hasilEl.textContent = 'Mengambil data flag perbantuan dari Sheet...';
+
+            try {
+                const result = await apiPost({ action: 'getPerbantuanFlags' }, 60000);
+                if (result.status !== 'success') throw new Error(result.message || 'Gagal ambil data dari GAS.');
+
+                const rows = (result.rows || []).filter(r => r.perbantuan === true);
+                hasilEl.textContent += `\n✅ ${rows.length} baris dengan perbantuan=TRUE ditemukan di Sheet.`;
+
+                if (rows.length === 0) {
+                    hasilEl.className = 'sukses';
+                    hasilEl.textContent += '\n\nTidak ada yang perlu diupdate.';
+                    btn.disabled = false;
+                    return;
+                }
+
+                hasilEl.textContent += '\nMenulis ke Supabase...';
+                await waitSupabaseAuthReady();
+
+                const BATCH_SIZE = 200;
+                let sukses = 0, gagal = 0;
+                for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+                    const chunk = rows.slice(i, i + BATCH_SIZE);
+                    const ids = chunk.map(r => r.id);
+                    const { error, count } = await sb.from('kegiatan')
+                        .update({ perbantuan: true })
+                        .in('id', ids)
+                        .select('id', { count: 'exact' });
+                    if (error) {
+                        gagal += chunk.length;
+                        hasilEl.textContent += `\n❌ Batch gagal: ${error.message}`;
+                    } else {
+                        sukses += (count ?? chunk.length);
+                    }
+                    hasilEl.textContent += `\nProgress: ${Math.min(i + BATCH_SIZE, rows.length)}/${rows.length}`;
+                }
+
+                hasilEl.className = 'sukses';
+                hasilEl.textContent += `\n\n🎉 SELESAI. ${sukses} baris berhasil diupdate jadi perbantuan=true${gagal > 0 ? `, ${gagal} gagal` : ''}.`;
+            } catch (e) {
+                hasilEl.className = 'gagal';
+                hasilEl.textContent = '❌ ' + (e.message || e);
+            } finally {
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
