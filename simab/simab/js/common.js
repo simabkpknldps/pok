@@ -579,6 +579,16 @@ function csBindRekeningButtons(popup) {
                 .eq('id', nip);
             if (error) throw new Error(error.message);
 
+            // Buat/timpa notifikasi utk admin (id=nip -> maks 1 notifikasi
+            // pending per pegawai; upsert supaya perubahan berulang sebelum
+            // notifikasi lama sempat dihapus tetap aman, bukan error duplikat).
+            const namaUser = localStorage.getItem('nama') || '';
+            const { error: notifError } = await sb.from('notifikasi').upsert({
+                id: nip, nama: namaUser, keterangan: 'Ubah Nomor Rekening',
+                tanggal: new Date().toISOString()
+            });
+            if (notifError) console.error('Gagal membuat notifikasi:', notifError);
+
             showToast('Data rekening berhasil diubah');
 
             bankSelect.disabled = true;
@@ -589,8 +599,6 @@ function csBindRekeningButtons(popup) {
             btnSimpan.classList.add('hidden');
             btnUbah.classList.remove('hidden');
 
-            // Muncul notifikasi baru di sheet -> refresh lonceng notifikasi
-            // (sistem notifikasi masih GAS/Sheet, belum dikonversi)
             if (typeof refreshNotifikasi === 'function') refreshNotifikasi();
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
@@ -612,7 +620,7 @@ async function csLoadPejabatData(popup) {
 
     try {
         await waitSupabaseAuthReady();
-        const { data, error } = await sb.from('pejabat').select('*').eq('id', 'main').single();
+        const { data, error } = await sb.from('pejabat').select('*').eq('id', 'main').maybeSingle();
         if (error) throw new Error(error.message);
 
         popup.querySelector('#cs-ppkNama').value = data?.ppk_nama || '';
@@ -701,34 +709,33 @@ async function refreshNotifikasi() {
     const listEl = document.getElementById('notif-list');
     if (!badge || !listEl) return; // halaman ini tidak punya lonceng notifikasi
 
-    const nip = localStorage.getItem('nip') || '';
-
     try {
-        const result = await apiPost({ action: 'getNotifikasiData', nip });
-        if (result.status !== 'success') return;
+        await waitSupabaseAuthReady();
+        const { data, error } = await sb.from('notifikasi').select('*').order('tanggal', { ascending: false });
+        if (error) { console.error('Gagal memuat notifikasi', error); return; }
 
-        const data = result.data || [];
+        const rows = data || [];
 
-        if (data.length > 0) {
-            badge.textContent = data.length > 99 ? '99+' : String(data.length);
+        if (rows.length > 0) {
+            badge.textContent = rows.length > 99 ? '99+' : String(rows.length);
             badge.classList.remove('hidden');
         } else {
             badge.classList.add('hidden');
         }
 
-        if (data.length === 0) {
+        if (rows.length === 0) {
             listEl.innerHTML = `<div class="p-4 text-center text-slate-400 text-sm">Tidak ada notifikasi</div>`;
             return;
         }
 
-        listEl.innerHTML = data.map(n => `
+        listEl.innerHTML = rows.map(n => `
             <div class="p-3 flex items-start gap-2 hover:bg-slate-50">
-                <div class="flex-1 min-w-0 cursor-pointer notif-item" data-nip="${n.nip}" title="Lihat detail rekening">
+                <div class="flex-1 min-w-0 cursor-pointer notif-item" data-nip="${n.id}" title="Lihat detail rekening">
                     <p class="text-sm font-medium text-slate-700 truncate">${n.nama}</p>
                     <p class="text-xs text-slate-500">${n.keterangan}</p>
                     <p class="text-[11px] text-slate-400 mt-0.5">${n.tanggal}</p>
                 </div>
-                <button class="notif-delete-btn text-slate-300 hover:text-red-500 text-sm shrink-0" title="Hapus notifikasi" data-row="${n.row}">
+                <button class="notif-delete-btn text-slate-300 hover:text-red-500 text-sm shrink-0" title="Hapus notifikasi" data-id="${n.id}">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
@@ -746,18 +753,13 @@ async function refreshNotifikasi() {
         listEl.querySelectorAll('.notif-delete-btn').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
-                const row = btn.getAttribute('data-row');
+                const id = btn.getAttribute('data-id');
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
                 try {
-                    const res = await apiPost({ action: 'deleteNotifikasi', nip, row });
-                    if (res.status === 'success') {
-                        refreshNotifikasi();
-                    } else {
-                        alert('Gagal hapus notifikasi: ' + (res.message || 'Terjadi kesalahan.'));
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fa-solid fa-trash"></i>';
-                    }
+                    const { error: delError } = await sb.from('notifikasi').delete().eq('id', id);
+                    if (delError) throw new Error(delError.message);
+                    refreshNotifikasi();
                 } catch (err) {
                     alert('Error koneksi: ' + (err.message || 'Tidak diketahui'));
                     btn.disabled = false;
@@ -772,7 +774,6 @@ async function refreshNotifikasi() {
 
 // Popup detail rekening, dipanggil saat sebuah notifikasi diklik
 async function showNotifRekeningDetail(nip) {
-    const viewerNip = localStorage.getItem('nip') || '';
 
     const { overlay, popup } = commonOpenOverlay(`
         <div class="flex items-center justify-between mb-1">
@@ -800,19 +801,19 @@ async function showNotifRekeningDetail(nip) {
     const contentEl = popup.querySelector('#nrd-content');
 
     try {
-        const result = await apiPost({ action: 'getRekeningDetailByNip', nip, viewerNip });
-        if (result.status === 'success') {
-            popup.querySelector('#nrd-nama').value = result.nama || '';
-            popup.querySelector('#nrd-nip').value = result.nip || '';
-            popup.querySelector('#nrd-bank').value = result.namaBank || '';
-            popup.querySelector('#nrd-norek').value = result.norek || '';
+        await waitSupabaseAuthReady();
+        const { data, error } = await sb.from('pegawai').select('nama, nama_bank, no_rekening').eq('id', nip).maybeSingle();
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('Data pegawai tidak ditemukan.');
 
-            loadingEl.classList.add('hidden');
-            contentEl.classList.remove('hidden');
-            contentEl.classList.add('flex');
-        } else {
-            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data rekening'}</span>`;
-        }
+        popup.querySelector('#nrd-nama').value = data.nama || '';
+        popup.querySelector('#nrd-nip').value = nip;
+        popup.querySelector('#nrd-bank').value = data.nama_bank || '';
+        popup.querySelector('#nrd-norek').value = data.no_rekening || '';
+
+        loadingEl.classList.add('hidden');
+        contentEl.classList.remove('hidden');
+        contentEl.classList.add('flex');
     } catch (e) {
         loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data rekening'}</span>`;
     }
