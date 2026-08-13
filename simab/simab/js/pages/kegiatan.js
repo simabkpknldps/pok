@@ -771,16 +771,45 @@ async function kgOpenPilihMakPopup(onPilih) {
 
     try {
         await waitFirebaseAuthReady();
-        const snap = await db.collection('pok').get();
-        const data = snap.docs.map(doc => {
+
+        // Ambil pok & kegiatan BARENGAN (pakai cache kegiatan kalau sudah ada dari
+        // halaman lain, spy hemat baca) — Realisasi/Sisa dihitung LIVE persis sama
+        // seperti di halaman POK (pok.js loadPokData), BUKAN baca field
+        // realisasi/sisa yang tersimpan statis di Firestore (itu gampang basi).
+        let kegiatanRows = window.kegiatanRowsCache;
+        const fetchKegiatan = kegiatanRows
+            ? Promise.resolve(null)
+            : db.collection('kegiatan').get();
+
+        const [pokSnap, kegiatanSnap] = await Promise.all([
+            db.collection('pok').get(),
+            fetchKegiatan
+        ]);
+
+        if (kegiatanSnap) {
+            kegiatanRows = kegiatanSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.kegiatanRowsCache = kegiatanRows;
+        }
+
+        const realisasiByMak = {};
+        kegiatanRows.forEach(d => {
+            const mak = String(d.mak || '').trim();
+            if (!mak) return;
+            realisasiByMak[mak] = (realisasiByMak[mak] || 0) + (Number(d.jumlah) || 0);
+        });
+
+        const data = pokSnap.docs.map(doc => {
             const d = doc.data();
+            const kode = d.kode || doc.id; // fallback ke doc.id kalau data lama blm ada field kode
+            const pagu = d.pagu || 0;
+            const blokir = d.blokir || 0;
+            const realisasi = realisasiByMak[kode] || 0; // LIVE, dikunci per Kode
+            const sisa = pagu - blokir - realisasi; // LIVE
             return {
-                kode: doc.id,
+                docId: doc.id,
+                kode,
                 uraian: d.uraian || '',
-                pagu: d.pagu || 0,
-                blokir: d.blokir || 0,
-                realisasi: d.realisasi || 0,
-                sisa: d.sisa || 0,
+                pagu, blokir, realisasi, sisa,
                 sumber: d.sd || '',
                 bidang: d.seksi || '',
                 ba: d.ba || '',
