@@ -11,7 +11,6 @@
  * P status, R nomorSPM.
  */
 
-
 let kgCurrentTableRowsData = [];
 let kgAllRows = [];       // SEMUA data dari Firestore (dimuat sekali per masuk halaman/Refresh)
 let kgPegawaiList = [];
