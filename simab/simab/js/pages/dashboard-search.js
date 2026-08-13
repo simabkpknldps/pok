@@ -70,6 +70,7 @@
 
 
 
+
 const DASH_GS_SEARCH_COLS = ['C', 'D', 'E', 'G', 'P', 'R'];
 
 
