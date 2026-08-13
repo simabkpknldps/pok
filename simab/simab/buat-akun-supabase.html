@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buat Akun Auth Pegawai (Supabase) — SiMAB</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #1e293b; }
+        h1 { font-size: 20px; }
+        p.desc { color: #64748b; font-size: 14px; }
+        .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 16px; }
+        button { padding: 10px 18px; border-radius: 8px; border: none; background: #3ecf8e; color: white; font-size: 14px; cursor: pointer; }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; }
+        #progressBarWrap { background: #f1f5f9; border-radius: 8px; height: 10px; margin-top: 12px; overflow: hidden; }
+        #progressBar { background: #3ecf8e; height: 100%; width: 0%; transition: width .2s; }
+        #status { margin-top: 10px; font-size: 14px; }
+        #log { margin-top: 12px; font-size: 12px; white-space: pre-wrap; font-family: monospace; background: #f8fafc; padding: 12px; border-radius: 8px; max-height: 350px; overflow-y: auto; }
+        .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Buat Akun Supabase Auth — Pegawai</h1>
+    <p class="desc">Bikin akun login Supabase Auth utk semua pegawai, berdasarkan daftar NIP dari GAS (action <code>getAllPegawaiData</code> — bukan dari tabel Supabase, supaya tidak perlu buka RLS lagi). Email dibuat otomatis dari NIP: <code>&lt;NIP&gt;@simab.local</code>, password default = NIP itu sendiri (sama seperti pola di Firebase).</p>
+
+    <div class="warn">
+        ⚠️ Login dulu di SiMAB (tab lain) sebelum pakai halaman ini.
+    </div>
+
+    <div class="card">
+        <button id="btnMulai">Mulai Buat Akun</button>
+        <div id="progressBarWrap"><div id="progressBar"></div></div>
+        <div id="status"></div>
+    </div>
+
+    <div id="log"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        const logEl = document.getElementById('log');
+        function log(msg) {
+            logEl.textContent += msg + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function nipToEmail(nip) {
+            return `${String(nip).trim()}@simab.local`;
+        }
+
+        document.getElementById('btnMulai').onclick = async function () {
+            const btn = this;
+            const statusEl = document.getElementById('status');
+            const progressBar = document.getElementById('progressBar');
+
+            if (!localStorage.getItem('nama') || !localStorage.getItem('realUrl')) {
+                statusEl.textContent = '❌ Belum login. Login dulu di index.html.';
+                statusEl.style.color = '#dc2626';
+                return;
+            }
+
+            btn.disabled = true;
+            statusEl.textContent = 'Mengambil daftar pegawai dari GAS...';
+            statusEl.style.color = '#0369a1';
+
+            let pegawai = [];
+            try {
+                const result = await apiPost({ action: 'getAllPegawaiData' }, 60000);
+                if (result.status !== 'success') throw new Error(result.message || 'Gagal mengambil data pegawai.');
+                pegawai = result.rows || [];
+            } catch (e) {
+                statusEl.textContent = '❌ ' + (e.message || e);
+                statusEl.style.color = '#dc2626';
+                btn.disabled = false;
+                return;
+            }
+
+            log(`Ditemukan ${pegawai.length} pegawai. Mulai bikin akun satu-satu...\n`);
+
+            let sukses = 0, sudahAda = 0, gagalLain = 0;
+
+            for (let i = 0; i < pegawai.length; i++) {
+                const p = pegawai[i];
+                const nip = String(p.nip || '').trim();
+                const email = nipToEmail(nip);
+
+                statusEl.textContent = `Memproses ${i + 1}/${pegawai.length}: ${p.nama} (${nip})...`;
+                progressBar.style.width = Math.round(((i + 1) / pegawai.length) * 100) + '%';
+
+                if (!nip) {
+                    log(`⏭️  Dilewati: NIP kosong (${p.nama || '?'})`);
+                    continue;
+                }
+
+                try {
+                    const { error } = await sb.auth.signUp({ email, password: nip });
+                    if (error) throw error;
+                    log(`✅ Akun dibuat: ${p.nama} (${nip})`);
+                    sukses++;
+                } catch (e) {
+                    const msg = (e.message || '').toLowerCase();
+                    if (msg.includes('already registered') || msg.includes('already exists') || e.code === 'user_already_exists') {
+                        log(`ℹ️  Sudah ada akunnya sebelumnya: ${p.nama} (${nip})`);
+                        sudahAda++;
+                    } else {
+                        log(`❌ GAGAL: ${p.nama} (${nip}) — ${e.message || e}`);
+                        gagalLain++;
+                    }
+                }
+
+                // Jeda kecil antar-akun, jaga2 supaya tidak kena rate-limit Supabase Auth.
+                await new Promise(res => setTimeout(res, 400));
+            }
+
+            // Keluar dari sesi user TERAKHIR yang sempat dibuat (signUp otomatis
+            // login sebagai user itu) -- biar tidak nyangkut sesi asing.
+            try { await sb.auth.signOut(); } catch (e) { /* abaikan */ }
+
+            statusEl.textContent = `✅ Selesai. Baru: ${sukses}, Sudah ada: ${sudahAda}, Gagal lain: ${gagalLain}.`;
+            statusEl.style.color = '#15803d';
+            log(`\n🎉 SELESAI. Baru: ${sukses} | Sudah ada: ${sudahAda} | Gagal lain: ${gagalLain}`);
+
+            btn.disabled = false;
+        };
+    </script>
+</body>
+</html>
