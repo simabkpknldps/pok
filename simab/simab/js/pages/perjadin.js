@@ -16,6 +16,7 @@
  * H tglSelesai, I tglLPT, J tglBayar, M jumlah, N user, P status
  */
 
+
 let pjAllRows = [];       // baris milik user login yang sedang login, sudah difilter MAK 524111/524113
 let pjChartInstance = null;
 let pjFirstLoad = true;
