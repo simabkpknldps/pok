@@ -151,7 +151,10 @@ function computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows) {
         .filter(r => !['1', '2', '3', '4', '5', '6', '7'].includes(String(r.id)))
         .map(r => ({ id: r.id, uraian: r.uraian || '', jumlah: Number(r.jumlah) || 0 }));
 
-    const totalAkhir = deviasiRpd - customRows.reduce((a, r) => a + r.jumlah, 0);
+    // Total Akhir = Deviasi (baris 3) DIKURANGI SEMUA baris di bawahnya —
+    // itu baris 4,5,6,7 (Proses Sakti RM/PNBP, LPT, Terlaksana) DAN semua
+    // baris manual (8+), bukan cuma baris manual saja.
+    const totalAkhir = deviasiRpd - prosesRM - prosesPNBP - lpt - terlaksana - customRows.reduce((a, r) => a + r.jumlah, 0);
     const persenTerhadapRpd = rpdBerjalan ? (totalAkhir / rpdBerjalan * 100) : 0;
 
     return { fixedRows, customRows, totalAkhir, persenTerhadapRpd, rpdBerjalan };
