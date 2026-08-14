@@ -93,6 +93,69 @@ function computeDashboardData(kegiatanRows, pokRows) {
     };
 }
 
+// ============================================================
+// TABEL RPD BERJALAN (di atas grafik Realisasi Perjadin)
+// Baris 1-7: TETAP, nilainya SELALU dihitung LIVE (tidak pernah disimpan).
+// Baris 8+: manual, tersimpan di tabel 'rpd_berjalan' (kolom uraian+jumlah),
+// bisa ditambah/diubah/dihapus lewat UI.
+// ============================================================
+function computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows) {
+    const currentMonth = new Date().getMonth() + 1; // 1-12
+
+    const rpdRow = rpdRows.find(r => Number(r.id) === currentMonth);
+    const rpdBerjalan = rpdRow ? Number(rpdRow.nilai) || 0 : 0;
+
+    let sudahSp2d = 0, prosesRM = 0, prosesPNBP = 0, lpt = 0, terlaksana = 0;
+
+    kegiatanRows.forEach(k => {
+        const jumlah = Number(k.jumlah) || 0;
+        const uraian = String(k.uraian || '');
+
+        // Baris 2: sudah SP2D ATAU sudah ada nomor SPM, bulan berjalan
+        // (cek tgl_sp2d, fallback tgl_bayar kalau tgl_sp2d kosong).
+        if (k.tgl_sp2d || k.nomor_spm) {
+            const tglCek = k.tgl_sp2d || k.tgl_bayar;
+            if (tglCek) {
+                const d = new Date(tglCek);
+                if (!isNaN(d.getTime()) && d.getMonth() + 1 === currentMonth) sudahSp2d += jumlah;
+            }
+        }
+
+        // Baris 4-7: berdasarkan tgl_mulai bulan berjalan.
+        if (k.tgl_mulai) {
+            const dMulai = new Date(k.tgl_mulai);
+            if (!isNaN(dMulai.getTime()) && dMulai.getMonth() + 1 === currentMonth) {
+                if (k.status === 'Terbayar' && uraian.includes('(RM)')) prosesRM += jumlah;
+                if (k.status === 'Terbayar' && uraian.includes('(PNBP)')) prosesPNBP += jumlah;
+                if (k.status === 'LPT') lpt += jumlah;
+                if (k.status === 'Terlaksana') terlaksana += jumlah;
+            }
+        }
+    });
+
+    const deviasiRpd = rpdBerjalan - sudahSp2d;
+
+    const fixedRows = [
+        { id: '1', uraian: 'RPD Berjalan', jumlah: rpdBerjalan },
+        { id: '2', uraian: 'Sudah SP2D', jumlah: sudahSp2d },
+        { id: '3', uraian: 'Deviasi RPD', jumlah: deviasiRpd },
+        { id: '4', uraian: 'Kegiatan Proses Sakti (RM)', jumlah: prosesRM },
+        { id: '5', uraian: 'Kegiatan Proses Sakti (PNBP)', jumlah: prosesPNBP },
+        { id: '6', uraian: 'Kegiatan LPT', jumlah: lpt },
+        { id: '7', uraian: 'Kegiatan Terlaksana', jumlah: terlaksana }
+    ];
+
+    // Baris manual = semua baris di tabel rpd_berjalan yang id-nya BUKAN "1".."7".
+    const customRows = rpdBerjalanRows
+        .filter(r => !['1', '2', '3', '4', '5', '6', '7'].includes(String(r.id)))
+        .map(r => ({ id: r.id, uraian: r.uraian || '', jumlah: Number(r.jumlah) || 0 }));
+
+    const totalAkhir = deviasiRpd - customRows.reduce((a, r) => a + r.jumlah, 0);
+    const persenTerhadapRpd = rpdBerjalan ? (totalAkhir / rpdBerjalan * 100) : 0;
+
+    return { fixedRows, customRows, totalAkhir, persenTerhadapRpd, rpdBerjalan };
+}
+
 async function initDashboardPage() {
     const container = document.getElementById('dashboard-content');
     if (!container) return;
@@ -102,12 +165,14 @@ async function initDashboardPage() {
     try {
         await waitSupabaseAuthReady();
 
-        // 1x baca tabel kegiatan + 1x baca tabel pok, dijalankan bareng.
+        // 1x baca tabel kegiatan + pok + rpd + rpd_berjalan, dijalankan bareng.
         // sbFetchAll dipakai (bukan select('*') polos) supaya tidak kena limit
         // 1000 baris default Supabase/PostgREST.
-        const [kegiatanRows, pokRows] = await Promise.all([
+        const [kegiatanRows, pokRows, rpdRows, rpdBerjalanRows] = await Promise.all([
             sbFetchAll('kegiatan'),
-            sbFetchAll('pok')
+            sbFetchAll('pok'),
+            sbFetchAll('rpd'),
+            sbFetchAll('rpd_berjalan')
         ]);
 
         // Cache dipakai juga oleh pok.js (popup Detil/Rekam/Pelaksana) supaya
@@ -116,9 +181,11 @@ async function initDashboardPage() {
         window.kegiatanRowsCache = kegiatanRows;
 
         const data = computeDashboardData(kegiatanRows, pokRows);
-        container.innerHTML = buildDashboardHtml(data);
+        const rpdBerjalanData = computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows);
+        container.innerHTML = buildDashboardHtml(data, rpdBerjalanData);
         initCharts(data);
         bindGlobalSearchBar();
+        bindRpdBerjalanEvents();
     } catch (e) {
         console.error('Dashboard error:', e);
         const errorMsg = e.message || 'Gagal memuat dashboard';
@@ -126,7 +193,7 @@ async function initDashboardPage() {
     }
 }
 
-function buildDashboardHtml(data) {
+function buildDashboardHtml(data, rpdBerjalanData) {
     return `
         <div class="space-y-8">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
@@ -157,12 +224,159 @@ function buildDashboardHtml(data) {
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
             </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                ${renderRpdBerjalanTable(rpdBerjalanData)}
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
             </div>
         </div>
     `;
+}
+
+function renderRpdBerjalanTable(d) {
+    const persen = d.persenTerhadapRpd;
+    const warnaTotal = (persen >= -5 && persen <= 5) ? 'text-green-600' : 'text-red-600';
+
+    const fixedRowsHtml = d.fixedRows.map(r => `
+        <tr class="border-b border-slate-100">
+            <td class="p-2.5">${escapeHtml(r.uraian)}</td>
+            <td class="p-2.5 text-right">${formatAngka(r.jumlah)}</td>
+            <td class="p-2.5 text-center text-slate-300">-</td>
+        </tr>
+    `).join('');
+
+    const customRowsHtml = d.customRows.map(r => `
+        <tr class="border-b border-slate-100" data-id="${r.id}">
+            <td class="p-2.5 dash-rpdb-uraian">${escapeHtml(r.uraian)}</td>
+            <td class="p-2.5 text-right dash-rpdb-jumlah">${formatAngka(r.jumlah)}</td>
+            <td class="p-2.5 text-center">
+                <button class="dash-rpdb-btnEdit text-sky-600 hover:text-sky-800 mr-2" title="Ubah"><i class="fa-solid fa-pen"></i></button>
+                <button class="dash-rpdb-btnDelete text-red-500 hover:text-red-700" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+
+    return `
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-700">RPD Berjalan</h3>
+            <button id="dash-rpdb-btnTambah" class="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium rounded-lg">
+                <i class="fa-solid fa-plus"></i> Tambah Baris
+            </button>
+        </div>
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-sm border-collapse">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-slate-500">
+                        <th class="p-2.5 font-medium">Uraian</th>
+                        <th class="p-2.5 font-medium text-right">Jumlah</th>
+                        <th class="p-2.5 font-medium text-center w-24">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="dash-rpdb-tbody">
+                    ${fixedRowsHtml}
+                    ${customRowsHtml}
+                    <tr class="bg-slate-50 font-semibold">
+                        <td class="p-2.5">Total Akhir</td>
+                        <td class="p-2.5 text-right ${warnaTotal}">${formatAngka(d.totalAkhir)} <span class="text-xs font-normal">(${persen.toFixed(2)}%)</span></td>
+                        <td class="p-2.5"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function bindRpdBerjalanEvents() {
+    const btnTambah = document.getElementById('dash-rpdb-btnTambah');
+    if (btnTambah) btnTambah.onclick = () => openRpdBerjalanRowForm();
+
+    document.querySelectorAll('.dash-rpdb-btnEdit').forEach(btn => {
+        btn.onclick = () => {
+            const tr = btn.closest('tr');
+            const id = tr.dataset.id;
+            const uraian = tr.querySelector('.dash-rpdb-uraian').textContent;
+            const jumlah = tr.querySelector('.dash-rpdb-jumlah').textContent.replace(/\./g, '');
+            openRpdBerjalanRowForm({ id, uraian, jumlah });
+        };
+    });
+
+    document.querySelectorAll('.dash-rpdb-btnDelete').forEach(btn => {
+        btn.onclick = () => {
+            const tr = btn.closest('tr');
+            const id = tr.dataset.id;
+            const uraian = tr.querySelector('.dash-rpdb-uraian').textContent;
+            hapusRpdBerjalanRow(id, uraian);
+        };
+    });
+}
+
+function openRpdBerjalanRowForm(existing) {
+    const isEdit = !!existing;
+    const { overlay, popup } = commonOpenOverlay(`
+        <h3 class="text-base font-semibold text-sky-700 mb-3">${isEdit ? 'Ubah' : 'Tambah'} Baris RPD Berjalan</h3>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Uraian</label>
+                <input id="rpdb-uraian" type="text" value="${isEdit ? escapeHtml(existing.uraian) : ''}" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Jumlah</label>
+                <input id="rpdb-jumlah" type="text" value="${isEdit ? Number(existing.jumlah).toLocaleString('id-ID') : ''}"
+                    oninput="this.value = formatRibuan(this.value)"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 text-right">
+            </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-4">
+            <button id="rpdb-cancel" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Batal</button>
+            <button id="rpdb-save" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+            </button>
+        </div>
+    `, 'max-w-md');
+
+    popup.querySelector('#rpdb-cancel').onclick = () => overlay.remove();
+    popup.querySelector('#rpdb-save').onclick = async function () {
+        const btn = this;
+        const uraian = popup.querySelector('#rpdb-uraian').value.trim();
+        const jumlah = Number(popup.querySelector('#rpdb-jumlah').value.replace(/\./g, '')) || 0;
+
+        if (!uraian) { alert('Uraian tidak boleh kosong.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+        try {
+            await waitSupabaseAuthReady();
+            if (isEdit) {
+                const { error } = await sb.from('rpd_berjalan').update({ uraian, jumlah }).eq('id', existing.id);
+                if (error) throw new Error(error.message);
+            } else {
+                const { error } = await sb.from('rpd_berjalan').insert({ id: kgGenerateRandomId(10), uraian, jumlah });
+                if (error) throw new Error(error.message);
+            }
+            overlay.remove();
+            showToast('Baris berhasil disimpan');
+            initDashboardPage();
+        } catch (e) {
+            alert('Gagal menyimpan: ' + (e.message || e));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+
+async function hapusRpdBerjalanRow(id, uraian) {
+    if (!confirm(`Hapus baris "${uraian}"?`)) return;
+    try {
+        await waitSupabaseAuthReady();
+        const { error } = await sb.from('rpd_berjalan').delete().eq('id', id);
+        if (error) throw new Error(error.message);
+        showToast('Baris berhasil dihapus');
+        initDashboardPage();
+    } catch (e) {
+        alert('Gagal menghapus: ' + (e.message || e));
+    }
 }
 
 function initCharts(data) {
