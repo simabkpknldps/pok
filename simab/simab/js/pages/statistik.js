@@ -564,7 +564,7 @@ function stLoadMPData() {
         return {
             no: idx + 1,
             uraian: mp.uraian || '-',
-            periode: tglMp ? `s.d. ${stFormatDate(mp.tgl_mp)}` : '-',
+            periode: mp.periode || (tglMp ? `s.d. ${stFormatDate(mp.tgl_mp)}` : '-'),
             tanggalMP: mp.tgl_mp,
             paguMP,
             realisasiBruto,
