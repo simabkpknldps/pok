@@ -1,21 +1,16 @@
 /**
  * Halaman Perjadinku
- * Diadaptasi dari perjadinku.html (versi standalone lama) ke pola SPA:
  * - Entry point: initPerjadinPage()  (dipanggil oleh router.js lewat PAGE_INIT.perjadin)
- * - Komunikasi backend lewat apiPost() (js/api.js), sama seperti halaman Daftar Kegiatan
- * - Helper umum: showToast() dsb dari js/common.js (tidak wajib dipakai di halaman ini)
+ * - Baca LANGSUNG dari Supabase (tabel 'kegiatan'), pakai cache
+ *   window.kegiatanRowsCache kalau sudah ada dari halaman lain (Dashboard/
+ *   POK/Kegiatan) — hemat baca, tidak query ulang kalau tidak perlu.
+ * - Filtering per nama pegawai (harus sama persis dgn localStorage.nama) &
+ *   per jenis MAK (524111/524113) dilakukan di client.
  *
- * PERBEDAAN DARI VERSI LAMA (GAS_Perjadin_lama.txt):
- * - GAS lama: doGet(kantor, nama) -> server sudah memfilter data per pegawai & per MAK.
- * - GAS sekarang: hanya ada action 'getKegiatanData' (dipakai bersama halaman Kegiatan)
- *   yang mengembalikan SEMUA baris kegiatan (semua pegawai, kolom A-R).
- *   Filtering per nama pegawai & per jenis MAK dilakukan di sini (client).
- *
- * Struktur baris data dari backend (huruf kolom sheet Data_Kegiatan_2026):
- * A id, B mak, C uraian, D pelaksana, E tujuan, F tglST, G tglMulai,
- * H tglSelesai, I tglLPT, J tglBayar, M jumlah, N user, P status
+ * Struktur baris pjAllRows (dipetakan dari kolom Supabase ke huruf-kolom,
+ * meniru pola lama, supaya kode render/filter di bawah tidak perlu diubah):
+ * B mak, C uraian, E tujuan, G tgl_mulai, H tgl_selesai, M jumlah, P status
  */
-
 
 let pjAllRows = [];       // baris milik user login yang sedang login, sudah difilter MAK 524111/524113
 let pjChartInstance = null;
@@ -58,28 +53,30 @@ async function pjLoadData() {
     tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>`;
 
     try {
-        // statusFilter WAJIB 'Semua' -> backend getKegiatanData defaultnya cuma kirim
-        // status "Dalam Proses" (Rekam Data + Terlaksana) kalau tidak diisi, padahal
-        // halaman ini butuh SEMUA status (LPT/Terbayar/Selesai juga) karena filter
-        // status yang sesungguhnya dilakukan di sini (client), bukan di server.
-        const data = await apiPost({
-            action: 'getKegiatanData',
-            kantor: localStorage.getItem('kantor'),
-            statusFilter: 'Semua',
-            pageSize: 'all'
-        });
+        await waitSupabaseAuthReady();
 
-        if (!data || data.status !== 'success') {
-            tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">Gagal memuat data perjadin.</td></tr>`;
-            return;
+        // Pakai cache dari halaman lain (Dashboard/POK/Kegiatan) kalau sudah ada,
+        // hindari baca ulang tabel kegiatan dari nol.
+        let rows = window.kegiatanRowsCache;
+        if (!rows) {
+            rows = await sbFetchAll('kegiatan');
+            window.kegiatanRowsCache = rows;
         }
 
         const nama = (localStorage.getItem('nama') || '').trim().toLowerCase();
 
-        pjAllRows = (data.rows || []).filter(r => {
-            const pelaksana = String(r.D || '').trim().toLowerCase();
-            return pelaksana === nama && pjIsPerjalananDinas(r.B);
-        });
+        // Dipetakan ke bentuk huruf-kolom (B,C,E,G,H,M,P) yang sudah dipakai di
+        // seluruh file ini, supaya fungsi render/filter di bawah tidak perlu diubah.
+        pjAllRows = rows
+            .filter(r => {
+                const pelaksana = String(r.pelaksana || '').trim().toLowerCase();
+                return pelaksana === nama && pjIsPerjalananDinas(r.mak);
+            })
+            .map(r => ({
+                B: r.mak || '', C: r.uraian || '', E: r.tujuan || '',
+                G: r.tgl_mulai || '', H: r.tgl_selesai || '',
+                M: Number(r.jumlah) || 0, P: r.status || ''
+            }));
 
         pjRenderStatusSummary(pjAllRows);
         pjUpdateLokasiFavorit(pjAllRows);
