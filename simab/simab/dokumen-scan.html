@@ -18,6 +18,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-config.js"></script>
 
 <style>
     html, body { overscroll-behavior-y: contain; }
@@ -93,11 +95,25 @@ function statusBadgeClass(status) {
 }
 
 // ============================================================
-// Pencarian (pakai action getKegiatanData yang sudah ada — filter
-// & pencarian tetap diproses di server, bukan di HP)
+// Pencarian — baca dari Supabase (tabel 'kegiatan'), difilter di HP
+// (client-side), sama pola dgn halaman Kegiatan versi web.
 // ============================================================
+let dsAllRowsCache = null; // cache di memori halaman ini saja, sekali per kunjungan
+
+async function dsGetAllRows() {
+    if (dsAllRowsCache) return dsAllRowsCache;
+    await waitSupabaseAuthReady();
+    const rows = await sbFetchAll('kegiatan');
+    dsAllRowsCache = rows.map(d => ({
+        A: d.id, B: d.mak || '', C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
+        F: d.tgl_st || '', G: d.tgl_mulai || '', P: d.status || '',
+        R: d.nomor_spm || '', T: d.dokumen_link || ''
+    }));
+    return dsAllRowsCache;
+}
+
 async function runSearch() {
-    const q = $('ds-searchInput').value.trim();
+    const q = $('ds-searchInput').value.trim().toLowerCase();
     const resultsEl = $('ds-results');
     const hintEl = $('ds-hint');
 
@@ -111,28 +127,27 @@ async function runSearch() {
     hintEl.textContent = '';
 
     try {
-        const data = await apiPost({
-            action: 'getKegiatanData',
-            statusFilter: 'Semua',
-            search: q,
-            page: 1,
-            pageSize: 15,
-            includeRef: false
-        });
+        const allRows = await dsGetAllRows();
 
-        if (!data || data.status !== 'success') {
-            resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">Gagal memuat data.</div>`;
-            return;
-        }
+        const matched = allRows.filter(r =>
+            String(r.C).toLowerCase().includes(q) ||
+            String(r.D).toLowerCase().includes(q) ||
+            String(r.E).toLowerCase().includes(q) ||
+            String(r.F).toLowerCase().includes(q) ||
+            String(r.P).toLowerCase().includes(q) ||
+            String(r.R).toLowerCase().includes(q)
+        );
 
-        const rows = data.rows || [];
+        const MAX_SHOW = 15;
+        const rows = matched.slice(0, MAX_SHOW);
+
         if (rows.length === 0) {
             resultsEl.innerHTML = `<div class="text-center text-slate-400 py-12"><i class="fa-regular fa-folder-open text-3xl mb-2"></i><p class="text-sm">Data tidak ditemukan.</p></div>`;
             return;
         }
 
-        hintEl.textContent = (data.totalRows > rows.length)
-            ? `Menampilkan ${rows.length} dari ${data.totalRows} hasil. Persempit pencarian kalau belum ketemu.`
+        hintEl.textContent = (matched.length > rows.length)
+            ? `Menampilkan ${rows.length} dari ${matched.length} hasil. Persempit pencarian kalau belum ketemu.`
             : `${rows.length} hasil ditemukan.`;
 
         resultsEl.innerHTML = rows.map(dsRenderCard).join('');
@@ -429,8 +444,53 @@ async function dsConvertAndUploadPhotos() {
 }
 
 // ============================================================
-// Upload / hapus dokumen (action sama persis dengan halaman Kegiatan & Perbantuan)
+// Upload / hapus dokumen — file tetap lewat GAS (Drive), link hasilnya
+// disinkron ke Supabase (pola sama dgn halaman Kegiatan & Perbantuan versi web).
 // ============================================================
+
+// Deteksi tag SPBy-XXXX / Kkp-XXXX / SPM-XXXX di teks Uraian, dipakai buat
+// nyari baris LAIN yang perlu ikut dapat link sama (1 upload bisa berlaku
+// utk beberapa baris kalau Uraian-nya sama/tag-nya sama).
+function dsFindDokTagMatchText(uraian) {
+    const u = String(uraian || '');
+    let m = u.match(/SPBy-\d+/i); if (m) return m[0];
+    m = u.match(/Kkp-\d+/i); if (m) return m[0];
+    m = u.match(/SPM-\d+/i); if (m) return m[0];
+    return null;
+}
+
+async function dsFindTargetIdsForDokLink(row) {
+    const allRows = await dsGetAllRows();
+    const uraianSource = String(row.C || '').trim();
+    const tagMatch = dsFindDokTagMatchText(uraianSource);
+    if (tagMatch) {
+        const tagLower = tagMatch.toLowerCase();
+        return allRows.filter(r => String(r.C || '').toLowerCase().includes(tagLower)).map(r => r.A);
+    }
+    return allRows.filter(r => String(r.C || '').trim() === uraianSource).map(r => r.A);
+}
+
+async function dsSyncDokLinkToDb(targetIds, link) {
+    if (!targetIds || targetIds.length === 0) return;
+    try {
+        await waitSupabaseAuthReady();
+        const rows = targetIds.map(id => ({ id, dokumen_link: link }));
+        const { error } = await sb.from('kegiatan').upsert(rows, { onConflict: 'id' });
+        if (error) throw new Error(error.message);
+
+        // Perbarui cache di memori juga, biar kalau user cari lagi tanpa
+        // reload halaman, ikon dokumennya sudah benar.
+        if (dsAllRowsCache) {
+            targetIds.forEach(id => {
+                const r = dsAllRowsCache.find(x => String(x.A) === String(id));
+                if (r) r.T = link;
+            });
+        }
+    } catch (e) {
+        console.error('Gagal sinkron link dokumen ke Supabase:', e);
+    }
+}
+
 async function dsUploadBase64Pdf(base64) {
     dsSetStatus('Mengupload dokumen...', 'sky');
     dsSetButtonsDisabled(true);
@@ -440,17 +500,20 @@ async function dsUploadBase64Pdf(base64) {
             action: 'uploadDokumenKegiatan',
             id: currentRow.A,
             fileData: base64,
-            fileName: currentRow.A + '.pdf'
+            fileName: currentRow.A + '.pdf',
+            uraian: currentRow.C,
+            nomorSPM: currentRow.R
         }, 60000);
 
         if (result.status === 'success') {
+            const targetIds = await dsFindTargetIdsForDokLink(currentRow);
             currentRow.T = result.link;
             dsUpdateCardIcon(currentRow.A, result.link);
             // Satu upload bisa berlaku utk beberapa baris (Uraian sama, ID beda) ->
             // update juga kartu lain yang kebetulan lagi tampil di hasil pencarian.
-            if (result.links) {
-                Object.keys(result.links).forEach(rid => dsUpdateCardIcon(rid, result.links[rid]));
-            }
+            targetIds.forEach(rid => dsUpdateCardIcon(rid, result.link));
+            await dsSyncDokLinkToDb(targetIds, result.link);
+
             dsSetStatus('✅ Dokumen berhasil diupload.', 'emerald');
             dsRenderSheet();
         } else {
@@ -469,10 +532,14 @@ async function dsHapusDokumen() {
     dsSetButtonsDisabled(true);
 
     try {
-        const result = await apiPost({ action: 'hapusDokumenKegiatan', id: currentRow.A }, 30000);
+        const result = await apiPost({ action: 'hapusDokumenKegiatan', id: currentRow.A, uraian: currentRow.C, nomorSPM: currentRow.R }, 30000);
         if (result.status === 'success') {
+            const targetIds = await dsFindTargetIdsForDokLink(currentRow);
             currentRow.T = '';
             dsUpdateCardIcon(currentRow.A, '');
+            targetIds.forEach(rid => dsUpdateCardIcon(rid, ''));
+            await dsSyncDokLinkToDb(targetIds, '');
+
             dsSetStatus('✅ Dokumen dihapus.', 'emerald');
             dsRenderSheet();
         } else {
