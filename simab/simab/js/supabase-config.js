@@ -15,6 +15,7 @@
  * -----------------------------------------------------------------------
  */
 
+
 const SUPABASE_URL = "https://iqedxrjcosorjwsawowk.supabase.co";
 const SUPABASE_KEY = "sb_publishable_GrguFKOgL0M3uFDoVKLHYw_1dYG19O2";
 
