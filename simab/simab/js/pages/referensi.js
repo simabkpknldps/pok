@@ -24,6 +24,8 @@ let refPegawaiData = [];
 let refPegawaiLoaded = false;
 let refRekeningData = [];
 let refRekeningLoaded = false;
+let refUserManagerData = [];
+let refUserManagerLoaded = false;
 
 const refInputClass = 'w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500';
 
@@ -77,13 +79,16 @@ function initReferensiPage() {
     refSbmLoaded = false;
     refPegawaiLoaded = false;
     refRekeningLoaded = false;
+    refUserManagerLoaded = false;
 
     const tabBtnSbm = document.getElementById('ref-tabBtnSbm');
     const tabBtnPegawai = document.getElementById('ref-tabBtnPegawai');
     const tabBtnRekening = document.getElementById('ref-tabBtnRekening');
+    const tabBtnUserManager = document.getElementById('ref-tabBtnUserManager');
     const tabSbm = document.getElementById('ref-tabSbm');
     const tabPegawai = document.getElementById('ref-tabPegawai');
     const tabRekening = document.getElementById('ref-tabRekening');
+    const tabUserManager = document.getElementById('ref-tabUserManager');
 
     // 3 tingkat akses (lihat catatan di kepala file) — sembunyikan tab yang
     // tidak boleh dilihat sesuai tingkatnya.
@@ -101,21 +106,29 @@ function initReferensiPage() {
     }
     // aksesLevel === 'admin' -> semua tab tetap ada apa adanya.
 
+    // Tab User Manager: TERPISAH dari 3 tingkat di atas, cuma utk superadmin.
+    if (localStorage.getItem('superadmin') !== '1') {
+        tabBtnUserManager?.remove();
+        tabUserManager?.remove();
+    }
+
     const isRestricted = aksesLevel === 'biasa'; // dipakai activateTab() di bawah
 
     const tabs = {
         sbm: { btn: tabBtnSbm, content: tabSbm },
         pegawai: { btn: document.getElementById('ref-tabBtnPegawai'), content: document.getElementById('ref-tabPegawai') },
-        rekening: { btn: document.getElementById('ref-tabBtnRekening'), content: document.getElementById('ref-tabRekening') }
+        rekening: { btn: document.getElementById('ref-tabBtnRekening'), content: document.getElementById('ref-tabRekening') },
+        userManager: { btn: document.getElementById('ref-tabBtnUserManager'), content: document.getElementById('ref-tabUserManager') }
     };
 
     function activateTab(tab) {
         if (isRestricted) tab = 'sbm'; // paksa selalu di tab SBM untuk user terbatas
         if (tab === 'rekening' && !tabs.rekening.btn) tab = 'sbm'; // jaga-jaga kalau tab rekening tidak ada (non-admin)
+        if (tab === 'userManager' && !tabs.userManager.btn) tab = 'sbm'; // jaga-jaga kalau tab ini tidak ada (non-superadmin)
 
         Object.keys(tabs).forEach(key => {
             const t = tabs[key];
-            if (!t.btn || !t.content) return; // tab dihapus (non-admin / restricted)
+            if (!t.btn || !t.content) return; // tab dihapus (non-admin / restricted / non-superadmin)
             const active = key === tab;
             t.content.classList.toggle('hidden', !active);
             t.btn.className = `ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition ${active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`;
@@ -131,12 +144,15 @@ function initReferensiPage() {
             refPegawaiLoaded ? refRenderPegawaiTable(document.getElementById('ref-pegawai-search')?.value || '') : refLoadPegawaiData();
         } else if (tab === 'rekening') {
             refRekeningLoaded ? refRenderRekeningTable(document.getElementById('ref-rekening-search')?.value || '') : refLoadRekeningDataAll();
+        } else if (tab === 'userManager') {
+            refUserManagerLoaded ? refRenderUserManagerTable(document.getElementById('ref-um-search')?.value || '') : refLoadUserManagerData();
         }
     }
 
     if (tabBtnSbm) tabBtnSbm.onclick = () => activateTab('sbm');
     if (tabBtnPegawai) tabBtnPegawai.onclick = () => activateTab('pegawai');
     if (tabs.rekening.btn) tabs.rekening.btn.onclick = () => activateTab('rekening');
+    if (tabs.userManager.btn) tabs.userManager.btn.onclick = () => activateTab('userManager');
 
     const sbmSearchEl = document.getElementById('ref-sbm-search');
     if (sbmSearchEl) sbmSearchEl.oninput = (e) => refRenderSbmTable(e.target.value);
@@ -144,6 +160,8 @@ function initReferensiPage() {
     if (pegawaiSearchEl) pegawaiSearchEl.oninput = (e) => refRenderPegawaiTable(e.target.value);
     const rekeningSearchEl = document.getElementById('ref-rekening-search');
     if (rekeningSearchEl) rekeningSearchEl.oninput = (e) => refRenderRekeningTable(e.target.value);
+    const umSearchEl = document.getElementById('ref-um-search');
+    if (umSearchEl) umSearchEl.oninput = (e) => refRenderUserManagerTable(e.target.value);
 
     activateTab('sbm');
 }
@@ -704,4 +722,94 @@ function refBindRekeningRow(tr) {
             btnSave.disabled = false;
         }
     };
+}
+
+// ============================================
+// TAB USER MANAGER (superadmin saja) — Reset Password ke NIP (default)
+// ============================================
+
+async function refLoadUserManagerData() {
+    const tbody = document.getElementById('ref-um-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="2" class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+
+    try {
+        await waitSupabaseAuthReady();
+        const rows = await sbFetchAll('pegawai', 'id, nama');
+        refUserManagerData = rows.map(d => ({ nip: d.id, nama: d.nama || '' }));
+        refUserManagerLoaded = true;
+        refRenderUserManagerTable('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="2" class="text-center text-red-500 py-8">❌ Error koneksi: ${e.message || 'Tidak diketahui'}</td></tr>`;
+    }
+}
+
+function refRenderUserManagerTable(keyword) {
+    const tbody = document.getElementById('ref-um-tbody');
+    const emptyMsg = document.getElementById('ref-um-empty');
+    const kw = (keyword || '').trim().toLowerCase();
+
+    const filtered = refUserManagerData.filter(row =>
+        !kw || String(row.nama).toLowerCase().includes(kw) || String(row.nip).toLowerCase().includes(kw)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        return;
+    }
+    emptyMsg.classList.add('hidden');
+
+    tbody.innerHTML = filtered.map(row => `
+        <tr data-nip="${row.nip}" class="hover:bg-slate-50">
+            <td class="py-2 px-4">
+                <div class="font-medium text-slate-700">${row.nama}</div>
+                <div class="text-xs text-slate-400">${row.nip}</div>
+            </td>
+            <td class="py-2 px-4 text-center">
+                <button class="ref-um-btnReset px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium">
+                    <i class="fa-solid fa-rotate-left mr-1"></i>Reset Password
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    tbody.querySelectorAll('tr').forEach(tr => {
+        const btn = tr.querySelector('.ref-um-btnReset');
+        const nip = tr.getAttribute('data-nip');
+        const nama = tr.querySelector('.font-medium').textContent;
+
+        btn.onclick = () => {
+            refConfirmHapusPopup(
+                `Reset password <span class="font-medium text-slate-800">${nama}</span> (${nip}) ke default (NIP)?`,
+                async () => {
+                    btn.disabled = true;
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    try {
+                        await waitSupabaseAuthReady();
+                        const { data: { session } } = await sb.auth.getSession();
+                        if (!session) throw new Error('Sesi tidak valid, login ulang.');
+
+                        const result = await apiPost({
+                            action: 'resetUserPasswordSuperadmin',
+                            accessToken: session.access_token,
+                            targetNip: nip
+                        });
+
+                        if (result.status === 'success') {
+                            showToast(`Password ${nama} berhasil direset ke NIP`);
+                        } else {
+                            alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+                        }
+                    } catch (e) {
+                        alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    }
+                }
+            );
+        };
+    });
 }
