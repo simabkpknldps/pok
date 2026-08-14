@@ -2,6 +2,7 @@
  * Fungsi umum yang dipakai di banyak halaman.
  */
 
+
 function logout() {
     ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'lastActivity']
         .forEach(k => localStorage.removeItem(k));
