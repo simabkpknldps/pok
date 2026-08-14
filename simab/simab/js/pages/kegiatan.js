@@ -234,7 +234,8 @@ async function kgLoadData(forceRefresh) {
         }
 
         await waitSupabaseAuthReady();
-        const rows = await sbFetchAll('kegiatan');
+        const tahunAktif = await getTahunAktif();
+        const rows = await sbFetchAll('kegiatan', null, { tahun: tahunAktif });
 
         kgAllRows = rows.map(d => ({
             A: d.id,
@@ -616,6 +617,7 @@ function kgOpenTambahKegiatanPopup() {
         try {
             await waitSupabaseAuthReady();
             const namaUser = localStorage.getItem('nama') || 'Guest';
+            const tahunAktif = await getTahunAktif();
             const { error } = await sb.from('kegiatan').insert({
                 id: idKegiatan,
                 mak: makTerpilih.kode,
@@ -629,7 +631,8 @@ function kgOpenTambahKegiatanPopup() {
                 status: 'Rekam Data',
                 tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
                 tgl_rekam: normDate(new Date().toISOString().split('T')[0]),
-                perbantuan: false
+                perbantuan: false,
+                tahun: tahunAktif
             });
             if (error) throw new Error(error.message);
 
@@ -772,27 +775,22 @@ async function kgOpenPilihMakPopup(onPilih) {
     try {
         await waitSupabaseAuthReady();
 
-        // Ambil pok, kegiatan, & blokir BARENGAN (pakai cache kalau sudah ada dari
-        // halaman lain, spy hemat baca) — Realisasi & Blokir dihitung LIVE persis
-        // sama seperti di halaman POK (pok.js loadPokData), BUKAN baca kolom
-        // realisasi/blokir/sisa yang tersimpan statis.
-        let kegiatanRows = window.kegiatanRowsCache;
-        let blokirRows = window.blokirRowsCache;
-
+        // Ambil pok, kegiatan, & blokir SEGAR setiap kali popup ini dibuka (BUKAN
+        // pakai cache) — popup ini nunjukin Realisasi/Sisa sebelum user commit
+        // kegiatan baru, jadi akurasinya penting, lebih penting dari hemat baca.
+        // Cache global (window.kegiatanRowsCache/blokirRowsCache) tetap
+        // di-refresh juga di sini, supaya halaman lain yang dibuka setelah ini
+        // ikut kebagian data terbaru juga.
         const [pokRows, kegiatanRowsFetched, blokirRowsFetched] = await Promise.all([
             sbFetchAll('pok'),
-            kegiatanRows ? Promise.resolve(null) : sbFetchAll('kegiatan'),
-            blokirRows ? Promise.resolve(null) : sbFetchAll('blokir')
+            sbFetchAll('kegiatan'),
+            sbFetchAll('blokir')
         ]);
 
-        if (kegiatanRowsFetched) {
-            kegiatanRows = kegiatanRowsFetched;
-            window.kegiatanRowsCache = kegiatanRows;
-        }
-        if (blokirRowsFetched) {
-            blokirRows = blokirRowsFetched.map(d => ({ id: d.id, nilai: Number(d.nilai) || 0 }));
-            window.blokirRowsCache = blokirRows;
-        }
+        const kegiatanRows = kegiatanRowsFetched;
+        window.kegiatanRowsCache = kegiatanRows;
+        const blokirRows = blokirRowsFetched.map(d => ({ id: d.id, nilai: Number(d.nilai) || 0 }));
+        window.blokirRowsCache = blokirRows;
 
         const realisasiByMak = {};
         kegiatanRows.forEach(d => {
