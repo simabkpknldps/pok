@@ -67,12 +67,11 @@
     <div id="ds-results" class="px-4 pb-8 max-w-lg mx-auto"></div>
 </div>
 
-<!-- ===================== TAB: POK (lihat & cari saja) ===================== -->
+<!-- ===================== TAB: POK (lihat saja, terstruktur per Seksi kayak web) ===================== -->
 <div id="ds-tabPok" class="ds-tab-content hidden">
     <div class="px-4 pt-4 pb-2 max-w-lg mx-auto">
         <input id="ds-pokSearchInput" type="text" inputmode="search" placeholder="Cari kode / uraian POK..."
             class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
-        <p id="ds-pokHint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan Enter (mis. kode akun atau sebagian uraian).</p>
     </div>
     <div id="ds-pokResults" class="px-4 pb-8 max-w-lg mx-auto"></div>
 </div>
@@ -834,14 +833,18 @@ function dsSwitchTab(tab) {
     const map = { home: 'ds-tabHome', pok: 'ds-tabPok', kegiatan: 'ds-tabKegiatan', referensi: 'ds-tabReferensi' };
     $(map[tab]).classList.remove('hidden');
 
-    // Muat data referensi (SBM) begitu tab-nya pertama kali dibuka.
+    // Muat data referensi (SBM) / POK begitu tab-nya pertama kali dibuka.
     if (tab === 'referensi' && !dsRefLoaded) dsRunRefSearch();
+    if (tab === 'pok' && !dsPokRowsCache) dsRunPokSearch();
 }
 
 // ============================================================
-// TAB: POK (baca & cari saja)
+// TAB: POK (baca saja) — bertingkat per Seksi, meniru struktur web
+// (pok.js renderPok), tapi berupa kartu bisa-tap, bukan tabel.
 // ============================================================
 let dsPokRowsCache = null;
+let dsPokExpandedSeksi = new Set();
+let dsPokExpandedCodes = new Set(); // key: "<seksi>::<kode>", sama pola dgn web
 
 async function dsGetPokRows() {
     if (dsPokRowsCache) return dsPokRowsCache;
@@ -867,20 +870,21 @@ async function dsGetPokRows() {
         const blokir = blokirByKode[kode] || 0;
         const realisasi = realisasiByMak[kode] || 0;
         const sisa = pagu - blokir - realisasi;
-        return { kode, uraian: d.uraian || '', pagu, blokir, realisasi, sisa, sumber: d.sd || '' };
+        return { kode, uraian: d.uraian || '', pagu, blokir, realisasi, sisa, sumber: d.sd || '', bidang: d.seksi || 'Lainnya' };
     });
     return dsPokRowsCache;
 }
 
-function dsRenderPokCard(item) {
+function dsRenderPokLeafCard(item) {
     const penyebut = item.pagu - item.blokir;
     const persen = penyebut ? Math.min(Math.max((item.realisasi / penyebut) * 100, 0), 100) : 0;
     const warna = persen >= 100 ? 'bg-red-500' : (persen >= 80 ? 'bg-amber-500' : 'bg-sky-500');
+    const sisaClass = item.sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
     return `
-    <div class="bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5">
+    <div class="bg-white rounded-xl border border-slate-200 p-3 mb-2">
         <div class="flex items-start justify-between gap-2">
-            <p class="text-xs font-mono text-slate-400">${escHtml(item.kode)}</p>
-            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium ${item.sumber === 'PNBP' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}">${escHtml(item.sumber || '-')}</span>
+            <p class="text-[11px] font-mono text-slate-400">${escHtml(item.kode)}</p>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${item.sumber === 'PNBP' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}">${escHtml(item.sumber || '-')}</span>
         </div>
         <p class="text-sm font-medium text-slate-800 mt-0.5 mb-2 leading-snug">${escHtml(item.uraian)}</p>
         <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
@@ -890,39 +894,131 @@ function dsRenderPokCard(item) {
             <div><span class="text-slate-400">Pagu</span> <span class="font-medium text-slate-700 float-right">${Number(item.pagu).toLocaleString('id-ID')}</span></div>
             <div><span class="text-slate-400">Blokir</span> <span class="font-medium text-slate-700 float-right">${Number(item.blokir).toLocaleString('id-ID')}</span></div>
             <div><span class="text-slate-400">Realisasi</span> <span class="font-medium text-slate-700 float-right">${Number(item.realisasi).toLocaleString('id-ID')}</span></div>
-            <div><span class="text-slate-400">Sisa</span> <span class="font-medium text-slate-700 float-right">${Number(item.sisa).toLocaleString('id-ID')}</span></div>
+            <div><span class="text-slate-400">Sisa</span> <span class="font-medium ${sisaClass} float-right">${Number(item.sisa).toLocaleString('id-ID')}</span></div>
         </div>
     </div>`;
 }
 
+function dsRenderPokParentRow(item, seksi, hasChildren, depth) {
+    const expandKey = seksi + '::' + item.kode;
+    const isOpen = dsPokExpandedCodes.has(expandKey);
+    const indentPx = Math.min(depth - 1, 5) * 14;
+    return `
+    <div class="ds-pok-parent flex items-center justify-between py-2.5 border-b border-slate-100 active:bg-slate-50" style="padding-left:${indentPx}px" data-kode="${escHtml(item.kode)}" data-seksi="${escHtml(seksi)}">
+        <span class="text-sm ${depth <= 2 ? 'font-bold' : 'font-semibold'} text-slate-700 flex-1 pr-2">${escHtml(item.uraian)}</span>
+        ${hasChildren ? `<i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs text-slate-400 shrink-0"></i>` : ''}
+    </div>`;
+}
+
+function dsRenderPokTreeForSeksi(seksi, items) {
+    let html = '';
+    items.forEach(item => {
+        const c = String(item.kode);
+        const isParent = c.length === 12; // level Kegiatan, selalu tampil
+        const isLeaf = c.length > 27;
+        const isChildVisible = Array.from(dsPokExpandedCodes).some(k => {
+            if (!k.startsWith(seksi + '::')) return false;
+            const p = k.slice((seksi + '::').length);
+            return c.startsWith(p) && c !== p;
+        });
+        if (!isParent && !isChildVisible) return;
+
+        const depth = c.split('.').length;
+        const hasChildren = items.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
+
+        if (isLeaf) {
+            html += `<div style="padding-left:${Math.min(depth - 1, 5) * 14}px">${dsRenderPokLeafCard(item)}</div>`;
+        } else {
+            html += dsRenderPokParentRow(item, seksi, hasChildren, depth);
+        }
+    });
+    return html;
+}
+
+function dsRenderPokBrowse() {
+    const resultsEl = $('ds-pokResults');
+
+    // Dedup kode+seksi dulu (1 kode bisa punya beberapa Seksi), sama pola web.
+    const uniqueMap = new Map();
+    dsPokRowsCache.forEach(item => uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item));
+    const uniqueData = Array.from(uniqueMap.values());
+
+    const groups = new Map();
+    uniqueData.forEach(item => {
+        const seksi = item.bidang || 'Lainnya';
+        if (!groups.has(seksi)) groups.set(seksi, []);
+        groups.get(seksi).push(item);
+    });
+
+    let html = '';
+    groups.forEach((items, seksi) => {
+        const isOpen = dsPokExpandedSeksi.has(seksi);
+        html += `
+        <div class="ds-pok-seksiHeader bg-slate-100 rounded-xl px-3.5 py-3 mb-2 active:bg-slate-200" data-seksi="${escHtml(seksi)}">
+            <span class="text-sm font-bold text-slate-700"><i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>${escHtml(seksi)} <span class="font-normal text-xs text-slate-400">(${items.length} item)</span></span>
+        </div>`;
+        if (isOpen) {
+            html += `<div class="mb-3">${dsRenderPokTreeForSeksi(seksi, items)}</div>`;
+        }
+    });
+
+    resultsEl.innerHTML = html;
+    dsWirePokTreeEvents();
+}
+
+function dsWirePokTreeEvents() {
+    document.querySelectorAll('.ds-pok-seksiHeader').forEach(el => {
+        el.onclick = () => {
+            const seksi = el.dataset.seksi;
+            if (dsPokExpandedSeksi.has(seksi)) dsPokExpandedSeksi.delete(seksi);
+            else dsPokExpandedSeksi.add(seksi);
+            dsRenderPokBrowse();
+        };
+    });
+    document.querySelectorAll('.ds-pok-parent').forEach(el => {
+        el.onclick = () => {
+            const kode = el.dataset.kode;
+            const seksi = el.dataset.seksi;
+            const key = seksi + '::' + kode;
+            if (dsPokExpandedCodes.has(key)) dsPokExpandedCodes.delete(key);
+            else dsPokExpandedCodes.add(key);
+            dsRenderPokBrowse();
+        };
+    });
+}
+
+// Tanpa kata kunci -> tampil struktur bertingkat per Seksi (spt web).
+// Dengan kata kunci -> tampil FLAT list baris detail (leaf) yang cocok saja.
 async function dsRunPokSearch() {
     const q = $('ds-pokSearchInput').value.trim().toLowerCase();
     const resultsEl = $('ds-pokResults');
-    const hintEl = $('ds-pokHint');
-
-    if (!q) {
-        resultsEl.innerHTML = '';
-        hintEl.textContent = 'Masukkan kata kunci lalu tekan Enter (mis. kode akun atau sebagian uraian).';
-        return;
-    }
 
     resultsEl.innerHTML = `<div class="text-center text-sky-600 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
-    hintEl.textContent = '';
 
     try {
-        const allRows = await dsGetPokRows();
-        const matched = allRows.filter(r => String(r.kode).toLowerCase().includes(q) || String(r.uraian).toLowerCase().includes(q));
-        const MAX_SHOW = 20;
+        await dsGetPokRows();
+
+        if (!q) {
+            dsRenderPokBrowse();
+            return;
+        }
+
+        const uniqueMap = new Map();
+        dsPokRowsCache.forEach(item => uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item));
+        const leafOnly = Array.from(uniqueMap.values()).filter(item => String(item.kode).length > 27);
+
+        const matched = leafOnly.filter(r => String(r.kode).toLowerCase().includes(q) || String(r.uraian).toLowerCase().includes(q));
+        const MAX_SHOW = 30;
         const rows = matched.slice(0, MAX_SHOW);
 
         if (rows.length === 0) {
             resultsEl.innerHTML = `<div class="text-center text-slate-400 py-12"><i class="fa-regular fa-folder-open text-3xl mb-2"></i><p class="text-sm">Data tidak ditemukan.</p></div>`;
             return;
         }
-        hintEl.textContent = matched.length > rows.length
-            ? `Menampilkan ${rows.length} dari ${matched.length} hasil. Persempit pencarian kalau belum ketemu.`
-            : `${rows.length} hasil ditemukan.`;
-        resultsEl.innerHTML = rows.map(dsRenderPokCard).join('');
+        const hintHtml = matched.length > rows.length
+            ? `<p class="text-xs text-slate-400 mb-2">Menampilkan ${rows.length} dari ${matched.length} hasil.</p>`
+            : `<p class="text-xs text-slate-400 mb-2">${rows.length} hasil ditemukan.</p>`;
+        resultsEl.innerHTML = hintHtml + rows.map(dsRenderPokLeafCard).join('');
     } catch (e) {
         resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">❌ ${escHtml(e.message || 'Terjadi kesalahan.')}</div>`;
     }
@@ -1078,7 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('ds-btnSearch').onclick = runSearch;
     $('ds-searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
 
-    $('ds-pokSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') dsRunPokSearch(); });
+    $('ds-pokSearchInput').addEventListener('input', () => dsRunPokSearch());
     $('ds-kgSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') dsRunKgSearch(); });
     $('ds-refSearchInput').addEventListener('input', () => dsRunRefSearch());
 
