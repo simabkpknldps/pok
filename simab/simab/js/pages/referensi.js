@@ -39,6 +39,13 @@ function refIsAdmin() {
     return localStorage.getItem('admin') === '1';
 }
 
+// Superadmin: tingkat di atas admin biasa. Admin biasa TETAP boleh ubah data
+// pegawai lain (nama/jabatan/pangkat/status), TAPI TIDAK boleh melihat/ubah
+// siapa saja yang berstatus admin — itu cuma hak superadmin.
+function refIsSuperadmin() {
+    return localStorage.getItem('superadmin') === '1';
+}
+
 // Aksi kolom Aksi: kalau bukan admin, tampilkan kunci sebagai pengganti tombol edit/hapus.
 function refAksiCell(disabledIconClass) {
     return `<span class="${disabledIconClass} text-slate-300" title="Hanya admin yang bisa mengubah data ini"><i class="fa-solid fa-lock"></i></span>`;
@@ -377,11 +384,11 @@ function refRenderPegawaiTable(keyword) {
     const tbody = document.getElementById('ref-pegawai-tbody');
     const emptyMsg = document.getElementById('ref-pegawai-empty');
     const kw = (keyword || '').trim().toLowerCase();
-    const isAdminView = refIsAdmin(); // kolom Admin cuma utk tingkat admin, bukan aksesMenu biasa
+    const isSuperadminView = refIsSuperadmin(); // kolom Admin CUMA utk superadmin, admin biasa tidak boleh lihat/ubah
 
-    // Sembunyikan header "Admin" kalau bukan admin (tab ini juga muncul utk
-    // tingkat 'aksesMenu', yang TIDAK boleh melihat kolom ini sama sekali).
-    document.getElementById('ref-th-admin')?.classList.toggle('hidden', !isAdminView);
+    // Sembunyikan header "Admin" kalau bukan superadmin (admin biasa & aksesMenu
+    // TIDAK boleh melihat kolom ini sama sekali).
+    document.getElementById('ref-th-admin')?.classList.toggle('hidden', !isSuperadminView);
 
     const filtered = refPegawaiData.filter(row =>
         !kw || String(row.nama).toLowerCase().includes(kw) || String(row.nip).toLowerCase().includes(kw)
@@ -412,7 +419,7 @@ function refRenderPegawaiTable(keyword) {
                     <span class="ref-peg-kepeg-label text-xs text-slate-500">${String(row.kepeg) === '1' ? 'PNS' : 'PPNPN'}</span>
                 </div>
             </td>
-            <td class="py-2 px-4 ${isAdminView ? '' : 'hidden'}">
+            <td class="py-2 px-4 ${isSuperadminView ? '' : 'hidden'}">
                 <div class="flex flex-col items-center gap-1">
                     ${refToggleSwitch('ref-peg-admin', String(row.admin) === '1')}
                     <span class="ref-peg-admin-label text-xs text-slate-500">${String(row.admin) === '1' ? 'Admin' : 'User'}</span>
@@ -528,9 +535,15 @@ function refBindPegawaiRow(tr) {
         const admin = adminCheckbox.checked ? '1' : '0';
         const status = statusCheckbox.checked ? '1' : '0';
 
+        // Field 'admin' CUMA diikutkan kalau viewer superadmin — admin biasa
+        // tidak boleh mengubah siapa saja yang berstatus admin, walau
+        // secara UI kolomnya sudah disembunyikan (ini pengaman tambahan,
+        // bukan cuma sembunyi visual).
+        const updatePayload = { nama, jabatan, pangkat, kepeg, status };
+        if (refIsSuperadmin()) updatePayload.admin = admin;
+
         // Pegawai yang dinonaktifkan (status=0) otomatis kehilangan akses_menu
         // (nonaktif tidak boleh tetap punya akses penuh ke semua halaman).
-        const updatePayload = { nama, jabatan, pangkat, kepeg, admin, status };
         if (status === '0') updatePayload.akses_menu = '';
 
         btnSave.disabled = true;
@@ -549,7 +562,7 @@ function refBindPegawaiRow(tr) {
                 item.jabatan = jabatan;
                 item.pangkat = pangkat;
                 item.kepeg = kepeg;
-                item.admin = admin;
+                if (refIsSuperadmin()) item.admin = admin;
                 item.status = status;
             }
             showToast('Data pegawai berhasil diubah' + (status === '0' ? ' (akses menu ikut dicabut)' : ''));
