@@ -25,6 +25,7 @@
  * -----------------------------------------------------------------------
  */
 
+
 // Ambil segmen 6-digit dari kode MAK (itu adalah kode Akun) — dipakai utk
 // menentukan kategori 52 (Belanja Barang) / 53 (Belanja Modal).
 function getAkunFromMak(mak) {
