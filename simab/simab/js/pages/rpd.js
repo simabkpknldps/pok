@@ -104,7 +104,7 @@ async function rpdLoadData() {
 }
 
 function rpdFormatPersen(v) {
-    const persenText = (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+    const persenText = (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
     // Merah jika >= 5% atau <= -5%, hijau jika di antara -5% s/d 5% (termasuk 0%)
     const colorClass = (v >= 0.05 || v <= -0.05) ? 'text-red-600' : 'text-green-600';
     return `<span class="${colorClass} font-medium">${persenText}</span>`;
