@@ -20,12 +20,11 @@ const SUPABASE_KEY = "sb_publishable_GrguFKOgL0M3uFDoVKLHYw_1dYG19O2";
 
 window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Sama seperti Firebase (lihat firebase-config.js) — Supabase juga butuh waktu
-// (async) buat "menghidupkan ulang" sesi login yang tersimpan tiap kali halaman
-// dibuka/di-refresh. Kalau query ke tabel yg dibatasi RLS langsung ditembak
-// sebelum ini selesai, request-nya dianggap belum login -> ditolak Rules
-// (padahal user sebenarnya sudah login). Fungsi ini nunggu sampai Supabase
-// Auth benar2 siap (auth state ready) dulu.
+// Supabase butuh waktu (async) buat "menghidupkan ulang" sesi login yang
+// tersimpan tiap kali halaman dibuka/di-refresh. Kalau query ke tabel yg
+// dibatasi RLS langsung ditembak sebelum ini selesai, request-nya dianggap
+// belum login -> ditolak Rules (padahal user sebenarnya sudah login).
+// Fungsi ini nunggu sampai Supabase Auth benar2 siap (auth state ready) dulu.
 let _supabaseAuthReadyPromise = null;
 function waitSupabaseAuthReady() {
     if (!_supabaseAuthReadyPromise) {
@@ -68,3 +67,34 @@ async function sbFetchAll(table, selectCols) {
     return allRows;
 }
 window.sbFetchAll = sbFetchAll;
+
+// Status kegiatan dihitung ulang di client tiap kali salah satu field tanggal
+// terkait (tgl_mulai/tgl_lpt/tgl_bayar/tgl_sp2d) berubah, lalu disimpan
+// sebagai field biasa (Postgres tidak punya formula hidup spt Sheet dulu).
+// Dipakai bersama oleh kegiatan.js, pok.js, & perbantuan.js (semuanya sama-
+// sama punya fitur Pelaksana Kegiatan / Tambah Usulan).
+function kgComputeStatus(tglMulai, tglLPT, tglBayar, tglSP2D) {
+    if (tglSP2D) return 'Selesai';
+    if (tglBayar) return 'Terbayar';
+    if (tglLPT) return 'LPT';
+    if (tglMulai) {
+        const mulai = new Date(tglMulai);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        mulai.setHours(0, 0, 0, 0);
+        if (!isNaN(mulai.getTime()) && mulai.getTime() > today.getTime()) return 'Rekam Data';
+    }
+    return 'Terlaksana';
+}
+window.kgComputeStatus = kgComputeStatus;
+
+// ID baris kegiatan baru (dipakai fitur Pelaksana Kegiatan / Tambah Usulan
+// yg generate baris baru per pelaksana). Dipakai bersama oleh kegiatan.js,
+// pok.js, & perbantuan.js.
+function kgGenerateRandomId(len) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let id = '';
+    for (let i = 0; i < len; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
+    return id;
+}
+window.kgGenerateRandomId = kgGenerateRandomId;
