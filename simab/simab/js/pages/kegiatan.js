@@ -233,8 +233,7 @@ async function kgLoadData(forceRefresh) {
         }
 
         await waitSupabaseAuthReady();
-        const tahunAktif = await getTahunAktif();
-        const rows = await sbFetchAll('kegiatan', null, { tahun: tahunAktif });
+        const rows = await sbFetchAll('kegiatan');
 
         kgAllRows = rows.map(d => ({
             A: d.id,
@@ -616,7 +615,6 @@ function kgOpenTambahKegiatanPopup() {
         try {
             await waitSupabaseAuthReady();
             const namaUser = localStorage.getItem('nama') || 'Guest';
-            const tahunAktif = await getTahunAktif();
             const { error } = await sb.from('kegiatan').insert({
                 id: idKegiatan,
                 mak: makTerpilih.kode,
@@ -630,8 +628,7 @@ function kgOpenTambahKegiatanPopup() {
                 status: 'Rekam Data',
                 tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
                 tgl_rekam: normDate(new Date().toISOString().split('T')[0]),
-                perbantuan: false,
-                tahun: tahunAktif
+                perbantuan: false
             });
             if (error) throw new Error(error.message);
 
