@@ -1,27 +1,23 @@
 /**
  * Halaman Kalender
- * Diadaptasi dari kalender.html (versi standalone lama) ke pola SPA.
  * Entry point: initKalenderPage() (dipanggil router.js lewat PAGE_INIT.kalender)
  *
- * PERBEDAAN DARI VERSI LAMA:
- * - GAS lama: endpoint terpisah dengan action 'getCalendar' yang mengembalikan
- *   object siap pakai {tanggal: [ {c,d,e,p}, ... ]}. Action ini TIDAK ADA di
- *   GAS_saat_ini.txt, jadi diganti dengan 'getKegiatanData' (dipakai bareng
- *   halaman Kegiatan & Perjadinku), dikelompokkan per tanggal MULAI (kolom G)
- *   di sisi client. Semua kegiatan kantor ditampilkan (tidak difilter MAK
- *   ataupun nama pegawai), sama seperti perilaku versi lama.
- * - MODIFIKASI SESUAI PERMINTAAN: detail kegiatan tanggal yang diklik TIDAK
- *   lagi tampil di popup, melainkan di tabel pada card sebelah kanan kalender.
+ * Baca LANGSUNG dari Supabase (tabel 'kegiatan'), dikelompokkan per tanggal
+ * mulai (kolom tgl_mulai) di sisi client. Semua kegiatan kantor ditampilkan
+ * (tidak difilter MAK ataupun nama pegawai).
  *
- * Struktur baris data dari backend (huruf kolom sheet Data_Kegiatan_2026):
- * A id, B mak, C uraian, D pelaksana, E tujuan, G tglMulai, P status
+ * Load pakai cache window.kegiatanRowsCache kalau sudah ada dari halaman
+ * lain (hemat baca). TIDAK ADA auto-refresh (halaman ini jarang dibuka) —
+ * data cuma dimuat sekali tiap kali halaman ini dibuka/navigasi ke sini.
+ *
+ * Detail kegiatan tanggal yang diklik tampil di tabel pada card sebelah
+ * kanan kalender (bukan popup).
  */
 
 
 let klCalendarData = {};      // { "yyyy-MM-dd": [ {c,d,e,p}, ... ] }
 let klCurrentDate = new Date();
 let klSelectedKey = null;     // key tanggal yang sedang dipilih (untuk search filter)
-let klAutoRefreshTimer = null;
 
 async function initKalenderPage() {
     const body = document.getElementById('kl-calendarBody');
@@ -37,20 +33,6 @@ async function initKalenderPage() {
     await klLoadCalendarData();
     klRenderCalendar();
     klShowLoading(false);
-
-    // hentikan auto-refresh sebelumnya (kalau user pindah-pindah halaman) sebelum bikin baru
-    if (klAutoRefreshTimer) clearInterval(klAutoRefreshTimer);
-    klAutoRefreshTimer = setInterval(async () => {
-        // kalau fragment kalender sudah tidak ada di DOM (user pindah halaman), hentikan timer
-        if (!document.getElementById('kl-calendarBody')) {
-            clearInterval(klAutoRefreshTimer);
-            klAutoRefreshTimer = null;
-            return;
-        }
-        await klLoadCalendarData();
-        klRenderCalendar();
-        if (klSelectedKey) klRenderDetailForKey(klSelectedKey);
-    }, 60000);
 }
 
 function klShowLoading(show) {
@@ -118,26 +100,26 @@ function klChangeMonthYear() {
     klRenderCalendar();
 }
 
-async function klLoadCalendarData() {
+async function klLoadCalendarData(forceRefresh) {
     try {
-        const data = await apiPost({ action: 'getKegiatanData', kantor: localStorage.getItem('kantor') });
+        await waitSupabaseAuthReady();
 
-        if (!data || data.status !== 'success') {
-            console.error('Gagal memuat data kalender:', data && data.message);
-            klCalendarData = {};
-            return;
+        let rows = forceRefresh ? null : window.kegiatanRowsCache;
+        if (!rows) {
+            rows = await sbFetchAll('kegiatan');
+            window.kegiatanRowsCache = rows;
         }
 
         const grouped = {};
-        (data.rows || []).forEach(r => {
-            const key = klNormalizeDateKey(r.G);
+        rows.forEach(r => {
+            const key = klNormalizeDateKey(r.tgl_mulai);
             if (!key) return;
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push({
-                c: r.C || '',
-                d: r.D || '',
-                e: r.E || '',
-                p: r.P || ''
+                c: r.uraian || '',
+                d: r.pelaksana || '',
+                e: r.tujuan || '',
+                p: r.status || ''
             });
         });
 
