@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Scan Dokumen - SiMAB</title>
+<title>SOH - SiMAB On Hand</title>
 
 <!-- PWA -->
 <meta name="theme-color" content="#0369a1">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Scan Dokumen">
+<meta name="apple-mobile-web-app-title" content="SOH">
 <link rel="manifest" href="manifest-dokumen.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
@@ -23,6 +23,7 @@
 
 <style>
     html, body { overscroll-behavior-y: contain; }
+    body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
     #ds-sheet { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
     .ds-appbar { padding-top: env(safe-area-inset-top); }
 </style>
@@ -36,7 +37,7 @@
 <div class="ds-appbar bg-sky-700 text-white sticky top-0 z-30 shadow-sm">
     <div class="flex items-center justify-between px-4 py-3.5">
         <div>
-            <h1 class="text-base font-semibold leading-tight"><i class="fa-solid fa-camera-retro mr-1.5"></i>Scan Dokumen</h1>
+            <h1 class="text-base font-semibold leading-tight"><i class="fa-solid fa-mobile-screen-button mr-1.5"></i>SOH <span class="text-sky-200 font-normal text-xs">(SiMAB On Hand)</span></h1>
             <p class="text-[11px] text-sky-100 leading-tight" id="ds-userLabel">SiMAB</p>
         </div>
         <div class="flex items-center gap-2">
@@ -51,24 +52,75 @@
     <i class="fa-solid fa-wifi-slash mr-1"></i> Tidak ada koneksi internet
 </div>
 
-<!-- ===================== Search ===================== -->
-<div class="px-4 pt-4 pb-2 max-w-lg mx-auto">
-    <div class="flex items-center gap-2">
-        <input id="ds-searchInput" type="text" inputmode="search" placeholder="Cari nama, uraian, No ST, No SPM..."
-            class="flex-1 px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
-        <button id="ds-btnSearch" class="w-12 h-12 shrink-0 flex items-center justify-center bg-sky-700 hover:bg-sky-800 text-white rounded-xl">
-            <i class="fa-solid fa-magnifying-glass"></i>
-        </button>
+<!-- ===================== TAB: HOME / CARI DOKUMEN ===================== -->
+<div id="ds-tabHome" class="ds-tab-content">
+    <div class="px-4 pt-4 pb-2 max-w-lg mx-auto">
+        <div class="flex items-center gap-2">
+            <input id="ds-searchInput" type="text" inputmode="search" placeholder="Cari nama, uraian, No ST, No SPM..."
+                class="flex-1 px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+            <button id="ds-btnSearch" class="w-12 h-12 shrink-0 flex items-center justify-center bg-sky-700 hover:bg-sky-800 text-white rounded-xl">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+        </div>
+        <p id="ds-hint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan tombol cari (mis. nama pegawai, uraian kegiatan, No ST, atau No SPM). Tap hasil buat urus dokumen &amp; transaksi (LPT/Bayar/SP2D).</p>
     </div>
-    <p id="ds-hint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan tombol cari (mis. nama pegawai, uraian kegiatan, No ST, atau No SPM).</p>
+    <div id="ds-results" class="px-4 pb-8 max-w-lg mx-auto"></div>
 </div>
 
-<!-- ===================== Hasil Pencarian ===================== -->
-<div id="ds-results" class="px-4 pb-8 max-w-lg mx-auto"></div>
+<!-- ===================== TAB: POK (lihat & cari saja) ===================== -->
+<div id="ds-tabPok" class="ds-tab-content hidden">
+    <div class="px-4 pt-4 pb-2 max-w-lg mx-auto">
+        <input id="ds-pokSearchInput" type="text" inputmode="search" placeholder="Cari kode / uraian POK..."
+            class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+        <p id="ds-pokHint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan Enter (mis. kode akun atau sebagian uraian).</p>
+    </div>
+    <div id="ds-pokResults" class="px-4 pb-8 max-w-lg mx-auto"></div>
+</div>
+
+<!-- ===================== TAB: DAFTAR KEGIATAN (lihat & cari saja) ===================== -->
+<div id="ds-tabKegiatan" class="ds-tab-content hidden">
+    <div class="px-4 pt-4 pb-2 max-w-lg mx-auto">
+        <input id="ds-kgSearchInput" type="text" inputmode="search" placeholder="Cari uraian, pelaksana, tujuan, status..."
+            class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+        <p id="ds-kgHint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan Enter. Tap hasil buat lihat detil (tanpa aksi transaksi — buka tab Home kalau perlu urus LPT/Bayar/SP2D/dokumen).</p>
+    </div>
+    <div id="ds-kgResults" class="px-4 pb-8 max-w-lg mx-auto"></div>
+</div>
+
+<!-- ===================== TAB: REFERENSI (lihat & cari saja) ===================== -->
+<div id="ds-tabReferensi" class="ds-tab-content hidden">
+    <div class="px-4 pt-4 max-w-lg mx-auto">
+        <div class="flex gap-2 mb-3">
+            <button id="ds-refSubSbm" class="ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-sky-700 text-white">SBM Uang Harian</button>
+            <button id="ds-refSubPegawai" class="ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-600">Pegawai</button>
+        </div>
+        <input id="ds-refSearchInput" type="text" inputmode="search" placeholder="Cari..."
+            class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+    </div>
+    <div id="ds-refResults" class="px-4 pt-2 pb-8 max-w-lg mx-auto"></div>
+</div>
 
 <!-- ===================== Bottom Sheet Detail/Aksi ===================== -->
 <div id="ds-sheetOverlay" class="hidden fixed inset-0 bg-black/40 z-40">
     <div id="ds-sheet" class="fixed left-0 right-0 bottom-0 bg-white rounded-t-2xl max-h-[88vh] overflow-y-auto p-5"></div>
+</div>
+
+<!-- ===================== Bottom Tab Bar ===================== -->
+<div class="fixed left-0 right-0 bottom-0 bg-white border-t border-slate-200 z-30" style="padding-bottom: env(safe-area-inset-bottom);">
+    <div class="grid grid-cols-4 max-w-lg mx-auto">
+        <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-sky-700" data-tab="home">
+            <i class="fa-solid fa-magnifying-glass text-lg"></i><span class="text-[10.5px] font-medium">Cari</span>
+        </button>
+        <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="pok">
+            <i class="fa-solid fa-folder-open text-lg"></i><span class="text-[10.5px] font-medium">POK</span>
+        </button>
+        <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="kegiatan">
+            <i class="fa-solid fa-list-check text-lg"></i><span class="text-[10.5px] font-medium">Kegiatan</span>
+        </button>
+        <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="referensi">
+            <i class="fa-solid fa-book text-lg"></i><span class="text-[10.5px] font-medium">Referensi</span>
+        </button>
+    </div>
 </div>
 
 <!-- ===================== Scripts ===================== -->
@@ -767,6 +819,256 @@ async function dsHapusDokumen() {
 }
 
 // ============================================================
+// TAB SWITCHING (bottom nav)
+// ============================================================
+let dsActiveTab = 'home';
+
+function dsSwitchTab(tab) {
+    dsActiveTab = tab;
+    document.querySelectorAll('.ds-tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.ds-navbtn').forEach(btn => {
+        const active = btn.dataset.tab === tab;
+        btn.className = `ds-navbtn flex flex-col items-center gap-1 py-2.5 ${active ? 'text-sky-700' : 'text-slate-400'}`;
+    });
+
+    const map = { home: 'ds-tabHome', pok: 'ds-tabPok', kegiatan: 'ds-tabKegiatan', referensi: 'ds-tabReferensi' };
+    $(map[tab]).classList.remove('hidden');
+
+    // Muat data referensi (SBM) begitu tab-nya pertama kali dibuka.
+    if (tab === 'referensi' && !dsRefLoaded) dsRunRefSearch();
+}
+
+// ============================================================
+// TAB: POK (baca & cari saja)
+// ============================================================
+let dsPokRowsCache = null;
+
+async function dsGetPokRows() {
+    if (dsPokRowsCache) return dsPokRowsCache;
+    await waitSupabaseAuthReady();
+    const [pokRows, kegiatanRows, blokirRows] = await Promise.all([
+        sbFetchAll('pok'),
+        dsGetAllRows(),
+        sbFetchAll('blokir')
+    ]);
+
+    const realisasiByMak = {};
+    kegiatanRows.forEach(k => {
+        const mak = String(k.B || '').trim();
+        if (!mak) return;
+        realisasiByMak[mak] = (realisasiByMak[mak] || 0) + (Number(k.M) || 0);
+    });
+    const blokirByKode = {};
+    blokirRows.forEach(b => { blokirByKode[b.id] = Number(b.nilai) || 0; });
+
+    dsPokRowsCache = pokRows.map(d => {
+        const kode = d.kode || d.id;
+        const pagu = Number(d.pagu) || 0;
+        const blokir = blokirByKode[kode] || 0;
+        const realisasi = realisasiByMak[kode] || 0;
+        const sisa = pagu - blokir - realisasi;
+        return { kode, uraian: d.uraian || '', pagu, blokir, realisasi, sisa, sumber: d.sd || '' };
+    });
+    return dsPokRowsCache;
+}
+
+function dsRenderPokCard(item) {
+    const penyebut = item.pagu - item.blokir;
+    const persen = penyebut ? Math.min(Math.max((item.realisasi / penyebut) * 100, 0), 100) : 0;
+    const warna = persen >= 100 ? 'bg-red-500' : (persen >= 80 ? 'bg-amber-500' : 'bg-sky-500');
+    return `
+    <div class="bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5">
+        <div class="flex items-start justify-between gap-2">
+            <p class="text-xs font-mono text-slate-400">${escHtml(item.kode)}</p>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium ${item.sumber === 'PNBP' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}">${escHtml(item.sumber || '-')}</span>
+        </div>
+        <p class="text-sm font-medium text-slate-800 mt-0.5 mb-2 leading-snug">${escHtml(item.uraian)}</p>
+        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
+            <div class="h-full ${warna} rounded-full" style="width:${persen}%"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+            <div><span class="text-slate-400">Pagu</span> <span class="font-medium text-slate-700 float-right">${Number(item.pagu).toLocaleString('id-ID')}</span></div>
+            <div><span class="text-slate-400">Blokir</span> <span class="font-medium text-slate-700 float-right">${Number(item.blokir).toLocaleString('id-ID')}</span></div>
+            <div><span class="text-slate-400">Realisasi</span> <span class="font-medium text-slate-700 float-right">${Number(item.realisasi).toLocaleString('id-ID')}</span></div>
+            <div><span class="text-slate-400">Sisa</span> <span class="font-medium text-slate-700 float-right">${Number(item.sisa).toLocaleString('id-ID')}</span></div>
+        </div>
+    </div>`;
+}
+
+async function dsRunPokSearch() {
+    const q = $('ds-pokSearchInput').value.trim().toLowerCase();
+    const resultsEl = $('ds-pokResults');
+    const hintEl = $('ds-pokHint');
+
+    if (!q) {
+        resultsEl.innerHTML = '';
+        hintEl.textContent = 'Masukkan kata kunci lalu tekan Enter (mis. kode akun atau sebagian uraian).';
+        return;
+    }
+
+    resultsEl.innerHTML = `<div class="text-center text-sky-600 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+    hintEl.textContent = '';
+
+    try {
+        const allRows = await dsGetPokRows();
+        const matched = allRows.filter(r => String(r.kode).toLowerCase().includes(q) || String(r.uraian).toLowerCase().includes(q));
+        const MAX_SHOW = 20;
+        const rows = matched.slice(0, MAX_SHOW);
+
+        if (rows.length === 0) {
+            resultsEl.innerHTML = `<div class="text-center text-slate-400 py-12"><i class="fa-regular fa-folder-open text-3xl mb-2"></i><p class="text-sm">Data tidak ditemukan.</p></div>`;
+            return;
+        }
+        hintEl.textContent = matched.length > rows.length
+            ? `Menampilkan ${rows.length} dari ${matched.length} hasil. Persempit pencarian kalau belum ketemu.`
+            : `${rows.length} hasil ditemukan.`;
+        resultsEl.innerHTML = rows.map(dsRenderPokCard).join('');
+    } catch (e) {
+        resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">❌ ${escHtml(e.message || 'Terjadi kesalahan.')}</div>`;
+    }
+}
+
+// ============================================================
+// TAB: DAFTAR KEGIATAN (baca & cari saja — tanpa aksi transaksi)
+// ============================================================
+function dsRenderKgCard(r) {
+    return `
+    <div class="ds-kg-card bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5 active:bg-slate-50" data-id="${escHtml(r.A)}">
+        <p class="text-sm font-medium text-slate-800 leading-snug">${escHtml(r.C)}</p>
+        <p class="text-xs text-slate-500 mt-1">${escHtml(r.D)} &middot; ${escHtml(r.E)}</p>
+        <div class="flex items-center justify-between mt-2">
+            <span class="text-xs text-slate-400">${escHtml(r.G || '-')} &middot; Rp ${Number(r.M || 0).toLocaleString('id-ID')}</span>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${statusBadgeClass(r.P)}">${escHtml(r.P)}</span>
+        </div>
+    </div>`;
+}
+
+async function dsRunKgSearch() {
+    const q = $('ds-kgSearchInput').value.trim().toLowerCase();
+    const resultsEl = $('ds-kgResults');
+    const hintEl = $('ds-kgHint');
+
+    if (!q) {
+        resultsEl.innerHTML = '';
+        hintEl.textContent = 'Masukkan kata kunci lalu tekan Enter. Tap hasil buat lihat detil (tanpa aksi transaksi — buka tab Home kalau perlu urus LPT/Bayar/SP2D/dokumen).';
+        return;
+    }
+
+    resultsEl.innerHTML = `<div class="text-center text-sky-600 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+    hintEl.textContent = '';
+
+    try {
+        const allRows = await dsGetAllRows();
+        const matched = allRows.filter(r =>
+            String(r.C).toLowerCase().includes(q) || String(r.D).toLowerCase().includes(q) ||
+            String(r.E).toLowerCase().includes(q) || String(r.P).toLowerCase().includes(q) ||
+            String(r.R).toLowerCase().includes(q)
+        );
+        const MAX_SHOW = 20;
+        const rows = matched.slice(0, MAX_SHOW);
+
+        if (rows.length === 0) {
+            resultsEl.innerHTML = `<div class="text-center text-slate-400 py-12"><i class="fa-regular fa-folder-open text-3xl mb-2"></i><p class="text-sm">Data tidak ditemukan.</p></div>`;
+            return;
+        }
+        hintEl.textContent = matched.length > rows.length
+            ? `Menampilkan ${rows.length} dari ${matched.length} hasil. Persempit pencarian kalau belum ketemu.`
+            : `${rows.length} hasil ditemukan.`;
+
+        resultsEl.innerHTML = rows.map(dsRenderKgCard).join('');
+        resultsEl.querySelectorAll('.ds-kg-card').forEach(card => {
+            const id = card.dataset.id;
+            const row = rows.find(r => String(r.A) === id);
+            card.onclick = () => dsOpenKgDetilReadOnly(row);
+        });
+    } catch (e) {
+        resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">❌ ${escHtml(e.message || 'Terjadi kesalahan.')}</div>`;
+    }
+}
+
+// Detil baca-saja (TANPA tombol dokumen/LPT/Bayar/SP2D) — dipakai khusus dari
+// tab Kegiatan. Kalau butuh urus dokumen/transaksi, arahkan ke tab Home.
+function dsOpenKgDetilReadOnly(row) {
+    currentRow = row;
+    $('ds-sheetOverlay').classList.remove('hidden');
+    dsRenderDetilView();
+    // dsRenderDetilView() sudah nyediain tombol "Tutup"/back yg cukup buat
+    // konteks baca-saja ini — tinggal pastikan overlay ke-close dgn benar.
+    const closeAndHide = () => { $('ds-sheetOverlay').classList.add('hidden'); currentRow = null; };
+    $('ds-btnBackFromForm').onclick = closeAndHide;
+    $('ds-btnCloseDetil').onclick = closeAndHide;
+}
+
+// ============================================================
+// TAB: REFERENSI (SBM & Pegawai — baca & cari saja)
+// ============================================================
+let dsRefMode = 'sbm'; // 'sbm' | 'pegawai'
+let dsRefLoaded = false;
+let dsSbmRowsCache = null;
+let dsPegawaiRowsCache = null;
+
+async function dsGetSbmRows() {
+    if (dsSbmRowsCache) return dsSbmRowsCache;
+    await waitSupabaseAuthReady();
+    const rows = await sbFetchAll('sbm');
+    dsSbmRowsCache = rows.map(d => ({ kabupaten: d.id, luarKota: Number(d.luar_kota) || 0, dalamKota: Number(d.dalam_kota) || 0, diklat: Number(d.diklat) || 0 }));
+    return dsSbmRowsCache;
+}
+
+async function dsGetPegawaiRows() {
+    if (dsPegawaiRowsCache) return dsPegawaiRowsCache;
+    await waitSupabaseAuthReady();
+    const rows = await sbFetchAll('pegawai', 'id, nama, jabatan');
+    dsPegawaiRowsCache = rows.map(d => ({ nip: d.id, nama: d.nama || '', jabatan: d.jabatan || '' }));
+    return dsPegawaiRowsCache;
+}
+
+function dsRenderSbmCard(item) {
+    return `
+    <div class="bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5">
+        <p class="text-sm font-medium text-slate-800 mb-2">${escHtml(item.kabupaten)}</p>
+        <div class="grid grid-cols-3 gap-2 text-[11px] text-center">
+            <div class="bg-slate-50 rounded-lg py-1.5"><span class="block text-slate-400">Luar Kota</span><span class="font-medium text-slate-700">${item.luarKota.toLocaleString('id-ID')}</span></div>
+            <div class="bg-slate-50 rounded-lg py-1.5"><span class="block text-slate-400">Dalam Kota</span><span class="font-medium text-slate-700">${item.dalamKota.toLocaleString('id-ID')}</span></div>
+            <div class="bg-slate-50 rounded-lg py-1.5"><span class="block text-slate-400">Diklat</span><span class="font-medium text-slate-700">${item.diklat.toLocaleString('id-ID')}</span></div>
+        </div>
+    </div>`;
+}
+
+function dsRenderPegawaiCard(item) {
+    return `
+    <div class="bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5">
+        <p class="text-sm font-medium text-slate-800">${escHtml(item.nama)}</p>
+        <p class="text-xs text-slate-500 mt-0.5">${escHtml(item.nip)} &middot; ${escHtml(item.jabatan || '-')}</p>
+    </div>`;
+}
+
+async function dsRunRefSearch() {
+    dsRefLoaded = true;
+    const q = $('ds-refSearchInput').value.trim().toLowerCase();
+    const resultsEl = $('ds-refResults');
+    resultsEl.innerHTML = `<div class="text-center text-sky-600 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+
+    try {
+        if (dsRefMode === 'sbm') {
+            const allRows = await dsGetSbmRows();
+            const matched = q ? allRows.filter(r => String(r.kabupaten).toLowerCase().includes(q)) : allRows;
+            resultsEl.innerHTML = matched.length
+                ? matched.map(dsRenderSbmCard).join('')
+                : `<div class="text-center text-slate-400 py-12 text-sm">Tidak ada data yang cocok.</div>`;
+        } else {
+            const allRows = await dsGetPegawaiRows();
+            const matched = q ? allRows.filter(r => String(r.nama).toLowerCase().includes(q) || String(r.nip).toLowerCase().includes(q)) : allRows;
+            resultsEl.innerHTML = matched.length
+                ? matched.slice(0, 30).map(dsRenderPegawaiCard).join('')
+                : `<div class="text-center text-slate-400 py-12 text-sm">Tidak ada data yang cocok.</div>`;
+        }
+    } catch (e) {
+        resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">❌ ${escHtml(e.message || 'Terjadi kesalahan.')}</div>`;
+    }
+}
+
+// ============================================================
 // Init
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -776,12 +1078,41 @@ document.addEventListener('DOMContentLoaded', () => {
     $('ds-btnSearch').onclick = runSearch;
     $('ds-searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
 
+    $('ds-pokSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') dsRunPokSearch(); });
+    $('ds-kgSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') dsRunKgSearch(); });
+    $('ds-refSearchInput').addEventListener('input', () => dsRunRefSearch());
+
+    $('ds-refSubSbm').onclick = () => {
+        dsRefMode = 'sbm';
+        $('ds-refSubSbm').className = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-sky-700 text-white';
+        $('ds-refSubPegawai').className = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-600';
+        $('ds-refSearchInput').placeholder = 'Cari Kabupaten/Kota...';
+        $('ds-refSearchInput').value = '';
+        dsRunRefSearch();
+    };
+    $('ds-refSubPegawai').onclick = () => {
+        dsRefMode = 'pegawai';
+        $('ds-refSubPegawai').className = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-sky-700 text-white';
+        $('ds-refSubSbm').className = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-600';
+        $('ds-refSearchInput').placeholder = 'Cari Nama / NIP...';
+        $('ds-refSearchInput').value = '';
+        dsRunRefSearch();
+    };
+
+    document.querySelectorAll('.ds-navbtn').forEach(btn => {
+        btn.onclick = () => dsSwitchTab(btn.dataset.tab);
+    });
+
     $('ds-sheetOverlay').addEventListener('click', (e) => {
         if (e.target === $('ds-sheetOverlay')) dsCloseDetail();
     });
 
     $('ds-btnLogout').onclick = () => {
         if (!confirm('Yakin ingin keluar?')) return;
+        // Titipkan halaman ini supaya setelah login lagi, balik ke SOH
+        // (bukan ke dashboard.html SiMAB versi web) — dibaca index.html,
+        // kadaluarsa otomatis 10 menit kalau nggak jadi login lagi.
+        localStorage.setItem('postLoginRedirect', JSON.stringify({ page: 'dokumen-scan.html', ts: Date.now() }));
         ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'lastActivity']
             .forEach(k => localStorage.removeItem(k));
         window.location.href = 'index.html';
