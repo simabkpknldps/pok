@@ -106,8 +106,9 @@ async function dsGetAllRows() {
     const rows = await sbFetchAll('kegiatan');
     dsAllRowsCache = rows.map(d => ({
         A: d.id, B: d.mak || '', C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
-        F: d.tgl_st || '', G: d.tgl_mulai || '', P: d.status || '',
-        R: d.nomor_spm || '', T: d.dokumen_link || ''
+        F: d.tgl_st || '', G: d.tgl_mulai || '', H: d.tgl_selesai || '',
+        I: d.tgl_lpt || '', J: d.tgl_bayar || '', M: Number(d.jumlah) || 0, N: d.user || '',
+        P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '', T: d.dokumen_link || ''
     }));
     return dsAllRowsCache;
 }
@@ -239,12 +240,14 @@ function dsRenderSheet() {
         </div>
         <p class="text-sm text-slate-500 mb-3">${escHtml(r.D)} &middot; ${escHtml(r.E)}</p>
 
-        <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 rounded-xl p-3 mb-4">
+        <div class="grid grid-cols-2 gap-2 text-xs bg-slate-50 rounded-xl p-3 mb-3">
             <div><span class="text-slate-400">Tgl ST/ND</span><br><span class="text-slate-700 font-medium">${escHtml(r.F || '-')}</span></div>
             <div><span class="text-slate-400">Tgl Mulai</span><br><span class="text-slate-700 font-medium">${escHtml(r.G || '-')}</span></div>
             <div><span class="text-slate-400">Status</span><br><span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${statusBadgeClass(r.P)}">${escHtml(r.P)}</span></div>
             <div><span class="text-slate-400">ID Kegiatan</span><br><span class="text-slate-700 font-medium">${escHtml(r.A)}</span></div>
         </div>
+
+        <button id="ds-btnDetil" class="w-full text-center text-xs text-sky-600 font-medium mb-4"><i class="fa-solid fa-circle-info mr-1"></i>Lihat Detil Kegiatan Lengkap</button>
 
         <p class="text-xs text-slate-400 mb-2 text-center">${hasDoc ? '✅ Dokumen sudah tersedia' : 'Dokumen belum diupload'}</p>
 
@@ -264,6 +267,19 @@ function dsRenderSheet() {
         <button id="ds-btnHapus" class="w-full mt-2.5 py-2.5 rounded-xl border border-red-300 text-red-600 text-xs font-medium">
             <i class="fa-solid fa-trash mr-1"></i> Hapus Dokumen
         </button>` : ''}
+
+        <p class="text-xs text-slate-400 mt-4 mb-2 text-center">Transaksi</p>
+        <div class="grid grid-cols-3 gap-2">
+            <button id="ds-btnLpt" class="flex flex-col items-center gap-1 py-3 rounded-xl border border-amber-300 text-amber-700">
+                <i class="fa-solid fa-stamp text-lg"></i><span class="text-[11px] font-medium">LPT</span>
+            </button>
+            <button id="ds-btnBayar" class="flex flex-col items-center gap-1 py-3 rounded-xl border border-green-300 text-green-700">
+                <i class="fa-solid fa-money-check-dollar text-lg"></i><span class="text-[11px] font-medium">Bayar</span>
+            </button>
+            <button id="ds-btnSp2d" class="flex flex-col items-center gap-1 py-3 rounded-xl border border-blue-300 text-blue-700">
+                <i class="fa-solid fa-file-invoice-dollar text-lg"></i><span class="text-[11px] font-medium">SP2D</span>
+            </button>
+        </div>
 
         <input id="ds-fileInputPdf" type="file" accept="application/pdf,.pdf" class="hidden">
         <input id="ds-fileInputCamera" type="file" accept="image/*" capture="environment" class="hidden">
@@ -336,6 +352,204 @@ function dsWireSheetEvents() {
             dsRenderSheet();
         };
     });
+
+    $('ds-btnDetil').onclick = dsRenderDetilView;
+    $('ds-btnLpt').onclick = dsRenderLptForm;
+    $('ds-btnBayar').onclick = dsRenderBayarForm;
+    $('ds-btnSp2d').onclick = dsRenderSp2dForm;
+}
+
+function dsSetMsg(elId, msg, color) {
+    const el = $(elId);
+    if (!el) return;
+    const colorMap = { sky: 'text-sky-600', red: 'text-red-500', emerald: 'text-emerald-600' };
+    el.textContent = msg;
+    el.className = 'text-center text-xs min-h-[18px] mt-3 ' + (colorMap[color] || 'text-slate-400');
+}
+
+// ============================================================
+// Sub-layar: Detil Kegiatan (baca saja)
+// ============================================================
+function dsRenderDetilView() {
+    const r = currentRow;
+    const baris = (label, value) => `
+        <div class="flex justify-between items-start gap-3 py-2 border-b border-slate-100 text-sm">
+            <span class="text-slate-400 whitespace-nowrap">${label}</span>
+            <span class="font-medium text-slate-700 text-right break-words">${value || '-'}</span>
+        </div>`;
+
+    $('ds-sheet').innerHTML = `
+        <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        <div class="flex items-center gap-2 mb-3">
+            <button id="ds-btnBackFromForm" class="text-slate-400 text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 class="text-base font-semibold text-slate-800">Detil Kegiatan</h3>
+        </div>
+        <div>
+            ${baris('ID Kegiatan', escHtml(r.A))}
+            ${baris('MAK', escHtml(r.B))}
+            ${baris('Uraian / No ST', escHtml(r.C))}
+            ${baris('Pelaksana Tugas', escHtml(r.D))}
+            ${baris('Tujuan', escHtml(r.E))}
+            ${baris('Tgl ST', escHtml(r.F))}
+            ${baris('Tgl Mulai', escHtml(r.G))}
+            ${baris('Tgl Selesai', escHtml(r.H))}
+            ${baris('Tgl LPT', escHtml(r.I))}
+            ${baris('Tgl Bayar', escHtml(r.J))}
+            ${baris('Jumlah', 'Rp ' + Number(r.M || 0).toLocaleString('id-ID'))}
+            ${baris('User', escHtml(r.N))}
+            ${baris('Status', escHtml(r.P))}
+            ${baris('Tgl SP2D', escHtml(r.Q))}
+            ${baris('Nomor SPM', escHtml(r.R))}
+        </div>
+        <button id="ds-btnCloseDetil" class="w-full mt-4 py-3 bg-slate-200 text-slate-600 rounded-xl text-sm font-medium">Tutup</button>
+    `;
+    $('ds-btnBackFromForm').onclick = dsRenderSheet;
+    $('ds-btnCloseDetil').onclick = dsRenderSheet;
+}
+
+// ============================================================
+// Sub-layar: LPT
+// ============================================================
+function dsRenderLptForm() {
+    const r = currentRow;
+    $('ds-sheet').innerHTML = `
+        <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        <div class="flex items-center gap-2 mb-4">
+            <button id="ds-btnBackFromForm" class="text-slate-400 text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 class="text-base font-semibold text-slate-800">Tetapkan LPT</h3>
+        </div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Tanggal LPT</label>
+        <input id="ds-lptTanggal" type="date" value="${r.I || ''}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-4">
+        <button id="ds-btnSimpanForm" class="w-full py-3 bg-sky-600 text-white rounded-xl text-sm font-semibold">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+        </button>
+        <div id="ds-formStatus" class="text-center text-xs text-slate-400 min-h-[18px] mt-3"></div>
+    `;
+    $('ds-btnBackFromForm').onclick = dsRenderSheet;
+    $('ds-btnSimpanForm').onclick = async function () {
+        const btn = this;
+        const tgl = $('ds-lptTanggal').value;
+        if (!tgl) { alert('Tanggal LPT harus diisi.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await waitSupabaseAuthReady();
+            const status = kgComputeStatus(r.G, tgl, r.J, r.Q);
+            const { error } = await sb.from('kegiatan').update({ tgl_lpt: tgl, status }).eq('id', r.A);
+            if (error) throw new Error(error.message);
+
+            r.I = tgl; r.P = status;
+            const cr = dsAllRowsCache?.find(x => String(x.A) === String(r.A));
+            if (cr) { cr.I = tgl; cr.P = status; }
+
+            dsSetMsg('ds-formStatus', '✅ LPT berhasil disimpan.', 'emerald');
+            setTimeout(dsRenderSheet, 700);
+        } catch (e) {
+            dsSetMsg('ds-formStatus', '❌ ' + (e.message || 'Gagal menyimpan.'), 'red');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+
+// ============================================================
+// Sub-layar: Bayar
+// ============================================================
+function dsRenderBayarForm() {
+    const r = currentRow;
+    $('ds-sheet').innerHTML = `
+        <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        <div class="flex items-center gap-2 mb-4">
+            <button id="ds-btnBackFromForm" class="text-slate-400 text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 class="text-base font-semibold text-slate-800">Tetapkan Bayar</h3>
+        </div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Uraian</label>
+        <input id="ds-bayarUraian" type="text" value="${escHtml(r.C)}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Tanggal Bayar</label>
+        <input id="ds-bayarTanggal" type="date" value="${r.J || ''}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-4">
+        <button id="ds-btnSimpanForm" class="w-full py-3 bg-sky-600 text-white rounded-xl text-sm font-semibold">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+        </button>
+        <div id="ds-formStatus" class="text-center text-xs text-slate-400 min-h-[18px] mt-3"></div>
+    `;
+    $('ds-btnBackFromForm').onclick = dsRenderSheet;
+    $('ds-btnSimpanForm').onclick = async function () {
+        const btn = this;
+        const uraian = $('ds-bayarUraian').value.trim();
+        const tgl = $('ds-bayarTanggal').value;
+        if (!uraian) { alert('Uraian tidak boleh kosong.'); return; }
+        if (!tgl) { alert('Tanggal Bayar harus diisi.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await waitSupabaseAuthReady();
+            const status = kgComputeStatus(r.G, r.I, tgl, r.Q);
+            const { error } = await sb.from('kegiatan').update({ uraian, tgl_bayar: tgl, status }).eq('id', r.A);
+            if (error) throw new Error(error.message);
+
+            r.C = uraian; r.J = tgl; r.P = status;
+            const cr = dsAllRowsCache?.find(x => String(x.A) === String(r.A));
+            if (cr) { cr.C = uraian; cr.J = tgl; cr.P = status; }
+
+            dsSetMsg('ds-formStatus', '✅ Bayar berhasil disimpan.', 'emerald');
+            setTimeout(dsRenderSheet, 700);
+        } catch (e) {
+            dsSetMsg('ds-formStatus', '❌ ' + (e.message || 'Gagal menyimpan.'), 'red');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+
+// ============================================================
+// Sub-layar: SP2D
+// ============================================================
+function dsRenderSp2dForm() {
+    const r = currentRow;
+    $('ds-sheet').innerHTML = `
+        <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        <div class="flex items-center gap-2 mb-4">
+            <button id="ds-btnBackFromForm" class="text-slate-400 text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 class="text-base font-semibold text-slate-800">Tetapkan SP2D</h3>
+        </div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Tanggal SP2D</label>
+        <input id="ds-sp2dTanggal" type="date" value="${r.Q || ''}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Nomor SPM</label>
+        <input id="ds-sp2dNomorSpm" type="text" value="${escHtml(r.R)}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-4">
+        <button id="ds-btnSimpanForm" class="w-full py-3 bg-sky-600 text-white rounded-xl text-sm font-semibold">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+        </button>
+        <div id="ds-formStatus" class="text-center text-xs text-slate-400 min-h-[18px] mt-3"></div>
+    `;
+    $('ds-btnBackFromForm').onclick = dsRenderSheet;
+    $('ds-btnSimpanForm').onclick = async function () {
+        const btn = this;
+        const tgl = $('ds-sp2dTanggal').value;
+        const nomorSpm = $('ds-sp2dNomorSpm').value.trim();
+        if (!tgl) { alert('Tanggal SP2D harus diisi.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await waitSupabaseAuthReady();
+            const status = kgComputeStatus(r.G, r.I, r.J, tgl);
+            const { error } = await sb.from('kegiatan').update({ tgl_sp2d: tgl, nomor_spm: nomorSpm, status }).eq('id', r.A);
+            if (error) throw new Error(error.message);
+
+            r.Q = tgl; r.R = nomorSpm; r.P = status;
+            const cr = dsAllRowsCache?.find(x => String(x.A) === String(r.A));
+            if (cr) { cr.Q = tgl; cr.R = nomorSpm; cr.P = status; }
+
+            dsSetMsg('ds-formStatus', '✅ SP2D berhasil disimpan.', 'emerald');
+            setTimeout(dsRenderSheet, 700);
+        } catch (e) {
+            dsSetMsg('ds-formStatus', '❌ ' + (e.message || 'Gagal menyimpan.'), 'red');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
 }
 
 function dsSetStatus(msg, color) {
