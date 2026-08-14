@@ -1,37 +1,31 @@
 /**
  * js/pages/rpd.js
  * -----------------------------------------------------------------------
- * Halaman "RPD" — menampilkan tabel dari sheet "dash_bulanan_2026",
- * range T2:X14.
+ * Halaman "RPD" — FULL Supabase.
  *
- * Struktur kolom (T, U, V, W, X):
- *   T -> % Deviasi  (formula di sheet, read-only, ditampilkan sbg persen, rata kanan)
- *   U -> Bulan      (read-only, rata tengah)
- *   V -> RPD        (SATU-SATUNYA kolom yang bisa diedit dari halaman ini, rata kanan)
- *   W -> Realisasi  (read-only, rata kanan)
- *   X -> Deviasi = RPD - Realisasi, FORMULA di sheet (=V-W). Read-only, rata kanan.
- *        Kolom T (% Deviasi) & X (Deviasi) otomatis ikut berubah begitu
- *        kolom RPD (V) diupdate.
+ * Sumber data:
+ *   - Tabel 'rpd': 12 baris tetap (id 1-12 = bulan Jan-Des), kolom 'nilai'
+ *     = angka RPD (Rencana Penarikan Dana) bulan itu. SATU-SATUNYA nilai
+ *     yang disimpan di database — sisanya dihitung live di browser.
+ *   - Tabel 'kegiatan': dipakai hitung Realisasi per bulan (SUM jumlah utk
+ *     kegiatan yang tgl_sp2d-nya jatuh di bulan tsb), pakai cache
+ *     window.kegiatanRowsCache kalau sudah ada dari halaman lain.
  *
- * Alur edit per baris:
- *   1. Klik icon pencil  -> HANYA sel kolom RPD (V) di baris itu berubah jadi
- *      <input>. Tombol Aksi berubah jadi 2 tombol: disket (simpan) & x (batal).
- *   2. Klik disket -> HANYA nilai kolom RPD yang dikirim ke backend
- *      (action: updateRpdTabelRow), yang menulis 1 sel saja ke sheet
- *      (kolom V). Kolom lain (T, U, W, X) tidak pernah ditulis ulang,
- *      supaya formula % Deviasi & Deviasi tetap aman.
- *   3. Klik x (batal) -> edit dibatalkan, nilai kembali seperti semula,
- *      tidak ada yang dikirim ke backend.
+ * Kolom yang ditampilkan (per bulan): Bulan | RPD | Realisasi | Deviasi
+ * (= RPD - Realisasi) | % Deviasi (= Deviasi / RPD) | Aksi.
+ *
+ * Alur edit per baris: cuma kolom RPD yang bisa diubah (klik pensil -> input
+ * -> simpan -> update tabel 'rpd'). Realisasi/Deviasi/%Deviasi otomatis
+ * ikut kehitung ulang begitu RPD diubah, karena semuanya dihitung di
+ * browser, bukan tersimpan.
  * -----------------------------------------------------------------------
  */
 
-const RPD_COL_PERSEN_DEVIASI_INDEX = 4; // index ke-0 dalam range T:X = kolom T (% Deviasi)
-const RPD_COL_BULAN_INDEX = 0;          // index ke-1 = kolom U (Bulan), satu-satunya yang rata tengah
-const RPD_COL_RPD_INDEX = 1;            // index ke-2 = kolom V (RPD), satu-satunya yang editable
+const RPD_BULAN_LABEL = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+let rpdComputedRows = []; // { bulanKe(1-12), bulan, rpd, realisasi, deviasi, persenDeviasi }
 
 async function initRpdPage() {
-    // Fragment pages/rpd.html sudah otomatis dimuat router ke #app sebelum
-    // fungsi ini dipanggil, jadi di sini cukup ambil datanya.
     await rpdLoadData();
 }
 
@@ -49,18 +43,54 @@ async function rpdLoadData() {
     errorEl.classList.add('hidden');
 
     try {
-        const result = await apiPost({ action: 'getRpdTabelData' });
-        if (result.status !== 'success') {
-            throw new Error(result.message || 'Gagal memuat data RPD');
+        await waitSupabaseAuthReady();
+
+        const [rpdRows, kegiatanRows] = await Promise.all([
+            sbFetchAll('rpd'),
+            (async () => {
+                let rows = window.kegiatanRowsCache;
+                if (!rows) {
+                    rows = await sbFetchAll('kegiatan');
+                    window.kegiatanRowsCache = rows;
+                }
+                return rows;
+            })()
+        ]);
+
+        // Realisasi per bulan = SUM jumlah kegiatan yang tgl_sp2d-nya jatuh di bulan itu.
+        const realisasiPerBulan = new Array(13).fill(0); // index 1-12 dipakai, index 0 dibuang
+        kegiatanRows.forEach(k => {
+            if (!k.tgl_sp2d) return;
+            const d = new Date(k.tgl_sp2d);
+            if (isNaN(d.getTime())) return;
+            realisasiPerBulan[d.getMonth() + 1] += Number(k.jumlah) || 0;
+        });
+
+        const rpdByBulan = {};
+        rpdRows.forEach(r => { rpdByBulan[Number(r.id)] = Number(r.nilai) || 0; });
+
+        rpdComputedRows = [];
+        for (let bulanKe = 1; bulanKe <= 12; bulanKe++) {
+            const rpdVal = rpdByBulan[bulanKe] || 0;
+            const realisasi = realisasiPerBulan[bulanKe] || 0;
+            const deviasi = rpdVal - realisasi;
+            const persenDeviasi = rpdVal !== 0 ? deviasi / rpdVal : 0;
+            rpdComputedRows.push({
+                bulanKe, bulan: RPD_BULAN_LABEL[bulanKe - 1],
+                rpd: rpdVal, realisasi, deviasi, persenDeviasi
+            });
         }
 
-        // Header (baris 2, kolom T:X) + kolom Aksi tambahan
-        theadRow.innerHTML = result.header
-            .map((h, idx) => `<th class="px-3 py-1.5 font-semibold whitespace-nowrap ${rpdColAlign(idx)}">${rpdEscapeHtml(h)}</th>`)
-            .join('') + `<th class="px-3 py-1.5 font-semibold text-center">Aksi</th>`;
+        theadRow.innerHTML = [
+            { label: 'Bulan', align: 'text-center' },
+            { label: 'RPD', align: 'text-right' },
+            { label: 'Realisasi', align: 'text-right' },
+            { label: 'Deviasi', align: 'text-right' },
+            { label: '% Deviasi', align: 'text-right' }
+        ].map(h => `<th class="px-3 py-1.5 font-semibold whitespace-nowrap ${h.align}">${h.label}</th>`).join('')
+            + `<th class="px-3 py-1.5 font-semibold text-center">Aksi</th>`;
 
-        // Baris data (baris 3-14)
-        tbody.innerHTML = result.rows.map(row => rpdRenderRow(row)).join('');
+        tbody.innerHTML = rpdComputedRows.map(row => rpdRenderRow(row)).join('');
 
         loadingEl.classList.add('hidden');
         wrapperEl.classList.remove('hidden');
@@ -73,56 +103,30 @@ async function rpdLoadData() {
     }
 }
 
-function rpdColAlign(idx) {
-    // Hanya kolom Bulan (U) yang rata tengah, semua kolom lain (termasuk % Deviasi) rata kanan
-    return idx === RPD_COL_BULAN_INDEX ? 'text-center' : 'text-right';
+function rpdFormatPersen(v) {
+    const persenText = (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+    // Merah jika >= 5% atau <= -5%, hijau jika di antara -5% s/d 5% (termasuk 0%)
+    const colorClass = (v >= 0.05 || v <= -0.05) ? 'text-red-600' : 'text-green-600';
+    return `<span class="${colorClass} font-medium">${persenText}</span>`;
 }
 
 function rpdRenderRow(row) {
-    const cells = row.values.map((v, idx) => `
-        <td class="px-3 py-1.5 rpd-cell ${rpdColAlign(idx)}" data-col="${idx}" data-display="${rpdEscapeAttr(v)}">
-            ${rpdFormatCell(v, idx)}
-        </td>
-    `).join('');
-
     return `
-        <tr data-row="${row.rowIndex}">
-            ${cells}
+        <tr data-bulan-ke="${row.bulanKe}">
+            <td class="px-3 py-1.5 text-center">${row.bulan}</td>
+            <td class="px-3 py-1.5 rpd-cell-rpd text-right" data-value="${row.rpd}">${formatRibuan(row.rpd)}</td>
+            <td class="px-3 py-1.5 text-right">${formatRibuan(row.realisasi)}</td>
+            <td class="px-3 py-1.5 text-right">${formatRibuan(row.deviasi)}</td>
+            <td class="px-3 py-1.5 text-right">${rpdFormatPersen(row.persenDeviasi)}</td>
             <td class="px-3 py-1.5 text-center">
                 <div class="rpd-actions inline-flex items-center gap-3">
-                    <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD baris ini">
+                    <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD bulan ini">
                         <i class="fa-solid fa-pen"></i>
                     </button>
                 </div>
             </td>
         </tr>
     `;
-}
-
-function rpdFormatCell(v, idx) {
-    if (v === '' || v === null || typeof v === 'undefined') return '-';
-
-    // Kolom % Deviasi (T): tampilkan sebagai persen + warna.
-    // Asumsi: nilai di sheet tersimpan sbg pecahan (0.05 = 5%), sesuai format
-    // "Percent" default Google Sheets. Kalau ternyata nilainya sudah dalam
-    // bentuk angka persen utuh (5 = 5%), sesuaikan threshold di bawah (pakai 5 & -5, bukan 0.05 & -0.05).
-    if (idx === RPD_COL_PERSEN_DEVIASI_INDEX && typeof v === 'number') {
-        const persenText = (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
-        // Merah jika >= 5% atau <= -5%, hijau jika di antara -5% s/d 5% (termasuk 0%)
-        const colorClass = (v >= 0.05 || v <= -0.05) ? 'text-red-600' : 'text-green-600';
-        return `<span class="${colorClass} font-medium">${persenText}</span>`;
-    }
-
-    if (typeof v === 'number') return formatRibuan(v);
-    const stripped = String(v).trim().replace(/\./g, '').replace(/,/g, '.');
-    if (stripped !== '' && !isNaN(stripped)) return formatRibuan(v);
-    return rpdEscapeHtml(v);
-}
-
-function rpdEscapeHtml(v) {
-    const div = document.createElement('div');
-    div.textContent = v ?? '';
-    return div.innerHTML;
 }
 
 function rpdEscapeAttr(v) {
@@ -139,16 +143,16 @@ function rpdBindRowButtons() {
     });
 }
 
-// Masuk mode edit: HANYA sel kolom RPD (V) yang jadi <input>, kolom lain tetap read-only.
-// Tombol Aksi berubah jadi [simpan] [batal].
+// Masuk mode edit: HANYA sel RPD yang jadi <input>, kolom lain tetap read-only.
 function rpdEnterEditMode(tr, actionsDiv) {
-    const td = tr.querySelector(`.rpd-cell[data-col="${RPD_COL_RPD_INDEX}"]`);
+    const td = tr.querySelector('.rpd-cell-rpd');
     if (!td) return;
 
-    const currentValue = td.getAttribute('data-display') || '';
+    const currentValue = td.getAttribute('data-value') || '0';
     td.innerHTML = `<input type="text"
-        class="rpd-input w-full px-2 py-1 border border-sky-300 rounded-lg text-sm ${rpdColAlign(RPD_COL_RPD_INDEX)} focus:outline-none focus:ring-2 focus:ring-sky-500"
-        value="${rpdEscapeAttr(currentValue)}">`;
+        class="rpd-input w-full px-2 py-1 border border-sky-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-sky-500"
+        value="${rpdEscapeAttr(formatRibuan(Number(currentValue)))}"
+        oninput="this.value = formatRibuan(this.value)">`;
 
     actionsDiv.innerHTML = `
         <button class="rpd-btn-simpan text-green-600 hover:text-green-800" title="Simpan">
@@ -169,19 +173,19 @@ function rpdEnterEditMode(tr, actionsDiv) {
     if (input) input.focus();
 }
 
-// Batalkan edit: kembalikan sel kolom RPD ke tampilan semula (tanpa kirim apapun ke backend)
+// Batalkan edit: kembalikan sel RPD ke tampilan semula (tanpa kirim apapun ke backend)
 function rpdCancelEdit(tr, actionsDiv) {
-    const td = tr.querySelector(`.rpd-cell[data-col="${RPD_COL_RPD_INDEX}"]`);
+    const td = tr.querySelector('.rpd-cell-rpd');
     if (td) {
-        const currentValue = td.getAttribute('data-display') || '';
-        td.innerHTML = rpdFormatCell(currentValue, RPD_COL_RPD_INDEX);
+        const currentValue = Number(td.getAttribute('data-value')) || 0;
+        td.innerHTML = formatRibuan(currentValue);
     }
     rpdResetActionsToPencil(tr, actionsDiv);
 }
 
 function rpdResetActionsToPencil(tr, actionsDiv) {
     actionsDiv.innerHTML = `
-        <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD baris ini">
+        <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD bulan ini">
             <i class="fa-solid fa-pen"></i>
         </button>
     `;
@@ -190,13 +194,13 @@ function rpdResetActionsToPencil(tr, actionsDiv) {
     };
 }
 
-// Kirim HANYA nilai RPD (kolom V) yang baru ke backend. Backend hanya menulis
-// 1 sel (kolom V), sehingga formula % Deviasi (T) & Deviasi (X) tidak pernah tersentuh.
+// Simpan nilai RPD baru ke tabel 'rpd' (kolom nilai), lalu hitung ulang
+// Realisasi/Deviasi/%Deviasi baris ini di browser (tanpa perlu reload semua data).
 async function rpdSaveRow(tr, actionsDiv) {
-    const rowIndex = tr.getAttribute('data-row');
-    const td = tr.querySelector(`.rpd-cell[data-col="${RPD_COL_RPD_INDEX}"]`);
+    const bulanKe = Number(tr.getAttribute('data-bulan-ke'));
+    const td = tr.querySelector('.rpd-cell-rpd');
     const input = td ? td.querySelector('.rpd-input') : null;
-    const newValue = input ? input.value.trim() : '';
+    const newValue = Number((input ? input.value : '0').replace(/\./g, '')) || 0;
 
     const btnSimpan = actionsDiv.querySelector('.rpd-btn-simpan');
     const originalIcon = btnSimpan ? btnSimpan.innerHTML : '';
@@ -206,40 +210,24 @@ async function rpdSaveRow(tr, actionsDiv) {
     }
 
     try {
-        const result = await apiPost({
-            action: 'updateRpdTabelRow',
-            rowIndex: Number(rowIndex),
-            value: newValue
-        });
+        await waitSupabaseAuthReady();
+        const { error } = await sb.from('rpd').update({ nilai: newValue }).eq('id', bulanKe);
+        if (error) throw new Error(error.message);
 
-        if (result.status === 'success') {
-            showToast('Data RPD berhasil diperbarui');
+        const row = rpdComputedRows.find(r => r.bulanKe === bulanKe);
+        if (row) {
+            row.rpd = newValue;
+            row.deviasi = row.rpd - row.realisasi;
+            row.persenDeviasi = row.rpd !== 0 ? row.deviasi / row.rpd : 0;
 
-            // Backend mengembalikan seluruh baris (T:X) SETELAH SpreadsheetApp.flush(),
-            // jadi % Deviasi (T) & Deviasi (X) di sini sudah nilai terbaru hasil formula,
-            // langsung dipakai tanpa perlu reload/request terpisah.
-            const updatedValues = result.values;
-            if (Array.isArray(updatedValues)) {
-                const cells = tr.querySelectorAll('.rpd-cell');
-                cells.forEach(cellTd => {
-                    const colIdx = Number(cellTd.getAttribute('data-col'));
-                    const v = updatedValues[colIdx];
-                    cellTd.setAttribute('data-display', v);
-                    cellTd.innerHTML = rpdFormatCell(v, colIdx);
-                });
-            } else {
-                td.setAttribute('data-display', newValue);
-                td.innerHTML = rpdFormatCell(newValue, RPD_COL_RPD_INDEX);
-            }
-
-            rpdResetActionsToPencil(tr, actionsDiv);
-        } else {
-            alert('Gagal menyimpan: ' + (result.message || 'Terjadi kesalahan.'));
-            if (btnSimpan) {
-                btnSimpan.disabled = false;
-                btnSimpan.innerHTML = originalIcon;
-            }
+            td.setAttribute('data-value', newValue);
+            td.innerHTML = formatRibuan(newValue);
+            tr.children[3].innerHTML = formatRibuan(row.deviasi);
+            tr.children[4].innerHTML = rpdFormatPersen(row.persenDeviasi);
         }
+
+        showToast('Data RPD berhasil diperbarui');
+        rpdResetActionsToPencil(tr, actionsDiv);
     } catch (e) {
         alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
         if (btnSimpan) {
