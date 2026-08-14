@@ -539,27 +539,30 @@ function stLoadMPData() {
         return;
     }
 
-    // Urutkan berdasarkan tgl_mp ASC -> Realisasi = akumulasi kegiatan PNBP
-    // SAMPAI DENGAN tanggal tgl_mp baris ini (lihat catatan di kepala file).
+    // Realisasi Bruto = TOTAL FLAT semua kegiatan yg uraiannya mengandung
+    // "(PNBP)", TIDAK peduli tgl_bayar/tgl_sp2d ada isinya atau tidak — jadi
+    // nilainya SAMA di semua baris (bukan kumulatif per tahap MP).
+    let totalRealisasiBruto = 0;
+    stKegiatanRows.forEach(k => {
+        if (String(k.uraian || '').includes('(PNBP)')) totalRealisasiBruto += Number(k.jumlah) || 0;
+    });
+
+    // Urutkan berdasarkan tgl_mp ASC -> Realisasi SP2D = akumulasi kegiatan
+    // PNBP yg SUDAH ada tgl_sp2d, SAMPAI DENGAN tanggal tgl_mp baris ini.
     const sorted = [...stMpRows].sort((a, b) => new Date(a.tgl_mp) - new Date(b.tgl_mp));
 
     const rows = sorted.map((mp, idx) => {
         const tglMp = mp.tgl_mp ? new Date(mp.tgl_mp) : null;
         const paguMP = Number(mp.jumlah) || 0;
 
-        let realisasiBruto = 0, realisasiSP2D = 0;
+        let realisasiSP2D = 0;
         stKegiatanRows.forEach(k => {
-            if (!String(k.uraian || '').includes('(PNBP)') || !tglMp) return;
-
-            if (k.tgl_bayar) {
-                const dBayar = new Date(k.tgl_bayar);
-                if (!isNaN(dBayar.getTime()) && dBayar <= tglMp) realisasiBruto += Number(k.jumlah) || 0;
-            }
-            if (k.tgl_sp2d) {
-                const dSp2d = new Date(k.tgl_sp2d);
-                if (!isNaN(dSp2d.getTime()) && dSp2d <= tglMp) realisasiSP2D += Number(k.jumlah) || 0;
-            }
+            if (!String(k.uraian || '').includes('(PNBP)') || !tglMp || !k.tgl_sp2d) return;
+            const dSp2d = new Date(k.tgl_sp2d);
+            if (!isNaN(dSp2d.getTime()) && dSp2d <= tglMp) realisasiSP2D += Number(k.jumlah) || 0;
         });
+
+        const realisasiBruto = totalRealisasiBruto;
 
         return {
             no: idx + 1,
@@ -580,7 +583,7 @@ function stLoadMPData() {
     const totalRow = {
         no: '', uraian: 'Total', periode: '', tanggalMP: null,
         paguMP: rows.reduce((a, r) => a + r.paguMP, 0),
-        realisasiBruto: rows.reduce((a, r) => a + r.realisasiBruto, 0),
+        realisasiBruto: totalRealisasiBruto, // flat, BUKAN dijumlah dari tiap baris (biar tidak dobel-hitung)
         realisasiSP2D: rows.reduce((a, r) => a + r.realisasiSP2D, 0),
         sisaBruto: rows.reduce((a, r) => a + r.sisaBruto, 0),
         sisaSP2D: rows.reduce((a, r) => a + r.sisaSP2D, 0),
