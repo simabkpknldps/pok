@@ -89,9 +89,10 @@
 <!-- ===================== TAB: REFERENSI (lihat & cari saja) ===================== -->
 <div id="ds-tabReferensi" class="ds-tab-content hidden">
     <div class="px-4 pt-4 max-w-lg mx-auto">
-        <div class="flex gap-2 mb-3">
+        <div class="flex gap-2 mb-3 flex-wrap">
             <button id="ds-refSubSbm" class="ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-sky-700 text-white">SBM Uang Harian</button>
             <button id="ds-refSubPegawai" class="ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-600">Pegawai</button>
+            <button id="ds-refSubUserManager" class="hidden ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-600">User Manager</button>
         </div>
         <input id="ds-refSearchInput" type="text" inputmode="search" placeholder="Cari..."
             class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
@@ -875,26 +876,44 @@ async function dsGetPokRows() {
     return dsPokRowsCache;
 }
 
+// Sama persis dengan POK_SEKSI_COLORS di pok.js (web) — biar konsisten.
+const DS_POK_SEKSI_COLORS = {
+    'PN': 'bg-sky-100 text-sky-700',
+    'HI': 'bg-purple-100 text-purple-700',
+    'KI': 'bg-amber-100 text-amber-700',
+    'Lelang': 'bg-rose-100 text-rose-700',
+    'Penilaian': 'bg-emerald-100 text-emerald-700',
+    'PKN': 'bg-indigo-100 text-indigo-700',
+    'Umum': 'bg-slate-200 text-slate-700'
+};
+function dsPokSeksiBadgeClass(seksi) {
+    return DS_POK_SEKSI_COLORS[seksi] || 'bg-slate-100 text-slate-600';
+}
+
 function dsRenderPokLeafCard(item) {
     const penyebut = item.pagu - item.blokir;
     const persen = penyebut ? Math.min(Math.max((item.realisasi / penyebut) * 100, 0), 100) : 0;
     const warna = persen >= 100 ? 'bg-red-500' : (persen >= 80 ? 'bg-amber-500' : 'bg-sky-500');
     const sisaClass = item.sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
+    // Sama persis dgn web: leaf PNBP = pink, leaf RM = biru.
+    const isPnbp = item.sumber === 'PNBP';
+    const cardBg = isPnbp ? 'bg-pink-100 border-pink-200' : 'bg-blue-100 border-blue-200';
+    const badgeBg = isPnbp ? 'bg-pink-600 text-white' : 'bg-blue-600 text-white';
     return `
-    <div class="bg-white rounded-xl border border-slate-200 p-3 mb-2">
+    <div class="${cardBg} rounded-xl border p-3 mb-2">
         <div class="flex items-start justify-between gap-2">
-            <p class="text-[11px] font-mono text-slate-400">${escHtml(item.kode)}</p>
-            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${item.sumber === 'PNBP' ? 'bg-purple-100 text-purple-700' : 'bg-sky-100 text-sky-700'}">${escHtml(item.sumber || '-')}</span>
+            <p class="text-[11px] font-mono text-slate-500">${escHtml(item.kode)}</p>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${badgeBg}">${escHtml(item.sumber || '-')}</span>
         </div>
         <p class="text-sm font-medium text-slate-800 mt-0.5 mb-2 leading-snug">${escHtml(item.uraian)}</p>
-        <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
+        <div class="w-full h-1.5 bg-white/60 rounded-full overflow-hidden mb-2">
             <div class="h-full ${warna} rounded-full" style="width:${persen}%"></div>
         </div>
         <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-            <div><span class="text-slate-400">Pagu</span> <span class="font-medium text-slate-700 float-right">${Number(item.pagu).toLocaleString('id-ID')}</span></div>
-            <div><span class="text-slate-400">Blokir</span> <span class="font-medium text-slate-700 float-right">${Number(item.blokir).toLocaleString('id-ID')}</span></div>
-            <div><span class="text-slate-400">Realisasi</span> <span class="font-medium text-slate-700 float-right">${Number(item.realisasi).toLocaleString('id-ID')}</span></div>
-            <div><span class="text-slate-400">Sisa</span> <span class="font-medium ${sisaClass} float-right">${Number(item.sisa).toLocaleString('id-ID')}</span></div>
+            <div><span class="text-slate-500">Pagu</span> <span class="font-medium text-slate-800 float-right">${Number(item.pagu).toLocaleString('id-ID')}</span></div>
+            <div><span class="text-slate-500">Blokir</span> <span class="font-medium text-slate-800 float-right">${Number(item.blokir).toLocaleString('id-ID')}</span></div>
+            <div><span class="text-slate-500">Realisasi</span> <span class="font-medium text-slate-800 float-right">${Number(item.realisasi).toLocaleString('id-ID')}</span></div>
+            <div><span class="text-slate-500">Sisa</span> <span class="font-medium ${sisaClass} float-right">${Number(item.sisa).toLocaleString('id-ID')}</span></div>
         </div>
     </div>`;
 }
@@ -903,8 +922,11 @@ function dsRenderPokParentRow(item, seksi, hasChildren, depth) {
     const expandKey = seksi + '::' + item.kode;
     const isOpen = dsPokExpandedCodes.has(expandKey);
     const indentPx = Math.min(depth - 1, 5) * 14;
+    // Sama pola dgn web: depth<=2 abu-abu (level tinggi), lainnya biru muda
+    // (penanda visual "bisa di-tap buat expand").
+    const rowBg = depth <= 2 ? 'bg-slate-50' : 'bg-sky-50 active:bg-sky-100';
     return `
-    <div class="ds-pok-parent flex items-center justify-between py-2.5 border-b border-slate-100 active:bg-slate-50" style="padding-left:${indentPx}px" data-kode="${escHtml(item.kode)}" data-seksi="${escHtml(seksi)}">
+    <div class="ds-pok-parent flex items-center justify-between py-2.5 px-2 mb-1 rounded-lg ${rowBg}" style="padding-left:${12 + indentPx}px" data-kode="${escHtml(item.kode)}" data-seksi="${escHtml(seksi)}">
         <span class="text-sm ${depth <= 2 ? 'font-bold' : 'font-semibold'} text-slate-700 flex-1 pr-2">${escHtml(item.uraian)}</span>
         ${hasChildren ? `<i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs text-slate-400 shrink-0"></i>` : ''}
     </div>`;
@@ -954,8 +976,8 @@ function dsRenderPokBrowse() {
     groups.forEach((items, seksi) => {
         const isOpen = dsPokExpandedSeksi.has(seksi);
         html += `
-        <div class="ds-pok-seksiHeader bg-slate-100 rounded-xl px-3.5 py-3 mb-2 active:bg-slate-200" data-seksi="${escHtml(seksi)}">
-            <span class="text-sm font-bold text-slate-700"><i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>${escHtml(seksi)} <span class="font-normal text-xs text-slate-400">(${items.length} item)</span></span>
+        <div class="ds-pok-seksiHeader ${dsPokSeksiBadgeClass(seksi)} rounded-xl px-3.5 py-3 mb-2" data-seksi="${escHtml(seksi)}">
+            <span class="text-sm font-bold"><i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>${escHtml(seksi)} <span class="font-normal text-xs opacity-70">(${items.length} item)</span></span>
         </div>`;
         if (isOpen) {
             html += `<div class="mb-3">${dsRenderPokTreeForSeksi(seksi, items)}</div>`;
@@ -1096,12 +1118,14 @@ function dsOpenKgDetilReadOnly(row) {
 }
 
 // ============================================================
-// TAB: REFERENSI (SBM & Pegawai — baca & cari saja)
+// TAB: REFERENSI (SBM & Pegawai & User Manager — baca & cari saja, kecuali
+// User Manager yg punya 1 aksi: Reset Password, khusus superadmin)
 // ============================================================
-let dsRefMode = 'sbm'; // 'sbm' | 'pegawai'
+let dsRefMode = 'sbm'; // 'sbm' | 'pegawai' | 'userManager'
 let dsRefLoaded = false;
 let dsSbmRowsCache = null;
 let dsPegawaiRowsCache = null;
+let dsIsAdminView = false; // ditentukan di init, dari localStorage.admin
 
 async function dsGetSbmRows() {
     if (dsSbmRowsCache) return dsSbmRowsCache;
@@ -1111,11 +1135,18 @@ async function dsGetSbmRows() {
     return dsSbmRowsCache;
 }
 
+// Data Rekening (nama_bank/no_rekening) CUMA diikutkan kalau viewer admin —
+// RLS Supabase tidak membatasi per-kolom, jadi pembatasan ini murni di sisi
+// tampilan (sama seperti tab "Data Rekening" yg terpisah & admin-only di web).
 async function dsGetPegawaiRows() {
     if (dsPegawaiRowsCache) return dsPegawaiRowsCache;
     await waitSupabaseAuthReady();
-    const rows = await sbFetchAll('pegawai', 'id, nama, jabatan');
-    dsPegawaiRowsCache = rows.map(d => ({ nip: d.id, nama: d.nama || '', jabatan: d.jabatan || '' }));
+    const cols = dsIsAdminView ? 'id, nama, jabatan, nama_bank, no_rekening' : 'id, nama, jabatan';
+    const rows = await sbFetchAll('pegawai', cols);
+    dsPegawaiRowsCache = rows.map(d => ({
+        nip: d.id, nama: d.nama || '', jabatan: d.jabatan || '',
+        namaBank: d.nama_bank || '', norek: d.no_rekening || ''
+    }));
     return dsPegawaiRowsCache;
 }
 
@@ -1132,10 +1163,29 @@ function dsRenderSbmCard(item) {
 }
 
 function dsRenderPegawaiCard(item) {
+    const rekeningHtml = dsIsAdminView ? `
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs">
+            <span class="text-slate-400">${escHtml(item.namaBank || '-')}</span>
+            <span class="font-mono text-slate-600">${escHtml(item.norek || '-')}</span>
+        </div>` : '';
     return `
     <div class="bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5">
         <p class="text-sm font-medium text-slate-800">${escHtml(item.nama)}</p>
         <p class="text-xs text-slate-500 mt-0.5">${escHtml(item.nip)} &middot; ${escHtml(item.jabatan || '-')}</p>
+        ${rekeningHtml}
+    </div>`;
+}
+
+function dsRenderUserManagerCard(item) {
+    return `
+    <div class="ds-um-card bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5 flex items-center justify-between gap-2" data-nip="${escHtml(item.nip)}" data-nama="${escHtml(item.nama)}">
+        <div class="min-w-0">
+            <p class="text-sm font-medium text-slate-800 truncate">${escHtml(item.nama)}</p>
+            <p class="text-xs text-slate-400">${escHtml(item.nip)}</p>
+        </div>
+        <button class="ds-um-btnReset shrink-0 px-3 py-2 bg-amber-500 active:bg-amber-600 text-white rounded-lg text-xs font-medium">
+            <i class="fa-solid fa-rotate-left mr-1"></i>Reset
+        </button>
     </div>`;
 }
 
@@ -1152,15 +1202,60 @@ async function dsRunRefSearch() {
             resultsEl.innerHTML = matched.length
                 ? matched.map(dsRenderSbmCard).join('')
                 : `<div class="text-center text-slate-400 py-12 text-sm">Tidak ada data yang cocok.</div>`;
-        } else {
+        } else if (dsRefMode === 'pegawai') {
             const allRows = await dsGetPegawaiRows();
             const matched = q ? allRows.filter(r => String(r.nama).toLowerCase().includes(q) || String(r.nip).toLowerCase().includes(q)) : allRows;
             resultsEl.innerHTML = matched.length
                 ? matched.slice(0, 30).map(dsRenderPegawaiCard).join('')
                 : `<div class="text-center text-slate-400 py-12 text-sm">Tidak ada data yang cocok.</div>`;
+        } else if (dsRefMode === 'userManager') {
+            const allRows = await dsGetPegawaiRows();
+            const matched = q ? allRows.filter(r => String(r.nama).toLowerCase().includes(q) || String(r.nip).toLowerCase().includes(q)) : allRows;
+            if (!matched.length) {
+                resultsEl.innerHTML = `<div class="text-center text-slate-400 py-12 text-sm">Tidak ada data yang cocok.</div>`;
+                return;
+            }
+            resultsEl.innerHTML = matched.slice(0, 30).map(dsRenderUserManagerCard).join('');
+            resultsEl.querySelectorAll('.ds-um-card').forEach(card => {
+                const btn = card.querySelector('.ds-um-btnReset');
+                const nip = card.dataset.nip;
+                const nama = card.dataset.nama;
+                btn.onclick = () => dsResetUserPassword(btn, nip, nama);
+            });
         }
     } catch (e) {
         resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">❌ ${escHtml(e.message || 'Terjadi kesalahan.')}</div>`;
+    }
+}
+
+async function dsResetUserPassword(btn, nip, nama) {
+    if (!confirm(`Reset password ${nama} (${nip}) ke default (NIP)?`)) return;
+    btn.disabled = true;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    try {
+        await waitSupabaseAuthReady();
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session) throw new Error('Sesi tidak valid, login ulang.');
+
+        const result = await apiPost({
+            action: 'resetUserPasswordSuperadmin',
+            accessToken: session.access_token,
+            targetNip: nip
+        });
+
+        if (result.status === 'success') {
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            setTimeout(() => { btn.disabled = false; btn.innerHTML = originalHtml; }, 1500);
+        } else {
+            alert('Gagal: ' + (result.message || 'Terjadi kesalahan.'));
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    } catch (e) {
+        alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
     }
 }
 
@@ -1171,6 +1266,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = window.getSessionUser ? window.getSessionUser() : null;
     if (user && user.nama) $('ds-userLabel').textContent = user.nama;
 
+    dsIsAdminView = localStorage.getItem('admin') === '1';
+    if (localStorage.getItem('superadmin') === '1') {
+        $('ds-refSubUserManager').classList.remove('hidden');
+    }
+
     $('ds-btnSearch').onclick = runSearch;
     $('ds-searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
 
@@ -1178,22 +1278,23 @@ document.addEventListener('DOMContentLoaded', () => {
     $('ds-kgSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') dsRunKgSearch(); });
     $('ds-refSearchInput').addEventListener('input', () => dsRunRefSearch());
 
-    $('ds-refSubSbm').onclick = () => {
-        dsRefMode = 'sbm';
-        $('ds-refSubSbm').className = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-sky-700 text-white';
-        $('ds-refSubPegawai').className = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-600';
-        $('ds-refSearchInput').placeholder = 'Cari Kabupaten/Kota...';
+    const ACTIVE_CLS = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-sky-700 text-white';
+    const INACTIVE_CLS = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-600';
+    function dsSetRefSubtab(mode, placeholder) {
+        dsRefMode = mode;
+        ['ds-refSubSbm', 'ds-refSubPegawai', 'ds-refSubUserManager'].forEach(id => {
+            const el = $(id);
+            const modeOfId = { 'ds-refSubSbm': 'sbm', 'ds-refSubPegawai': 'pegawai', 'ds-refSubUserManager': 'userManager' }[id];
+            el.className = (modeOfId === mode ? ACTIVE_CLS : INACTIVE_CLS) + (el.classList.contains('hidden') ? ' hidden' : '');
+        });
+        $('ds-refSearchInput').placeholder = placeholder;
         $('ds-refSearchInput').value = '';
         dsRunRefSearch();
-    };
-    $('ds-refSubPegawai').onclick = () => {
-        dsRefMode = 'pegawai';
-        $('ds-refSubPegawai').className = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-sky-700 text-white';
-        $('ds-refSubSbm').className = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-white border border-slate-300 text-slate-600';
-        $('ds-refSearchInput').placeholder = 'Cari Nama / NIP...';
-        $('ds-refSearchInput').value = '';
-        dsRunRefSearch();
-    };
+    }
+
+    $('ds-refSubSbm').onclick = () => dsSetRefSubtab('sbm', 'Cari Kabupaten/Kota...');
+    $('ds-refSubPegawai').onclick = () => dsSetRefSubtab('pegawai', 'Cari Nama / NIP...');
+    $('ds-refSubUserManager').onclick = () => dsSetRefSubtab('userManager', 'Cari Nama / NIP...');
 
     document.querySelectorAll('.ds-navbtn').forEach(btn => {
         btn.onclick = () => dsSwitchTab(btn.dataset.tab);
