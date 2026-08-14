@@ -330,24 +330,12 @@ function openSettings() {
             });
             if (insError) throw new Error(insError.message);
 
-            // 2. Bikinkan akun Firebase Auth + Supabase Auth (password = NIP),
-            //    pakai instance KEDUA (secondaryAuthDaftar/secondaryAuthSbDaftar)
-            //    supaya sesi login admin yang sedang buka Settings ini TIDAK
-            //    ikut ke-logout/ke-ganti (createUser/signUp otomatis "login sbg
-            //    user baru itu" kalau dipakai di instance utama).
+            // 2. Bikinkan akun Supabase Auth (password = NIP), pakai instance
+            //    KEDUA (client terpisah dgn storageKey unik) supaya sesi login
+            //    admin yang sedang buka Settings ini TIDAK ikut ke-logout/ke-
+            //    ganti (signUp otomatis "login sbg user baru itu" kalau dipakai
+            //    di instance utama).
             const emailBaru = `${nip}@simab.local`;
-            try {
-                if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-                    const secondaryAppTp = firebase.initializeApp(firebase.app().options, 'SecondaryTambahPegawai_' + Date.now());
-                    const secondaryAuthTp = secondaryAppTp.auth();
-                    try { await secondaryAuthTp.createUserWithEmailAndPassword(emailBaru, nip); }
-                    catch (fbErr) { if (fbErr.code !== 'auth/email-already-in-use') console.error('Gagal bikin akun Firebase:', fbErr); }
-                    finally { try { await secondaryAuthTp.signOut(); } catch (e2) { /* abaikan */ } }
-                }
-            } catch (fbOuterErr) {
-                console.error('Firebase tidak tersedia / gagal:', fbOuterErr);
-            }
-
             try {
                 const secondaryDbTp = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
                     auth: { storageKey: 'sb-secondary-tambahpegawai-' + Date.now() }
@@ -415,20 +403,6 @@ function openSettings() {
             //    valid dari langkah verifikasi di atas).
             const { error: updateSbError } = await sb.auth.updateUser({ password: pwBaru });
             if (updateSbError) throw new Error(updateSbError.message);
-
-            // 3. Update password di Firebase Auth juga (dual-auth, masih dipakai
-            //    halaman yang belum dikonversi ke Supabase) — verifikasi ulang
-            //    dgn password lama dulu (Firebase mewajibkan re-auth utk ganti
-            //    password), baru update.
-            try {
-                await firebase.auth().signInWithEmailAndPassword(email, pwLama);
-                await firebase.auth().currentUser.updatePassword(pwBaru);
-            } catch (fbErr) {
-                console.error('Gagal update password Firebase:', fbErr);
-                // Tidak menghentikan proses -- Supabase (sumber utama sekarang)
-                // sudah berhasil diupdate. User tetap dianggap berhasil ganti
-                // password, cuma dicatat di console kalau Firebase-nya gagal.
-            }
 
             showToast('Password berhasil diubah');
             overlay.remove();
