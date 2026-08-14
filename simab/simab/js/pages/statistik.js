@@ -1,14 +1,34 @@
 /**
- * HALAMAN STATISTIK
+ * HALAMAN STATISTIK — FULL Supabase
  * ------------------
  * Entry point : initStatistikPage()
- * Komunikasi backend lewat apiPost() (js/api.js)
- * Menampilkan grafik jumlah kegiatan perjalanan dinas per bulan (Jan - Des)
- * berdasarkan tanggal pelaksanaan / tgl mulai (kolom G sheet Data_Kegiatan_2026).
+ * 4 bagian, masing-masing dihitung LIVE di browser dari tabel Supabase:
+ *   1. Realisasi Anggaran Bulanan (Belanja Barang 52 & Modal 53)
+ *      - Pagu: SUM pok.pagu per akun (52/53)
+ *      - Blokir: SUM blokir.nilai utk kode yg akunnya 52/53
+ *      - Realisasi per bulan: SUM kegiatan.jumlah per akun, dikelompokkan
+ *        per bulan dari kegiatan.tgl_sp2d (konsisten dgn RPD)
+ *   2. Monitoring Maksimum Pencairan (MP) — dari tabel 'mp_pnbp' (uraian,
+ *      tgl_mp, jumlah=Pagu MP tahap itu). Realisasi = AKUMULASI semua
+ *      kegiatan PNBP ("(PNBP)" di uraian) sampai dengan tgl_mp baris itu
+ *      (Bruto: pakai tgl_bayar; SP2D: pakai tgl_sp2d & harus sudah terisi).
+ *   3. Progres Perjalanan Dinas per Pegawai — dari kegiatan (MAK 524111/
+ *      524113), dikelompokkan per pelaksana & per bulan (tgl_mulai).
+ *   4. Grafik jumlah kegiatan perjalanan dinas per bulan — sama sumbernya
+ *      dgn #3, cuma dihitung total per bulan (bukan per pegawai).
+ *
+ * Semua tabel yg dibutuhkan (kegiatan, pok, blokir, mp_pnbp) dibaca SEKALI
+ * di awal (initStatistikPage), dipakai bareng oleh ke-4 bagian di atas —
+ * bukan 4x request terpisah.
  */
 
-
 let stChartInstance = null;
+let stKegiatanRows = [];
+let stPokRows = [];
+let stBlokirRows = [];
+let stMpRows = [];
+
+const ST_BULAN_LABEL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 async function initStatistikPage() {
     const searchInput = document.getElementById('st-searchNama');
@@ -30,45 +50,68 @@ async function initStatistikPage() {
         tbody.dataset.dblclickBound = '1';
     }
 
-    await Promise.all([stLoadData(), stLoadPegawaiData(), stLoadBudgetData(), stLoadMPData()]);
+    // Baca SEMUA tabel yg dibutuhkan sekali di awal, dipakai bareng ke-4 bagian.
+    try {
+        await waitSupabaseAuthReady();
+        const [kegiatanRows, pokRows, blokirRows, mpRows] = await Promise.all([
+            window.kegiatanRowsCache ? Promise.resolve(window.kegiatanRowsCache) : sbFetchAll('kegiatan'),
+            sbFetchAll('pok'),
+            sbFetchAll('blokir'),
+            sbFetchAll('mp_pnbp')
+        ]);
+        window.kegiatanRowsCache = kegiatanRows;
+        stKegiatanRows = kegiatanRows;
+        stPokRows = pokRows;
+        stBlokirRows = blokirRows;
+        stMpRows = mpRows;
+    } catch (e) {
+        console.error('Gagal memuat data statistik:', e);
+        ['st-loading', 'st-pegawaiLoading', 'st-budgetLoading', 'st-mpLoading'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data'}</span>`;
+        });
+        return;
+    }
+
+    stLoadData();
+    stLoadPegawaiData();
+    stLoadBudgetData();
+    stLoadMPData();
 }
 
-async function stLoadData() {
+window.initStatistikPage = initStatistikPage;
+
+// ============================================
+// GRAFIK JUMLAH KEGIATAN PERJALANAN DINAS PER BULAN
+// ============================================
+
+function stLoadData() {
     const loadingEl = document.getElementById('st-loading');
     const wrapperEl = document.getElementById('st-chartWrapper');
+    if (!loadingEl || !wrapperEl) return;
 
-    if (!loadingEl || !wrapperEl) return; // halaman sudah berpindah
+    const jumlahPerBulan = new Array(12).fill(0);
+    stKegiatanRows.forEach(k => {
+        if (!isPerjadinMak(k.mak) || !k.tgl_mulai) return;
+        const d = new Date(k.tgl_mulai);
+        if (isNaN(d.getTime())) return;
+        jumlahPerBulan[d.getMonth()]++;
+    });
 
-    loadingEl.classList.remove('hidden');
-    loadingEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>';
-    wrapperEl.classList.add('hidden');
+    const totalKegiatan = jumlahPerBulan.reduce((a, b) => a + b, 0);
+    document.getElementById('st-totalKegiatan').textContent = totalKegiatan.toLocaleString('id-ID');
 
-    try {
-        const result = await apiPost({ action: 'getStatistikData' });
+    const maxVal = Math.max(...jumlahPerBulan);
+    const maxIdx = jumlahPerBulan.indexOf(maxVal);
+    document.getElementById('st-bulanTertinggi').textContent = maxVal > 0 ? `${ST_BULAN_LABEL[maxIdx]} (${maxVal})` : '-';
 
-        if (result.status !== 'success') {
-            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data statistik'}</span>`;
-            return;
-        }
+    const rataRata = totalKegiatan > 0 ? (totalKegiatan / 12).toFixed(1) : '0';
+    document.getElementById('st-rataRata').textContent = rataRata;
 
-        const { labels, jumlahPerBulan, totalKegiatan } = result;
+    stRenderChart(ST_BULAN_LABEL, jumlahPerBulan);
 
-        document.getElementById('st-totalKegiatan').textContent = Number(totalKegiatan || 0).toLocaleString('id-ID');
-
-        const maxVal = Math.max(...jumlahPerBulan);
-        const maxIdx = jumlahPerBulan.indexOf(maxVal);
-        document.getElementById('st-bulanTertinggi').textContent = maxVal > 0 ? `${labels[maxIdx]} (${maxVal})` : '-';
-
-        const rataRata = totalKegiatan > 0 ? (totalKegiatan / 12).toFixed(1) : '0';
-        document.getElementById('st-rataRata').textContent = rataRata;
-
-        stRenderChart(labels, jumlahPerBulan);
-
-        loadingEl.classList.add('hidden');
-        wrapperEl.classList.remove('hidden');
-    } catch (e) {
-        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data statistik'}</span>`;
-    }
+    loadingEl.classList.add('hidden');
+    wrapperEl.classList.remove('hidden');
 }
 
 function stRenderChart(labels, data) {
@@ -76,9 +119,7 @@ function stRenderChart(labels, data) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    if (stChartInstance) {
-        stChartInstance.destroy();
-    }
+    if (stChartInstance) stChartInstance.destroy();
 
     stChartInstance = new Chart(ctx, {
         type: 'line',
@@ -101,23 +142,12 @@ function stRenderChart(labels, data) {
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${ctx.parsed.y} kegiatan`
-                    }
-                }
+                tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y} kegiatan` } }
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { precision: 0 }
-                }
-            }
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
         }
     });
 }
-
-window.initStatistikPage = initStatistikPage;
 
 // ============================================
 // TABEL PROGRES PERJALANAN DINAS PER PEGAWAI
@@ -125,32 +155,47 @@ window.initStatistikPage = initStatistikPage;
 
 let stPegawaiRows = [];
 
-async function stLoadPegawaiData() {
+function stLoadPegawaiData() {
     const loadingEl = document.getElementById('st-pegawaiLoading');
     const wrapperEl = document.getElementById('st-pegawaiTableWrapper');
+    if (!loadingEl || !wrapperEl) return;
 
-    if (!loadingEl || !wrapperEl) return; // halaman sudah berpindah
+    const byPegawai = {};
+    stKegiatanRows.forEach(k => {
+        if (!isPerjadinMak(k.mak)) return;
+        const nama = String(k.pelaksana || '').trim();
+        if (!nama || !k.tgl_mulai) return;
+        const d = new Date(k.tgl_mulai);
+        if (isNaN(d.getTime())) return;
+        const bulanIdx = d.getMonth();
 
-    loadingEl.classList.remove('hidden');
-    loadingEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>';
-    wrapperEl.classList.add('hidden');
-
-    try {
-        const result = await apiPost({ action: 'getStatistikPegawaiData' });
-
-        if (result.status !== 'success') {
-            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data progres pegawai'}</span>`;
-            return;
+        if (!byPegawai[nama]) {
+            byPegawai[nama] = {
+                nama,
+                bulan: Array.from({ length: 12 }, () => ({ selesai: 0, total: 0, rows: [] })),
+                total: 0
+            };
         }
+        const b = byPegawai[nama].bulan[bulanIdx];
+        b.total++;
+        if (k.status === 'Selesai') b.selesai++;
+        b.rows.push({
+            idKegiatan: k.id, mak: k.mak, uraian: k.uraian, pelaksana: k.pelaksana,
+            tujuan: k.tujuan, tglSt: k.tgl_st, tglMulai: k.tgl_mulai, tglSelesai: k.tgl_selesai,
+            tglLPT: k.tgl_lpt, tglBayar: k.tgl_bayar, jumlah: k.jumlah, userLogin: k.user,
+            status: k.status, tglSP2D: k.tgl_sp2d, nomorSPM: k.nomor_spm
+        });
+        byPegawai[nama].total++;
+    });
 
-        stPegawaiRows = (result.rows || []).map((r, i) => ({ ...r, _idx: i }));
-        stApplyPegawaiFilter();
+    stPegawaiRows = Object.values(byPegawai)
+        .sort((a, b) => a.nama.localeCompare(b.nama))
+        .map((r, i) => ({ ...r, _idx: i }));
 
-        loadingEl.classList.add('hidden');
-        wrapperEl.classList.remove('hidden');
-    } catch (e) {
-        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data progres pegawai'}</span>`;
-    }
+    stApplyPegawaiFilter();
+
+    loadingEl.classList.add('hidden');
+    wrapperEl.classList.remove('hidden');
 }
 
 function stApplyPegawaiFilter() {
@@ -200,8 +245,6 @@ function stRenderPegawaiTable(rows) {
 // ============================================
 // POPUP DAFTAR KEGIATAN PER BULAN (level 1)
 // ============================================
-
-const ST_BULAN_LABEL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 function stFormatDate(v) {
     if (!v) return '-';
@@ -321,46 +364,103 @@ function stShowDetilKegiatanPopup(pegawaiIdx, bulanIdx, itemIdx) {
 }
 
 // ============================================
-// CARD REALISASI ANGGARAN BULANAN (sheet: bulanan_2026)
+// CARD REALISASI ANGGARAN BULANAN (Belanja Barang 52 & Modal 53)
 // ============================================
-
-async function stLoadBudgetData() {
-    const loadingEl = document.getElementById('st-budgetLoading');
-    const wrapperEl = document.getElementById('st-budgetTableWrapper');
-    const summaryEl = document.getElementById('st-budgetSummary');
-
-    if (!loadingEl || !wrapperEl) return; // halaman sudah berpindah
-
-    loadingEl.classList.remove('hidden');
-    loadingEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>';
-    wrapperEl.classList.add('hidden');
-    if (summaryEl) summaryEl.classList.add('hidden');
-
-    try {
-        const result = await apiPost({ action: 'getStatistikBulananData' });
-
-        if (result.status !== 'success' || !result.rows || result.rows.length === 0) {
-            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data realisasi anggaran'}</span>`;
-            return;
-        }
-
-        stRenderBudgetSummary(result.rows);
-        stRenderBudgetTable(result.rows);
-
-        loadingEl.classList.add('hidden');
-        wrapperEl.classList.remove('hidden');
-        if (summaryEl) summaryEl.classList.remove('hidden');
-    } catch (e) {
-        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data realisasi anggaran'}</span>`;
-    }
-}
 
 function stRupiah(v) {
     return Number(v || 0).toLocaleString('id-ID');
 }
 
+function stMakeBulanCell(nilai, penyebut) {
+    return { nilai, persen: penyebut ? (nilai / penyebut * 100) : 0 };
+}
+
+function stComputeBudgetRow(uraian, jenis, akunPrefix) {
+    let pagu = 0;
+    stPokRows.forEach(p => {
+        const akun = getAkunFromMak(p.kode);
+        if (akun.startsWith(akunPrefix)) pagu += Number(p.pagu) || 0;
+    });
+
+    const blokirByKode = {};
+    stBlokirRows.forEach(b => { blokirByKode[b.id] = Number(b.nilai) || 0; });
+    let blokir = 0;
+    stPokRows.forEach(p => {
+        const akun = getAkunFromMak(p.kode);
+        if (akun.startsWith(akunPrefix)) blokir += blokirByKode[p.kode] || 0;
+    });
+
+    const penyebut = pagu - blokir; // "* Persentase dihitung terhadap Pagu setelah dikurangi Blokir."
+
+    const nilaiPerBulan = new Array(12).fill(0);
+    stKegiatanRows.forEach(k => {
+        const akun = getAkunFromMak(k.mak);
+        if (!akun.startsWith(akunPrefix) || !k.tgl_sp2d) return;
+        const d = new Date(k.tgl_sp2d);
+        if (isNaN(d.getTime())) return;
+        nilaiPerBulan[d.getMonth()] += Number(k.jumlah) || 0;
+    });
+
+    const bulanObj = {};
+    ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'agu', 'sep', 'okt', 'nov', 'des'].forEach((key, idx) => {
+        bulanObj[key] = stMakeBulanCell(nilaiPerBulan[idx], penyebut);
+    });
+
+    const twNilai = [
+        nilaiPerBulan[0] + nilaiPerBulan[1] + nilaiPerBulan[2],
+        nilaiPerBulan[3] + nilaiPerBulan[4] + nilaiPerBulan[5],
+        nilaiPerBulan[6] + nilaiPerBulan[7] + nilaiPerBulan[8],
+        nilaiPerBulan[9] + nilaiPerBulan[10] + nilaiPerBulan[11]
+    ];
+    const tw = {
+        twI: stMakeBulanCell(twNilai[0], penyebut), twII: stMakeBulanCell(twNilai[1], penyebut),
+        twIII: stMakeBulanCell(twNilai[2], penyebut), twIV: stMakeBulanCell(twNilai[3], penyebut)
+    };
+
+    const totalNilai = nilaiPerBulan.reduce((a, b) => a + b, 0);
+
+    return { uraian, jenis, pagu, blokir, bulan: bulanObj, tw, total: stMakeBulanCell(totalNilai, penyebut) };
+}
+
+function stLoadBudgetData() {
+    const loadingEl = document.getElementById('st-budgetLoading');
+    const wrapperEl = document.getElementById('st-budgetTableWrapper');
+    const summaryEl = document.getElementById('st-budgetSummary');
+    if (!loadingEl || !wrapperEl) return;
+
+    const rowBarang = stComputeBudgetRow('Belanja Barang', '52', '52');
+    const rowModal = stComputeBudgetRow('Belanja Modal', '53', '53');
+
+    const pagu = rowBarang.pagu + rowModal.pagu;
+    const blokir = rowBarang.blokir + rowModal.blokir;
+    const penyebut = pagu - blokir;
+    const bulanTotal = {};
+    ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'agu', 'sep', 'okt', 'nov', 'des'].forEach(key => {
+        const nilai = rowBarang.bulan[key].nilai + rowModal.bulan[key].nilai;
+        bulanTotal[key] = stMakeBulanCell(nilai, penyebut);
+    });
+    const twTotal = {};
+    ['twI', 'twII', 'twIII', 'twIV'].forEach(key => {
+        const nilai = rowBarang.tw[key].nilai + rowModal.tw[key].nilai;
+        twTotal[key] = stMakeBulanCell(nilai, penyebut);
+    });
+    const totalNilai = rowBarang.total.nilai + rowModal.total.nilai;
+
+    const rows = [rowBarang, rowModal, {
+        uraian: 'Total', jenis: '', pagu, blokir, bulan: bulanTotal, tw: twTotal,
+        total: stMakeBulanCell(totalNilai, penyebut)
+    }];
+
+    stRenderBudgetSummary(rows);
+    stRenderBudgetTable(rows);
+
+    loadingEl.classList.add('hidden');
+    wrapperEl.classList.remove('hidden');
+    if (summaryEl) summaryEl.classList.remove('hidden');
+}
+
 function stRenderBudgetSummary(rows) {
-    const totalRow = rows[rows.length - 1]; // baris "Total" selalu paling bawah
+    const totalRow = rows[rows.length - 1];
 
     document.getElementById('st-bTotalPagu').textContent = stRupiah(totalRow.pagu);
     document.getElementById('st-bTotalBlokir').textContent = stRupiah(totalRow.blokir);
@@ -425,38 +525,78 @@ function stRenderBudgetTable(rows) {
 }
 
 // ============================================
-// CARD MONITORING MAKSIMUM PENCAIRAN / MP (sheet: bulanan_2026)
+// CARD MONITORING MAKSIMUM PENCAIRAN / MP (tabel mp_pnbp)
 // ============================================
 
-async function stLoadMPData() {
+function stLoadMPData() {
     const loadingEl = document.getElementById('st-mpLoading');
     const wrapperEl = document.getElementById('st-mpTableWrapper');
     const summaryEl = document.getElementById('st-mpSummary');
+    if (!loadingEl || !wrapperEl) return;
 
-    if (!loadingEl || !wrapperEl) return; // halaman sudah berpindah
-
-    loadingEl.classList.remove('hidden');
-    loadingEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>';
-    wrapperEl.classList.add('hidden');
-    if (summaryEl) summaryEl.classList.add('hidden');
-
-    try {
-        const result = await apiPost({ action: 'getStatistikMPData' });
-
-        if (result.status !== 'success' || !result.rows || result.rows.length === 0) {
-            loadingEl.innerHTML = `<span class="text-red-500">❌ ${result.message || 'Gagal memuat data monitoring MP'}</span>`;
-            return;
-        }
-
-        stRenderMPSummary(result.rows);
-        stRenderMPTable(result.rows);
-
-        loadingEl.classList.add('hidden');
-        wrapperEl.classList.remove('hidden');
-        if (summaryEl) summaryEl.classList.remove('hidden');
-    } catch (e) {
-        loadingEl.innerHTML = `<span class="text-red-500">❌ ${e.message || 'Gagal memuat data monitoring MP'}</span>`;
+    if (!stMpRows || stMpRows.length === 0) {
+        loadingEl.innerHTML = `<span class="text-red-500">❌ Belum ada data MP (tabel mp_pnbp kosong)</span>`;
+        return;
     }
+
+    // Urutkan berdasarkan tgl_mp ASC -> Realisasi = akumulasi kegiatan PNBP
+    // SAMPAI DENGAN tanggal tgl_mp baris ini (lihat catatan di kepala file).
+    const sorted = [...stMpRows].sort((a, b) => new Date(a.tgl_mp) - new Date(b.tgl_mp));
+
+    const rows = sorted.map((mp, idx) => {
+        const tglMp = mp.tgl_mp ? new Date(mp.tgl_mp) : null;
+        const paguMP = Number(mp.jumlah) || 0;
+
+        let realisasiBruto = 0, realisasiSP2D = 0;
+        stKegiatanRows.forEach(k => {
+            if (!String(k.uraian || '').includes('(PNBP)') || !tglMp) return;
+
+            if (k.tgl_bayar) {
+                const dBayar = new Date(k.tgl_bayar);
+                if (!isNaN(dBayar.getTime()) && dBayar <= tglMp) realisasiBruto += Number(k.jumlah) || 0;
+            }
+            if (k.tgl_sp2d) {
+                const dSp2d = new Date(k.tgl_sp2d);
+                if (!isNaN(dSp2d.getTime()) && dSp2d <= tglMp) realisasiSP2D += Number(k.jumlah) || 0;
+            }
+        });
+
+        return {
+            no: idx + 1,
+            uraian: mp.uraian || '-',
+            periode: tglMp ? `s.d. ${stFormatDate(mp.tgl_mp)}` : '-',
+            tanggalMP: mp.tgl_mp,
+            paguMP,
+            realisasiBruto,
+            realisasiSP2D,
+            sisaBruto: paguMP - realisasiBruto,
+            sisaSP2D: paguMP - realisasiSP2D,
+            persenBruto: paguMP ? (realisasiBruto / paguMP * 100) : 0,
+            persenSP2D: paguMP ? (realisasiSP2D / paguMP * 100) : 0,
+            isTotal: false
+        };
+    });
+
+    const totalRow = {
+        no: '', uraian: 'Total', periode: '', tanggalMP: null,
+        paguMP: rows.reduce((a, r) => a + r.paguMP, 0),
+        realisasiBruto: rows.reduce((a, r) => a + r.realisasiBruto, 0),
+        realisasiSP2D: rows.reduce((a, r) => a + r.realisasiSP2D, 0),
+        sisaBruto: rows.reduce((a, r) => a + r.sisaBruto, 0),
+        sisaSP2D: rows.reduce((a, r) => a + r.sisaSP2D, 0),
+        isTotal: true
+    };
+    totalRow.persenBruto = totalRow.paguMP ? (totalRow.realisasiBruto / totalRow.paguMP * 100) : 0;
+    totalRow.persenSP2D = totalRow.paguMP ? (totalRow.realisasiSP2D / totalRow.paguMP * 100) : 0;
+
+    const allRows = [...rows, totalRow];
+
+    stRenderMPSummary(allRows);
+    stRenderMPTable(allRows);
+
+    loadingEl.classList.add('hidden');
+    wrapperEl.classList.remove('hidden');
+    if (summaryEl) summaryEl.classList.remove('hidden');
 }
 
 function stRenderMPSummary(rows) {
@@ -493,7 +633,7 @@ function stRenderMPRow(r) {
             <td class="p-2.5 text-center whitespace-nowrap">${r.no}</td>
             <td class="p-2.5 text-slate-700 whitespace-nowrap">${r.isTotal ? 'Total' : r.uraian}</td>
             <td class="p-2.5 text-slate-700 whitespace-nowrap">${r.periode || '-'}</td>
-            <td class="p-2.5 text-center whitespace-nowrap">${stFormatDate(r.tanggalMP)}</td>
+            <td class="p-2.5 text-center whitespace-nowrap">${r.tanggalMP ? stFormatDate(r.tanggalMP) : '-'}</td>
             <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.paguMP)}</td>
             <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.realisasiBruto)}</td>
             <td class="p-2.5 text-right whitespace-nowrap">${stRupiah(r.realisasiSP2D)}</td>
@@ -503,7 +643,6 @@ function stRenderMPRow(r) {
             <td class="p-2.5">${stPercentBadge(r.persenSP2D)}</td>
         </tr>`;
 }
-
 
 function stRenderMPTable(rows) {
     const tbody = document.getElementById('st-mpTableBody');
