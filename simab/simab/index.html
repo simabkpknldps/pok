@@ -150,11 +150,6 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-    <script src="js/firebase-config.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="js/supabase-config.js"></script>
 
@@ -178,13 +173,6 @@
 
         // MASUKKAN URL DARI "GAS REDIRECTOR" ANDA DI SINI
         const redirectorUrl = "https://script.google.com/macros/s/AKfycbxhclFUTLCSzjQHK-W-dyZgF3dFeF5SaJEk6JvdhMU_6HA9Bs_avFb9G25gPrWT1XxXxA/exec";
-
-        // App Firebase KEDUA, terpisah dari yang utama (dipakai proses login) —
-        // khusus dipakai saat Daftar Akun bikin akun Auth baru, supaya proses ini
-        // tidak mengganggu/menimpa sesi login yang sedang aktif (kalau ada).
-        const secondaryAppDaftar = firebase.initializeApp(firebase.app().options, "SecondaryDaftar");
-        const secondaryAuthDaftar = secondaryAppDaftar.auth();
-        const secondaryDbDaftar = secondaryAppDaftar.firestore();
 
         function nipToEmail(nip) {
             return `${String(nip).trim()}@simab.local`;
@@ -225,19 +213,11 @@
                 const passwordInput = document.getElementById('password').value;
                 const emailLogin = nipToEmail(nipInput);
 
-                // 1. Verifikasi NIP + Password — login ke DUA-DUANYA (Firebase & Supabase)
-                //    bareng. Firebase MASIH dipakai halaman yang belum sempat dikonversi
-                //    (POK/Kegiatan/Dashboard/dll), Supabase dipakai bertahap ke depannya.
-                //    Kalau salah satu gagal, anggap gagal total (kredensial harus sama
-                //    persis di kedua sistem, karena akun dibuat dari sumber yang sama).
-                const [fbResult, sbResult] = await Promise.all([
-                    firebase.auth().signInWithEmailAndPassword(emailLogin, passwordInput),
-                    sb.auth.signInWithPassword({ email: emailLogin, password: passwordInput })
-                ]);
-                if (sbResult.error) throw sbResult.error;
+                // 1. Verifikasi NIP + Password lewat Supabase Auth.
+                const { error: sbLoginError } = await sb.auth.signInWithPassword({ email: emailLogin, password: passwordInput });
+                if (sbLoginError) throw sbLoginError;
 
-                // 2. Ambil profil pegawai (nama, jabatan, admin, dst) dari SUPABASE
-                //    (bukan Firestore lagi — Supabase jadi sumber utama ke depannya).
+                // 2. Ambil profil pegawai (nama, jabatan, admin, dst) dari Supabase.
                 const { data: profil, error: profilError } = await sb
                     .from('pegawai')
                     .select('*')
@@ -285,10 +265,6 @@
                 const msg = (err && err.message || '').toLowerCase();
                 if (err && err.code === 'profil-tidak-ditemukan') {
                     showLoginError('Profil pegawai tidak ditemukan di database. Hubungi admin.');
-                } else if (err && (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-email')) {
-                    showLoginError('NIP atau password salah. Password default adalah NIP.');
-                } else if (err && err.code === 'auth/too-many-requests') {
-                    showLoginError('Terlalu banyak percobaan gagal. Coba lagi sebentar lagi.');
                 } else if (msg.includes('invalid login credentials') || msg.includes('invalid_credentials')) {
                     showLoginError('NIP atau password salah. Password default adalah NIP.');
                 } else if (msg.includes('rate limit') || msg.includes('too many requests')) {
@@ -549,52 +525,31 @@
                 if (data.status === 'success') {
                     // Selain nyatet ke sheet ref_pegawai (di atas, tetap dipertahankan supaya
                     // fitur2 lain yg masih baca dari situ tidak rusak), sekalian bikinkan akun
-                    // Firebase Auth + profil Firestore-nya juga, supaya BISA LANGSUNG login
-                    // pakai sistem baru tanpa perlu proses migrasi manual terpisah lagi.
-                    // Password default SAMA dgn yg dipakai GAS di atas: NIP itu sendiri.
+                    // Supabase Auth + profil-nya juga, supaya BISA LANGSUNG login tanpa perlu
+                    // proses migrasi manual terpisah lagi. Password default SAMA dgn yg
+                    // dipakai GAS di atas: NIP itu sendiri. Pakai instance KEDUA (client
+                    // terpisah dgn storageKey unik) supaya proses ini tidak mengganggu/
+                    // menimpa sesi login yang sedang aktif (kalau ada).
                     try {
-                        await secondaryAuthDaftar.createUserWithEmailAndPassword(nipToEmail(nip), nip);
-                        await secondaryDbDaftar.collection('pegawai').doc(nip).set({
-                            nama, jabatan, pangkat,
-                            kepeg: status,
-                            admin: '0',
-                            aksesMenu: '1',
-                            namaBank: '',
-                            noRekening: ''
+                        const secondaryDbDaftar = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                            auth: { storageKey: 'sb-secondary-daftar-' + Date.now() }
                         });
-                    } catch (fbErr) {
-                        if (fbErr.code !== 'auth/email-already-in-use') {
-                            console.error('Gagal bikin akun Firebase utk pegawai ini:', fbErr);
-                        }
-                        // auth/email-already-in-use: NIP ini sudah pernah didaftarkan sebelumnya
-                        // di Firebase Auth -> password Firebase-nya TIDAK ikut ter-reset ke
-                        // default di sini (keterbatasan client SDK). Kalau pegawai ini memang
-                        // perlu direset passwordnya, admin perlu reset manual lewat Firebase
-                        // Console (Authentication -> Users -> pilih user -> Reset password).
-                    } finally {
-                        try { await secondaryAuthDaftar.signOut(); } catch (e2) { /* abaikan */ }
-                    }
-
-                    // Sekalian bikin akun + profil di SUPABASE juga (skema baru yang
-                    // dipakai bertahap menggantikan Firebase). Password sama: NIP sendiri.
-                    try {
-                        const { error: signUpError } = await sb.auth.signUp({ email: nipToEmail(nip), password: nip });
+                        const { error: signUpError } = await secondaryDbDaftar.auth.signUp({ email: nipToEmail(nip), password: nip });
                         if (signUpError && !(signUpError.message || '').toLowerCase().includes('already registered')) {
                             throw signUpError;
                         }
-                        // signUp otomatis login sbg user baru itu di client 'sb' -> insert
+                        // signUp otomatis login sbg user baru itu di instance kedua ini -> insert
                         // profilnya SEKARANG (selagi sesi itu aktif, RLS self-write butuh ini).
-                        await sb.from('pegawai').upsert({
+                        await secondaryDbDaftar.from('pegawai').upsert({
                             id: nip, nama, jabatan, pangkat, kepeg: status,
                             admin: '0', akses_menu: '1', nama_bank: '', no_rekening: ''
                         });
+                        try { await secondaryDbDaftar.auth.signOut(); } catch (e2) { /* abaikan */ }
                     } catch (sbErr) {
                         console.error('Gagal bikin akun Supabase utk pegawai ini:', sbErr);
-                        // Sama seperti Firebase: kalau NIP sudah pernah terdaftar, password
-                        // Supabase-nya TIDAK ikut ter-reset (keterbatasan client SDK) -- perlu
-                        // reset manual lewat Supabase Dashboard kalau memang dibutuhkan.
-                    } finally {
-                        try { await sb.auth.signOut(); } catch (e2) { /* abaikan */ }
+                        // Kalau NIP sudah pernah terdaftar, password Supabase-nya TIDAK ikut
+                        // ter-reset (keterbatasan client SDK) -- perlu reset manual lewat
+                        // Supabase Dashboard kalau memang dibutuhkan.
                     }
 
                     daftarSuccess.textContent = data.message || 'Pendaftaran berhasil.';
