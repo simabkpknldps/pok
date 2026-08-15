@@ -25,7 +25,6 @@
  * -----------------------------------------------------------------------
  */
 
-
 // Ambil segmen 6-digit dari kode MAK (itu adalah kode Akun) — dipakai utk
 // menentukan kategori 52 (Belanja Barang) / 53 (Belanja Modal).
 function getAkunFromMak(mak) {
@@ -122,16 +121,13 @@ function computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows) {
             }
         }
 
-        // Baris 4-7: berdasarkan tgl_mulai bulan berjalan.
-        if (k.tgl_mulai) {
-            const dMulai = new Date(k.tgl_mulai);
-            if (!isNaN(dMulai.getTime()) && dMulai.getMonth() + 1 === currentMonth) {
-                if (k.status === 'Terbayar' && uraian.includes('(RM)')) prosesRM += jumlah;
-                if (k.status === 'Terbayar' && uraian.includes('(PNBP)')) prosesPNBP += jumlah;
-                if (k.status === 'LPT') lpt += jumlah;
-                if (k.status === 'Terlaksana') terlaksana += jumlah;
-            }
-        }
+        // Baris 4-7 (semua baris di bawah Deviasi RPD): TANPA filter tanggal/
+        // bulan sama sekali — cuma baris 1 (RPD Berjalan) & 2 (Sudah SP2D) yg
+        // pakai filter bulan berjalan.
+        if (k.status === 'Terbayar' && uraian.includes('(RM)')) prosesRM += jumlah;
+        if (k.status === 'Terbayar' && uraian.includes('(PNBP)')) prosesPNBP += jumlah;
+        if (k.status === 'LPT') lpt += jumlah;
+        if (k.status === 'Terlaksana') terlaksana += jumlah;
     });
 
     const deviasiRpd = rpdBerjalan - sudahSp2d;
