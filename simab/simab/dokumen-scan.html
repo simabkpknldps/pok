@@ -41,6 +41,9 @@
             <p class="text-[11px] text-sky-100 leading-tight" id="ds-userLabel">SiMAB</p>
         </div>
         <div class="flex items-center gap-2">
+            <button id="ds-btnRefreshAll" class="w-9 h-9 flex items-center justify-center rounded-lg bg-sky-600 hover:bg-sky-800 transition" title="Muat Ulang Data Terbaru">
+                <i class="fa-solid fa-rotate-right" id="ds-refreshIcon"></i>
+            </button>
             <button id="ds-btnLogout" class="w-9 h-9 flex items-center justify-center rounded-lg bg-sky-600 hover:bg-sky-800 transition" title="Keluar">
                 <i class="fa-solid fa-right-from-bracket"></i>
             </button>
@@ -130,6 +133,26 @@ let currentRow = null;
 let photoQueue = []; // { dataUrl } — antrian foto sebelum digabung jadi 1 PDF
 
 const $ = (id) => document.getElementById(id);
+
+// Toast kecil di bawah layar (dipakai tombol Refresh Data) — tanpa dependensi
+// apapun (dokumen-scan.html tidak memuat common.js versi web).
+function showToastSOH(msg, isError) {
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = `
+        position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+        background: ${isError ? '#dc2626' : '#0f172a'}; color: white;
+        padding: 9px 16px; border-radius: 9999px; font-size: 12.5px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.25); z-index: 999999;
+        max-width: 85vw; text-align: center; opacity: 0; transition: opacity .2s;
+    `;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => { el.style.opacity = '1'; });
+    setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 250);
+    }, 2200);
+}
 
 function escHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1303,6 +1326,38 @@ document.addEventListener('DOMContentLoaded', () => {
     $('ds-sheetOverlay').addEventListener('click', (e) => {
         if (e.target === $('ds-sheetOverlay')) dsCloseDetail();
     });
+
+    $('ds-btnRefreshAll').onclick = async () => {
+        const icon = $('ds-refreshIcon');
+        icon.classList.add('fa-spin');
+
+        // Kosongkan SEMUA cache di memori halaman ini, biar semua tab (Cari,
+        // POK, Kegiatan, Referensi) ambil data segar dari Supabase lagi.
+        dsAllRowsCache = null;
+        dsPokRowsCache = null;
+        dsSbmRowsCache = null;
+        dsPegawaiRowsCache = null;
+        dsRefLoaded = false;
+
+        try {
+            // Muat ulang tab yg sedang aktif saja (bukan semua tab sekaligus,
+            // biar cepat) -- tab lain otomatis kebagian data segar begitu dibuka.
+            if (dsActiveTab === 'home') {
+                if ($('ds-searchInput').value.trim()) await runSearch();
+            } else if (dsActiveTab === 'pok') {
+                await dsRunPokSearch();
+            } else if (dsActiveTab === 'kegiatan') {
+                if ($('ds-kgSearchInput').value.trim()) await dsRunKgSearch();
+            } else if (dsActiveTab === 'referensi') {
+                await dsRunRefSearch();
+            }
+            showToastSOH('Data berhasil dimuat ulang');
+        } catch (e) {
+            showToastSOH('Gagal memuat ulang: ' + (e.message || 'Terjadi kesalahan'), true);
+        } finally {
+            icon.classList.remove('fa-spin');
+        }
+    };
 
     $('ds-btnLogout').onclick = () => {
         if (!confirm('Yakin ingin keluar?')) return;
