@@ -134,6 +134,7 @@
                 <button type="submit" id="loginBtn"
                     class="btn-ios w-full py-3 text-[15px] flex items-center justify-center gap-2 disabled:cursor-not-allowed mt-4">
                     <span id="loginBtnText">Masuk</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket text-sm"></i>
                 </button>
             </form>
 
@@ -424,8 +425,9 @@
             daftarModal.classList.replace('flex', 'hidden');
         });
 
-        const DAFTAR_BTN_CLASS_NORMAL = 'w-full bg-sky-600 text-white py-2.5 rounded-xl font-semibold hover:bg-sky-700 active:bg-sky-800 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed';
-        const DAFTAR_BTN_CLASS_TUTUP = 'w-full bg-red-600 text-white py-2.5 rounded-xl font-semibold hover:bg-red-700 active:bg-red-800 transition flex items-center justify-center gap-2';
+        const DAFTAR_BTN_CLASS_NORMAL = 'btn-ios w-full py-3 text-[15px] flex items-center justify-center gap-2 disabled:cursor-not-allowed';
+        const DAFTAR_BTN_CLASS_TUTUP = 'w-full py-3 text-[15px] font-medium rounded-xl flex items-center justify-center gap-2 transition';
+        // Warna Tutup beda dari Simpan (abu-abu, bukan biru) -- diset lewat style inline saat dipakai, lihat pemakaiannya di bawah.
 
         // NIP ditemukan -> akun sudah terdaftar, tidak bisa daftar lagi.
         // Tombol "Daftar" langsung berubah jadi "Tutup" warna merah.
@@ -433,6 +435,8 @@
             const btn = document.getElementById('daftarBtnSimpan');
             const btnText = document.getElementById('daftarBtnSimpanText');
             btn.className = DAFTAR_BTN_CLASS_TUTUP;
+            btn.style.background = 'rgba(118,118,128,0.16)';
+            btn.style.color = 'var(--label)';
             btnText.textContent = 'Tutup';
             btn.disabled = false;
         }
@@ -442,6 +446,8 @@
             const btn = document.getElementById('daftarBtnSimpan');
             const btnText = document.getElementById('daftarBtnSimpanText');
             btn.className = DAFTAR_BTN_CLASS_NORMAL;
+            btn.style.background = '';
+            btn.style.color = '';
             btnText.textContent = 'Daftar';
             btn.disabled = false;
         }
@@ -453,7 +459,7 @@
 
             if (!nip) {
                 daftarCekMsg.textContent = 'NIP harus diisi.';
-                daftarCekMsg.className = 'text-xs px-3 py-2 rounded-lg mt-3 text-red-600 bg-red-50 border border-red-100';
+                daftarCekMsg.className = 'text-[13px] px-3.5 py-2.5 rounded-xl mt-3 text-center'; daftarCekMsg.style.background = 'rgba(255,59,48,0.1)'; daftarCekMsg.style.color = '#FF3B30';
                 daftarCekMsg.classList.remove('hidden');
                 return;
             }
@@ -472,7 +478,7 @@
 
                 if (data.status !== 'success') {
                     daftarCekMsg.textContent = data.message || 'Terjadi kesalahan saat memeriksa NIP.';
-                    daftarCekMsg.className = 'text-xs px-3 py-2 rounded-lg mt-3 text-red-600 bg-red-50 border border-red-100';
+                    daftarCekMsg.className = 'text-[13px] px-3.5 py-2.5 rounded-xl mt-3 text-center'; daftarCekMsg.style.background = 'rgba(255,59,48,0.1)'; daftarCekMsg.style.color = '#FF3B30';
                     daftarCekMsg.classList.remove('hidden');
                     return;
                 }
@@ -532,7 +538,7 @@
                 daftarStep2.classList.remove('hidden');
             } catch (err) {
                 daftarCekMsg.textContent = 'Koneksi ke server gagal, pastikan redirector aktif.';
-                daftarCekMsg.className = 'text-xs px-3 py-2 rounded-lg mt-3 text-red-600 bg-red-50 border border-red-100';
+                daftarCekMsg.className = 'text-[13px] px-3.5 py-2.5 rounded-xl mt-3 text-center'; daftarCekMsg.style.background = 'rgba(255,59,48,0.1)'; daftarCekMsg.style.color = '#FF3B30';
                 daftarCekMsg.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
