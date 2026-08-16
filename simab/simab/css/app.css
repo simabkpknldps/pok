@@ -1,9 +1,127 @@
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+/**
+ * css/app.css — Sistem desain "iOS/macOS" SiMAB.
+ * Dipakai bareng oleh dashboard.html (shell) + semua halaman js/pages/*.js
+ * yang inject HTML ke #app. Definisikan di SINI (bukan diulang-ulang per
+ * halaman) supaya konsisten di seluruh aplikasi.
+ */
 
-#detil-tbody { display: block; max-height: 40vh; overflow-y: auto; }
-#detil-tbody tr { display: table; width: 100%; table-layout: fixed; }
-#detil-thead { display: table; width: 100%; table-layout: fixed; }
+:root {
+    --sf: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --ios-blue: #0071E3;
+    --ios-blue-press: #0059B3;
+    --ios-blue-tint: rgba(0,113,227,0.1);
+    --ios-red: #FF3B30;
+    --ios-red-tint: rgba(255,59,48,0.1);
+    --ios-green: #34C759;
+    --ios-green-tint: rgba(52,199,89,0.12);
+    --ios-amber: #FF9F0A;
+    --ios-amber-tint: rgba(255,159,10,0.14);
+    --label: #1D1D1F;
+    --label-secondary: #86868B;
+    --field-bg: rgba(118,118,128,0.12);
+    --sidebar-bg: #F6F6F8;
+    --divider: rgba(0,0,0,0.08);
+}
 
-.pok-table-container { max-height: 60vh; overflow-y: auto; overflow-x: auto; }
-#pok-thead { position: sticky; top: 0; z-index: 10; background: #f1f5f9; }
+body { font-family: var(--sf); }
+
+/* ---- Kartu & Panel ---- */
+.ios-panel {
+    background: #fff;
+    border: 1px solid var(--divider);
+    border-radius: 18px;
+}
+
+/* ---- Field input (form) ---- */
+.ios-field {
+    background: var(--field-bg);
+    border: none;
+    color: var(--label);
+    font-family: var(--sf);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    width: 100%;
+    outline: none;
+    font-size: 0.9rem;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ios-field::placeholder { color: var(--label-secondary); }
+.ios-field:focus { background: rgba(118,118,128,0.16); box-shadow: 0 0 0 3.5px var(--ios-blue-tint); }
+
+.ios-label {
+    font-family: var(--sf);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--label-secondary);
+}
+
+/* ---- Tombol ---- */
+.btn-ios {
+    background: var(--ios-blue);
+    color: #fff;
+    font-family: var(--sf);
+    font-weight: 590;
+    border-radius: 10px;
+    transition: background-color 0.12s ease, transform 0.08s ease;
+}
+.btn-ios:hover { background: var(--ios-blue-press); }
+.btn-ios:active { transform: scale(0.98); }
+.btn-ios:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ios-secondary {
+    background: var(--field-bg);
+    color: var(--label);
+    font-family: var(--sf);
+    font-weight: 590;
+    border-radius: 10px;
+    transition: background-color 0.12s ease, transform 0.08s ease;
+}
+.btn-ios-secondary:hover { background: rgba(118,118,128,0.18); }
+.btn-ios-secondary:active { transform: scale(0.98); }
+
+.btn-ios-danger {
+    background: var(--ios-red-tint);
+    color: var(--ios-red);
+    font-family: var(--sf);
+    font-weight: 590;
+    border-radius: 10px;
+    transition: background-color 0.12s ease, transform 0.08s ease;
+}
+.btn-ios-danger:hover { background: rgba(255,59,48,0.18); }
+.btn-ios-danger:active { transform: scale(0.98); }
+
+.link-ios { color: var(--ios-blue); }
+.link-ios:hover { text-decoration: underline; }
+
+/* ---- Sidebar navigasi ---- */
+.sidebar-nav-btn {
+    display: flex; align-items: center; gap: 0.65rem;
+    width: 100%; text-align: left;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: #3C3C43;
+    transition: background-color 0.1s ease, color 0.1s ease;
+}
+.sidebar-nav-btn:hover { background: rgba(0,0,0,0.04); }
+.sidebar-nav-btn.is-active { background: var(--ios-blue); color: #fff; }
+.sidebar-nav-btn i { width: 18px; text-align: center; font-size: 0.85rem; opacity: 0.85; }
+
+/* ---- Badge status ---- */
+.ios-badge {
+    display: inline-block; padding: 0.15rem 0.6rem; border-radius: 9999px;
+    font-size: 0.72rem; font-weight: 600;
+}
+
+/* ---- Scrollbar halus ---- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
+:focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+}
