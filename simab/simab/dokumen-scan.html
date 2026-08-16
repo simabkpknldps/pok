@@ -36,11 +36,11 @@
 <!-- ===================== App Bar ===================== -->
 <div class="ds-appbar bg-sky-700 text-white sticky top-0 z-30 shadow-sm">
     <div class="flex items-center justify-between px-4 py-3.5">
-        <div>
-            <h1 class="text-base font-semibold leading-tight"><i class="fa-solid fa-mobile-screen-button mr-1.5"></i>SOH <span class="text-sky-200 font-normal text-xs">(SiMAB On Hand)</span></h1>
-            <p class="text-[11px] text-sky-100 leading-tight" id="ds-userLabel">SiMAB</p>
-        </div>
+        <h1 class="text-base font-semibold leading-tight"><i class="fa-solid fa-mobile-screen-button mr-1.5"></i>SOH <span class="text-sky-200 font-normal text-xs">(SiMAB On Hand)</span></h1>
         <div class="flex items-center gap-2">
+            <button id="ds-btnTambahKegiatan" class="w-9 h-9 flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 transition" title="Rekam Kegiatan Baru">
+                <i class="fa-solid fa-plus"></i>
+            </button>
             <button id="ds-btnRefreshAll" class="w-9 h-9 flex items-center justify-center rounded-lg bg-sky-600 hover:bg-sky-800 transition" title="Muat Ulang Data Terbaru">
                 <i class="fa-solid fa-rotate-right" id="ds-refreshIcon"></i>
             </button>
@@ -65,7 +65,7 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
             </button>
         </div>
-        <p id="ds-hint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan tombol cari (mis. nama pegawai, uraian kegiatan, No ST, atau No SPM). Tap hasil buat urus dokumen &amp; transaksi (LPT/Bayar/SP2D).</p>
+        <p id="ds-hint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan tombol cari (mis. nama pegawai, uraian kegiatan, No ST, atau No SPM). Tap hasil buat urus dokumen &amp; transaksi.</p>
     </div>
     <div id="ds-results" class="px-4 pb-8 max-w-lg mx-auto"></div>
 </div>
@@ -77,16 +77,6 @@
             class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
     </div>
     <div id="ds-pokResults" class="px-4 pb-8 max-w-lg mx-auto"></div>
-</div>
-
-<!-- ===================== TAB: DAFTAR KEGIATAN (lihat & cari saja) ===================== -->
-<div id="ds-tabKegiatan" class="ds-tab-content hidden">
-    <div class="px-4 pt-4 pb-2 max-w-lg mx-auto">
-        <input id="ds-kgSearchInput" type="text" inputmode="search" placeholder="Cari uraian, pelaksana, tujuan, status..."
-            class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
-        <p id="ds-kgHint" class="text-xs text-slate-400 mt-2 px-1">Masukkan kata kunci lalu tekan Enter. Tap hasil buat lihat detil (tanpa aksi transaksi — buka tab Home kalau perlu urus LPT/Bayar/SP2D/dokumen).</p>
-    </div>
-    <div id="ds-kgResults" class="px-4 pb-8 max-w-lg mx-auto"></div>
 </div>
 
 <!-- ===================== TAB: REFERENSI (lihat & cari saja) ===================== -->
@@ -103,6 +93,11 @@
     <div id="ds-refResults" class="px-4 pt-2 pb-8 max-w-lg mx-auto"></div>
 </div>
 
+<!-- ===================== TAB: USER (profil + data perjadin sendiri) ===================== -->
+<div id="ds-tabUser" class="ds-tab-content hidden">
+    <div id="ds-userResults" class="px-4 pt-4 pb-8 max-w-lg mx-auto"></div>
+</div>
+
 <!-- ===================== Bottom Sheet Detail/Aksi ===================== -->
 <div id="ds-sheetOverlay" class="hidden fixed inset-0 bg-black/40 z-40">
     <div id="ds-sheet" class="fixed left-0 right-0 bottom-0 bg-white rounded-t-2xl max-h-[88vh] overflow-y-auto p-5"></div>
@@ -117,11 +112,11 @@
         <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="pok">
             <i class="fa-solid fa-folder-open text-lg"></i><span class="text-[10.5px] font-medium">POK</span>
         </button>
-        <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="kegiatan">
-            <i class="fa-solid fa-list-check text-lg"></i><span class="text-[10.5px] font-medium">Kegiatan</span>
-        </button>
         <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="referensi">
             <i class="fa-solid fa-book text-lg"></i><span class="text-[10.5px] font-medium">Referensi</span>
+        </button>
+        <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="user">
+            <i class="fa-solid fa-user text-lg"></i><span class="text-[10.5px] font-medium">User</span>
         </button>
     </div>
 </div>
@@ -133,6 +128,12 @@ let currentRow = null;
 let photoQueue = []; // { dataUrl } — antrian foto sebelum digabung jadi 1 PDF
 
 const $ = (id) => document.getElementById(id);
+
+// Format angka ribuan saat mengetik di input (mis. "1500000" -> "1.500.000").
+function formatRibuan(v) {
+    const angka = String(v || '').replace(/\D/g, '');
+    return angka ? Number(angka).toLocaleString('id-ID') : '';
+}
 
 // Toast kecil di bawah layar (dipakai tombol Refresh Data) — tanpa dependensi
 // apapun (dokumen-scan.html tidak memuat common.js versi web).
@@ -356,6 +357,19 @@ function dsRenderSheet() {
             </button>
         </div>
 
+        <p class="text-xs text-slate-400 mt-4 mb-2 text-center">Kelola Kegiatan</p>
+        <div class="grid grid-cols-3 gap-2">
+            <button id="ds-btnUbah" class="flex flex-col items-center gap-1 py-3 rounded-xl border border-indigo-300 text-indigo-700">
+                <i class="fa-solid fa-pen text-lg"></i><span class="text-[11px] font-medium">Ubah</span>
+            </button>
+            <button id="ds-btnPelaksana" class="flex flex-col items-center gap-1 py-3 rounded-xl border border-purple-300 text-purple-700">
+                <i class="fa-solid fa-users text-lg"></i><span class="text-[11px] font-medium">Pelaksana</span>
+            </button>
+            <button id="ds-btnHapusKegiatan" class="flex flex-col items-center gap-1 py-3 rounded-xl border border-red-300 text-red-600">
+                <i class="fa-solid fa-trash-can text-lg"></i><span class="text-[11px] font-medium">Hapus</span>
+            </button>
+        </div>
+
         <input id="ds-fileInputPdf" type="file" accept="application/pdf,.pdf" class="hidden">
         <input id="ds-fileInputCamera" type="file" accept="image/*" capture="environment" class="hidden">
 
@@ -432,6 +446,9 @@ function dsWireSheetEvents() {
     $('ds-btnLpt').onclick = dsRenderLptForm;
     $('ds-btnBayar').onclick = dsRenderBayarForm;
     $('ds-btnSp2d').onclick = dsRenderSp2dForm;
+    $('ds-btnUbah').onclick = dsRenderUbahForm;
+    $('ds-btnPelaksana').onclick = dsRenderPelaksanaForm;
+    $('ds-btnHapusKegiatan').onclick = dsHapusKegiatanConfirm;
 }
 
 function dsSetMsg(elId, msg, color) {
@@ -619,6 +636,454 @@ function dsRenderSp2dForm() {
 
             dsSetMsg('ds-formStatus', '✅ SP2D berhasil disimpan.', 'emerald');
             setTimeout(dsRenderSheet, 700);
+        } catch (e) {
+            dsSetMsg('ds-formStatus', '❌ ' + (e.message || 'Gagal menyimpan.'), 'red');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+
+// ============================================================
+// POPUP PILIH MAK — overlay terpisah (bukan bagian sheet), hierarki
+// bertingkat per Seksi sama persis kayak Chrome Extension & web SiMAB.
+// Tombol "Pilih" CUMA di baris paling detail (leaf, kode terpanjang).
+// ============================================================
+let dsMakExpandedSeksi = new Set();
+let dsMakExpandedCodes = new Set();
+
+function dsOpenPilihMakPopup(onPick) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black/50 z-[999998] flex flex-col';
+    overlay.innerHTML = `
+        <div class="bg-white flex flex-col h-full max-w-lg mx-auto w-full">
+            <div class="flex items-center gap-2 p-4 border-b border-slate-100">
+                <button id="ds-makClose" class="text-slate-400 text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+                <h3 class="text-base font-semibold text-slate-800 flex-1">Pilih Kode MAK</h3>
+            </div>
+            <div class="p-4 pb-2">
+                <input id="ds-makSearch" type="text" placeholder="Cari kode / uraian... (kosongkan utk lihat per Seksi)"
+                    class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm">
+            </div>
+            <div id="ds-makList" class="flex-1 overflow-y-auto px-4 pb-4"></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#ds-makClose').onclick = () => overlay.remove();
+
+    let allPok = [];
+
+    function leafRow(p) {
+        return `
+        <div class="flex items-center justify-between gap-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5 mb-1.5">
+            <div class="min-w-0 flex-1">
+                <p class="text-[10px] font-mono text-slate-400">${escHtml(p.kode)}</p>
+                <p class="text-xs text-slate-700">${escHtml(p.uraian)}</p>
+            </div>
+            <button class="ds-makPilihBtn shrink-0 px-3 py-2 bg-sky-600 text-white rounded-lg text-xs font-semibold" data-kode="${escHtml(p.kode)}">Pilih ✓</button>
+        </div>`;
+    }
+    function parentRow(p, seksi, depth, isOpen, hasChildren) {
+        const indent = Math.min(depth - 1, 5) * 12;
+        return `
+        <div class="ds-makParent p-2.5 mb-1 rounded-lg cursor-pointer ${depth <= 2 ? 'bg-slate-100 font-bold' : 'bg-sky-50 font-semibold'} text-xs text-slate-700"
+            style="padding-left:${10 + indent}px" data-seksi="${escHtml(seksi)}" data-kode="${escHtml(p.kode)}">
+            ${hasChildren ? (isOpen ? '▾' : '▸') : '·'} ${escHtml(p.uraian)}
+        </div>`;
+    }
+    function wirePilih(container) {
+        container.querySelectorAll('.ds-makPilihBtn').forEach(btn => {
+            btn.onclick = () => {
+                const item = allPok.find(p => p.kode === btn.dataset.kode);
+                if (item) { onPick(item); overlay.remove(); }
+            };
+        });
+    }
+
+    function renderTree(seksi, items) {
+        let html = '';
+        items.forEach(item => {
+            const c = String(item.kode);
+            const isKegiatanLevel = c.length === 12;
+            const isLeaf = c.length > 27;
+            const isChildVisible = Array.from(dsMakExpandedCodes).some(k => {
+                if (!k.startsWith(seksi + '::')) return false;
+                const p = k.slice((seksi + '::').length);
+                return c.startsWith(p) && c !== p;
+            });
+            if (!isKegiatanLevel && !isChildVisible) return;
+
+            const depth = c.split('.').length;
+            if (isLeaf) {
+                html += leafRow(item);
+            } else {
+                const hasChildren = items.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
+                html += parentRow(item, seksi, depth, dsMakExpandedCodes.has(seksi + '::' + c), hasChildren);
+            }
+        });
+        return html;
+    }
+
+    function render() {
+        const q = overlay.querySelector('#ds-makSearch').value.trim().toLowerCase();
+        const listEl = overlay.querySelector('#ds-makList');
+
+        if (q) {
+            const leafOnly = allPok.filter(p => String(p.kode).length > 27);
+            const filtered = leafOnly.filter(p => String(p.kode).toLowerCase().includes(q) || String(p.uraian).toLowerCase().includes(q));
+            listEl.innerHTML = filtered.length ? filtered.slice(0, 50).map(leafRow).join('') : `<p class="text-center text-slate-400 text-sm py-8">Tidak ada data.</p>`;
+            wirePilih(listEl);
+            return;
+        }
+
+        const groups = new Map();
+        allPok.forEach(p => {
+            const seksi = p.seksi || 'Lainnya';
+            if (!groups.has(seksi)) groups.set(seksi, []);
+            groups.get(seksi).push(p);
+        });
+
+        let html = '';
+        groups.forEach((items, seksi) => {
+            const isOpen = dsMakExpandedSeksi.has(seksi);
+            html += `<div class="ds-makSeksi p-2.5 mb-1.5 rounded-lg cursor-pointer text-sm font-bold bg-indigo-50 text-indigo-700" data-seksi="${escHtml(seksi)}">
+                ${isOpen ? '▾' : '▸'} ${escHtml(seksi)} <span class="font-normal text-[11px] opacity-70">(${items.length})</span>
+            </div>`;
+            if (isOpen) html += `<div class="mb-2">${renderTree(seksi, items)}</div>`;
+        });
+        listEl.innerHTML = html;
+
+        listEl.querySelectorAll('.ds-makSeksi').forEach(el => {
+            el.onclick = () => {
+                const s = el.dataset.seksi;
+                if (dsMakExpandedSeksi.has(s)) dsMakExpandedSeksi.delete(s); else dsMakExpandedSeksi.add(s);
+                render();
+            };
+        });
+        listEl.querySelectorAll('.ds-makParent').forEach(el => {
+            el.onclick = () => {
+                const key = el.dataset.seksi + '::' + el.dataset.kode;
+                if (dsMakExpandedCodes.has(key)) dsMakExpandedCodes.delete(key); else dsMakExpandedCodes.add(key);
+                render();
+            };
+        });
+        wirePilih(listEl);
+    }
+
+    overlay.querySelector('#ds-makSearch').addEventListener('input', render);
+
+    (async () => {
+        overlay.querySelector('#ds-makList').innerHTML = `<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-xl"></i></div>`;
+        try {
+            await waitSupabaseAuthReady();
+            allPok = await sbFetchAll('pok', 'kode,uraian,sd,seksi');
+            render();
+        } catch (e) {
+            overlay.querySelector('#ds-makList').innerHTML = `<p class="text-center text-red-500 text-sm py-8">❌ ${escHtml(e.message || 'Gagal memuat.')}</p>`;
+        }
+    })();
+}
+
+// ============================================================
+// UBAH KEGIATAN
+// ============================================================
+function dsRenderUbahForm() {
+    const r = currentRow;
+    let makTerpilih = { kode: r.B, uraian: r.C };
+
+    $('ds-sheet').innerHTML = `
+        <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        <div class="flex items-center gap-2 mb-4">
+            <button id="ds-btnBackFromForm" class="text-slate-400 text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 class="text-base font-semibold text-slate-800">Ubah Kegiatan</h3>
+        </div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">MAK</label>
+        <button id="ds-ubPilihMak" type="button" class="w-full text-left px-3.5 py-3 border border-dashed border-emerald-300 bg-emerald-50 rounded-xl text-sm text-emerald-700 mb-3 truncate">${escHtml(r.B)}</button>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Uraian / No ST</label>
+        <input id="ds-ubUraian" type="text" value="${escHtml(r.C)}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Pelaksana Tugas</label>
+        <input id="ds-ubPelaksana" type="text" list="ds-pegawaiOptions" value="${escHtml(r.D)}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Tujuan</label>
+        <input id="ds-ubTujuan" type="text" list="ds-tujuanOptions" value="${escHtml(r.E)}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Tgl ST</label>
+        <input id="ds-ubTglSt" type="date" value="${r.F || ''}" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Jumlah</label>
+        <input id="ds-ubJumlah" type="text" value="${Number(r.M || 0).toLocaleString('id-ID')}" oninput="this.value = formatRibuan(this.value)" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-4 text-right">
+        <datalist id="ds-tujuanOptions"></datalist>
+        <datalist id="ds-pegawaiOptions"></datalist>
+        <button id="ds-btnSimpanForm" class="w-full py-3 bg-sky-600 text-white rounded-xl text-sm font-semibold">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+        </button>
+        <div id="ds-formStatus" class="text-center text-xs text-slate-400 min-h-[18px] mt-3"></div>
+    `;
+    $('ds-btnBackFromForm').onclick = dsRenderSheet;
+
+    dsFillSuggestions('ds-tujuanOptions', 'ds-pegawaiOptions');
+
+    $('ds-ubPilihMak').onclick = () => {
+        dsOpenPilihMakPopup((item) => {
+            makTerpilih = item;
+            $('ds-ubPilihMak').textContent = `${item.kode} — ${item.uraian}`;
+        });
+    };
+
+    $('ds-btnSimpanForm').onclick = async function () {
+        const btn = this;
+        const uraian = $('ds-ubUraian').value.trim();
+        const pelaksana = $('ds-ubPelaksana').value.trim();
+        const tujuan = $('ds-ubTujuan').value.trim();
+        const tglSt = $('ds-ubTglSt').value;
+        const jumlah = Number($('ds-ubJumlah').value.replace(/\./g, '')) || 0;
+        if (!uraian) { alert('Uraian tidak boleh kosong.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('kegiatan').update({
+                mak: makTerpilih.kode, uraian, pelaksana, tujuan, tgl_st: normDate(tglSt), jumlah
+            }).eq('id', r.A);
+            if (error) throw new Error(error.message);
+
+            r.B = makTerpilih.kode; r.C = uraian; r.D = pelaksana; r.E = tujuan; r.F = tglSt; r.M = jumlah;
+            const cr = dsAllRowsCache?.find(x => String(x.A) === String(r.A));
+            if (cr) { cr.B = r.B; cr.C = r.C; cr.D = r.D; cr.E = r.E; cr.F = r.F; cr.M = r.M; }
+
+            dsSetMsg('ds-formStatus', '✅ Kegiatan berhasil diubah.', 'emerald');
+            setTimeout(dsRenderSheet, 700);
+        } catch (e) {
+            dsSetMsg('ds-formStatus', '❌ ' + (e.message || 'Gagal menyimpan.'), 'red');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+
+// Isi saran (datalist) Tujuan (dari histori dsAllRowsCache) & Pegawai (dari tabel pegawai).
+async function dsFillSuggestions(tujuanDatalistId, pegawaiDatalistId) {
+    try {
+        const rows = await dsGetAllRows();
+        const tujuanSet = new Set();
+        rows.forEach(r => { const t = String(r.E || '').trim(); if (t) tujuanSet.add(t); });
+        const dl = $(tujuanDatalistId);
+        if (dl) dl.innerHTML = Array.from(tujuanSet).sort().map(v => `<option value="${escHtml(v)}"></option>`).join('');
+    } catch (e) { /* saran gagal dimuat, tidak fatal */ }
+
+    try {
+        await waitSupabaseAuthReady();
+        const pegawaiRows = await sbFetchAll('pegawai', 'nama');
+        const dl2 = $(pegawaiDatalistId);
+        if (dl2) dl2.innerHTML = pegawaiRows.map(p => `<option value="${escHtml(p.nama)}"></option>`).join('');
+    } catch (e) { /* saran gagal dimuat, tidak fatal */ }
+}
+
+// ============================================================
+// PELAKSANA KEGIATAN (multi-pelaksana, sama pola dgn web/extension)
+// ============================================================
+function dsRenderPelaksanaForm() {
+    const r = currentRow;
+    let pelaksanaList = [{ nama: r.D || '', jumlah: r.M || 0, tglMulai: r.G || '', tglSelesai: r.H || '' }];
+
+    $('ds-sheet').innerHTML = `
+        <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        <div class="flex items-center gap-2 mb-1">
+            <button id="ds-btnBackFromForm" class="text-slate-400 text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 class="text-base font-semibold text-slate-800">Pelaksana Kegiatan</h3>
+        </div>
+        <p class="text-xs text-slate-400 mb-3 px-1">${escHtml(r.C)}</p>
+        <div id="ds-plList"></div>
+        <button id="ds-plAdd" class="w-full py-2.5 border border-dashed border-sky-300 bg-sky-50 text-sky-700 rounded-xl text-xs font-semibold mb-4">+ Tambah Pelaksana</button>
+        <datalist id="ds-plPegawaiOptions"></datalist>
+        <button id="ds-btnSimpanForm" class="w-full py-3 bg-sky-600 text-white rounded-xl text-sm font-semibold">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+        </button>
+        <div id="ds-formStatus" class="text-center text-xs text-slate-400 min-h-[18px] mt-3"></div>
+    `;
+    $('ds-btnBackFromForm').onclick = dsRenderSheet;
+
+    (async () => {
+        try {
+            await waitSupabaseAuthReady();
+            const pegawaiRows = await sbFetchAll('pegawai', 'nama');
+            const dl = $('ds-plPegawaiOptions');
+            if (dl) dl.innerHTML = pegawaiRows.map(p => `<option value="${escHtml(p.nama)}"></option>`).join('');
+        } catch (e) { /* tidak fatal */ }
+    })();
+
+    function renderList() {
+        $('ds-plList').innerHTML = pelaksanaList.map((p, idx) => `
+            <div class="border border-slate-200 rounded-xl p-3 mb-2.5 relative">
+                ${pelaksanaList.length > 1 ? `<button class="ds-plRemove absolute top-2 right-2 text-red-500" data-idx="${idx}"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                <label class="block text-[10.5px] font-semibold text-slate-500 mb-1">Nama Pelaksana</label>
+                <input class="ds-plNama w-full px-3 py-2 border border-slate-300 rounded-lg text-xs mb-2" list="ds-plPegawaiOptions" data-idx="${idx}" type="text" value="${escHtml(p.nama)}">
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                        <label class="block text-[10.5px] font-semibold text-slate-500 mb-1">Tgl Mulai</label>
+                        <input class="ds-plTglMulai w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" data-idx="${idx}" type="date" value="${p.tglMulai || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-[10.5px] font-semibold text-slate-500 mb-1">Tgl Selesai</label>
+                        <input class="ds-plTglSelesai w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" data-idx="${idx}" type="date" value="${p.tglSelesai || ''}">
+                    </div>
+                </div>
+                <label class="block text-[10.5px] font-semibold text-slate-500 mb-1">Jumlah</label>
+                <input class="ds-plJumlah w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-right" data-idx="${idx}" type="text" value="${Number(p.jumlah || 0).toLocaleString('id-ID')}">
+            </div>
+        `).join('');
+
+        $('ds-plList').querySelectorAll('.ds-plNama').forEach(el => el.oninput = () => { pelaksanaList[el.dataset.idx].nama = el.value; });
+        $('ds-plList').querySelectorAll('.ds-plTglMulai').forEach(el => el.oninput = () => { pelaksanaList[el.dataset.idx].tglMulai = el.value; });
+        $('ds-plList').querySelectorAll('.ds-plTglSelesai').forEach(el => el.oninput = () => { pelaksanaList[el.dataset.idx].tglSelesai = el.value; });
+        $('ds-plList').querySelectorAll('.ds-plJumlah').forEach(el => el.oninput = function () {
+            this.value = formatRibuan(this.value);
+            pelaksanaList[this.dataset.idx].jumlah = this.value.replace(/\./g, '');
+        });
+        $('ds-plList').querySelectorAll('.ds-plRemove').forEach(el => el.onclick = () => {
+            pelaksanaList.splice(Number(el.dataset.idx), 1);
+            renderList();
+        });
+    }
+    renderList();
+
+    $('ds-plAdd').onclick = () => {
+        pelaksanaList.push({ nama: '', jumlah: 0, tglMulai: '', tglSelesai: '' });
+        renderList();
+    };
+
+    $('ds-btnSimpanForm').onclick = async function () {
+        const btn = this;
+        const valid = pelaksanaList.filter(p => p.nama.trim());
+        if (valid.length === 0) { alert('Minimal 1 pelaksana harus diisi namanya.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await waitSupabaseAuthReady();
+            const namaUser = localStorage.getItem('nama') || 'SOH';
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const { error: delError } = await sb.from('kegiatan').delete().eq('id', r.A);
+            if (delError) throw new Error(delError.message);
+
+            const rowsBaru = valid.map(p => ({
+                id: kgGenerateRandomId(10), mak: r.B, uraian: r.C, pelaksana: p.nama, tujuan: r.E,
+                tgl_st: normDate(r.F), tgl_mulai: normDate(p.tglMulai), tgl_selesai: normDate(p.tglSelesai),
+                tgl_lpt: null, tgl_bayar: null, jumlah: Number(p.jumlah) || 0,
+                user: namaUser, status: kgComputeStatus(p.tglMulai, '', '', ''),
+                tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
+                tgl_rekam: todayStr, perbantuan: false
+            }));
+            const { error: insError } = await sb.from('kegiatan').insert(rowsBaru);
+            if (insError) throw new Error(insError.message);
+
+            dsAllRowsCache = null; // data berubah drastis (ganti beberapa baris) -> paksa reload total
+            dsSetMsg('ds-formStatus', '✅ Pelaksana berhasil disimpan.', 'emerald');
+            setTimeout(dsCloseDetail, 900);
+        } catch (e) {
+            dsSetMsg('ds-formStatus', '❌ ' + (e.message || 'Gagal menyimpan.'), 'red');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+
+// ============================================================
+// HAPUS KEGIATAN
+// ============================================================
+async function dsHapusKegiatanConfirm() {
+    const r = currentRow;
+    if (!confirm(`Yakin ingin menghapus kegiatan ini?\n\n"${r.C}"\n\nTindakan ini tidak bisa dibatalkan.`)) return;
+
+    dsSetStatus('Menghapus kegiatan...', 'sky');
+    try {
+        await waitSupabaseAuthReady();
+        const { error } = await sb.from('kegiatan').delete().eq('id', r.A);
+        if (error) throw new Error(error.message);
+
+        dsAllRowsCache = null;
+        dsCloseDetail();
+        showToastSOH('Kegiatan berhasil dihapus');
+        if ($('ds-searchInput').value.trim()) runSearch();
+    } catch (e) {
+        dsSetStatus('❌ ' + (e.message || 'Gagal menghapus.'), 'red');
+    }
+}
+
+// ============================================================
+// TAMBAH KEGIATAN BARU (tombol + di App Bar)
+// ============================================================
+function dsOpenTambahKegiatanSheet() {
+    let makTerpilih = null;
+    currentRow = null;
+
+    $('ds-sheetOverlay').classList.remove('hidden');
+    $('ds-sheet').innerHTML = `
+        <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        <div class="flex items-center gap-2 mb-4">
+            <button id="ds-tkClose" class="text-slate-400 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-base font-semibold text-emerald-700">+ Rekam Kegiatan Baru</h3>
+        </div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">MAK</label>
+        <button id="ds-tkPilihMak" type="button" class="w-full text-left px-3.5 py-3 border border-dashed border-emerald-300 bg-emerald-50 rounded-xl text-sm text-emerald-700 mb-3">Klik utk pilih kode MAK...</button>
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Uraian / No ST</label>
+        <input id="ds-tkUraian" type="text" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Tujuan</label>
+        <input id="ds-tkTujuan" type="text" list="ds-tkTujuanOptions" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Tgl ST</label>
+        <input id="ds-tkTglSt" type="date" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-3">
+        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Estimasi Jumlah</label>
+        <input id="ds-tkJumlah" type="text" oninput="this.value = formatRibuan(this.value)" class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm mb-4 text-right">
+        <datalist id="ds-tkTujuanOptions"></datalist>
+        <button id="ds-tkSimpan" class="w-full py-3 bg-emerald-600 text-white rounded-xl text-sm font-semibold">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+        </button>
+        <div id="ds-formStatus" class="text-center text-xs text-slate-400 min-h-[18px] mt-3"></div>
+    `;
+
+    (async () => {
+        try {
+            const rows = await dsGetAllRows();
+            const tujuanSet = new Set();
+            rows.forEach(r => { const t = String(r.E || '').trim(); if (t) tujuanSet.add(t); });
+            $('ds-tkTujuanOptions').innerHTML = Array.from(tujuanSet).sort().map(v => `<option value="${escHtml(v)}"></option>`).join('');
+        } catch (e) { /* tidak fatal */ }
+    })();
+
+    $('ds-tkClose').onclick = dsCloseDetail;
+    $('ds-tkPilihMak').onclick = () => {
+        dsOpenPilihMakPopup((item) => {
+            makTerpilih = item;
+            $('ds-tkPilihMak').textContent = `${item.kode} — ${item.uraian}`;
+        });
+    };
+
+    $('ds-tkSimpan').onclick = async function () {
+        const btn = this;
+        if (!makTerpilih) { alert('Pilih MAK dulu.'); return; }
+        const uraian = $('ds-tkUraian').value.trim();
+        if (!uraian) { alert('Uraian tidak boleh kosong.'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await waitSupabaseAuthReady();
+            const namaUser = localStorage.getItem('nama') || 'SOH';
+            const todayStr = new Date().toISOString().split('T')[0];
+            const { error } = await sb.from('kegiatan').insert({
+                id: kgGenerateRandomId(10), mak: makTerpilih.kode, uraian, pelaksana: '',
+                tujuan: $('ds-tkTujuan').value.trim(), tgl_st: normDate($('ds-tkTglSt').value),
+                tgl_mulai: null, tgl_selesai: null, tgl_lpt: null, tgl_bayar: null,
+                jumlah: Number($('ds-tkJumlah').value.replace(/\./g, '')) || 0,
+                user: namaUser, status: 'Rekam Data',
+                tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
+                tgl_rekam: todayStr, perbantuan: false
+            });
+            if (error) throw new Error(error.message);
+
+            dsAllRowsCache = null;
+            dsSetMsg('ds-formStatus', '✅ Kegiatan berhasil direkam.', 'emerald');
+            showToastSOH('Kegiatan baru berhasil direkam');
+            setTimeout(dsCloseDetail, 900);
         } catch (e) {
             dsSetMsg('ds-formStatus', '❌ ' + (e.message || 'Gagal menyimpan.'), 'red');
             btn.disabled = false;
@@ -854,12 +1319,13 @@ function dsSwitchTab(tab) {
         btn.className = `ds-navbtn flex flex-col items-center gap-1 py-2.5 ${active ? 'text-sky-700' : 'text-slate-400'}`;
     });
 
-    const map = { home: 'ds-tabHome', pok: 'ds-tabPok', kegiatan: 'ds-tabKegiatan', referensi: 'ds-tabReferensi' };
+    const map = { home: 'ds-tabHome', pok: 'ds-tabPok', referensi: 'ds-tabReferensi', user: 'ds-tabUser' };
     $(map[tab]).classList.remove('hidden');
 
-    // Muat data referensi (SBM) / POK begitu tab-nya pertama kali dibuka.
+    // Muat data referensi (SBM) / POK / User begitu tab-nya pertama kali dibuka.
     if (tab === 'referensi' && !dsRefLoaded) dsRunRefSearch();
     if (tab === 'pok' && !dsPokRowsCache) dsRunPokSearch();
+    if (tab === 'user' && !dsUserTabLoaded) dsRenderUserTab();
 }
 
 // ============================================================
@@ -1070,82 +1536,12 @@ async function dsRunPokSearch() {
 }
 
 // ============================================================
-// TAB: DAFTAR KEGIATAN (baca & cari saja — tanpa aksi transaksi)
-// ============================================================
-function dsRenderKgCard(r) {
-    return `
-    <div class="ds-kg-card bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5 active:bg-slate-50" data-id="${escHtml(r.A)}">
-        <p class="text-sm font-medium text-slate-800 leading-snug">${escHtml(r.C)}</p>
-        <p class="text-xs text-slate-500 mt-1">${escHtml(r.D)} &middot; ${escHtml(r.E)}</p>
-        <div class="flex items-center justify-between mt-2">
-            <span class="text-xs text-slate-400">${escHtml(r.G || '-')} &middot; Rp ${Number(r.M || 0).toLocaleString('id-ID')}</span>
-            <span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${statusBadgeClass(r.P)}">${escHtml(r.P)}</span>
-        </div>
-    </div>`;
-}
-
-async function dsRunKgSearch() {
-    const q = $('ds-kgSearchInput').value.trim().toLowerCase();
-    const resultsEl = $('ds-kgResults');
-    const hintEl = $('ds-kgHint');
-
-    if (!q) {
-        resultsEl.innerHTML = '';
-        hintEl.textContent = 'Masukkan kata kunci lalu tekan Enter. Tap hasil buat lihat detil (tanpa aksi transaksi — buka tab Home kalau perlu urus LPT/Bayar/SP2D/dokumen).';
-        return;
-    }
-
-    resultsEl.innerHTML = `<div class="text-center text-sky-600 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
-    hintEl.textContent = '';
-
-    try {
-        const allRows = await dsGetAllRows();
-        const matched = allRows.filter(r =>
-            String(r.C).toLowerCase().includes(q) || String(r.D).toLowerCase().includes(q) ||
-            String(r.E).toLowerCase().includes(q) || String(r.P).toLowerCase().includes(q) ||
-            String(r.R).toLowerCase().includes(q)
-        );
-        const MAX_SHOW = 20;
-        const rows = matched.slice(0, MAX_SHOW);
-
-        if (rows.length === 0) {
-            resultsEl.innerHTML = `<div class="text-center text-slate-400 py-12"><i class="fa-regular fa-folder-open text-3xl mb-2"></i><p class="text-sm">Data tidak ditemukan.</p></div>`;
-            return;
-        }
-        hintEl.textContent = matched.length > rows.length
-            ? `Menampilkan ${rows.length} dari ${matched.length} hasil. Persempit pencarian kalau belum ketemu.`
-            : `${rows.length} hasil ditemukan.`;
-
-        resultsEl.innerHTML = rows.map(dsRenderKgCard).join('');
-        resultsEl.querySelectorAll('.ds-kg-card').forEach(card => {
-            const id = card.dataset.id;
-            const row = rows.find(r => String(r.A) === id);
-            card.onclick = () => dsOpenKgDetilReadOnly(row);
-        });
-    } catch (e) {
-        resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">❌ ${escHtml(e.message || 'Terjadi kesalahan.')}</div>`;
-    }
-}
-
-// Detil baca-saja (TANPA tombol dokumen/LPT/Bayar/SP2D) — dipakai khusus dari
-// tab Kegiatan. Kalau butuh urus dokumen/transaksi, arahkan ke tab Home.
-function dsOpenKgDetilReadOnly(row) {
-    currentRow = row;
-    $('ds-sheetOverlay').classList.remove('hidden');
-    dsRenderDetilView();
-    // dsRenderDetilView() sudah nyediain tombol "Tutup"/back yg cukup buat
-    // konteks baca-saja ini — tinggal pastikan overlay ke-close dgn benar.
-    const closeAndHide = () => { $('ds-sheetOverlay').classList.add('hidden'); currentRow = null; };
-    $('ds-btnBackFromForm').onclick = closeAndHide;
-    $('ds-btnCloseDetil').onclick = closeAndHide;
-}
-
-// ============================================================
 // TAB: REFERENSI (SBM & Pegawai & User Manager — baca & cari saja, kecuali
 // User Manager yg punya 1 aksi: Reset Password, khusus superadmin)
 // ============================================================
 let dsRefMode = 'sbm'; // 'sbm' | 'pegawai' | 'userManager'
 let dsRefLoaded = false;
+let dsUserTabLoaded = false;
 let dsSbmRowsCache = null;
 let dsPegawaiRowsCache = null;
 let dsIsAdminView = false; // ditentukan di init, dari localStorage.admin
@@ -1283,11 +1679,102 @@ async function dsResetUserPassword(btn, nip, nama) {
 }
 
 // ============================================================
+// TAB: USER — profil sendiri + data Perjadinku (sama seperti web SiMAB)
+// ============================================================
+async function dsRenderUserTab() {
+    dsUserTabLoaded = true;
+    const resultsEl = $('ds-userResults');
+    resultsEl.innerHTML = `<div class="text-center text-sky-600 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+
+    const nama = localStorage.getItem('nama') || '-';
+    const nip = localStorage.getItem('nip') || '-';
+    const jabatan = localStorage.getItem('jabatan') || '-';
+    const pangkat = localStorage.getItem('pangkat') || '-';
+    const kepeg = localStorage.getItem('kepeg') === '1' ? 'PNS' : 'PPNPN';
+
+    try {
+        const allRows = await dsGetAllRows();
+        const namaLower = nama.trim().toLowerCase();
+
+        // Perjadin = MAK 524111/524113, pelaksana harus sama persis dgn nama login.
+        const myPerjadin = allRows.filter(r =>
+            (String(r.B || '').includes('524111') || String(r.B || '').includes('524113')) &&
+            String(r.D || '').trim().toLowerCase() === namaLower
+        );
+
+        const statusCount = { 'Rekam Data': 0, 'Terlaksana': 0, 'LPT': 0, 'Terbayar': 0, 'Selesai': 0 };
+        let totalJumlah = 0;
+        myPerjadin.forEach(r => {
+            if (statusCount.hasOwnProperty(r.P)) statusCount[r.P]++;
+            totalJumlah += Number(r.M) || 0;
+        });
+
+        const sortedByTgl = [...myPerjadin].sort((a, b) => new Date(b.G || 0) - new Date(a.G || 0));
+
+        resultsEl.innerHTML = `
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+                <div class="flex items-center gap-3 mb-1">
+                    <div class="w-11 h-11 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-lg font-semibold shrink-0">
+                        ${escHtml(nama.charAt(0).toUpperCase())}
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-slate-800 truncate">${escHtml(nama)}</p>
+                        <p class="text-xs text-slate-400">${escHtml(nip)}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs mt-3 pt-3 border-t border-slate-100">
+                    <div><span class="text-slate-400">Jabatan</span><br><span class="text-slate-700 font-medium">${escHtml(jabatan)}</span></div>
+                    <div><span class="text-slate-400">Pangkat</span><br><span class="text-slate-700 font-medium">${escHtml(pangkat)}</span></div>
+                    <div><span class="text-slate-400">Kepegawaian</span><br><span class="text-slate-700 font-medium">${escHtml(kepeg)}</span></div>
+                    <div><span class="text-slate-400">Total Perjadin</span><br><span class="text-slate-700 font-medium">Rp ${totalJumlah.toLocaleString('id-ID')}</span></div>
+                </div>
+            </div>
+
+            <p class="text-xs font-semibold text-slate-500 mb-2 px-1">Ringkasan Status Perjadinku (${myPerjadin.length} kegiatan)</p>
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                ${Object.entries(statusCount).map(([status, count]) => `
+                    <div class="bg-white rounded-xl border border-slate-200 p-2.5 text-center">
+                        <p class="text-lg font-bold text-slate-800">${count}</p>
+                        <p class="text-[10px] text-slate-400 leading-tight mt-0.5">${escHtml(status)}</p>
+                    </div>
+                `).join('')}
+            </div>
+
+            <p class="text-xs font-semibold text-slate-500 mb-2 px-1">Riwayat Perjadin Terbaru</p>
+            <div id="ds-userPerjadinList"></div>
+        `;
+
+        const listEl = $('ds-userPerjadinList');
+        if (sortedByTgl.length === 0) {
+            listEl.innerHTML = `<div class="text-center text-slate-400 py-8 text-sm">Belum ada data perjadin.</div>`;
+            return;
+        }
+        listEl.innerHTML = sortedByTgl.slice(0, 20).map(r => `
+            <div class="ds-userPerjadinCard bg-white rounded-xl border border-slate-200 p-3.5 mb-2.5 active:bg-slate-50" data-id="${escHtml(r.A)}">
+                <p class="text-sm font-medium text-slate-800 leading-snug">${escHtml(r.C)}</p>
+                <p class="text-xs text-slate-500 mt-1">${escHtml(r.E)}</p>
+                <div class="flex items-center justify-between mt-2">
+                    <span class="text-xs text-slate-400">${escHtml(r.G || '-')} &middot; Rp ${Number(r.M || 0).toLocaleString('id-ID')}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[11px] font-medium ${statusBadgeClass(r.P)}">${escHtml(r.P)}</span>
+                </div>
+            </div>
+        `).join('');
+
+        listEl.querySelectorAll('.ds-userPerjadinCard').forEach(card => {
+            const id = card.dataset.id;
+            const row = sortedByTgl.find(r => String(r.A) === id);
+            card.onclick = () => dsOpenDetail(row);
+        });
+    } catch (e) {
+        resultsEl.innerHTML = `<div class="text-center text-red-500 py-10">❌ ${escHtml(e.message || 'Terjadi kesalahan.')}</div>`;
+    }
+}
+
+// ============================================================
 // Init
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     const user = window.getSessionUser ? window.getSessionUser() : null;
-    if (user && user.nama) $('ds-userLabel').textContent = user.nama;
 
     dsIsAdminView = localStorage.getItem('admin') === '1';
     if (localStorage.getItem('superadmin') === '1') {
@@ -1298,7 +1785,6 @@ document.addEventListener('DOMContentLoaded', () => {
     $('ds-searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
 
     $('ds-pokSearchInput').addEventListener('input', () => dsRunPokSearch());
-    $('ds-kgSearchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') dsRunKgSearch(); });
     $('ds-refSearchInput').addEventListener('input', () => dsRunRefSearch());
 
     const ACTIVE_CLS = 'ds-ref-subtab flex-1 py-2.5 rounded-xl text-sm font-medium bg-sky-700 text-white';
@@ -1327,6 +1813,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === $('ds-sheetOverlay')) dsCloseDetail();
     });
 
+    $('ds-btnTambahKegiatan').onclick = dsOpenTambahKegiatanSheet;
+
     $('ds-btnRefreshAll').onclick = async () => {
         const icon = $('ds-refreshIcon');
         icon.classList.add('fa-spin');
@@ -1346,10 +1834,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if ($('ds-searchInput').value.trim()) await runSearch();
             } else if (dsActiveTab === 'pok') {
                 await dsRunPokSearch();
-            } else if (dsActiveTab === 'kegiatan') {
-                if ($('ds-kgSearchInput').value.trim()) await dsRunKgSearch();
             } else if (dsActiveTab === 'referensi') {
                 await dsRunRefSearch();
+            } else if (dsActiveTab === 'user') {
+                dsAllRowsCache = null;
+                await dsRenderUserTab();
             }
             showToastSOH('Data berhasil dimuat ulang');
         } catch (e) {
