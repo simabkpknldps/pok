@@ -1,50 +1,41 @@
-<div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-4">
+<div class="ios-panel p-5 flex flex-col gap-4">
 
-    
     <!-- Filter bar -->
     <div class="flex flex-col gap-3">
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2.5">
             <div class="flex-1 min-w-[200px] flex items-center gap-2">
-                <input id="kg-searchBox" type="text" placeholder="Cari data... (tekan Enter atau klik Cari)"
-                    class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
-                <button id="kg-btnSearch"
-                    class="flex items-center gap-1 px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-sm font-medium rounded-lg transition whitespace-nowrap">
-                    <i class="fa-solid fa-magnifying-glass"></i> Cari
+                <input id="kg-searchBox" type="text" placeholder="Cari data... (tekan Enter atau klik Cari)" class="ios-field flex-1">
+                <button id="kg-btnSearch" class="btn-ios flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i> Cari
                 </button>
             </div>
-            <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-                <span class="text-xs font-semibold text-slate-600 whitespace-nowrap">Cari SPM</span>
-                <input id="kg-spmSearchBox" type="text" maxlength="10"
-                    class="w-20 text-center px-2 py-1 border border-slate-300 rounded-md text-sm">
-                <button id="kg-btnSearchSPM"
-                    class="flex items-center gap-1 px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-medium rounded-md transition">
-                    <i class="fa-solid fa-magnifying-glass"></i> Cari
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg" style="background: var(--sidebar-bg); border: 1px solid var(--divider);">
+                <span class="text-xs font-semibold whitespace-nowrap" style="color: var(--label-secondary);">Cari SPM</span>
+                <input id="kg-spmSearchBox" type="text" maxlength="10" class="w-20 text-center ios-field" style="padding: 0.35rem;">
+                <button id="kg-btnSearchSPM" class="btn-ios flex items-center gap-1 px-3 py-1.5 text-xs">
+                    <i class="fa-solid fa-magnifying-glass text-[10px]"></i> Cari
                 </button>
             </div>
 
-            <div class="text-sm font-semibold text-sky-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg whitespace-nowrap">
+            <div class="text-sm font-semibold px-3 py-2 rounded-lg whitespace-nowrap" style="color: var(--ios-green); background: var(--ios-green-tint);">
                 Jumlah (Data Terfilter): <span id="kg-totalJumlahLabel">0</span>
             </div>
 
-            <button id="kg-btnRefreshData"
-                class="flex items-center gap-2 px-3 py-2 bg-sky-700 hover:bg-sky-800 text-white text-sm font-medium rounded-lg transition">
-                <i class="fa-solid fa-arrow-rotate-right"></i> Refresh
+            <button id="kg-btnRefreshData" class="btn-ios-secondary flex items-center gap-2 px-3 py-2 text-sm">
+                <i class="fa-solid fa-arrow-rotate-right text-xs"></i> Refresh
             </button>
-            <button id="kg-btnDownloadExcel"
-                class="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition">
-                <i class="fa-solid fa-file-excel"></i> Download Excel
+            <button id="kg-btnDownloadExcel" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition" style="background: var(--ios-green); color: #fff;">
+                <i class="fa-solid fa-file-excel text-xs"></i> Download Excel
             </button>
-            <button id="kg-btnOpenNominatif"
-                class="flex items-center gap-2 px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-lg transition">
-                <i class="fa-solid fa-print"></i> Cetak Daftar Nominatif
+            <button id="kg-btnOpenNominatif" class="btn-ios flex items-center gap-2 px-3 py-2 text-sm">
+                <i class="fa-solid fa-print text-xs"></i> Cetak Daftar Nominatif
             </button>
-            <button id="kg-btnTambahKegiatan"
-                class="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition">
-                <i class="fa-solid fa-plus"></i> Tambah Kegiatan
+            <button id="kg-btnTambahKegiatan" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition" style="background: #34C759; color: #fff;">
+                <i class="fa-solid fa-plus text-xs"></i> Tambah Kegiatan
             </button>
         </div>
 
-        <div class="flex items-center gap-4 flex-wrap text-sm text-slate-600">
+        <div class="flex items-center gap-4 flex-wrap text-sm" style="color: var(--label-secondary);">
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="Dalam Proses" checked> Dalam Proses</label>
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="LPT"> LPT</label>
             <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="Terbayar"> Terbayar</label>
@@ -54,21 +45,21 @@
     </div>
 
     <!-- Tabel -->
-    <div class="w-full overflow-x-auto border border-slate-200 rounded-xl">
+    <div class="w-full overflow-x-auto rounded-xl" style="border: 1px solid var(--divider);">
         <div class="min-w-[1320px] max-h-[60vh] overflow-y-auto">
             <table id="kg-mainDataTable" class="w-full border-collapse text-[13px]">
-                <thead class="bg-slate-100 sticky top-0 z-10">
-                    <tr>
-                        <th class="p-2.5 text-left font-semibold">MAK</th>
-                        <th class="p-2.5 text-left font-semibold">Uraian / No ST</th>
-                        <th class="p-2.5 text-left font-semibold">Pelaksana Tugas</th>
-                        <th class="p-2.5 text-left font-semibold">Tujuan</th>
-                        <th class="p-2.5 text-left font-semibold whitespace-nowrap">Tgl ST/ND</th>
-                        <th class="p-2.5 text-left font-semibold whitespace-nowrap">Tgl Mulai</th>
-                        <th class="p-2.5 text-right font-semibold">Jumlah</th>
-                        <th class="p-2.5 text-left font-semibold">User</th>
-                        <th class="p-2.5 text-center font-semibold">Status</th>
-                        <th class="p-2.5 text-center font-semibold sticky right-0 bg-slate-100">Aksi</th>
+                <thead class="sticky top-0 z-10" style="background: var(--sidebar-bg);">
+                    <tr style="color: var(--label-secondary);">
+                        <th class="p-2.5 text-left font-semibold text-[11px] uppercase tracking-wide">MAK</th>
+                        <th class="p-2.5 text-left font-semibold text-[11px] uppercase tracking-wide">Uraian / No ST</th>
+                        <th class="p-2.5 text-left font-semibold text-[11px] uppercase tracking-wide">Pelaksana Tugas</th>
+                        <th class="p-2.5 text-left font-semibold text-[11px] uppercase tracking-wide">Tujuan</th>
+                        <th class="p-2.5 text-left font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap">Tgl ST/ND</th>
+                        <th class="p-2.5 text-left font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap">Tgl Mulai</th>
+                        <th class="p-2.5 text-right font-semibold text-[11px] uppercase tracking-wide">Jumlah</th>
+                        <th class="p-2.5 text-left font-semibold text-[11px] uppercase tracking-wide">User</th>
+                        <th class="p-2.5 text-center font-semibold text-[11px] uppercase tracking-wide">Status</th>
+                        <th class="p-2.5 text-center font-semibold text-[11px] uppercase tracking-wide sticky right-0" style="background: var(--sidebar-bg);">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="kg-dataTableBody"></tbody>
