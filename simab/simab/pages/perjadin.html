@@ -1,14 +1,14 @@
 <div id="pj-root" class="space-y-6">
 
     <!-- CARD: Ringkasan Status + Detail -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div class="ios-panel p-5">
 
         <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
             <h3 class="font-semibold text-sky-700 text-base">Ringkasan Status Perjadin</h3>
 
             <div class="flex flex-wrap items-center gap-4">
                 <input id="pj-searchBox" type="text" placeholder="Cari MAK / uraian / tujuan..."
-                    class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    class="ios-field w-64">
 
                 <div class="flex flex-wrap items-center gap-3 text-sm">
                     <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pj-statusFilter" value="Rekam Data" class="accent-sky-600"> Rekam Data</label>
@@ -65,7 +65,7 @@
     <!-- BOTTOM CARDS -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="ios-panel p-5">
             <h3 class="font-semibold text-sky-700 mb-3">Lokasi Favorit</h3>
             <div class="overflow-auto max-h-[280px]">
                 <table class="w-full text-sm border-collapse">
@@ -81,7 +81,7 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="ios-panel p-5">
             <h3 class="font-semibold text-sky-700 mb-3">Jenis Perjadin</h3>
             <table class="w-full text-sm border-collapse">
                 <thead>
@@ -97,7 +97,7 @@
             </table>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="ios-panel p-5">
             <h3 class="font-semibold text-sky-700 mb-3">Grafik Perjadin</h3>
             <canvas id="pj-chartPerjadin" height="220"></canvas>
         </div>
