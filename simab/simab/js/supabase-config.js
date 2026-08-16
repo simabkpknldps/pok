@@ -25,6 +25,13 @@ const SUPABASE_KEY = "sb_publishable_GrguFKOgL0M3uFDoVKLHYw_1dYG19O2";
 // terus, baru berubah kalau logout+login/reload halaman total). Query
 // Supabase HARUS selalu ambil data terbaru dari server, tidak pernah dari
 // cache browser.
+//
+// CATATAN: sengaja TIDAK menambah parameter unik di URL (mis. "_cb=...")
+// sebagai cara lain cegah cache -- itu BERISIKO, karena PostgREST (API
+// yang dipakai Supabase) bisa salah mengartikan parameter yg tidak
+// dikenali sebagai nama kolom buat filter, dan gagal kalau kolom itu
+// tidak ada di tabel yang sedang di-query. Itu bisa mematahkan SEMUA
+// query di seluruh aplikasi.
 window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     global: {
         fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' })
