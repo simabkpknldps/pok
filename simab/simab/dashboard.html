@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛡️SiMAB</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Remap warna Tailwind bawaan (sky, slate, dst) ke palet iOS/macOS —
+        // supaya SEMUA halaman lain (Kegiatan, Referensi, Perbantuan, RPD,
+        // Statistik, Kalender, Perjadin) yang masih pakai kelas Tailwind
+        // lama (bg-sky-600, text-slate-500, dst) OTOMATIS ikut gaya baru,
+        // tanpa perlu diedit satu-satu. Cuma "slate" & "sky" yg paling
+        // sering dipakai (netral & aksen utama); warna lain (green/red/dst)
+        // juga dihaluskan biar senada, tapi TETAP beda hue-nya (fungsi
+        // warnanya tidak berubah, cuma nuansanya lebih iOS).
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 50: '#F6F6F8', 100: '#F0F0F2', 200: '#E5E5EA', 300: '#D1D1D6', 400: '#AEAEB2', 500: '#86868B', 600: '#6E6E73', 700: '#48484A', 800: '#1D1D1F', 900: '#000000' },
+                        sky:   { 50: '#EAF4FE', 100: '#D6E9FD', 200: '#ADD3FB', 300: '#7FB8F7', 400: '#4A97F0', 500: '#0071E3', 600: '#0071E3', 700: '#0071E3', 800: '#0059B3', 900: '#004080' },
+                        emerald: { 50: '#E9F9EE', 100: '#D3F3DD', 500: '#34C759', 600: '#2FB550', 700: '#248A3D', 800: '#1D6E31' },
+                        green:   { 50: '#E9F9EE', 100: '#D3F3DD', 400: '#4CD164', 500: '#34C759', 600: '#2FB550', 700: '#248A3D' },
+                        red:     { 50: '#FFEDEC', 100: '#FFDAD9', 300: '#FF8A84', 500: '#FF3B30', 600: '#E6352B', 700: '#CC2E25' },
+                        amber:   { 100: '#FFF1D6', 400: '#FFBB4D', 500: '#FF9F0A', 800: '#C77400' },
+                        yellow:  { 200: '#FFEDA3', 300: '#FFE578' },
+                        purple:  { 100: '#F1E3FB', 800: '#7A2FA8' },
+                        pink:    { 200: '#FFC9D9', 300: '#FFA8C3', 700: '#D6005C' },
+                        blue:    { 200: '#B8D9FC', 300: '#8FC1FA', 400: '#4A97F0' }
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
