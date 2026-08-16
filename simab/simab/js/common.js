@@ -82,10 +82,13 @@ const CS_DAFTAR_BANK = [
 
 function commonOpenOverlay(innerHtml, widthClass) {
     const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4 overflow-x-hidden';
+    overlay.className = 'fixed inset-0 flex items-center justify-center z-[9999] p-4 overflow-x-hidden';
+    overlay.style.background = 'rgba(0,0,0,0.35)';
+    overlay.style.backdropFilter = 'blur(3px)';
 
     const popup = document.createElement('div');
-    popup.className = `bg-white rounded-2xl shadow-xl w-full ${widthClass || 'max-w-md'} p-6 flex flex-col gap-3 max-h-[90vh] overflow-y-auto overflow-x-hidden`;
+    popup.className = `w-full ${widthClass || 'max-w-md'} p-6 flex flex-col gap-3 max-h-[90vh] overflow-y-auto overflow-x-hidden`;
+    popup.style.cssText = "background: #fff; border-radius: 18px; box-shadow: 0 24px 60px -12px rgba(0,0,0,0.35); font-family: var(--sf);";
     popup.innerHTML = innerHtml;
 
     overlay.appendChild(popup);
