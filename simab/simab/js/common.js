@@ -218,34 +218,54 @@ function openSettings() {
         </div>
 
         <div id="cs-tabTambahPegawai" class="hidden flex-col gap-3">
-            <label class="${csLabelClass}">Nama</label>
-            <input id="cs-tpNama" type="text" placeholder="Nama lengkap pegawai" class="${csInputClass}">
-            <label class="${csLabelClass}">NIP</label>
-            <input id="cs-tpNip" type="text" placeholder="NIP pegawai" class="${csInputClass}">
-            <label class="${csLabelClass}">Jabatan</label>
-            <input id="cs-tpJabatan" type="text" placeholder="Jabatan" class="${csInputClass}">
-            <label class="${csLabelClass}">Pangkat</label>
-            <select id="cs-tpPangkat" class="${csInputClass}">
-                <option value="">-- Pilih Pangkat --</option>
-                ${CS_DAFTAR_PANGKAT.map(p => `<option value="${p}">${p}</option>`).join('')}
-            </select>
-            <label class="${csLabelClass}">Kepegawaian</label>
-            <select id="cs-tpKepeg" class="${csInputClass}">
-                <option value="1">1 - PNS</option>
-                <option value="0">0 - PPNPN</option>
-            </select>
-            <label class="${csLabelClass}">Admin</label>
-            <select id="cs-tpAdmin" class="${csInputClass}">
-                <option value="0">0 - Bukan Admin</option>
-                <option value="1">1 - Admin</option>
-            </select>
-            <label class="${csLabelClass}">Akses Menu</label>
-            <select id="cs-tpAksesMenu" class="${csInputClass}">
-                <option value="0">0 - Terbatas (Perbantuan/Perjadinku/Referensi saja)</option>
-                <option value="1">1 - Penuh (semua halaman)</option>
-            </select>
+            <div>
+                <label class="${csLabelClass}">Nama</label>
+                <input id="cs-tpNama" type="text" placeholder="Nama lengkap pegawai" class="${csInputClass}">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="${csLabelClass}">NIP</label>
+                    <input id="cs-tpNip" type="text" placeholder="NIP pegawai" class="${csInputClass}">
+                </div>
+                <div>
+                    <label class="${csLabelClass}">Jabatan</label>
+                    <input id="cs-tpJabatan" type="text" placeholder="Jabatan" class="${csInputClass}">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="${csLabelClass}">Pangkat</label>
+                    <select id="cs-tpPangkat" class="${csInputClass}">
+                        <option value="">-- Pilih Pangkat --</option>
+                        ${CS_DAFTAR_PANGKAT.map(p => `<option value="${p}">${p}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="${csLabelClass}">Kepegawaian</label>
+                    <select id="cs-tpKepeg" class="${csInputClass}">
+                        <option value="1">1 - PNS</option>
+                        <option value="0">0 - PPNPN</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="${csLabelClass}">Admin</label>
+                    <select id="cs-tpAdmin" class="${csInputClass}">
+                        <option value="0">0 - Bukan Admin</option>
+                        <option value="1">1 - Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="${csLabelClass}">Akses Menu</label>
+                    <select id="cs-tpAksesMenu" class="${csInputClass}">
+                        <option value="0">0 - Terbatas</option>
+                        <option value="1">1 - Penuh</option>
+                    </select>
+                </div>
+            </div>
             <div class="flex justify-end mt-2">
-                <button id="cs-btnSimpanTambahPegawai" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                <button id="cs-btnSimpanTambahPegawai" class="btn-ios px-4 py-2 text-sm">
                     <i class="fa-solid fa-user-plus mr-1"></i> Simpan
                 </button>
             </div>
