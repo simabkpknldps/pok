@@ -39,13 +39,16 @@ function isPerjadinMak(mak) {
 
 // Hitung semua card dari data mentah kegiatan+pok (1x baca masing-masing,
 // bukan per-card) — inti dari penghematan baca Firestore di halaman ini.
-function computeDashboardData(kegiatanRows, pokRows) {
+function computeDashboardData(kegiatanRows, pokRows, mpPnbpRows) {
     let paguBarang = 0, paguModal = 0;
     pokRows.forEach(p => {
         const akun = getAkunFromMak(p.kode);
         if (akun.startsWith('52')) paguBarang += Number(p.pagu) || 0;
         else if (akun.startsWith('53')) paguModal += Number(p.pagu) || 0;
     });
+
+    // Pagu MP = SUM jumlah semua tahap di tabel mp_pnbp.
+    const paguMP = (mpPnbpRows || []).reduce((a, r) => a + (Number(r.jumlah) || 0), 0);
 
     let realisasiBarang = 0, realisasiModal = 0, realisasiMP = 0;
     const perjadinCount = {};
@@ -86,7 +89,7 @@ function computeDashboardData(kegiatanRows, pokRows) {
     return {
         barang: { pagu: paguBarang, realisasi: realisasiBarang, sisa: paguBarang - realisasiBarang, persen: paguBarang ? realisasiBarang / paguBarang : 0 },
         modal: { pagu: paguModal, realisasi: realisasiModal, sisa: paguModal - realisasiModal, persen: paguModal ? realisasiModal / paguModal : 0 },
-        mp: { realisasi: realisasiMP },
+        mp: { pagu: paguMP, realisasi: realisasiMP, sisa: paguMP - realisasiMP, persen: paguMP ? realisasiMP / paguMP : 0 },
         kegiatanHariIni,
         topPerjadin,
         grafikPerjadin: grafikPerBulan
@@ -165,14 +168,15 @@ async function initDashboardPage() {
     try {
         await waitSupabaseAuthReady();
 
-        // 1x baca tabel kegiatan + pok + rpd + rpd_berjalan, dijalankan bareng.
+        // 1x baca tabel kegiatan + pok + rpd + rpd_berjalan + mp_pnbp, dijalankan bareng.
         // sbFetchAll dipakai (bukan select('*') polos) supaya tidak kena limit
         // 1000 baris default Supabase/PostgREST.
-        const [kegiatanRows, pokRows, rpdRows, rpdBerjalanRows] = await Promise.all([
+        const [kegiatanRows, pokRows, rpdRows, rpdBerjalanRows, mpPnbpRows] = await Promise.all([
             sbFetchAll('kegiatan'),
             sbFetchAll('pok'),
             sbFetchAll('rpd'),
-            sbFetchAll('rpd_berjalan')
+            sbFetchAll('rpd_berjalan'),
+            sbFetchAll('mp_pnbp')
         ]);
 
         // Cache dipakai juga oleh pok.js (popup Detil/Rekam/Pelaksana) supaya
@@ -180,7 +184,7 @@ async function initDashboardPage() {
         // halaman POK sesudah ini dalam sesi yang sama.
         window.kegiatanRowsCache = kegiatanRows;
 
-        const data = computeDashboardData(kegiatanRows, pokRows);
+        const data = computeDashboardData(kegiatanRows, pokRows, mpPnbpRows);
         const rpdBerjalanData = computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows);
         container.innerHTML = buildDashboardHtml(data, rpdBerjalanData);
         initCharts(data);
@@ -212,7 +216,7 @@ function buildDashboardHtml(data, rpdBerjalanData) {
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div class="ios-panel p-5">${renderBelanjaCard('Belanja Barang', data.barang)}</div>
                 <div class="ios-panel p-5">${renderBelanjaCard('Belanja Modal', data.modal)}</div>
-                <div class="ios-panel p-5">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
+                <div class="ios-panel p-5">${renderBelanjaCard('Maksimum Pencairan PNBP', data.mp)}</div>
                 <div class="ios-panel p-5 flex flex-col">
                     <h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Kegiatan Hari Ini</h3>
                     <div class="space-y-3 overflow-y-auto max-h-48 pr-1">
@@ -394,14 +398,6 @@ function renderBelanjaCard(t, d) {
             <div class="h-1.5 rounded-full" style="width: ${pBar}%; background: ${warna};"></div>
         </div>
         <div class="text-[11px] leading-relaxed" style="color: var(--label-secondary);">Realisasi: ${formatAngka(d.realisasi)}<br><span class="font-semibold" style="color: var(--label);">Sisa: ${formatAngka(d.sisa)}</span></div>
-    </div>`;
-}
-
-function renderMPCard(t, d) {
-    return `<div>
-        <h3 class="text-[13px] font-semibold mb-2.5" style="color: var(--label);">${t}</h3>
-        <div class="text-[22px] font-semibold leading-none mb-3" style="color: var(--ios-green);">${formatAngka(d.realisasi)}</div>
-        <div class="text-[11px] leading-relaxed" style="color: var(--label-secondary);">Total realisasi pencairan PNBP berstatus Selesai</div>
     </div>`;
 }
 
