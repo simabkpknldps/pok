@@ -59,8 +59,7 @@ async function navigate(page) {
 
     // Highlight tombol nav aktif
     document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.toggle('bg-sky-50', btn.getAttribute('onclick') === `navigate('${page}')`);
-        btn.classList.toggle('text-sky-700', btn.getAttribute('onclick') === `navigate('${page}')`);
+        btn.classList.toggle('is-active', btn.getAttribute('onclick') === `navigate('${page}')`);
     });
 
     // Spinner sementara loading fragment
