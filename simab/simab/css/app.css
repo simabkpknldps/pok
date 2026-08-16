@@ -114,6 +114,10 @@ body { font-family: var(--sf); }
     font-size: 0.72rem; font-weight: 600;
 }
 
+/* ---- Toggle switch (dipakai di berbagai halaman, mis. Perbantuan) ---- */
+.ios-toggle-off { background: rgba(118,118,128,0.28) !important; }
+.ios-toggle-on { background: var(--ios-blue) !important; }
+
 /* ---- Scrollbar halus ---- */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
