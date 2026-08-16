@@ -128,8 +128,8 @@ function stRenderChart(labels, data) {
             datasets: [{
                 label: 'Jumlah Kegiatan',
                 data: data,
-                borderColor: '#0284c7',
-                backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                borderColor: '#0071E3',
+                backgroundColor: 'rgba(0, 113, 227, 0.08)',
                 fill: true,
                 tension: 0.3,
                 pointBackgroundColor: '#0284c7',
