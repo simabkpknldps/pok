@@ -2,7 +2,6 @@
  * Fungsi umum yang dipakai di banyak halaman.
  */
 
-
 function logout() {
     ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'lastActivity']
         .forEach(k => localStorage.removeItem(k));
@@ -12,8 +11,9 @@ function logout() {
 function showToast(message) {
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
-    toast.className = "bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center animate-in slide-in-from-right-10";
-    toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${message}`;
+    toast.style.cssText = "background: rgba(29,29,31,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); color: #fff; font-family: var(--sf); font-size: 13.5px; font-weight: 500;";
+    toast.className = "px-5 py-3 rounded-xl shadow-lg flex items-center animate-in slide-in-from-right-10";
+    toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2" style="color: var(--ios-green);"></i> ${message}`;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
