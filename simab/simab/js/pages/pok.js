@@ -12,19 +12,19 @@ window.selectedKode = "";
 window.detilKegiatanData = [];
 window.refCoaData = null; // cache B1 & B2 sheet ref_coa (kodeSatker, kodeUnit)
 
-// Warna badge per Seksi (kolom I sheet pok_sumber_2026)
+// Warna badge per Seksi (kolom I sheet pok_sumber_2026) — tint lembut khas iOS
 const POK_SEKSI_COLORS = {
-    'PN': 'bg-sky-100 text-sky-700',
-    'HI': 'bg-purple-100 text-purple-700',
-    'KI': 'bg-amber-100 text-amber-700',
-    'Lelang': 'bg-rose-100 text-rose-700',
-    'Penilaian': 'bg-emerald-100 text-emerald-700',
-    'PKN': 'bg-indigo-100 text-indigo-700',
-    'Umum': 'bg-slate-200 text-slate-700'
+    'PN': 'background: rgba(0,113,227,0.1); color: #0071E3;',
+    'HI': 'background: rgba(175,82,222,0.12); color: #AF52DE;',
+    'KI': 'background: rgba(255,159,10,0.14); color: #C77400;',
+    'Lelang': 'background: rgba(255,59,48,0.1); color: #FF3B30;',
+    'Penilaian': 'background: rgba(52,199,89,0.12); color: #248A3D;',
+    'PKN': 'background: rgba(88,86,214,0.12); color: #5856D6;',
+    'Umum': 'background: rgba(118,118,128,0.14); color: #3C3C43;'
 };
 
 function pokSeksiBadgeClass(seksi) {
-    return POK_SEKSI_COLORS[seksi] || 'bg-slate-100 text-slate-600';
+    return POK_SEKSI_COLORS[seksi] || 'background: rgba(118,118,128,0.1); color: #3C3C43;';
 }
 
 function toggleSeksiGroup(seksi) {
@@ -53,7 +53,7 @@ async function initPokPage() {
 async function loadPokData() {
     const tbody = document.getElementById('pok-tbody');
     try {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-6" style="color: var(--label-secondary);"><i class="fa-solid fa-spinner fa-spin mr-2" style="color: var(--ios-blue);"></i>Memuat data...</td></tr>`;
 
         // Pastikan Supabase Auth sudah selesai memuat ulang sesi login sebelum
         // query ke database (lihat komentar waitSupabaseAuthReady di supabase-config.js).
@@ -244,23 +244,23 @@ function openEditPokModal(idx) {
     const uraianEsc = String(item.uraian || '').replace(/"/g, '&quot;');
 
     const { overlay, popup } = commonOpenOverlay(`
-        <h3 class="text-base font-semibold text-sky-700 mb-1"><i class="fa-solid fa-pen mr-2"></i>Ubah POK</h3>
-        <p class="text-xs text-slate-400 mb-3 font-mono">${item.kode} <span class="text-slate-300">(${item.bidang || '-'})</span></p>
+        <h3 class="text-[16px] font-semibold mb-1" style="color: var(--label);"><i class="fa-solid fa-pen mr-2"></i>Ubah POK</h3>
+        <p class="text-xs mb-3 font-mono" style="color: var(--label-secondary);">${item.kode} <span style="opacity:0.6;">(${item.bidang || '-'})</span></p>
         <div class="space-y-3">
             <div>
-                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Uraian</label>
+                <label class="ios-label block mb-1">Uraian</label>
                 <input id="pok-editUraian" type="text" value="${uraianEsc}" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
             </div>
             <div>
-                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Pagu</label>
+                <label class="ios-label block mb-1">Pagu</label>
                 <input id="pok-editPagu" type="text" value="${Number(item.pagu || 0).toLocaleString('id-ID')}"
                     oninput="this.value = formatRibuan(this.value)"
                     class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 text-right">
             </div>
         </div>
         <div class="flex justify-end gap-2 mt-4">
-            <button id="pok-editCancel" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Batal</button>
-            <button id="pok-editSave" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+            <button id="pok-editCancel" class="btn-ios-secondary px-4 py-2 text-sm">Batal</button>
+            <button id="pok-editSave" class="btn-ios px-4 py-2 text-sm">
                 <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
             </button>
         </div>
@@ -335,18 +335,18 @@ function renderPok() {
         const depth = c.split('.').length;
         const indentPx = Math.min(depth - 1, 5) * 18;
 
-        let rowBg = 'bg-white hover:bg-slate-100';
+        let rowStyle = 'background: #fff;';
         if (isMatch) {
-            rowBg = 'bg-yellow-200 hover:bg-yellow-300';
+            rowStyle = 'background: rgba(255,214,10,0.22);';
         } else if (isLeaf) {
-            rowBg = i.sumber === 'PNBP' ? 'bg-pink-200 hover:bg-pink-300' : 'bg-blue-200 hover:bg-blue-300';
+            rowStyle = i.sumber === 'PNBP' ? 'background: rgba(255,45,85,0.08);' : 'background: rgba(0,113,227,0.07);';
         } else if (isParent) {
-            rowBg = 'bg-sky-50 hover:bg-sky-100'; // penanda visual: baris ini bisa diklik untuk expand/collapse
+            rowStyle = 'background: rgba(0,113,227,0.045);'; // penanda visual: baris ini bisa diklik untuk expand/collapse
         } else if (depth <= 2) {
-            rowBg = 'bg-slate-50 hover:bg-slate-100';
+            rowStyle = 'background: var(--sidebar-bg);';
         }
 
-        const textWeight = depth <= 2 ? 'font-bold text-slate-700' : (isLeaf ? 'font-normal text-slate-600' : 'font-semibold text-slate-700');
+        const textStyle = depth <= 2 ? 'font-weight:700; color: var(--label);' : (isLeaf ? `font-weight:400; color: var(--label);` : 'font-weight:600; color: var(--label);');
 
         const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
         const expandKey = seksi + '::' + c;
@@ -357,43 +357,43 @@ function renderPok() {
         const sisa = Number(i.sisa || 0);
         const paguEfektif = pagu - blokir;
         const persenRealisasi = paguEfektif > 0 ? Math.min((realisasi / paguEfektif) * 100, 100) : 0;
-        const barColor = persenRealisasi >= 90 ? 'bg-green-500' : (persenRealisasi >= 50 ? 'bg-sky-500' : 'bg-amber-400');
-        const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
+        const barColor = persenRealisasi >= 90 ? '#34C759' : (persenRealisasi >= 50 ? '#0071E3' : '#FF9F0A');
+        const sisaStyle = sisa < 0 ? 'color: #FF3B30; font-weight:600;' : 'color: var(--label);';
 
-        return `<tr data-kode="${c}" data-seksi="${seksi}" class="border-b transition ${rowBg} cursor-pointer" onclick="toggleExpand('${c}', '${seksi}')">
-            <td class="p-3 font-mono text-xs ${isLeaf ? 'font-bold text-slate-700' : 'text-slate-500'} whitespace-nowrap">${c}</td>
-            <td class="p-3 ${textWeight}" style="padding-left:${12 + indentPx}px">
+        return `<tr data-kode="${c}" data-seksi="${seksi}" class="cursor-pointer transition" style="${rowStyle} border-bottom: 1px solid var(--divider);" onmouseover="this.style.filter='brightness(0.97)'" onmouseout="this.style.filter=''" onclick="toggleExpand('${c}', '${seksi}')">
+            <td class="p-3 font-mono text-[11px] whitespace-nowrap" style="${isLeaf ? 'font-weight:700; color: var(--label);' : 'color: var(--label-secondary);'}">${c}</td>
+            <td class="p-3" style="${textStyle} padding-left:${12 + indentPx}px">
                 <span class="whitespace-normal break-words">${i.uraian}</span>
-                ${hasChildren ? (window.expandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
+                ${hasChildren ? (window.expandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px]" style="color: var(--label-secondary);"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]" style="color: var(--label-secondary);"></i>') : ''}
             </td>
-            <td class="p-3 text-right whitespace-nowrap">${pagu.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-right whitespace-nowrap">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
+            <td class="p-3 text-right whitespace-nowrap" style="color: var(--label);">${pagu.toLocaleString('id-ID')}</td>
+            <td class="p-3 text-right whitespace-nowrap" style="color: var(--label);">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
             <td class="p-3 text-right whitespace-nowrap">
-                <div>${realisasi.toLocaleString('id-ID')}</div>
+                <div style="color: var(--label);">${realisasi.toLocaleString('id-ID')}</div>
                 ${paguEfektif > 0 ? `
-                    <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
-                        <div class="h-full ${barColor} rounded-full" style="width:${persenRealisasi}%"></div>
+                    <div class="w-full h-1.5 rounded-full overflow-hidden mt-1" style="background: var(--field-bg);">
+                        <div class="h-full rounded-full" style="width:${persenRealisasi}%; background: ${barColor};"></div>
                     </div>
-                    <div class="text-[10px] text-slate-400 mt-0.5">${persenRealisasi.toFixed(1)}%</div>
+                    <div class="text-[10px] mt-0.5" style="color: var(--label-secondary);">${persenRealisasi.toFixed(1)}%</div>
                 ` : ''}
             </td>
-            <td class="p-3 text-right whitespace-nowrap ${sisaClass}">${sisa.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-center whitespace-nowrap text-slate-500">${i.sumber || '-'}</td>
+            <td class="p-3 text-right whitespace-nowrap" style="${sisaStyle}">${sisa.toLocaleString('id-ID')}</td>
+            <td class="p-3 text-center whitespace-nowrap" style="color: var(--label-secondary);">${i.sumber || '-'}</td>
             <td class="p-3 text-center whitespace-nowrap">
                 ${isLeaf ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
-                        class="bg-sky-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-sky-700 mr-1" title="Rekam">
+                        class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--ios-blue); color: #fff;" title="Rekam">
                         <i class="fa-solid fa-plus text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
-                    <button onclick="event.stopPropagation();openDetilModal('${c}')" class="bg-slate-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-slate-700 mr-1" title="Detil">
+                    <button onclick="event.stopPropagation();openDetilModal('${c}')" class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--label); color: #fff;" title="Detil">
                         <i class="fa-solid fa-exclamation text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                     <button onclick="event.stopPropagation();copyKodeAkun(${window.rawPokData.indexOf(i)})"
-                        class="bg-amber-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-amber-700 mr-1" title="Salin kode akun lengkap">
+                        class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--ios-amber); color: #fff;" title="Salin kode akun lengkap">
                         <i class="fa-solid fa-copy text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                     <button onclick="event.stopPropagation();openEditPokModal(${window.rawPokData.indexOf(i)})"
-                        class="bg-slate-500 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-slate-600" title="Ubah Uraian/Pagu">
+                        class="w-6 h-6 inline-flex items-center justify-center rounded-md transition" style="background: var(--label-secondary); color: #fff;" title="Ubah Uraian/Pagu">
                         <i class="fa-solid fa-pen text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                 ` : ''}
@@ -403,7 +403,7 @@ function renderPok() {
 
     const groupHeaderRow = (seksi, count, isOpen) => `
         <tr class="select-none">
-            <td colspan="8" class="p-3 font-bold text-sm ${pokSeksiBadgeClass(seksi)}">
+            <td colspan="8" class="p-3 font-bold text-sm" style="${pokSeksiBadgeClass(seksi)}">
                 <div class="flex items-center gap-3 flex-wrap">
                     <div class="cursor-pointer flex items-center" onclick="toggleSeksiGroup('${seksi}')">
                         <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>
@@ -412,11 +412,11 @@ function renderPok() {
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <button onclick="event.stopPropagation();downloadSeksiPDF('${seksi}')"
-                            class="bg-red-600 hover:bg-red-700 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 shadow-sm">
+                            class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition" style="background: #FF3B30; color: #fff;">
                             <i class="fa-solid fa-file-pdf"></i> PDF
                         </button>
                         <button onclick="event.stopPropagation();downloadSeksiExcel('${seksi}')"
-                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 shadow-sm">
+                            class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition" style="background: #34C759; color: #fff;">
                             <i class="fa-solid fa-file-excel"></i> Excel
                         </button>
                     </div>
@@ -425,15 +425,15 @@ function renderPok() {
         </tr>`;
 
     const columnSubHeaderRow = () => `
-        <tr class="text-slate-500 text-[11px] uppercase">
-            <td class="p-2 text-left bg-slate-50 font-semibold">Kode</td>
-            <td class="p-2 text-left bg-slate-50 font-semibold">Uraian</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Pagu</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Blokir</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Realisasi</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Sisa</td>
-            <td class="p-2 text-center bg-slate-50 font-semibold">SD</td>
-            <td class="p-2 text-center bg-slate-50 font-semibold">Aksi</td>
+        <tr class="text-[11px] uppercase" style="color: var(--label-secondary);">
+            <td class="p-2 text-left font-semibold" style="background: var(--sidebar-bg);">Kode</td>
+            <td class="p-2 text-left font-semibold" style="background: var(--sidebar-bg);">Uraian</td>
+            <td class="p-2 text-right font-semibold" style="background: var(--sidebar-bg);">Pagu</td>
+            <td class="p-2 text-right font-semibold" style="background: var(--sidebar-bg);">Blokir</td>
+            <td class="p-2 text-right font-semibold" style="background: var(--sidebar-bg);">Realisasi</td>
+            <td class="p-2 text-right font-semibold" style="background: var(--sidebar-bg);">Sisa</td>
+            <td class="p-2 text-center font-semibold" style="background: var(--sidebar-bg);">SD</td>
+            <td class="p-2 text-center font-semibold" style="background: var(--sidebar-bg);">Aksi</td>
         </tr>`;
 
     let html = '';
@@ -583,9 +583,9 @@ function ensurePerbantuanToggle() {
 
     const toggleContainer = document.createElement('div');
     toggleContainer.innerHTML = `
-        <label class="block text-sm font-medium text-slate-600 mb-1">Perbantuan</label>
+        <label class="ios-label block mb-1">Perbantuan</label>
         <button type="button" id="perbantuanToggle" data-on="0" aria-pressed="false"
-            class="relative w-11 h-6 rounded-full bg-slate-300" style="transition: background-color .2s ease;">
+            class="relative w-11 h-6 rounded-full ios-toggle-off" style="transition: background-color .2s ease;">
             <span id="perbantuanToggleKnob"
                 class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow"
                 style="transition: transform .2s ease; transform: translateX(0);"></span>
@@ -607,12 +607,12 @@ function setPerbantuanToggle(on) {
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
 
     if (on) {
-        btn.classList.remove('bg-slate-300');
-        btn.classList.add('bg-sky-600');
+        btn.classList.remove('ios-toggle-off');
+        btn.classList.add('ios-toggle-on');
         knob.style.transform = 'translateX(20px)';
     } else {
-        btn.classList.remove('bg-sky-600');
-        btn.classList.add('bg-slate-300');
+        btn.classList.remove('ios-toggle-on');
+        btn.classList.add('ios-toggle-off');
         knob.style.transform = 'translateX(0)';
     }
 }
@@ -703,13 +703,13 @@ function cekKecukupanDana() {
 
     if (estimasi > sisa) {
         statusEl.value = "Dana Tidak Cukup";
-        statusEl.className = "w-full rounded-xl border border-red-300 bg-red-50 text-red-700 px-4 py-2.5 font-bold transition";
+        statusEl.className = "ios-field font-semibold transition"; statusEl.style.background = "rgba(255,59,48,0.1)"; statusEl.style.color = "#FF3B30";
     } else if (estimasi === 0) {
         statusEl.value = "Dana Tersedia";
         statusEl.className = "w-full rounded-xl border border-slate-300 px-4 py-2.5 transition";
     } else {
         statusEl.value = "Dana Tersedia";
-        statusEl.className = "w-full rounded-xl border border-green-300 bg-green-50 text-green-700 px-4 py-2.5 font-bold transition";
+        statusEl.className = "ios-field font-semibold transition"; statusEl.style.background = "rgba(52,199,89,0.12)"; statusEl.style.color = "#248A3D";
     }
 }
 
@@ -772,7 +772,7 @@ async function openDetilModal(mak) {
     document.getElementById("detilTitle").innerHTML = `<i class="fa-solid fa-list-check"></i> Detil MAK: ${mak}`;
 
     const tbody = document.getElementById("detil-tbody");
-    tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><i class="fa-solid fa-spinner fa-spin mr-2 text-sky-600"></i><span class="text-slate-500">Memuat...</span></div>`;
+    tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><i class="fa-solid fa-spinner fa-spin mr-2" style="color: var(--ios-blue);"></i><span style="color: var(--label-secondary);">Memuat...</span></div>`;
 
     try {
         // Filter dari cache kalau sudah ada (dimuat pas loadPokData), kalau belum
@@ -815,32 +815,32 @@ function renderDetilTable(data) {
     const tbody = document.getElementById("detil-tbody");
 
     if (!Array.isArray(data) || data.length === 0) {
-        tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><span class="text-red-500">Tidak ada data.</span></div>`;
+        tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><span style="color: var(--ios-red);">Tidak ada data.</span></div>`;
         return;
     }
 
     tbody.innerHTML = data.map(i => {
-        const sClass = i.status === 'Rekam Data' ? 'bg-pink-100 text-pink-700' :
-            i.status === 'Terlaksana' ? 'bg-slate-200 text-slate-700' :
-            i.status === 'LPT' ? 'bg-yellow-100 text-yellow-700' :
-            i.status === 'Terbayar' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
+        const sStyle = i.status === 'Rekam Data' ? 'background: rgba(255,45,133,0.12); color: #D6005C;' :
+            i.status === 'Terlaksana' ? 'background: var(--field-bg); color: var(--label);' :
+            i.status === 'LPT' ? 'background: var(--ios-amber-tint); color: #C77400;' :
+            i.status === 'Terbayar' ? 'background: var(--ios-green-tint); color: #248A3D;' : 'background: var(--ios-blue-tint); color: var(--ios-blue);';
 
         return `
-            <div class="flex p-3 border-b items-center hover:bg-slate-50 text-xs">
+            <div class="flex p-3 items-center text-xs transition" style="border-bottom: 1px solid var(--divider);" onmouseover="this.style.background='var(--sidebar-bg)'" onmouseout="this.style.background=''">
                 <div class="w-[30%] pr-2 whitespace-normal break-words">${i.uraian || '-'}</div>
                 <div class="w-[12%] truncate pr-2 whitespace-normal break-words">${i.pelaksana_kegiatan || 'Belum Ada'}</div>
                 <div class="w-[18%] truncate pr-2">${i.tujuan || '-'}</div>
                 <div class="w-[10%]">${i.tglSt ? new Date(i.tglSt).toISOString().split('T')[0] : '-'}</div>
                 <div class="w-[12%] text-right pr-2">${Number(i.estimasi || 0).toLocaleString()}</div>
                 <div class="w-[10%] flex justify-center">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${sClass}">${i.status || '-'}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold" style="${sStyle}">${i.status || '-'}</span>
                 </div>
                 <div class="w-[8%] flex justify-center gap-2">
-                    <button onclick="showDetilKegiatanInfo('${i.idKegiatan}')" class="text-slate-600 hover:text-slate-800" title="Detil">
+                    <button onclick="showDetilKegiatanInfo('${i.idKegiatan}')" style="color: var(--label-secondary);" title="Detil">
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
                     ${i.status === 'Rekam Data' ? `
-                        <button onclick="openPelaksanaModal('${i.idKegiatan}')" class="text-sky-600 hover:text-sky-800 font-bold" title="Update Pelaksana">
+                        <button onclick="openPelaksanaModal('${i.idKegiatan}')" style="color: var(--ios-blue); font-weight:700;" title="Update Pelaksana">
                             <i class="fa-solid fa-users"></i>
                         </button>
                     ` : ''}
@@ -879,12 +879,12 @@ function showDetilKegiatanInfo(idKegiatan) {
 
     const baris = (label, value) => `
         <div class="flex justify-between items-start gap-4 py-2 border-b border-slate-100 text-sm">
-            <span class="text-slate-500 whitespace-nowrap">${label}</span>
-            <span class="font-medium text-slate-800 text-right break-words">${(value === undefined || value === null || value === '') ? '-' : value}</span>
+            <span style="color: var(--label-secondary); white-space:nowrap;">${label}</span>
+            <span style="color: var(--label); font-weight:600; text-align:right; word-break:break-word;">${(value === undefined || value === null || value === '') ? '-' : value}</span>
         </div>`;
 
     const { overlay, popup } = pokOpenOverlay(`
-        <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Detil Kegiatan #${data.idKegiatan ?? ''}</h3>
+        <h3 class="text-center text-[16px] font-semibold mb-1" style="color: var(--label);">Detil Kegiatan #${data.idKegiatan ?? ''}</h3>
         <div class="flex flex-col">
             ${baris('ID Kegiatan', data.idKegiatan)}
             ${baris('MAK', data.mak)}
@@ -898,7 +898,7 @@ function showDetilKegiatanInfo(idKegiatan) {
             ${baris('Nomor SPM', data.nomorSPM)}
         </div>
         <div class="flex justify-end mt-2">
-            <button id="pok-detilInfoClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button>
+            <button id="pok-detilInfoClose" class="btn-ios-secondary px-4 py-2 text-sm">Tutup</button>
         </div>
     `, 'max-w-md');
 
@@ -938,9 +938,9 @@ function ensurePelaksanaPerbantuanIndicator() {
 
     const toggleContainer = document.createElement('div');
     toggleContainer.innerHTML = `
-        <label class="block text-sm font-medium text-slate-600 mb-1">Perbantuan</label>
+        <label class="ios-label block mb-1">Perbantuan</label>
         <button type="button" id="pelaksanaPerbantuanToggle" data-on="0" disabled aria-pressed="false"
-            class="relative w-11 h-6 rounded-full bg-slate-300 opacity-60 cursor-not-allowed" style="transition: background-color .2s ease;">
+            class="relative w-11 h-6 rounded-full ios-toggle-off opacity-60 cursor-not-allowed" style="transition: background-color .2s ease;">
             <span id="pelaksanaPerbantuanToggleKnob"
                 class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow"
                 style="transition: transform .2s ease; transform: translateX(0);"></span>
@@ -958,12 +958,12 @@ function setPelaksanaPerbantuanIndicator(on) {
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
 
     if (on) {
-        btn.classList.remove('bg-slate-300');
-        btn.classList.add('bg-sky-600');
+        btn.classList.remove('ios-toggle-off');
+        btn.classList.add('ios-toggle-on');
         knob.style.transform = 'translateX(20px)';
     } else {
-        btn.classList.remove('bg-sky-600');
-        btn.classList.add('bg-slate-300');
+        btn.classList.remove('ios-toggle-on');
+        btn.classList.add('ios-toggle-off');
         knob.style.transform = 'translateX(0)';
     }
 }
@@ -1061,12 +1061,12 @@ function renderPelaksanaTable() {
     const tbody = document.getElementById("pelaksanaTableBody");
 
     if (window.pelaksanaTableData.length === 0) {
-        tbody.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">Belum ada data pelaksana</div>`;
+        tbody.innerHTML = `<div class="p-4 text-center text-xs" style="color: var(--label-secondary);">Belum ada data pelaksana</div>`;
         return;
     }
 
     tbody.innerHTML = window.pelaksanaTableData.map((row, idx) => `
-        <div class="flex p-3 border-b items-center hover:bg-slate-50 text-xs">
+        <div class="flex p-3 items-center text-xs transition" style="border-bottom: 1px solid var(--divider);" onmouseover="this.style.background='var(--sidebar-bg)'" onmouseout="this.style.background=''">
             <div class="w-[30%] font-medium">${row.nama}</div>
             <div class="w-[20%]">
                 <input type="date" value="${row.tglMulai}" 
