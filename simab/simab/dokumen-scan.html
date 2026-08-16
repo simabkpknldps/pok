@@ -26,6 +26,9 @@
     body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
     #ds-sheet { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
     .ds-appbar { padding-top: env(safe-area-inset-top); }
+    /* Cegah <input type="date"> "keluar" dari card di iOS Safari (lebar
+       minimum bawaannya bisa lebih besar dari kolom grid sempit). */
+    input[type="date"] { min-width: 0; max-width: 100%; box-sizing: border-box; }
 </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -917,13 +920,13 @@ function dsRenderPelaksanaForm() {
                 <label class="block text-[10.5px] font-semibold text-slate-500 mb-1">Nama Pelaksana</label>
                 <input class="ds-plNama w-full px-3 py-2 border border-slate-300 rounded-lg text-xs mb-2" list="ds-plPegawaiOptions" data-idx="${idx}" type="text" value="${escHtml(p.nama)}">
                 <div class="grid grid-cols-2 gap-2 mb-2">
-                    <div>
+                    <div class="min-w-0">
                         <label class="block text-[10.5px] font-semibold text-slate-500 mb-1">Tgl Mulai</label>
-                        <input class="ds-plTglMulai w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" data-idx="${idx}" type="date" value="${p.tglMulai || ''}">
+                        <input class="ds-plTglMulai w-full min-w-0 px-2 py-2 border border-slate-300 rounded-lg text-xs" data-idx="${idx}" type="date" value="${p.tglMulai || ''}">
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <label class="block text-[10.5px] font-semibold text-slate-500 mb-1">Tgl Selesai</label>
-                        <input class="ds-plTglSelesai w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" data-idx="${idx}" type="date" value="${p.tglSelesai || ''}">
+                        <input class="ds-plTglSelesai w-full min-w-0 px-2 py-2 border border-slate-300 rounded-lg text-xs" data-idx="${idx}" type="date" value="${p.tglSelesai || ''}">
                     </div>
                 </div>
                 <label class="block text-[10.5px] font-semibold text-slate-500 mb-1">Jumlah</label>
