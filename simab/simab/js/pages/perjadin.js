@@ -256,12 +256,12 @@ function pjUpdateChart(rows) {
             datasets: [{
                 label: 'Frekuensi Perjadin',
                 data: monthCounts,
-                borderColor: '#0369a1',
-                backgroundColor: 'rgba(3,105,161,0.2)',
+                borderColor: '#0071E3',
+                backgroundColor: 'rgba(0,113,227,0.12)',
                 tension: 0.3,
                 fill: true,
                 pointRadius: 4,
-                pointBackgroundColor: '#0369a1',
+                pointBackgroundColor: '#0071E3',
                 pointBorderColor: '#fff'
             }]
         },
