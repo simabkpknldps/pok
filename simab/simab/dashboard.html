@@ -10,45 +10,50 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="css/app.css">
 </head>
-<body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
+<body class="flex h-screen overflow-hidden" style="background: #EEEEF0; color: var(--label); font-family: var(--sf);">
 
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
-        <div class="p-6 border-b border-slate-100"><h1 class="text-2xl font-bold text-sky-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500"></i> SiMAB</h1></div>
-        <nav class="p-4 space-y-2 flex-grow">
-            <button onclick="navigate('dashboard')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-gauge mr-3"></i> Dashboard</button>
-            <button onclick="navigate('pok')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-folder-open mr-3"></i> POK</button>
-            <button onclick="navigate('kegiatan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-list-check mr-3"></i> Daftar Kegiatan</button>
-            <button onclick="navigate('perjadin')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-wallet mr-3"></i> Perjadinku</button>
-            <button onclick="navigate('kalender')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-regular fa-calendar mr-3"></i> Kalender</button>
-            <button onclick="navigate('statistik')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-chart-column mr-3"></i> Statistik</button>
-            <button onclick="navigate('rpd')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-table mr-3"></i> RPD</button>
-            <button onclick="navigate('referensi')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-book mr-3"></i> Referensi</button>
-            <button onclick="navigate('perbantuan')" class="nav-btn w-full text-left p-3 rounded-xl hover:bg-sky-50 hover:text-sky-700 transition"><i class="fa-solid fa-hands-helping mr-3"></i> Perbantuan</button>
+    <aside class="w-60 flex flex-col shrink-0" style="background: var(--sidebar-bg); border-right: 1px solid var(--divider);">
+        <div class="px-5 pt-6 pb-5 flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0" style="background: linear-gradient(160deg, #5B8DEF 0%, #0071E3 100%); box-shadow: 0 4px 10px -3px rgba(0,113,227,0.5);">
+                <i class="fa-solid fa-shield-halved text-white text-xs"></i>
+            </div>
+            <h1 class="text-[15px] font-semibold" style="color: var(--label);">SiMAB</h1>
+        </div>
+        <nav class="px-3 space-y-0.5 flex-grow overflow-y-auto">
+            <button onclick="navigate('dashboard')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-gauge"></i> Dashboard</button>
+            <button onclick="navigate('pok')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-folder-open"></i> POK</button>
+            <button onclick="navigate('kegiatan')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-list-check"></i> Daftar Kegiatan</button>
+            <button onclick="navigate('perjadin')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-wallet"></i> Perjadinku</button>
+            <button onclick="navigate('kalender')" class="nav-btn sidebar-nav-btn"><i class="fa-regular fa-calendar"></i> Kalender</button>
+            <button onclick="navigate('statistik')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-chart-column"></i> Statistik</button>
+            <button onclick="navigate('rpd')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-table"></i> RPD</button>
+            <button onclick="navigate('referensi')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-book"></i> Referensi</button>
+            <button onclick="navigate('perbantuan')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-hands-helping"></i> Perbantuan</button>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-            <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
-            <div class="flex items-center gap-4">
-                <span id="user-name" class="text-slate-600 font-medium text-sm">
-                    <i class="fa-solid fa-user mr-2"></i><span id="nama-login">Guest</span>
+        <header class="h-16 flex items-center justify-between px-7 shrink-0" style="background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--divider);">
+            <h2 id="page-title" class="text-[17px] font-semibold" style="color: var(--label);">Dashboard</h2>
+            <div class="flex items-center gap-5">
+                <span id="user-name" class="text-[13px] font-medium flex items-center gap-1.5" style="color: var(--label-secondary);">
+                    <i class="fa-regular fa-circle-user text-[15px]"></i><span id="nama-login">Guest</span>
                 </span>
                 <div id="notif-wrapper" class="relative">
-                    <button id="notif-bell-btn" onclick="toggleNotifikasiDropdown()" class="relative text-slate-600 hover:text-sky-700 font-medium text-sm" title="Notifikasi">
+                    <button id="notif-bell-btn" onclick="toggleNotifikasiDropdown()" class="relative text-[15px] transition" style="color: var(--label-secondary);" title="Notifikasi">
                         <i class="fa-solid fa-bell"></i>
-                        <span id="notif-badge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-[10px] leading-none rounded-full px-1.5 py-1 min-w-[16px] text-center">0</span>
+                        <span id="notif-badge" class="hidden absolute -top-1.5 -right-1.5 text-white text-[9px] leading-none rounded-full px-1 py-1 min-w-[15px] text-center font-semibold" style="background: var(--ios-red);">0</span>
                     </button>
-                    <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-50">
-                        <div class="p-3 border-b border-slate-100 font-semibold text-slate-700 text-sm">Notifikasi</div>
-                        <div id="notif-list" class="divide-y divide-slate-100"></div>
+                    <div id="notif-dropdown" class="hidden absolute right-0 mt-2.5 w-80 max-h-96 overflow-y-auto z-50 ios-panel" style="box-shadow: 0 12px 32px -8px rgba(0,0,0,0.25);">
+                        <div class="p-3 font-semibold text-[13px]" style="color: var(--label); border-bottom: 1px solid var(--divider);">Notifikasi</div>
+                        <div id="notif-list" class="divide-y" style="border-color: var(--divider);"></div>
                     </div>
                 </div>
-                <button onclick="openSettings()" class="text-slate-600 hover:text-sky-700 font-medium text-sm" title="Settings"><i class="fa-solid fa-gear"></i></button>
-                <button onclick="logout()" class="text-red-500 hover:text-red-700 font-medium text-sm" title="Logout"><i class="fa-solid fa-right-from-bracket mr-1"></i> Logout</button>
+                <button onclick="openSettings()" class="text-[15px] transition" style="color: var(--label-secondary);" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                <button onclick="logout()" class="text-[13px] font-medium flex items-center gap-1.5 transition" style="color: var(--ios-red);" title="Logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
             </div>
         </header>
-        <div id="app" class="flex-1 p-8 overflow-y-auto space-y-6"></div>
+        <div id="app" class="flex-1 p-7 overflow-y-auto space-y-6"></div>
     </main>
 
     <!-- Notifikasi global, dipakai halaman manapun -->
