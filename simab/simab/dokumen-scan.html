@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>SOH - SiMAB On Hand</title>
 
-    
 <!-- PWA -->
 <meta name="theme-color" content="#0369a1">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1823,8 +1822,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const icon = $('ds-refreshIcon');
         icon.classList.add('fa-spin');
 
+        // Kosongkan cache Service Worker (Cache Storage) DULU -- ini caching
+        // layer yang TERPISAH dari cache browser biasa, jalan di luar
+        // jangkauan opsi fetch() apapun yang kita atur di kode kita sendiri.
+        // Kalau ada sw-dokumen.js yang nyimpen respons API lama di sini,
+        // inilah yang bikin data kelihatan "nyangkut" sampai logout+login.
+        if ('caches' in window) {
+            try {
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map(k => caches.delete(k)));
+            } catch (e) { /* abaikan kalau browser tidak dukung / gagal, tetap lanjut */ }
+        }
+
         // Kosongkan SEMUA cache di memori halaman ini, biar semua tab (Cari,
-        // POK, Kegiatan, Referensi) ambil data segar dari Supabase lagi.
+        // POK, Referensi, User) ambil data segar dari Supabase lagi.
         dsAllRowsCache = null;
         dsPokRowsCache = null;
         dsSbmRowsCache = null;
