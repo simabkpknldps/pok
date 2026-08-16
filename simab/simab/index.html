@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛡️Login SiMAB</title>
 
-    
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0284c7">
+    <meta name="theme-color" content="#f5f5f7">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -17,139 +16,201 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        :root {
+            --sf: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --ios-blue: #0071E3;
+            --ios-blue-press: #0059B3;
+            --label: #1D1D1F;
+            --label-secondary: #86868B;
+            --field-bg: rgba(118,118,128,0.12);
+        }
+        * { -webkit-tap-highlight-color: transparent; }
+        html, body { font-family: var(--sf); }
+
+        /* Wallpaper ala macOS -- aurora gradient blur, statis (bukan foto,
+           supaya tidak ada dependensi gambar eksternal). */
+        .wallpaper {
+            position: fixed; inset: 0; overflow: hidden; z-index: -1;
+            background: linear-gradient(160deg, #FF9A6C 0%, #FF6B9D 22%, #A66CFF 45%, #5B8DEF 68%, #37C4E8 100%);
+        }
+        .wallpaper::before, .wallpaper::after {
+            content: ""; position: absolute; border-radius: 9999px; filter: blur(90px);
+        }
+        .wallpaper::before { width: 60vw; height: 60vw; top: -15vw; left: -10vw; background: rgba(255,255,255,0.25); }
+        .wallpaper::after { width: 55vw; height: 55vw; bottom: -20vw; right: -15vw; background: rgba(30,20,60,0.28); }
+
+        .glass-card {
+            background: rgba(255,255,255,0.68);
+            backdrop-filter: blur(34px) saturate(160%);
+            -webkit-backdrop-filter: blur(34px) saturate(160%);
+            border: 0.5px solid rgba(255,255,255,0.5);
+            box-shadow: 0 1px 1px rgba(255,255,255,0.6) inset, 0 20px 60px -12px rgba(0,0,0,0.35);
+        }
+
+        .app-icon {
+            background: linear-gradient(160deg, #5B8DEF 0%, #0071E3 100%);
+            box-shadow: 0 8px 20px -6px rgba(0,113,227,0.55), 0 1px 0 rgba(255,255,255,0.4) inset;
+        }
+
+        .ios-field {
+            background: var(--field-bg);
+            border: none;
+            color: var(--label);
+            font-family: var(--sf);
+            border-radius: 12px;
+            padding: 0.75rem 0.9rem;
+            width: 100%;
+            outline: none;
+            font-size: 0.95rem;
+            transition: background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .ios-field::placeholder { color: var(--label-secondary); }
+        .ios-field:focus { background: rgba(118,118,128,0.16); box-shadow: 0 0 0 3.5px rgba(0,113,227,0.22); }
+
+        .ios-label {
+            font-family: var(--sf);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--label-secondary);
+        }
+
+        .btn-ios {
+            background: var(--ios-blue);
+            color: #fff;
+            font-family: var(--sf);
+            font-weight: 590;
+            border-radius: 12px;
+            transition: background-color 0.12s ease, transform 0.08s ease;
+        }
+        .btn-ios:hover { background: var(--ios-blue-press); }
+        .btn-ios:active { transform: scale(0.98); }
+        .btn-ios:disabled { opacity: 0.5; }
+
+        .link-ios { color: var(--ios-blue); }
+        .link-ios:hover { text-decoration: underline; }
+
+        :focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 2px; }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; animation: none !important; }
+        }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+<body class="min-h-screen flex items-center justify-center p-4" style="color: var(--label);">
 
-    <!-- Dekorasi background minimalis -->
-    <div class="pointer-events-none absolute -top-24 -left-24 w-72 h-72 bg-sky-100 rounded-full blur-3xl opacity-70"></div>
-    <div class="pointer-events-none absolute -bottom-24 -right-24 w-72 h-72 bg-sky-200 rounded-full blur-3xl opacity-60"></div>
+    <div class="wallpaper"></div>
 
-    <div class="relative w-full max-w-sm">
-        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+    <div class="relative w-full max-w-[368px]">
 
-            <div class="mb-8 text-center">
-                <div class="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-shield-halved text-sky-600 text-2xl"></i>
+        <div class="glass-card rounded-[28px] px-8 pt-9 pb-8">
+
+            <div class="flex flex-col items-center mb-7">
+                <div class="app-icon w-16 h-16 rounded-[18px] flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-shield-halved text-white text-2xl"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-slate-800">SiMAB</h1>
-                <p class="text-xs text-slate-400 tracking-widest font-semibold mt-1">SISTEM MONITORING ANGGARAN BELANJA</p>
+                <h1 class="text-[1.4rem] font-semibold tracking-tight" style="color: var(--label);">SiMAB</h1>
+                <p class="text-[13px] mt-0.5" style="color: var(--label-secondary);">Sistem Monitoring Anggaran Belanja</p>
             </div>
 
-            <p id="sessionNotice" class="hidden text-amber-600 text-xs bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4"></p>
+            <p id="sessionNotice" class="hidden text-[13px] mb-5 px-3.5 py-2.5 rounded-xl text-center" style="background: rgba(0,113,227,0.1); color: var(--ios-blue);"></p>
 
-            <form id="loginForm" class="space-y-4">
+            <form id="loginForm" class="space-y-3">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">NIP</label>
-                    <div class="relative">
-                        <i class="fa-regular fa-id-card absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                        <input type="text" id="nip" placeholder="Masukkan NIP" required autocomplete="username"
-                            class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
-                    </div>
+                    <input type="text" id="nip" placeholder="NIP" required autocomplete="username" class="ios-field">
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">Password</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                        <input type="password" id="password" placeholder="Masukkan password" required autocomplete="current-password"
-                            class="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
-                        <button type="button" id="togglePassword" tabindex="-1"
-                            class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-sky-600 transition">
-                            <i class="fa-regular fa-eye text-sm"></i>
-                        </button>
-                    </div>
+                <div class="relative">
+                    <input type="password" id="password" placeholder="Kata Sandi" required autocomplete="current-password" class="ios-field pr-10">
+                    <button type="button" id="togglePassword" tabindex="-1"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 transition" style="color: var(--label-secondary);">
+                        <i class="fa-regular fa-eye text-sm"></i>
+                    </button>
                 </div>
 
-                <p id="loginError" class="hidden text-red-500 text-xs bg-red-50 border border-red-100 rounded-lg px-3 py-2"></p>
+                <p id="loginError" class="hidden text-[13px] px-3.5 py-2.5 rounded-xl text-center" style="background: rgba(255,59,48,0.1); color: #FF3B30;"></p>
 
                 <button type="submit" id="loginBtn"
-                    class="w-full bg-sky-600 text-white py-3 rounded-xl font-semibold hover:bg-sky-700 active:bg-sky-800 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    class="btn-ios w-full py-3 text-[15px] flex items-center justify-center gap-2 disabled:cursor-not-allowed mt-4">
                     <span id="loginBtnText">Masuk</span>
                 </button>
-
-                <p class="text-center text-sm text-slate-500">
-                    Buat Akun? <a href="#" id="daftarLink" class="text-sky-600 font-semibold hover:underline">Daftar Di sini!</a>
-                </p>
             </form>
+
+            <p class="text-center text-[13px] mt-5" style="color: var(--label-secondary);">
+                Belum punya akun? <a href="#" id="daftarLink" class="link-ios font-medium">Daftar</a>
+            </p>
         </div>
 
-        <p class="text-center text-xs text-slate-400 mt-6">&copy; <span id="tahunFooter"></span> SiMAB &mdash; KPKNL Denpasar</p>
+        <p class="text-center text-[11px] mt-5" style="color: rgba(255,255,255,0.75); text-shadow: 0 1px 2px rgba(0,0,0,0.15);">&copy; <span id="tahunFooter"></span> SiMAB &mdash; KPKNL Denpasar</p>
     </div>
 
     <!-- Modal Daftar Akun -->
-    <div id="daftarModal" class="hidden fixed inset-0 bg-black/40 items-center justify-center p-4 z-50">
-        <div class="bg-white w-full max-w-sm rounded-2xl shadow-lg border border-slate-200 p-6 max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-bold text-slate-800">Daftar Akun</h2>
-                <button type="button" id="daftarCloseBtn" class="text-slate-400 hover:text-slate-600 text-lg">
+    <div id="daftarModal" class="hidden fixed inset-0 items-center justify-center p-4 z-50" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(4px);">
+        <div class="glass-card w-full max-w-sm rounded-[24px] p-6 max-h-[90vh] overflow-y-auto" style="background: rgba(255,255,255,0.85);">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-[1.2rem] font-semibold" style="color: var(--label);">Daftar Akun</h2>
+                <button type="button" id="daftarCloseBtn" class="text-lg" style="color: var(--label-secondary);">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
             <div id="daftarStep1">
-                <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">NIP</label>
+                <label class="ios-label block mb-1.5 ml-0.5">NIP</label>
                 <div class="flex gap-2">
-                    <input type="text" id="daftarCekNip" placeholder="Masukkan NIP"
-                        class="flex-1 px-3 py-2.5 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                    <input type="text" id="daftarCekNip" placeholder="Masukkan NIP" class="ios-field flex-1">
                     <button type="button" id="daftarBtnCek"
-                        class="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-semibold shrink-0">
+                        class="btn-ios px-4 text-[14px] shrink-0">
                         Cek
                     </button>
                 </div>
-                <p id="daftarCekMsg" class="hidden text-xs px-3 py-2 rounded-lg mt-3"></p>
+                <p id="daftarCekMsg" class="hidden text-[13px] px-3.5 py-2.5 rounded-xl mt-3"></p>
             </div>
 
             <div id="daftarStep2" class="hidden space-y-3 mt-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">Nama</label>
-                    <input type="text" id="daftarNama"
-                        class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                    <label class="ios-label block mb-1.5 ml-0.5">Nama</label>
+                    <input type="text" id="daftarNama" class="ios-field">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">NIP</label>
-                    <input type="text" id="daftarNip"
-                        class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                    <label class="ios-label block mb-1.5 ml-0.5">NIP</label>
+                    <input type="text" id="daftarNip" class="ios-field">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">Jabatan</label>
-                    <input type="text" id="daftarJabatan"
-                        class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                    <label class="ios-label block mb-1.5 ml-0.5">Jabatan</label>
+                    <input type="text" id="daftarJabatan" class="ios-field">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">Pangkat</label>
-                    <select id="daftarPangkat"
-                        class="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                    <label class="ios-label block mb-1.5 ml-0.5">Pangkat</label>
+                    <select id="daftarPangkat" class="ios-field">
                         <option value="">-- Pilih Pangkat --</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-0.5">Status</label>
+                    <label class="ios-label block mb-1.5 ml-0.5">Status</label>
                     <!-- Kalau NIP ketemu: teks read-only. Kalau tidak ketemu: dropdown pilihan. -->
-                    <input type="text" id="daftarStatusText" readonly
-                        class="hidden w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-500 text-sm cursor-not-allowed">
-                    <select id="daftarStatusSelect"
-                        class="hidden w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none transition text-sm">
+                    <input type="text" id="daftarStatusText" readonly class="hidden ios-field" style="color: var(--label-secondary);">
+                    <select id="daftarStatusSelect" class="hidden ios-field">
                         <option value="1">PNS</option>
                         <option value="0">PPNPN</option>
                     </select>
                 </div>
 
-                <p id="daftarKeteranganDitemukan" class="hidden text-xs text-slate-400 italic">
+                <p id="daftarKeteranganDitemukan" class="hidden text-[12px] italic" style="color: var(--label-secondary);">
                     Data dapat diubah pada menu setting saat berhasil login
                 </p>
 
-                <p id="daftarError" class="hidden text-red-500 text-xs bg-red-50 border border-red-100 rounded-lg px-3 py-2"></p>
-                <p id="daftarSuccess" class="hidden text-emerald-600 text-xs bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2"></p>
+                <p id="daftarError" class="hidden text-[13px] px-3.5 py-2.5 rounded-xl text-center" style="background: rgba(255,59,48,0.1); color: #FF3B30;"></p>
+                <p id="daftarSuccess" class="hidden text-[13px] px-3.5 py-2.5 rounded-xl text-center" style="background: rgba(52,199,89,0.12); color: #248A3D;"></p>
 
                 <button type="button" id="daftarBtnSimpan"
-                    class="w-full bg-sky-600 text-white py-2.5 rounded-xl font-semibold hover:bg-sky-700 active:bg-sky-800 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-user-plus"></i>
+                    class="btn-ios w-full py-3 text-[15px] flex items-center justify-center gap-2 disabled:cursor-not-allowed">
                     <span id="daftarBtnSimpanText">Daftar</span>
                 </button>
             </div>
         </div>
     </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="js/supabase-config.js"></script>
