@@ -1,5 +1,5 @@
 /**
- * Halaman Dashboard 
+ * Halaman Dashboard
  * -----------------------------------------------------------------------
  * DIROMBAK supaya hemat kuota baca Firestore: dashboard sekarang cuma
  * menyisakan 6 hal (sesuai permintaan) —
@@ -160,7 +160,7 @@ async function initDashboardPage() {
     const container = document.getElementById('dashboard-content');
     if (!container) return;
 
-    container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-2xl"></i></div>`;
+    container.innerHTML = `<div class="flex justify-center mt-10"><i class="fa-solid fa-spinner fa-spin text-2xl" style="color: var(--ios-blue);"></i></div>`;
 
     try {
         await waitSupabaseAuthReady();
@@ -189,47 +189,46 @@ async function initDashboardPage() {
     } catch (e) {
         console.error('Dashboard error:', e);
         const errorMsg = e.message || 'Gagal memuat dashboard';
-        container.innerHTML = `<div class="text-center text-red-500 mt-10">❌ ${errorMsg}</div>`;
+        container.innerHTML = `<div class="text-center mt-10" style="color: var(--ios-red);">❌ ${errorMsg}</div>`;
     }
 }
 
 function buildDashboardHtml(data, rpdBerjalanData) {
     return `
-        <div class="space-y-8">
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <div class="space-y-6">
+            <div class="ios-panel p-3.5">
                 <div class="flex items-center gap-2">
                     <div class="relative flex-1">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px]" style="color: var(--label-secondary);"></i>
                         <input id="dash-globalSearchBox" type="text"
                             placeholder="Cari kegiatan (uraian/No ST, pelaksana, tujuan, tanggal, status, atau nomor SPM)..."
-                            class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            class="ios-field" style="padding-left: 2.4rem;">
                     </div>
-                    <button id="dash-btnGlobalSearch"
-                        class="flex items-center gap-2 px-4 py-2.5 bg-sky-700 hover:bg-sky-800 text-white text-sm font-medium rounded-lg transition whitespace-nowrap">
-                        <i class="fa-solid fa-magnifying-glass"></i> Cari
+                    <button id="dash-btnGlobalSearch" class="btn-ios flex items-center gap-2 px-4 py-2.5 text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i> Cari
                     </button>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Barang', data.barang, 'blue')}</div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderBelanjaCard('Belanja Modal', data.modal, 'blue')}</div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
-                    <h3 class="font-semibold text-slate-700 mb-4">Kegiatan Hari Ini</h3>
-                    <div class="space-y-4 overflow-y-auto max-h-48 pr-2 custom-scrollbar">
+                <div class="ios-panel p-5">${renderBelanjaCard('Belanja Barang', data.barang)}</div>
+                <div class="ios-panel p-5">${renderBelanjaCard('Belanja Modal', data.modal)}</div>
+                <div class="ios-panel p-5">${renderMPCard('Maksimum Pencairan PNBP', data.mp)}</div>
+                <div class="ios-panel p-5 flex flex-col">
+                    <h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Kegiatan Hari Ini</h3>
+                    <div class="space-y-3 overflow-y-auto max-h-48 pr-1">
                         ${data.kegiatanHariIni.length
-                            ? data.kegiatanHariIni.map(item => `<div class="border-b pb-2"><div class="text-sm font-semibold">${escapeHtml(item.uraian)}</div><div class="text-[10px] text-slate-500">${escapeHtml(item.pelaksana)} | ${escapeHtml(item.tujuan)}</div></div>`).join('')
-                            : `<div class="text-xs text-slate-400 text-center py-4">Tidak ada kegiatan hari ini.</div>`}
+                            ? data.kegiatanHariIni.map(item => `<div class="pb-2.5" style="border-bottom: 1px solid var(--divider);"><div class="text-[13px] font-medium" style="color: var(--label);">${escapeHtml(item.uraian)}</div><div class="text-[10.5px] mt-0.5" style="color: var(--label-secondary);">${escapeHtml(item.pelaksana)} &middot; ${escapeHtml(item.tujuan)}</div></div>`).join('')
+                            : `<div class="text-[12.5px] text-center py-4" style="color: var(--label-secondary);">Tidak ada kegiatan hari ini.</div>`}
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">${renderTopPerjadin(data.topPerjadin)}</div>
+                <div class="ios-panel p-5">${renderTopPerjadin(data.topPerjadin)}</div>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div class="ios-panel p-5">
                 ${renderRpdBerjalanTable(rpdBerjalanData)}
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-semibold text-slate-700 mb-4">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
+                <div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
+                <div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
             </div>
         </div>
     `;
@@ -237,49 +236,49 @@ function buildDashboardHtml(data, rpdBerjalanData) {
 
 function renderRpdBerjalanTable(d) {
     const persen = d.persenTerhadapRpd;
-    const warnaTotal = (persen >= -5 && persen <= 5) ? 'text-green-600' : 'text-red-600';
+    const warnaTotal = (persen >= -5 && persen <= 5) ? 'var(--ios-green)' : 'var(--ios-red)';
 
     const fixedRowsHtml = d.fixedRows.map(r => `
-        <tr class="border-b border-slate-100">
-            <td class="p-2.5">${escapeHtml(r.uraian)}</td>
-            <td class="p-2.5 text-right">${formatAngka(r.jumlah)}</td>
-            <td class="p-2.5 text-center text-slate-300">-</td>
+        <tr style="border-top: 1px solid var(--divider);">
+            <td class="p-2.5" style="color: var(--label);">${escapeHtml(r.uraian)}</td>
+            <td class="p-2.5 text-right" style="color: var(--label);">${formatAngka(r.jumlah)}</td>
+            <td class="p-2.5 text-center" style="color: var(--label-secondary);">-</td>
         </tr>
     `).join('');
 
     const customRowsHtml = d.customRows.map(r => `
-        <tr class="border-b border-slate-100" data-id="${r.id}">
-            <td class="p-2.5 dash-rpdb-uraian">${escapeHtml(r.uraian)}</td>
-            <td class="p-2.5 text-right dash-rpdb-jumlah">${formatAngka(r.jumlah)}</td>
-            <td class="p-2.5 text-center">
-                <button class="dash-rpdb-btnEdit text-sky-600 hover:text-sky-800 mr-2" title="Ubah"><i class="fa-solid fa-pen"></i></button>
-                <button class="dash-rpdb-btnDelete text-red-500 hover:text-red-700" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+        <tr style="border-top: 1px solid var(--divider);" data-id="${r.id}">
+            <td class="p-2.5 dash-rpdb-uraian" style="color: var(--label);">${escapeHtml(r.uraian)}</td>
+            <td class="p-2.5 text-right dash-rpdb-jumlah" style="color: var(--label);">${formatAngka(r.jumlah)}</td>
+            <td class="p-2.5 text-center whitespace-nowrap">
+                <button class="dash-rpdb-btnEdit mr-2 transition" style="color: var(--ios-blue);" title="Ubah"><i class="fa-solid fa-pen text-xs"></i></button>
+                <button class="dash-rpdb-btnDelete transition" style="color: var(--ios-red);" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>
             </td>
         </tr>
     `).join('');
 
     return `
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-700">RPD Berjalan</h3>
-            <button id="dash-rpdb-btnTambah" class="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium rounded-lg">
-                <i class="fa-solid fa-plus"></i> Tambah Baris
+        <div class="flex items-center justify-between mb-3.5">
+            <h3 class="text-[13px] font-semibold" style="color: var(--label);">RPD Berjalan</h3>
+            <button id="dash-rpdb-btnTambah" class="btn-ios flex items-center gap-1.5 px-3 py-1.5 text-xs">
+                <i class="fa-solid fa-plus text-[10px]"></i> Tambah Baris
             </button>
         </div>
-        <div class="overflow-x-auto border border-slate-200 rounded-xl">
-            <table class="w-full text-sm border-collapse">
-                <thead class="bg-slate-50">
-                    <tr class="text-left text-slate-500">
-                        <th class="p-2.5 font-medium">Uraian</th>
-                        <th class="p-2.5 font-medium text-right">Jumlah</th>
-                        <th class="p-2.5 font-medium text-center w-24">Aksi</th>
+        <div class="overflow-x-auto rounded-xl" style="border: 1px solid var(--divider);">
+            <table class="w-full text-[13px] border-collapse">
+                <thead style="background: var(--sidebar-bg);">
+                    <tr class="text-left" style="color: var(--label-secondary);">
+                        <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide">Uraian</th>
+                        <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-right">Jumlah</th>
+                        <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center w-24">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="dash-rpdb-tbody">
                     ${fixedRowsHtml}
                     ${customRowsHtml}
-                    <tr class="bg-slate-50 font-semibold">
-                        <td class="p-2.5">Total Akhir</td>
-                        <td class="p-2.5 text-right ${warnaTotal}">${formatAngka(d.totalAkhir)} <span class="text-xs font-normal">(${persen.toFixed(2)}%)</span></td>
+                    <tr style="border-top: 1.5px solid var(--divider); background: var(--sidebar-bg);">
+                        <td class="p-2.5 font-semibold" style="color: var(--label);">Total Akhir</td>
+                        <td class="p-2.5 text-right font-semibold" style="color: ${warnaTotal};">${formatAngka(d.totalAkhir)} <span class="text-[11px] font-normal">(${persen.toFixed(2)}%)</span></td>
                         <td class="p-2.5"></td>
                     </tr>
                 </tbody>
@@ -315,22 +314,21 @@ function bindRpdBerjalanEvents() {
 function openRpdBerjalanRowForm(existing) {
     const isEdit = !!existing;
     const { overlay, popup } = commonOpenOverlay(`
-        <h3 class="text-base font-semibold text-sky-700 mb-3">${isEdit ? 'Ubah' : 'Tambah'} Baris RPD Berjalan</h3>
-        <div class="space-y-3">
+        <h3 class="text-[16px] font-semibold mb-3" style="color: var(--label);">${isEdit ? 'Ubah' : 'Tambah'} Baris RPD Berjalan</h3>
+        <div class="space-y-3.5">
             <div>
-                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Uraian</label>
-                <input id="rpdb-uraian" type="text" value="${isEdit ? escapeHtml(existing.uraian) : ''}" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                <label class="ios-label block mb-1.5">Uraian</label>
+                <input id="rpdb-uraian" type="text" value="${isEdit ? escapeHtml(existing.uraian) : ''}" class="ios-field">
             </div>
             <div>
-                <label class="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Jumlah</label>
+                <label class="ios-label block mb-1.5">Jumlah</label>
                 <input id="rpdb-jumlah" type="text" value="${isEdit ? Number(existing.jumlah).toLocaleString('id-ID') : ''}"
-                    oninput="this.value = formatRibuan(this.value)"
-                    class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 text-right">
+                    oninput="this.value = formatRibuan(this.value)" class="ios-field text-right">
             </div>
         </div>
-        <div class="flex justify-end gap-2 mt-4">
-            <button id="rpdb-cancel" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Batal</button>
-            <button id="rpdb-save" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+        <div class="flex justify-end gap-2 mt-5">
+            <button id="rpdb-cancel" class="btn-ios-secondary px-4 py-2 text-sm">Batal</button>
+            <button id="rpdb-save" class="btn-ios px-4 py-2 text-sm">
                 <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
             </button>
         </div>
@@ -381,25 +379,37 @@ async function hapusRpdBerjalanRow(id, uraian) {
 
 function initCharts(data) {
     const labels = data.grafikPerjadin.map(d => d.bulan);
-    new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels, datasets: [{ label: 'Rupiah', data: data.grafikPerjadin.map(d => d.rupiah), borderColor: '#0284c7', tension: 0.3 }] } });
-    new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels, datasets: [{ label: 'Frekuensi', data: data.grafikPerjadin.map(d => d.frekuensi), backgroundColor: '#0ea5e9' }] } });
+    new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels, datasets: [{ label: 'Rupiah', data: data.grafikPerjadin.map(d => d.rupiah), borderColor: '#0071E3', backgroundColor: 'rgba(0,113,227,0.08)', fill: true, tension: 0.3 }] } });
+    new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels, datasets: [{ label: 'Frekuensi', data: data.grafikPerjadin.map(d => d.frekuensi), backgroundColor: '#0071E3', borderRadius: 4 }] } });
 }
 
-function renderBelanjaCard(t, d, c) {
+function renderBelanjaCard(t, d) {
     const p = (d.persen * 100).toFixed(2);
     const pBar = Math.min(Number(p), 100);
-    return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${t}</h3><div class="text-2xl font-bold text-${c}-600 mb-2">${p}%</div><div class="w-full bg-slate-200 rounded-full h-2 mb-4"><div class="bg-${c}-600 h-2 rounded-full" style="width: ${pBar}%"></div></div><div class="text-[11px] text-slate-500">Realisasi: ${formatAngka(d.realisasi)}<br><span class="font-bold text-slate-700">Sisa: ${formatAngka(d.sisa)}</span></div></div>`;
+    const warna = pBar >= 90 ? 'var(--ios-amber)' : 'var(--ios-blue)';
+    return `<div>
+        <h3 class="text-[13px] font-semibold mb-2.5" style="color: var(--label);">${t}</h3>
+        <div class="text-[26px] font-semibold leading-none mb-3" style="color: ${warna};">${p}%</div>
+        <div class="w-full rounded-full h-1.5 mb-3.5" style="background: var(--field-bg);">
+            <div class="h-1.5 rounded-full" style="width: ${pBar}%; background: ${warna};"></div>
+        </div>
+        <div class="text-[11px] leading-relaxed" style="color: var(--label-secondary);">Realisasi: ${formatAngka(d.realisasi)}<br><span class="font-semibold" style="color: var(--label);">Sisa: ${formatAngka(d.sisa)}</span></div>
+    </div>`;
 }
 
 function renderMPCard(t, d) {
-    return `<div class="mb-2"><h3 class="font-semibold text-slate-700 mb-2">${t}</h3><div class="text-2xl font-bold text-emerald-600 mb-2">${formatAngka(d.realisasi)}</div><div class="text-[11px] text-slate-500">Total realisasi pencairan PNBP berstatus Selesai</div></div>`;
+    return `<div>
+        <h3 class="text-[13px] font-semibold mb-2.5" style="color: var(--label);">${t}</h3>
+        <div class="text-[22px] font-semibold leading-none mb-3" style="color: var(--ios-green);">${formatAngka(d.realisasi)}</div>
+        <div class="text-[11px] leading-relaxed" style="color: var(--label-secondary);">Total realisasi pencairan PNBP berstatus Selesai</div>
+    </div>`;
 }
 
 function renderTopPerjadin(l) {
     if (!l.length) {
-        return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="text-xs text-slate-400 text-center py-4">Belum ada data.</div>`;
+        return `<h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Top 3 Perjadin</h3><div class="text-[12.5px] text-center py-4" style="color: var(--label-secondary);">Belum ada data.</div>`;
     }
-    return `<h3 class="font-semibold text-slate-700 mb-4">Top 3 Perjadin</h3><div class="space-y-3">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-xs text-slate-600">${idx + 1}. ${escapeHtml(i[0])}</div><div class="text-xs font-bold text-sky-600">${i[1]}x</div></div>`).join('')}</div>`;
+    return `<h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Top 3 Perjadin</h3><div class="space-y-2.5">${l.slice(0, 3).map((i, idx) => `<div class="flex items-center justify-between"><div class="text-[12.5px]" style="color: var(--label);">${idx + 1}. ${escapeHtml(i[0])}</div><div class="text-[12.5px] font-semibold" style="color: var(--ios-blue);">${i[1]}x</div></div>`).join('')}</div>`;
 }
 
 function escapeHtml(str) {
