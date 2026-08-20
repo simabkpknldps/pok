@@ -839,7 +839,7 @@ function renderDetilTable(data) {
                     <button onclick="showDetilKegiatanInfo('${i.idKegiatan}')" style="color: var(--label-secondary);" title="Detil">
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
-                    ${i.status === 'Rekam Data' ? `
+                    ${(i.status === 'Rekam Data' || localStorage.getItem('admin') === '1' || localStorage.getItem('superadmin') === '1') ? `
                         <button onclick="openPelaksanaModal('${i.idKegiatan}')" style="color: var(--ios-blue); font-weight:700;" title="Update Pelaksana">
                             <i class="fa-solid fa-users"></i>
                         </button>
