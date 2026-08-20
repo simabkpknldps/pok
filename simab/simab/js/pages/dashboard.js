@@ -257,6 +257,25 @@ function bindRekapSpmEvents(rekapSpmData) {
     }
 }
 
+// Card SPM (kanan) mengikuti tinggi ALAMI card RPD Berjalan (kiri) — SATU
+// ARAH, bukan grid stretch biasa (yg 2 arah, siapa lebih tinggi jadi
+// patokan keduanya). RPD dibiarkan setinggi kontennya sendiri; SPM dipaksa
+// PAS segitu (kontennya sendiri scroll ke dalam kalau datanya lebih banyak
+// dari itu). Dipanggil ulang tiap kali Dashboard di-render ulang (mis.
+// setelah Tambah/Ubah/Hapus baris RPD), jadi otomatis "ngikutin" kalau
+// tinggi RPD berubah.
+function syncSpmCardHeight() {
+    const rpdCard = document.getElementById('dash-rpd-card');
+    const spmCard = document.getElementById('dash-spm-card');
+    if (!rpdCard || !spmCard) return;
+
+    spmCard.style.height = 'auto'; // reset dulu biar ukur ulang bersih
+    requestAnimationFrame(() => {
+        const tinggiRpd = rpdCard.offsetHeight;
+        spmCard.style.height = tinggiRpd + 'px';
+    });
+}
+
 async function initDashboardPage() {
     const container = document.getElementById('dashboard-content');
     if (!container) return;
@@ -290,6 +309,7 @@ async function initDashboardPage() {
         bindGlobalSearchBar();
         bindRpdBerjalanEvents();
         bindRekapSpmEvents(rekapSpmData);
+        syncSpmCardHeight();
     } catch (e) {
         console.error('Dashboard error:', e);
         const errorMsg = e.message || 'Gagal memuat dashboard';
@@ -327,11 +347,11 @@ function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
                 </div>
                 <div class="ios-panel p-5">${renderTopPerjadin(data.topPerjadin)}</div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div class="ios-panel p-5">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div id="dash-rpd-card" class="ios-panel p-5">
                     ${renderRpdBerjalanTable(rpdBerjalanData)}
                 </div>
-                <div class="ios-panel p-5 flex flex-col">
+                <div id="dash-spm-card" class="ios-panel p-5 flex flex-col">
                     ${renderRekapSpmTable(rekapSpmData)}
                 </div>
             </div>
