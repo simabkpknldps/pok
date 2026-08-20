@@ -159,6 +159,86 @@ function computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows) {
     return { fixedRows, customRows, totalAkhir, persenTerhadapRpd, rpdBerjalan };
 }
 
+// ============================================================
+// TABEL REKAPITULASI SPM (di samping RPD Berjalan)
+// Dikelompokkan per Nomor SPM (1 SPM bisa berlaku utk beberapa baris
+// kegiatan/pelaksana -> Jumlah dijumlahkan jadi 1 baris rekap per SPM).
+// ============================================================
+function computeRekapSpmData(kegiatanRows) {
+    const grouped = {};
+    kegiatanRows.forEach(k => {
+        const nomorSpm = String(k.nomor_spm || '').trim();
+        if (!nomorSpm) return;
+        if (!grouped[nomorSpm]) {
+            grouped[nomorSpm] = { nomorSpm, jumlah: 0, tglSp2d: k.tgl_sp2d || '', uraian: k.uraian || '' };
+        }
+        grouped[nomorSpm].jumlah += Number(k.jumlah) || 0;
+        if (!grouped[nomorSpm].tglSp2d && k.tgl_sp2d) grouped[nomorSpm].tglSp2d = k.tgl_sp2d;
+    });
+
+    const rows = Object.values(grouped).map(r => {
+        const u = r.uraian;
+        let jenis = '-';
+        if (u.includes('SPBy')) jenis = 'GUP/TUP';
+        else if (u.includes('KKP')) jenis = 'GUP KKP';
+        else if (u.includes('SPM')) jenis = 'SPM-LS';
+        return { nomorSpm: r.nomorSpm, jenis, jumlah: r.jumlah, tglSp2d: r.tglSp2d };
+    });
+
+    // Terbaru (tgl_sp2d) di paling atas.
+    rows.sort((a, b) => new Date(b.tglSp2d || 0) - new Date(a.tglSp2d || 0));
+    return rows;
+}
+
+function renderRekapSpmTable(rows) {
+    const rowsHtml = rows.length === 0
+        ? `<tr><td colspan="5" class="p-4 text-center text-[13px]" style="color: var(--label-secondary);">Belum ada data SPM.</td></tr>`
+        : rows.map(r => `
+            <tr style="border-top: 1px solid var(--divider);">
+                <td class="p-2.5 font-mono text-[12px]" style="color: var(--label);">${escapeHtml(r.nomorSpm)}</td>
+                <td class="p-2.5" style="color: var(--label);">${escapeHtml(r.jenis)}</td>
+                <td class="p-2.5 text-right whitespace-nowrap" style="color: var(--label);">${formatAngka(r.jumlah)}</td>
+                <td class="p-2.5 text-center whitespace-nowrap" style="color: var(--label-secondary);">${r.tglSp2d || '-'}</td>
+                <td class="p-2.5 text-center">
+                    <button class="dash-spm-btnDetil transition" data-spm="${escapeHtml(r.nomorSpm)}" style="color: var(--ios-blue);" title="Lihat Detil">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+    return `
+        <div class="flex items-center justify-between mb-3.5">
+            <h3 class="text-[13px] font-semibold" style="color: var(--label);">Rekapitulasi SPM</h3>
+            <span class="text-[11px]" style="color: var(--label-secondary);">${rows.length} SPM</span>
+        </div>
+        <div class="overflow-x-auto rounded-xl" style="border: 1px solid var(--divider);">
+            <div class="max-h-72 overflow-y-auto">
+                <table class="w-full text-[13px] border-collapse">
+                    <thead style="background: var(--sidebar-bg);">
+                        <tr class="text-left sticky top-0" style="color: var(--label-secondary); background: var(--sidebar-bg);">
+                            <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide">Nomor SPM</th>
+                            <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide">Jenis</th>
+                            <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-right">Jumlah</th>
+                            <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center whitespace-nowrap">Tgl SP2D</th>
+                            <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center w-14">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dash-spm-tbody">${rowsHtml}</tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function bindRekapSpmEvents() {
+    document.querySelectorAll('.dash-spm-btnDetil').forEach(btn => {
+        btn.onclick = () => {
+            bukaPencarianKegiatanGlobal(btn.dataset.spm);
+        };
+    });
+}
+
 async function initDashboardPage() {
     const container = document.getElementById('dashboard-content');
     if (!container) return;
@@ -186,10 +266,12 @@ async function initDashboardPage() {
 
         const data = computeDashboardData(kegiatanRows, pokRows, mpPnbpRows);
         const rpdBerjalanData = computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows);
-        container.innerHTML = buildDashboardHtml(data, rpdBerjalanData);
+        const rekapSpmData = computeRekapSpmData(kegiatanRows);
+        container.innerHTML = buildDashboardHtml(data, rpdBerjalanData, rekapSpmData);
         initCharts(data);
         bindGlobalSearchBar();
         bindRpdBerjalanEvents();
+        bindRekapSpmEvents();
     } catch (e) {
         console.error('Dashboard error:', e);
         const errorMsg = e.message || 'Gagal memuat dashboard';
@@ -197,7 +279,7 @@ async function initDashboardPage() {
     }
 }
 
-function buildDashboardHtml(data, rpdBerjalanData) {
+function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
     return `
         <div class="space-y-6">
             <div class="ios-panel p-3.5">
@@ -227,8 +309,13 @@ function buildDashboardHtml(data, rpdBerjalanData) {
                 </div>
                 <div class="ios-panel p-5">${renderTopPerjadin(data.topPerjadin)}</div>
             </div>
-            <div class="ios-panel p-5">
-                ${renderRpdBerjalanTable(rpdBerjalanData)}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div class="ios-panel p-5">
+                    ${renderRpdBerjalanTable(rpdBerjalanData)}
+                </div>
+                <div class="ios-panel p-5">
+                    ${renderRekapSpmTable(rekapSpmData)}
+                </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
