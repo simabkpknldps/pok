@@ -182,7 +182,10 @@ function computeRekapSpmData(kegiatanRows) {
         if (u.includes('SPBy')) jenis = 'GUP/TUP';
         else if (u.includes('KKP')) jenis = 'GUP KKP';
         else if (u.includes('SPM')) jenis = 'SPM-LS';
-        return { nomorSpm: r.nomorSpm, jenis, jumlah: r.jumlah, tglSp2d: r.tglSp2d };
+        // Buang angka 0 di depan (mis. "0102" -> "102"); tetap "0" kalau
+        // isinya cuma nol semua.
+        const nomorSpmBersih = r.nomorSpm.replace(/^0+(?=\d)/, '');
+        return { nomorSpm: nomorSpmBersih, jenis, jumlah: r.jumlah, tglSp2d: r.tglSp2d };
     });
 
     // Terbaru (tgl_sp2d) di paling atas.
@@ -191,29 +194,14 @@ function computeRekapSpmData(kegiatanRows) {
 }
 
 function renderRekapSpmTable(rows) {
-    const rowsHtml = rows.length === 0
-        ? `<tr><td colspan="5" class="p-4 text-center text-[13px]" style="color: var(--label-secondary);">Belum ada data SPM.</td></tr>`
-        : rows.map(r => `
-            <tr style="border-top: 1px solid var(--divider);">
-                <td class="p-2.5 font-mono text-[12px]" style="color: var(--label);">${escapeHtml(r.nomorSpm)}</td>
-                <td class="p-2.5" style="color: var(--label);">${escapeHtml(r.jenis)}</td>
-                <td class="p-2.5 text-right whitespace-nowrap" style="color: var(--label);">${formatAngka(r.jumlah)}</td>
-                <td class="p-2.5 text-center whitespace-nowrap" style="color: var(--label-secondary);">${r.tglSp2d || '-'}</td>
-                <td class="p-2.5 text-center">
-                    <button class="dash-spm-btnDetil transition" data-spm="${escapeHtml(r.nomorSpm)}" style="color: var(--ios-blue);" title="Lihat Detil">
-                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
     return `
-        <div class="flex items-center justify-between mb-3.5">
+        <div class="flex items-center justify-between mb-3">
             <h3 class="text-[13px] font-semibold" style="color: var(--label);">Rekapitulasi SPM</h3>
-            <span class="text-[11px]" style="color: var(--label-secondary);">${rows.length} SPM</span>
+            <span id="dash-spm-count" class="text-[11px]" style="color: var(--label-secondary);">${rows.length} SPM</span>
         </div>
-        <div class="overflow-x-auto rounded-xl" style="border: 1px solid var(--divider);">
-            <div class="max-h-72 overflow-y-auto">
+        <input id="dash-spm-search" type="text" placeholder="Cari Nomor SPM..." class="ios-field mb-3" style="font-size: 13px; padding: 0.5rem 0.75rem;">
+        <div class="overflow-x-auto rounded-xl flex-1 flex flex-col min-h-0" style="border: 1px solid var(--divider);">
+            <div class="overflow-y-auto flex-1 min-h-0">
                 <table class="w-full text-[13px] border-collapse">
                     <thead style="background: var(--sidebar-bg);">
                         <tr class="text-left sticky top-0" style="color: var(--label-secondary); background: var(--sidebar-bg);">
@@ -224,19 +212,49 @@ function renderRekapSpmTable(rows) {
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center w-14">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="dash-spm-tbody">${rowsHtml}</tbody>
+                    <tbody id="dash-spm-tbody">${renderRekapSpmRows(rows)}</tbody>
                 </table>
             </div>
         </div>
     `;
 }
 
-function bindRekapSpmEvents() {
+function renderRekapSpmRows(rows) {
+    if (rows.length === 0) {
+        return `<tr><td colspan="5" class="p-4 text-center text-[13px]" style="color: var(--label-secondary);">Tidak ada data.</td></tr>`;
+    }
+    return rows.map(r => `
+        <tr style="border-top: 1px solid var(--divider);">
+            <td class="p-2.5 font-mono text-[12px]" style="color: var(--label);">${escapeHtml(r.nomorSpm)}</td>
+            <td class="p-2.5" style="color: var(--label);">${escapeHtml(r.jenis)}</td>
+            <td class="p-2.5 text-right whitespace-nowrap" style="color: var(--label);">${formatAngka(r.jumlah)}</td>
+            <td class="p-2.5 text-center whitespace-nowrap" style="color: var(--label-secondary);">${r.tglSp2d || '-'}</td>
+            <td class="p-2.5 text-center">
+                <button class="dash-spm-btnDetil transition" data-spm="${escapeHtml(r.nomorSpm)}" style="color: var(--ios-blue);" title="Lihat Detil">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function bindRekapSpmEvents(rekapSpmData) {
     document.querySelectorAll('.dash-spm-btnDetil').forEach(btn => {
-        btn.onclick = () => {
-            bukaPencarianKegiatanGlobal(btn.dataset.spm);
-        };
+        btn.onclick = () => bukaPencarianKegiatanGlobal(btn.dataset.spm, true);
     });
+
+    const searchInput = document.getElementById('dash-spm-search');
+    if (searchInput) {
+        searchInput.oninput = () => {
+            const q = searchInput.value.trim().toLowerCase();
+            const filtered = q ? rekapSpmData.filter(r => r.nomorSpm.toLowerCase().includes(q)) : rekapSpmData;
+            document.getElementById('dash-spm-tbody').innerHTML = renderRekapSpmRows(filtered);
+            document.getElementById('dash-spm-count').textContent = `${filtered.length} SPM`;
+            document.querySelectorAll('.dash-spm-btnDetil').forEach(btn => {
+                btn.onclick = () => bukaPencarianKegiatanGlobal(btn.dataset.spm, true);
+            });
+        };
+    }
 }
 
 async function initDashboardPage() {
@@ -271,7 +289,7 @@ async function initDashboardPage() {
         initCharts(data);
         bindGlobalSearchBar();
         bindRpdBerjalanEvents();
-        bindRekapSpmEvents();
+        bindRekapSpmEvents(rekapSpmData);
     } catch (e) {
         console.error('Dashboard error:', e);
         const errorMsg = e.message || 'Gagal memuat dashboard';
@@ -309,11 +327,11 @@ function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
                 </div>
                 <div class="ios-panel p-5">${renderTopPerjadin(data.topPerjadin)}</div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div class="ios-panel p-5">
                     ${renderRpdBerjalanTable(rpdBerjalanData)}
                 </div>
-                <div class="ios-panel p-5">
+                <div class="ios-panel p-5 flex flex-col">
                     ${renderRekapSpmTable(rekapSpmData)}
                 </div>
             </div>
