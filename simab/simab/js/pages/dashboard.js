@@ -170,7 +170,7 @@ function computeRekapSpmData(kegiatanRows) {
         const nomorSpm = String(k.nomor_spm || '').trim();
         if (!nomorSpm) return;
         if (!grouped[nomorSpm]) {
-            grouped[nomorSpm] = { nomorSpm, jumlah: 0, tglSp2d: k.tgl_sp2d || '', uraianGabungan: '' };
+            grouped[nomorSpm] = { nomorSpm, jumlah: 0, tglSp2d: k.tgl_sp2d || '', uraianGabungan: '', adaDokumen: false, adaSpby: false };
         }
         grouped[nomorSpm].jumlah += Number(k.jumlah) || 0;
         if (!grouped[nomorSpm].tglSp2d && k.tgl_sp2d) grouped[nomorSpm].tglSp2d = k.tgl_sp2d;
@@ -179,6 +179,11 @@ function computeRekapSpmData(kegiatanRows) {
         // pelaksana, dan tag SPBy/KKP/SPM bisa saja cuma ada di salah satu
         // baris, bukan yang kebetulan diproses duluan.
         grouped[nomorSpm].uraianGabungan += ' ' + (k.uraian || '');
+        // Sama pola: kalau ADA SALAH SATU baris dalam grup ini yg sudah
+        // punya dokumen_link/spby_link, dianggap SPM ini "sudah ada" --
+        // bukan cuma ngecek baris pertama.
+        if (k.dokumen_link) grouped[nomorSpm].adaDokumen = true;
+        if (k.spby_link) grouped[nomorSpm].adaSpby = true;
     });
 
     const rows = Object.values(grouped).map(r => {
@@ -193,7 +198,7 @@ function computeRekapSpmData(kegiatanRows) {
         // Buang angka 0 di depan (mis. "0102" -> "102"); tetap "0" kalau
         // isinya cuma nol semua.
         const nomorSpmBersih = r.nomorSpm.replace(/^0+(?=\d)/, '');
-        return { nomorSpm: nomorSpmBersih, jenis, jumlah: r.jumlah, tglSp2d: r.tglSp2d };
+        return { nomorSpm: nomorSpmBersih, jenis, jumlah: r.jumlah, tglSp2d: r.tglSp2d, adaDokumen: r.adaDokumen, adaSpby: r.adaSpby };
     });
 
     // Terbaru (tgl_sp2d) di paling atas.
@@ -217,6 +222,7 @@ function renderRekapSpmTable(rows) {
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide">Jenis</th>
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-right">Jumlah</th>
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center whitespace-nowrap">Tgl SP2D</th>
+                            <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center whitespace-nowrap">Dokumen</th>
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center w-14">Aksi</th>
                         </tr>
                     </thead>
@@ -229,21 +235,30 @@ function renderRekapSpmTable(rows) {
 
 function renderRekapSpmRows(rows) {
     if (rows.length === 0) {
-        return `<tr><td colspan="5" class="p-4 text-center text-[13px]" style="color: var(--label-secondary);">Tidak ada data.</td></tr>`;
+        return `<tr><td colspan="6" class="p-4 text-center text-[13px]" style="color: var(--label-secondary);">Tidak ada data.</td></tr>`;
     }
-    return rows.map(r => `
+    return rows.map(r => {
+        const angkaDok = r.adaDokumen ? 1 : 0;
+        const angkaSpby = r.adaSpby ? 1 : 0;
+        const warnaDok = angkaDok ? 'var(--ios-green)' : 'var(--ios-red)';
+        const warnaSpby = angkaSpby ? 'var(--ios-green)' : 'var(--ios-red)';
+        return `
         <tr style="border-top: 1px solid var(--divider);">
             <td class="p-2.5 font-mono text-[12px]" style="color: var(--label);">${escapeHtml(r.nomorSpm)}</td>
             <td class="p-2.5" style="color: var(--label);">${escapeHtml(r.jenis)}</td>
             <td class="p-2.5 text-right whitespace-nowrap" style="color: var(--label);">${formatAngka(r.jumlah)}</td>
             <td class="p-2.5 text-center whitespace-nowrap" style="color: var(--label-secondary);">${r.tglSp2d || '-'}</td>
+            <td class="p-2.5 text-center whitespace-nowrap font-mono font-semibold text-[12.5px]">
+                <span style="color: ${warnaDok};">${angkaDok}</span><span style="color: var(--label-secondary);"> | </span><span style="color: ${warnaSpby};">${angkaSpby}</span>
+            </td>
             <td class="p-2.5 text-center">
                 <button class="dash-spm-btnDetil transition" data-spm="${escapeHtml(r.nomorSpm)}" style="color: var(--ios-blue);" title="Lihat Detil">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i>
                 </button>
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function bindRekapSpmEvents(rekapSpmData) {
