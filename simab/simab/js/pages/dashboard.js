@@ -212,7 +212,13 @@ function renderRekapSpmTable(rows) {
             <h3 class="text-[13px] font-semibold" style="color: var(--label);">Rekapitulasi SPM</h3>
             <span id="dash-spm-count" class="text-[11px]" style="color: var(--label-secondary);">${rows.length} SPM</span>
         </div>
-        <input id="dash-spm-search" type="text" placeholder="Cari Nomor SPM..." class="ios-field mb-3" style="font-size: 13px; padding: 0.5rem 0.75rem;">
+        <div class="flex items-center gap-2 mb-3">
+            <input id="dash-spm-search" type="text" placeholder="Cari Nomor SPM..." class="ios-field flex-1" style="font-size: 13px; padding: 0.5rem 0.75rem;">
+            <button id="dash-spm-btnSync" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition" style="background: #7C3AED; color: #fff;" title="Sinkronkan Tgl SP2D dari file Excel MyIntress">
+                <i class="fa-solid fa-rotate text-[10px]"></i> Sync SiMAB - MyIntress
+            </button>
+            <input id="dash-spm-fileInput" type="file" accept=".xlsx,.xls" class="hidden">
+        </div>
         <div class="overflow-x-auto rounded-xl flex-1 flex flex-col min-h-0" style="border: 1px solid var(--divider);">
             <div class="overflow-y-auto flex-1 min-h-0">
                 <table class="w-full text-[13px] border-collapse">
@@ -277,6 +283,132 @@ function bindRekapSpmEvents(rekapSpmData) {
                 btn.onclick = () => bukaPencarianKegiatanGlobal(btn.dataset.spm, true);
             });
         };
+    }
+
+    const btnSync = document.getElementById('dash-spm-btnSync');
+    const fileInput = document.getElementById('dash-spm-fileInput');
+    if (btnSync && fileInput) {
+        btnSync.onclick = () => fileInput.click();
+        fileInput.onchange = () => {
+            if (fileInput.files && fileInput.files[0]) {
+                syncMyIntressExcel(fileInput.files[0]);
+            }
+            fileInput.value = ''; // reset, biar bisa upload file yg sama lagi kalau perlu
+        };
+    }
+}
+
+// ============================================================
+// SYNC SiMAB - MyIntress: baca file Excel (kolom L=Nomor SPM mulai baris 6,
+// kolom E=Tgl SP2D mulai baris 6), cocokkan Nomor SPM ke kolom nomor_spm
+// tabel kegiatan (numerik, nggak peduli beda jumlah nol), update tgl_sp2d
+// kalau beda dari yang ada di database.
+// ============================================================
+function parseExcelDateToDbFormat(value) {
+    if (!value) return null;
+    const str = String(value).trim();
+    // Sudah format yyyy-MM-dd (XLSX kadang otomatis convert kalau sel-nya
+    // beneran ber-tipe Date, bukan teks biasa).
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    // Format Excel d/M/yyyy (atau pakai "-") -> yyyy-MM-dd.
+    const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m) {
+        const [, d, mo, y] = m;
+        return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    return null; // format tanggal tidak dikenali, dilewati
+}
+
+async function syncMyIntressExcel(file) {
+    const { overlay, popup } = commonOpenOverlay(`
+        <h3 style="font-size:16px;font-weight:700;color:var(--label);margin-bottom:14px;">
+            <i class="fa-solid fa-rotate mr-2" style="color:#7C3AED;"></i>Sinkronisasi SiMAB &ndash; MyIntress
+        </h3>
+        <div style="background:var(--field-bg);border-radius:9999px;height:10px;overflow:hidden;margin-bottom:10px;">
+            <div id="sync-progressBar" style="height:100%;background:#7C3AED;width:0%;transition:width .2s ease;"></div>
+        </div>
+        <p id="sync-progressText" style="font-size:13px;color:var(--label-secondary);text-align:center;margin:0;">Membaca file Excel...</p>
+    `, 'max-w-sm');
+
+    const progressBar = popup.querySelector('#sync-progressBar');
+    const progressText = popup.querySelector('#sync-progressText');
+
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        // header:1 -> array-of-array (per baris, per kolom), 0-based index.
+        // raw:false + dateNF -> kalau selnya beneran ber-tipe Date, otomatis
+        // diformat "yyyy-mm-dd" sekalian di sini.
+        const rowsArr = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+
+        // Baris ke-6 Excel (dilihat manusia, 1-based) = index 5 (0-based).
+        // Kolom L = index 11, Kolom E = index 4.
+        const dataRows = rowsArr.slice(5).filter(r => r && String(r[11] || '').trim());
+
+        if (dataRows.length === 0) {
+            progressText.textContent = 'Tidak ada data ditemukan (cek kolom L mulai baris 6).';
+            setTimeout(() => overlay.remove(), 2000);
+            return;
+        }
+
+        progressText.textContent = 'Memuat data kegiatan dari database...';
+        await waitSupabaseAuthReady();
+        const kegiatanRows = await sbFetchAll('kegiatan', 'id, nomor_spm, tgl_sp2d');
+
+        // Map Nomor SPM (numerik, tanpa nol di depan) -> daftar baris kegiatan yg sesuai.
+        const spmMap = {};
+        kegiatanRows.forEach(k => {
+            if (!k.nomor_spm) return;
+            const num = parseInt(String(k.nomor_spm).replace(/\D/g, ''), 10);
+            if (isNaN(num)) return;
+            if (!spmMap[num]) spmMap[num] = [];
+            spmMap[num].push(k);
+        });
+
+        const total = dataRows.length;
+        let diproses = 0, diupdate = 0, dilewati = 0;
+
+        for (const row of dataRows) {
+            diproses++;
+            const persen = Math.round((diproses / total) * 100);
+            progressBar.style.width = persen + '%';
+            progressText.textContent = `Memproses ${diproses} dari ${total} baris... (${diupdate} diperbarui)`;
+
+            const kolomL = String(row[11] || '').trim();
+            const kolomE = row[4];
+
+            const matchNomor = kolomL.match(/^0*(\d+)/); // "00007T/538065/2026" -> "7"
+            if (!matchNomor) { dilewati++; continue; }
+            const nomorSpmExcel = parseInt(matchNomor[1], 10);
+
+            const tglSp2dBaru = parseExcelDateToDbFormat(kolomE);
+            if (!tglSp2dBaru) { dilewati++; continue; }
+
+            const kegiatanCocok = spmMap[nomorSpmExcel];
+            if (!kegiatanCocok || kegiatanCocok.length === 0) { dilewati++; continue; }
+
+            for (const k of kegiatanCocok) {
+                if (k.tgl_sp2d !== tglSp2dBaru) {
+                    const { error } = await sb.from('kegiatan').update({ tgl_sp2d: tglSp2dBaru }).eq('id', k.id);
+                    if (!error) { diupdate++; k.tgl_sp2d = tglSp2dBaru; }
+                }
+            }
+
+            // Jeda super singkat tiap beberapa baris, biar progress bar sempat
+            // ke-render (bukan freeze total selama loop panjang berjalan).
+            if (diproses % 5 === 0) await new Promise(r => setTimeout(r, 0));
+        }
+
+        overlay.remove();
+        showToast(`Sinkronisasi selesai — ${diupdate} data diperbarui dari ${total} baris Excel (${dilewati} dilewati).`);
+
+        // Refresh seluruh Dashboard biar RPD Berjalan/Rekap SPM/dst ikut
+        // update kalau ada tgl_sp2d yg berubah.
+        initDashboardPage();
+    } catch (e) {
+        overlay.remove();
+        alert('Gagal sinkronisasi: ' + (e.message || 'Terjadi kesalahan. Pastikan file Excel-nya sesuai format.'));
     }
 }
 
