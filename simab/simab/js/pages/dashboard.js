@@ -170,14 +170,19 @@ function computeRekapSpmData(kegiatanRows) {
         const nomorSpm = String(k.nomor_spm || '').trim();
         if (!nomorSpm) return;
         if (!grouped[nomorSpm]) {
-            grouped[nomorSpm] = { nomorSpm, jumlah: 0, tglSp2d: k.tgl_sp2d || '', uraian: k.uraian || '' };
+            grouped[nomorSpm] = { nomorSpm, jumlah: 0, tglSp2d: k.tgl_sp2d || '', uraianGabungan: '' };
         }
         grouped[nomorSpm].jumlah += Number(k.jumlah) || 0;
         if (!grouped[nomorSpm].tglSp2d && k.tgl_sp2d) grouped[nomorSpm].tglSp2d = k.tgl_sp2d;
+        // Gabungkan uraian SEMUA baris yg berbagi Nomor SPM yang sama (bukan
+        // cuma baris pertama) -- 1 SPM bisa mencakup beberapa baris kegiatan/
+        // pelaksana, dan tag SPBy/KKP/SPM bisa saja cuma ada di salah satu
+        // baris, bukan yang kebetulan diproses duluan.
+        grouped[nomorSpm].uraianGabungan += ' ' + (k.uraian || '');
     });
 
     const rows = Object.values(grouped).map(r => {
-        const u = r.uraian;
+        const u = r.uraianGabungan;
         let jenis = '-';
         if (u.includes('SPBy')) jenis = 'GUP/TUP';
         else if (u.includes('KKP')) jenis = 'GUP KKP';
