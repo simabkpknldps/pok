@@ -184,9 +184,12 @@ function computeRekapSpmData(kegiatanRows) {
     const rows = Object.values(grouped).map(r => {
         const u = r.uraianGabungan;
         let jenis = '-';
-        if (u.includes('SPBy')) jenis = 'GUP/TUP';
-        else if (u.includes('KKP')) jenis = 'GUP KKP';
-        else if (u.includes('SPM')) jenis = 'SPM-LS';
+        // toLowerCase() -> nggak peduli besar-kecil huruf (SPBy/Spby/spby/
+        // SPBY semua kedeteksi sama; begitu juga KKP/Kkp/kkp, dst).
+        const uLower = u.toLowerCase();
+        if (uLower.includes('spby')) jenis = 'GUP/TUP';
+        else if (uLower.includes('kkp')) jenis = 'GUP KKP';
+        else if (uLower.includes('spm')) jenis = 'SPM-LS';
         // Buang angka 0 di depan (mis. "0102" -> "102"); tetap "0" kalau
         // isinya cuma nol semua.
         const nomorSpmBersih = r.nomorSpm.replace(/^0+(?=\d)/, '');
