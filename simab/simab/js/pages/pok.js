@@ -313,7 +313,15 @@ window.openEditPokModal = openEditPokModal;
 
 function renderPok() {
     const tbody = document.getElementById('pok-tbody');
-    if (!tbody || !window.rawPokData || window.rawPokData.length === 0) return;
+    if (!tbody) return;
+
+    if (!window.rawPokData || window.rawPokData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-8" style="color: var(--label-secondary);">
+            <i class="fa-solid fa-folder-open text-2xl mb-2 block" style="color: var(--label-secondary); opacity: 0.5;"></i>
+            Data POK belum ada untuk kantor/tahun anggaran ini.
+        </td></tr>`;
+        return;
+    }
 
     const uniqueMap = new Map();
     window.rawPokData.forEach(item => {
