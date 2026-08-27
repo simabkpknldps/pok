@@ -26,6 +26,8 @@ let refRekeningData = [];
 let refRekeningLoaded = false;
 let refUserManagerData = [];
 let refUserManagerLoaded = false;
+let refKantorData = [];
+let refKantorLoaded = false;
 
 const refInputClass = 'w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500';
 
@@ -87,15 +89,18 @@ function initReferensiPage() {
     refPegawaiLoaded = false;
     refRekeningLoaded = false;
     refUserManagerLoaded = false;
+    refKantorLoaded = false;
 
     const tabBtnSbm = document.getElementById('ref-tabBtnSbm');
     const tabBtnPegawai = document.getElementById('ref-tabBtnPegawai');
     const tabBtnRekening = document.getElementById('ref-tabBtnRekening');
     const tabBtnUserManager = document.getElementById('ref-tabBtnUserManager');
+    const tabBtnKantor = document.getElementById('ref-tabBtnKantor');
     const tabSbm = document.getElementById('ref-tabSbm');
     const tabPegawai = document.getElementById('ref-tabPegawai');
     const tabRekening = document.getElementById('ref-tabRekening');
     const tabUserManager = document.getElementById('ref-tabUserManager');
+    const tabKantor = document.getElementById('ref-tabKantor');
 
     // 3 tingkat akses (lihat catatan di kepala file) — sembunyikan tab yang
     // tidak boleh dilihat sesuai tingkatnya.
@@ -113,10 +118,12 @@ function initReferensiPage() {
     }
     // aksesLevel === 'admin' -> semua tab tetap ada apa adanya.
 
-    // Tab User Manager: TERPISAH dari 3 tingkat di atas, cuma utk superadmin.
+    // Tab User Manager & Kantor: TERPISAH dari 3 tingkat di atas, cuma utk superadmin.
     if (localStorage.getItem('superadmin') !== '1') {
         tabBtnUserManager?.remove();
         tabUserManager?.remove();
+        tabBtnKantor?.remove();
+        tabKantor?.remove();
     }
 
     const isRestricted = aksesLevel === 'biasa'; // dipakai activateTab() di bawah
@@ -125,13 +132,15 @@ function initReferensiPage() {
         sbm: { btn: tabBtnSbm, content: tabSbm },
         pegawai: { btn: document.getElementById('ref-tabBtnPegawai'), content: document.getElementById('ref-tabPegawai') },
         rekening: { btn: document.getElementById('ref-tabBtnRekening'), content: document.getElementById('ref-tabRekening') },
-        userManager: { btn: document.getElementById('ref-tabBtnUserManager'), content: document.getElementById('ref-tabUserManager') }
+        userManager: { btn: document.getElementById('ref-tabBtnUserManager'), content: document.getElementById('ref-tabUserManager') },
+        kantor: { btn: document.getElementById('ref-tabBtnKantor'), content: document.getElementById('ref-tabKantor') }
     };
 
     function activateTab(tab) {
         if (isRestricted) tab = 'sbm'; // paksa selalu di tab SBM untuk user terbatas
         if (tab === 'rekening' && !tabs.rekening.btn) tab = 'sbm'; // jaga-jaga kalau tab rekening tidak ada (non-admin)
         if (tab === 'userManager' && !tabs.userManager.btn) tab = 'sbm'; // jaga-jaga kalau tab ini tidak ada (non-superadmin)
+        if (tab === 'kantor' && !tabs.kantor.btn) tab = 'sbm'; // jaga-jaga kalau tab ini tidak ada (non-superadmin)
 
         Object.keys(tabs).forEach(key => {
             const t = tabs[key];
@@ -153,6 +162,8 @@ function initReferensiPage() {
             refRekeningLoaded ? refRenderRekeningTable(document.getElementById('ref-rekening-search')?.value || '') : refLoadRekeningDataAll();
         } else if (tab === 'userManager') {
             refUserManagerLoaded ? refRenderUserManagerTable(document.getElementById('ref-um-search')?.value || '') : refLoadUserManagerData();
+        } else if (tab === 'kantor') {
+            refKantorLoaded ? refRenderKantorTable(document.getElementById('ref-kantor-search')?.value || '') : refLoadKantorData();
         }
     }
 
@@ -160,6 +171,7 @@ function initReferensiPage() {
     if (tabBtnPegawai) tabBtnPegawai.onclick = () => activateTab('pegawai');
     if (tabs.rekening.btn) tabs.rekening.btn.onclick = () => activateTab('rekening');
     if (tabs.userManager.btn) tabs.userManager.btn.onclick = () => activateTab('userManager');
+    if (tabs.kantor.btn) tabs.kantor.btn.onclick = () => activateTab('kantor');
 
     const sbmSearchEl = document.getElementById('ref-sbm-search');
     if (sbmSearchEl) sbmSearchEl.oninput = (e) => refRenderSbmTable(e.target.value);
@@ -169,6 +181,10 @@ function initReferensiPage() {
     if (rekeningSearchEl) rekeningSearchEl.oninput = (e) => refRenderRekeningTable(e.target.value);
     const umSearchEl = document.getElementById('ref-um-search');
     if (umSearchEl) umSearchEl.oninput = (e) => refRenderUserManagerTable(e.target.value);
+    const kantorSearchEl = document.getElementById('ref-kantor-search');
+    if (kantorSearchEl) kantorSearchEl.oninput = (e) => refRenderKantorTable(e.target.value);
+    const kantorBtnTambah = document.getElementById('ref-kantor-btnTambah');
+    if (kantorBtnTambah) kantorBtnTambah.onclick = () => refTambahKantorPopup();
 
     activateTab('sbm');
 }
@@ -825,4 +841,210 @@ function refRenderUserManagerTable(keyword) {
             );
         };
     });
+}
+
+/* ==========================================================
+ * ==================== TAB KANTOR =========================
+ * ========================================================== */
+
+async function refLoadKantorData() {
+    const tbody = document.getElementById('ref-kantor-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+
+    try {
+        await waitSupabaseAuthReady();
+        const rows = await sbFetchAll('kantor', 'id, nama, status');
+        refKantorData = rows.map(d => ({ id: d.id, nama: d.nama || '', status: d.status || 'aktif' }))
+            .sort((a, b) => a.nama.localeCompare(b.nama));
+        refKantorLoaded = true;
+        refRenderKantorTable('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500 py-8">❌ Error koneksi: ${e.message || 'Tidak diketahui'}</td></tr>`;
+    }
+}
+
+function refRenderKantorTable(keyword) {
+    const tbody = document.getElementById('ref-kantor-tbody');
+    const emptyMsg = document.getElementById('ref-kantor-empty');
+    const kw = (keyword || '').trim().toLowerCase();
+
+    const filtered = refKantorData.filter(row =>
+        !kw || String(row.nama).toLowerCase().includes(kw) || String(row.id).toLowerCase().includes(kw)
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        return;
+    }
+    emptyMsg.classList.add('hidden');
+
+    tbody.innerHTML = filtered.map(row => `
+        <tr data-id="${row.id}" class="hover:bg-slate-50">
+            <td class="py-2 px-4 font-medium text-slate-700">${row.id}</td>
+            <td class="py-2 px-4">
+                <input type="text" class="ref-kantor-nama ${refInputClass}" value="${row.nama}" readonly>
+            </td>
+            <td class="py-2 px-4 text-center">
+                <span class="ref-kantor-statusBadge px-2.5 py-1 rounded-full text-xs font-medium ${row.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}">
+                    ${row.status === 'aktif' ? 'Aktif' : 'Nonaktif'}
+                </span>
+            </td>
+            <td class="py-2 px-4 text-center whitespace-nowrap">
+                <button class="ref-kantor-btnEdit text-sky-600 hover:text-sky-800 mr-2" title="Ubah nama">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="ref-kantor-btnSave hidden text-green-600 hover:text-green-800 mr-2" title="Simpan">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                </button>
+                <button class="ref-kantor-btnCancel hidden text-slate-400 hover:text-slate-600 mr-2" title="Batal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <button class="ref-kantor-btnToggleStatus text-amber-600 hover:text-amber-800" title="${row.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}">
+                    <i class="fa-solid ${row.status === 'aktif' ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    tbody.querySelectorAll('tr').forEach(tr => {
+        const id = tr.getAttribute('data-id');
+        const namaInput = tr.querySelector('.ref-kantor-nama');
+        const btnEdit = tr.querySelector('.ref-kantor-btnEdit');
+        const btnSave = tr.querySelector('.ref-kantor-btnSave');
+        const btnCancel = tr.querySelector('.ref-kantor-btnCancel');
+        const btnToggle = tr.querySelector('.ref-kantor-btnToggleStatus');
+        let namaSebelumEdit = namaInput.value;
+
+        btnEdit.onclick = () => {
+            namaSebelumEdit = namaInput.value;
+            namaInput.readOnly = false;
+            namaInput.classList.remove('bg-slate-100');
+            namaInput.focus();
+            btnEdit.classList.add('hidden');
+            btnSave.classList.remove('hidden');
+            btnCancel.classList.remove('hidden');
+        };
+
+        btnCancel.onclick = () => {
+            namaInput.value = namaSebelumEdit;
+            namaInput.readOnly = true;
+            namaInput.classList.add('bg-slate-100');
+            btnEdit.classList.remove('hidden');
+            btnSave.classList.add('hidden');
+            btnCancel.classList.add('hidden');
+        };
+
+        btnSave.onclick = async () => {
+            const namaBaru = namaInput.value.trim();
+            if (!namaBaru) { alert('Nama kantor tidak boleh kosong.'); return; }
+            btnSave.disabled = true;
+            const originalHtml = btnSave.innerHTML;
+            btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try {
+                await waitSupabaseAuthReady();
+                const { error } = await sb.from('kantor').update({ nama: namaBaru }).eq('id', id);
+                if (error) throw error;
+                const rowData = refKantorData.find(r => r.id === id);
+                if (rowData) rowData.nama = namaBaru;
+                namaInput.readOnly = true;
+                namaInput.classList.add('bg-slate-100');
+                btnEdit.classList.remove('hidden');
+                btnSave.classList.add('hidden');
+                btnCancel.classList.add('hidden');
+                showToast(`Kantor ${id} berhasil diubah`);
+            } catch (e) {
+                alert('Gagal menyimpan: ' + (e.message || 'Tidak diketahui'));
+            } finally {
+                btnSave.disabled = false;
+                btnSave.innerHTML = originalHtml;
+            }
+        };
+
+        btnToggle.onclick = async () => {
+            const rowData = refKantorData.find(r => r.id === id);
+            const statusBaru = (rowData.status === 'aktif') ? 'nonaktif' : 'aktif';
+            const aksiLabel = statusBaru === 'aktif' ? 'mengaktifkan' : 'menonaktifkan';
+            refConfirmHapusPopup(
+                `Yakin ingin ${aksiLabel} kantor <span class="font-medium text-slate-800">${rowData.nama}</span> (${id})? ${statusBaru === 'nonaktif' ? 'Kantor nonaktif tidak akan muncul lagi di popup pilih kantor saat login.' : ''}`,
+                async () => {
+                    btnToggle.disabled = true;
+                    try {
+                        await waitSupabaseAuthReady();
+                        const { error } = await sb.from('kantor').update({ status: statusBaru }).eq('id', id);
+                        if (error) throw error;
+                        rowData.status = statusBaru;
+                        refRenderKantorTable(document.getElementById('ref-kantor-search')?.value || '');
+                        showToast(`Kantor ${id} berhasil di-${aksiLabel}`);
+                    } catch (e) {
+                        alert('Gagal mengubah status: ' + (e.message || 'Tidak diketahui'));
+                        btnToggle.disabled = false;
+                    }
+                }
+            );
+        };
+    });
+}
+
+function refTambahKantorPopup() {
+    const { overlay, popup } = commonOpenOverlay(`
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 shrink-0">
+                <i class="fa-solid fa-building"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-800">Tambah Kantor</h3>
+        </div>
+        <div class="space-y-3 mt-3">
+            <div>
+                <label class="text-xs font-medium text-slate-500 block mb-1">Kode Kantor (kode satker)</label>
+                <input id="ref-kantor-inputKode" type="text" placeholder="mis. 538065" class="${refInputClass} bg-white">
+            </div>
+            <div>
+                <label class="text-xs font-medium text-slate-500 block mb-1">Nama Kantor</label>
+                <input id="ref-kantor-inputNama" type="text" placeholder="mis. KPKNL Jember" class="${refInputClass} bg-white">
+            </div>
+        </div>
+        <p id="ref-kantor-tambahError" class="hidden text-[13px] px-3.5 py-2.5 rounded-xl text-center mt-3 bg-red-50 text-red-600"></p>
+        <div class="flex justify-end gap-2 mt-4">
+            <button id="ref-kantor-tambahCancelBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">Batal</button>
+            <button id="ref-kantor-tambahSimpanBtn" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-plus mr-1"></i> Tambah
+            </button>
+        </div>
+    `, 'max-w-sm');
+
+    popup.querySelector('#ref-kantor-tambahCancelBtn').onclick = () => overlay.remove();
+    popup.querySelector('#ref-kantor-tambahSimpanBtn').onclick = async () => {
+        const kode = popup.querySelector('#ref-kantor-inputKode').value.trim();
+        const nama = popup.querySelector('#ref-kantor-inputNama').value.trim();
+        const errEl = popup.querySelector('#ref-kantor-tambahError');
+        errEl.classList.add('hidden');
+
+        if (!kode || !nama) {
+            errEl.textContent = 'Kode dan Nama kantor harus diisi.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        const btn = popup.querySelector('#ref-kantor-tambahSimpanBtn');
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        try {
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('kantor').insert({ id: kode, nama, status: 'aktif' });
+            if (error) throw error;
+            overlay.remove();
+            showToast(`Kantor ${nama} berhasil ditambahkan`);
+            refKantorLoaded = false;
+            refLoadKantorData();
+        } catch (e) {
+            errEl.textContent = 'Gagal menambahkan: ' + (e.message || 'Kode kantor mungkin sudah dipakai.');
+            errEl.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    };
 }
