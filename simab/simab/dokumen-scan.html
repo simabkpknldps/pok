@@ -41,6 +41,9 @@
     <div class="flex items-center justify-between px-4 py-3.5">
         <h1 class="text-base font-semibold leading-tight"><i class="fa-solid fa-mobile-screen-button mr-1.5"></i>SOH <span class="text-sky-200 font-normal text-xs">(SiMAB On Hand)</span></h1>
         <div class="flex items-center gap-2">
+            <button id="ds-btnTahun" class="h-9 px-2.5 flex items-center gap-1 rounded-lg bg-sky-600 hover:bg-sky-800 transition text-xs font-medium" title="Ganti Tahun Anggaran">
+                <i class="fa-solid fa-calendar-days"></i> <span id="ds-tahunLabel">…</span>
+            </button>
             <button id="ds-btnTambahKegiatan" class="w-9 h-9 flex items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 transition" title="Rekam Kegiatan Baru">
                 <i class="fa-solid fa-plus"></i>
             </button>
@@ -173,22 +176,81 @@ function statusBadgeClass(status) {
     return map[status] || 'bg-slate-100 text-slate-500';
 }
 
+// getKantorAktif() biasanya ada di router.js, tapi halaman SOH ini standalone
+// (nggak muat router.js) -- disalin persis implementasinya di sini spy
+// dsGetAllRows/dsGetPokRows/dst bisa pakai fungsi yang sama.
+function getKantorAktif() {
+    return localStorage.getItem('kantor') || '';
+}
+
+// Isi label "Tahun XXXX" di app bar & tombolnya buka popup pilih tahun,
+// pakai sheet universal (#ds-sheetOverlay/#ds-sheet) yang sudah ada di
+// halaman ini -- versi ringkas dari openTahunAnggaranSwitcher() di
+// common.js (halaman ini standalone, tidak memuat common.js).
+async function dsInitTahunSwitcher() {
+    const labelEl = $('ds-tahunLabel');
+    if (labelEl) labelEl.textContent = await getTahunAktif();
+
+    $('ds-btnTahun').onclick = async () => {
+        const tahunSaatIni = await getTahunAktif();
+        const kantorAktif = getKantorAktif();
+
+        $('ds-sheet').innerHTML = `
+            <div class="w-10 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+            <h3 class="text-base font-semibold text-slate-800 mb-1"><i class="fa-solid fa-calendar-days mr-1.5 text-sky-600"></i>Tahun Anggaran</h3>
+            <p class="text-xs text-slate-400 mb-3 px-0.5">Pilih tahun anggaran yang ingin ditampilkan. Data Kegiatan &amp; POK akan menyesuaikan.</p>
+            <div id="ds-tahunList" class="space-y-2 mb-2"><div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin text-slate-400"></i></div></div>
+        `;
+        $('ds-sheetOverlay').classList.remove('hidden');
+
+        try {
+            const daftarTahun = await getTahunTersediaList(kantorAktif);
+            const listEl = $('ds-tahunList');
+            listEl.innerHTML = daftarTahun.map(t => `
+                <button type="button" class="ds-tahunOpt w-full text-left px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between ${t === tahunSaatIni ? 'bg-sky-50 text-sky-700' : 'bg-slate-50 text-slate-700'}" data-tahun="${t}">
+                    <span>${t}</span>${t === tahunSaatIni ? '<i class="fa-solid fa-check"></i>' : ''}
+                </button>
+            `).join('');
+            listEl.querySelectorAll('.ds-tahunOpt').forEach(btn => {
+                btn.onclick = () => {
+                    const tahunBaru = Number(btn.dataset.tahun);
+                    setTahunAktif(tahunBaru);
+                    showToastSOH(`Tahun anggaran diganti ke ${tahunBaru}`);
+                    setTimeout(() => window.location.reload(), 400);
+                };
+            });
+        } catch (e) {
+            $('ds-tahunList').innerHTML = `<p class="text-sm text-red-500 text-center py-4">Gagal memuat daftar tahun: ${escHtml(e.message || 'Tidak diketahui')}</p>`;
+        }
+    };
+}
+
 // ============================================================
 // Pencarian — baca dari Supabase (tabel 'kegiatan'), difilter di HP
 // (client-side), sama pola dgn halaman Kegiatan versi web.
 // ============================================================
 let dsAllRowsCache = null; // cache di memori halaman ini saja, sekali per kunjungan
+let dsAllRowsCacheKey = null; // "kantorId|tahun" -- reset cache kalau beda
 
-async function dsGetAllRows() {
-    if (dsAllRowsCache) return dsAllRowsCache;
+async function dsGetAllRows(forceRefresh) {
+    const kantorAktif = getKantorAktif();
+    const tahunAktif = await getTahunAktif();
+    const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+    const cacheKey = `${kantorAktif}|${tahunAktif}|${isSuperadminView ? 'S' : 'N'}`;
+
+    if (!forceRefresh && dsAllRowsCache && dsAllRowsCacheKey === cacheKey) return dsAllRowsCache;
+
     await waitSupabaseAuthReady();
-    const rows = await sbFetchAll('kegiatan');
+    const filters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
+    const rows = await sbFetchAll('kegiatan', '*', filters);
     dsAllRowsCache = rows.map(d => ({
         A: d.id, B: d.mak || '', C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
         F: d.tgl_st || '', G: d.tgl_mulai || '', H: d.tgl_selesai || '',
         I: d.tgl_lpt || '', J: d.tgl_bayar || '', M: Number(d.jumlah) || 0, N: d.user || '',
-        P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '', T: d.dokumen_link || ''
+        P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '', T: d.dokumen_link || '',
+        KANTOR: d.kantor_id || '', TAHUN: d.tahun || null
     }));
+    dsAllRowsCacheKey = cacheKey;
     return dsAllRowsCache;
 }
 
@@ -707,20 +769,25 @@ function dsOpenPilihMakPopup(onPick) {
         let html = '';
         items.forEach(item => {
             const c = String(item.kode);
-            const isKegiatanLevel = c.length === 12;
-            const isLeaf = c.length > 27;
+            // Akar (relatif per-Seksi) & leaf ditentuin dari struktur data
+            // (ada-nggaknya leluhur/turunan di dalam Seksi yg sama), BUKAN
+            // patokan panjang karakter -- 1 kode & turunannya bisa ditandai
+            // Seksi yg beda-beda, jadi asumsi "selalu 2 segmen"/"selalu 12
+            // karakter" salah total (sama persis kasus yg dibenerin di pok.js web).
+            const isAnchor = !items.some(other => String(other.kode) !== c && c.startsWith(String(other.kode) + '.'));
+            const hasChildren = items.some(ch => String(ch.kode).startsWith(c + '.'));
+            const isLeaf = !hasChildren;
             const isChildVisible = Array.from(dsMakExpandedCodes).some(k => {
                 if (!k.startsWith(seksi + '::')) return false;
                 const p = k.slice((seksi + '::').length);
-                return c.startsWith(p) && c !== p;
+                return c.startsWith(p + '.') || c === p;
             });
-            if (!isKegiatanLevel && !isChildVisible) return;
+            if (!isAnchor && !isChildVisible) return;
 
             const depth = c.split('.').length;
             if (isLeaf) {
                 html += leafRow(item);
             } else {
-                const hasChildren = items.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
                 html += parentRow(item, seksi, depth, dsMakExpandedCodes.has(seksi + '::' + c), hasChildren);
             }
         });
@@ -732,7 +799,10 @@ function dsOpenPilihMakPopup(onPick) {
         const listEl = overlay.querySelector('#ds-makList');
 
         if (q) {
-            const leafOnly = allPok.filter(p => String(p.kode).length > 27);
+            // "Leaf" (baris daun/detail, tidak punya turunan di kode POK manapun)
+            // dicari dari SELURUH allPok (lintas Seksi), bukan patokan panjang.
+            const semuaKode = allPok.map(p => String(p.kode));
+            const leafOnly = allPok.filter(p => !semuaKode.some(k => k !== String(p.kode) && k.startsWith(String(p.kode) + '.')));
             const filtered = leafOnly.filter(p => String(p.kode).toLowerCase().includes(q) || String(p.uraian).toLowerCase().includes(q));
             listEl.innerHTML = filtered.length ? filtered.slice(0, 50).map(leafRow).join('') : `<p class="text-center text-slate-400 text-sm py-8">Tidak ada data.</p>`;
             wirePilih(listEl);
@@ -779,7 +849,12 @@ function dsOpenPilihMakPopup(onPick) {
         overlay.querySelector('#ds-makList').innerHTML = `<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-sky-600 text-xl"></i></div>`;
         try {
             await waitSupabaseAuthReady();
-            allPok = await sbFetchAll('pok', 'kode,uraian,sd,seksi');
+            // Popup Pilih MAK ini konteksnya NULIS kegiatan baru -- SELALU
+            // scope kantor+tahun aktif sesi ini (termasuk superadmin), sama
+            // pola dgn kgOpenPilihMakPopup di web.
+            const kantorAktif = getKantorAktif();
+            const tahunAktif = await getTahunAktif();
+            allPok = await sbFetchAll('pok', 'kode,uraian,sd,seksi', { kantor_id: kantorAktif, tahun: tahunAktif });
             render();
         } catch (e) {
             overlay.querySelector('#ds-makList').innerHTML = `<p class="text-center text-red-500 text-sm py-8">❌ ${escHtml(e.message || 'Gagal memuat.')}</p>`;
@@ -964,6 +1039,7 @@ function dsRenderPelaksanaForm() {
             await waitSupabaseAuthReady();
             const namaUser = localStorage.getItem('nama') || 'SOH';
             const todayStr = new Date().toISOString().split('T')[0];
+            const tahunAktifFallback = await getTahunAktif();
 
             const { error: delError } = await sb.from('kegiatan').delete().eq('id', r.A);
             if (delError) throw new Error(delError.message);
@@ -974,7 +1050,8 @@ function dsRenderPelaksanaForm() {
                 tgl_lpt: null, tgl_bayar: null, jumlah: Number(p.jumlah) || 0,
                 user: namaUser, status: kgComputeStatus(p.tglMulai, '', '', ''),
                 tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
-                tgl_rekam: todayStr, perbantuan: false
+                tgl_rekam: todayStr, perbantuan: false,
+                kantor_id: r.KANTOR || getKantorAktif(), tahun: r.TAHUN || tahunAktifFallback
             }));
             const { error: insError } = await sb.from('kegiatan').insert(rowsBaru);
             if (insError) throw new Error(insError.message);
@@ -1072,6 +1149,8 @@ function dsOpenTambahKegiatanSheet() {
             await waitSupabaseAuthReady();
             const namaUser = localStorage.getItem('nama') || 'SOH';
             const todayStr = new Date().toISOString().split('T')[0];
+            const kantorAktif = getKantorAktif();
+            const tahunAktif = await getTahunAktif();
             const { error } = await sb.from('kegiatan').insert({
                 id: kgGenerateRandomId(10), mak: makTerpilih.kode, uraian, pelaksana: '',
                 tujuan: $('ds-tkTujuan').value.trim(), tgl_st: normDate($('ds-tkTglSt').value),
@@ -1079,7 +1158,8 @@ function dsOpenTambahKegiatanSheet() {
                 jumlah: Number($('ds-tkJumlah').value.replace(/\./g, '')) || 0,
                 user: namaUser, status: 'Rekam Data',
                 tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
-                tgl_rekam: todayStr, perbantuan: false
+                tgl_rekam: todayStr, perbantuan: false,
+                kantor_id: kantorAktif, tahun: tahunAktif
             });
             if (error) throw new Error(error.message);
 
@@ -1231,7 +1311,18 @@ async function dsSyncDokLinkToDb(targetIds, link) {
     if (!targetIds || targetIds.length === 0) return;
     try {
         await waitSupabaseAuthReady();
-        const rows = targetIds.map(id => ({ id, dokumen_link: link }));
+        const kantorAktifFallback = getKantorAktif();
+        const tahunAktifFallback = await getTahunAktif();
+        // kantor_id/tahun ikut baris ASLI-nya (dari cache), bukan sesi aktif --
+        // sama alasan spt kgSyncDokLinksToDb di web.
+        const rows = targetIds.map(id => {
+            const rowAsli = dsAllRowsCache ? dsAllRowsCache.find(x => String(x.A) === String(id)) : null;
+            return {
+                id, dokumen_link: link,
+                kantor_id: rowAsli ? (rowAsli.KANTOR || kantorAktifFallback) : kantorAktifFallback,
+                tahun: rowAsli ? (rowAsli.TAHUN || tahunAktifFallback) : tahunAktifFallback
+            };
+        });
         const { error } = await sb.from('kegiatan').upsert(rows, { onConflict: 'id' });
         if (error) throw new Error(error.message);
 
@@ -1336,16 +1427,24 @@ function dsSwitchTab(tab) {
 // (pok.js renderPok), tapi berupa kartu bisa-tap, bukan tabel.
 // ============================================================
 let dsPokRowsCache = null;
+let dsPokRowsCacheKey = null;
 let dsPokExpandedSeksi = new Set();
 let dsPokExpandedCodes = new Set(); // key: "<seksi>::<kode>", sama pola dgn web
 
-async function dsGetPokRows() {
-    if (dsPokRowsCache) return dsPokRowsCache;
+async function dsGetPokRows(forceRefresh) {
+    const kantorAktif = getKantorAktif();
+    const tahunAktif = await getTahunAktif();
+    const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+    const cacheKey = `${kantorAktif}|${tahunAktif}|${isSuperadminView ? 'S' : 'N'}`;
+
+    if (!forceRefresh && dsPokRowsCache && dsPokRowsCacheKey === cacheKey) return dsPokRowsCache;
+
     await waitSupabaseAuthReady();
+    const scopeFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
     const [pokRows, kegiatanRows, blokirRows] = await Promise.all([
-        sbFetchAll('pok'),
+        sbFetchAll('pok', '*', scopeFilters),
         dsGetAllRows(),
-        sbFetchAll('blokir')
+        sbFetchAll('blokir', '*', scopeFilters)
     ]);
 
     const realisasiByMak = {};
@@ -1365,6 +1464,7 @@ async function dsGetPokRows() {
         const sisa = pagu - blokir - realisasi;
         return { kode, uraian: d.uraian || '', pagu, blokir, realisasi, sisa, sumber: d.sd || '', bidang: d.seksi || 'Lainnya' };
     });
+    dsPokRowsCacheKey = cacheKey;
     return dsPokRowsCache;
 }
 
@@ -1428,17 +1528,19 @@ function dsRenderPokTreeForSeksi(seksi, items) {
     let html = '';
     items.forEach(item => {
         const c = String(item.kode);
-        const isParent = c.length === 12; // level Kegiatan, selalu tampil
-        const isLeaf = c.length > 27;
+        // Akar relatif per-Seksi & leaf dari struktur data -- sama fix
+        // seperti pok.js web (1 kode & turunannya bisa ditandai Seksi beda-beda).
+        const isParent = !items.some(other => String(other.kode) !== c && c.startsWith(String(other.kode) + '.'));
+        const hasChildren = items.some(ch => String(ch.kode).startsWith(c + '.'));
+        const isLeaf = !hasChildren;
         const isChildVisible = Array.from(dsPokExpandedCodes).some(k => {
             if (!k.startsWith(seksi + '::')) return false;
             const p = k.slice((seksi + '::').length);
-            return c.startsWith(p) && c !== p;
+            return c.startsWith(p + '.') || c === p;
         });
         if (!isParent && !isChildVisible) return;
 
         const depth = c.split('.').length;
-        const hasChildren = items.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
 
         if (isLeaf) {
             html += `<div style="padding-left:${Math.min(depth - 1, 5) * 14}px">${dsRenderPokLeafCard(item)}</div>`;
@@ -1519,7 +1621,13 @@ async function dsRunPokSearch() {
 
         const uniqueMap = new Map();
         dsPokRowsCache.forEach(item => uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item));
-        const leafOnly = Array.from(uniqueMap.values()).filter(item => String(item.kode).length > 27);
+        const allUnique = Array.from(uniqueMap.values());
+        // "Leaf" = TIDAK PUNYA TURUNAN (relatif per-Seksi/item.bidang), sama
+        // pola dgn hasChildren di dsRenderPokTreeForSeksi.
+        const leafOnly = allUnique.filter(item => {
+            const c = String(item.kode);
+            return !allUnique.some(other => other.bidang === item.bidang && String(other.kode).startsWith(c + '.'));
+        });
 
         const matched = leafOnly.filter(r => String(r.kode).toLowerCase().includes(q) || String(r.uraian).toLowerCase().includes(q));
         const MAX_SHOW = 30;
@@ -1552,6 +1660,7 @@ let dsIsAdminView = false; // ditentukan di init, dari localStorage.admin
 async function dsGetSbmRows() {
     if (dsSbmRowsCache) return dsSbmRowsCache;
     await waitSupabaseAuthReady();
+    // SBM = referensi nasional (sama utk semua kantor), SENGAJA tidak difilter.
     const rows = await sbFetchAll('sbm');
     dsSbmRowsCache = rows.map(d => ({ kabupaten: d.id, luarKota: Number(d.luar_kota) || 0, dalamKota: Number(d.dalam_kota) || 0, diklat: Number(d.diklat) || 0 }));
     return dsSbmRowsCache;
@@ -1560,15 +1669,27 @@ async function dsGetSbmRows() {
 // Data Rekening (nama_bank/no_rekening) CUMA diikutkan kalau viewer admin —
 // RLS Supabase tidak membatasi per-kolom, jadi pembatasan ini murni di sisi
 // tampilan (sama seperti tab "Data Rekening" yg terpisah & admin-only di web).
-async function dsGetPegawaiRows() {
-    if (dsPegawaiRowsCache) return dsPegawaiRowsCache;
+//
+// Dipakai tab Referensi>Pegawai & tab User Manager -- KEDUANYA difilter
+// kantor_id (kecuali superadminMode, lihat semua kantor), sama pola dgn
+// referensi.js web. INI BEDA dari daftar saran Pelaksana (dsFillSuggestions)
+// yang SENGAJA tetap lintas kantor, tidak lewat fungsi ini.
+let dsPegawaiRowsCacheKey = null;
+async function dsGetPegawaiRows(forceRefresh) {
+    const kantorAktif = getKantorAktif();
+    const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+    const cacheKey = `${kantorAktif}|${isSuperadminView ? 'S' : 'N'}`;
+    if (!forceRefresh && dsPegawaiRowsCache && dsPegawaiRowsCacheKey === cacheKey) return dsPegawaiRowsCache;
+
     await waitSupabaseAuthReady();
     const cols = dsIsAdminView ? 'id, nama, jabatan, nama_bank, no_rekening' : 'id, nama, jabatan';
-    const rows = await sbFetchAll('pegawai', cols);
+    const filters = isSuperadminView ? undefined : { kantor_id: kantorAktif };
+    const rows = await sbFetchAll('pegawai', cols, filters);
     dsPegawaiRowsCache = rows.map(d => ({
         nip: d.id, nama: d.nama || '', jabatan: d.jabatan || '',
         namaBank: d.nama_bank || '', norek: d.no_rekening || ''
     }));
+    dsPegawaiRowsCacheKey = cacheKey;
     return dsPegawaiRowsCache;
 }
 
@@ -1696,14 +1817,29 @@ async function dsRenderUserTab() {
     const kepeg = localStorage.getItem('kepeg') === '1' ? 'PNS' : 'PPNPN';
 
     try {
-        const allRows = await dsGetAllRows();
+        // Perjadinku = tampilan PERSONAL (data milik SAYA sendiri), difilter
+        // nama + tahun aktif, BUKAN kantor_id -- SENGAJA fetch terpisah dari
+        // dsGetAllRows() (yang sekarang sudah kantor-scoped buat tab Cari),
+        // sama pola dgn perjadin.js di web.
+        await waitSupabaseAuthReady();
+        const tahunAktif = await getTahunAktif();
+        const rawRows = await sbFetchAll('kegiatan', '*', { tahun: tahunAktif });
         const namaLower = nama.trim().toLowerCase();
 
         // Perjadin = MAK 524111/524113, pelaksana harus sama persis dgn nama login.
-        const myPerjadin = allRows.filter(r =>
-            (String(r.B || '').includes('524111') || String(r.B || '').includes('524113')) &&
-            String(r.D || '').trim().toLowerCase() === namaLower
-        );
+        const myPerjadin = rawRows
+            .filter(d => {
+                const mak = String(d.mak || '');
+                const pelaksana = String(d.pelaksana || '').trim().toLowerCase();
+                return (mak.includes('524111') || mak.includes('524113')) && pelaksana === namaLower;
+            })
+            .map(d => ({
+                A: d.id, B: d.mak || '', C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
+                F: d.tgl_st || '', G: d.tgl_mulai || '', H: d.tgl_selesai || '',
+                I: d.tgl_lpt || '', J: d.tgl_bayar || '', M: Number(d.jumlah) || 0, N: d.user || '',
+                P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '', T: d.dokumen_link || '',
+                KANTOR: d.kantor_id || '', TAHUN: d.tahun || null
+            }));
 
         const statusCount = { 'Rekam Data': 0, 'Terlaksana': 0, 'LPT': 0, 'Terbayar': 0, 'Selesai': 0 };
         let totalJumlah = 0;
@@ -1780,9 +1916,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = window.getSessionUser ? window.getSessionUser() : null;
 
     dsIsAdminView = localStorage.getItem('admin') === '1';
-    if (localStorage.getItem('superadmin') === '1') {
+    // Sama kayak referensi.js web -- tab User Manager cuma utk superadmin yang
+    // SEDANG dalam mode SuperAdmin (bukan cuma punya identitas superadmin).
+    if (localStorage.getItem('superadminMode') === '1') {
         $('ds-refSubUserManager').classList.remove('hidden');
     }
+
+    dsInitTahunSwitcher();
 
     $('ds-btnSearch').onclick = runSearch;
     $('ds-searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runSearch(); });
