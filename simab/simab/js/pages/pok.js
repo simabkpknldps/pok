@@ -41,7 +41,100 @@ async function initPokPage() {
     window.expandedSeksi = new Set();
     window.searchResults = [];
     window.selectedKode = "";
+    pokInjectHapusDataBtn();
     await loadPokData();
+}
+
+// Tombol "Hapus Data POK" -- HANYA utk admin kantor sendiri & superadmin
+// (mode SuperAdmin). Disisipkan lewat JS (bukan di pok.html) tepat di
+// sebelah kiri tombol Expand All, supaya tidak perlu ubah file HTML.
+function pokInjectHapusDataBtn() {
+    document.getElementById('pok-btnHapusData')?.remove(); // jaga2 kalau initPokPage dipanggil ulang
+
+    const isAdmin = localStorage.getItem('admin') === '1';
+    const isSuperadminMode = localStorage.getItem('superadminMode') === '1';
+    if (!isAdmin && !isSuperadminMode) return; // user biasa/aksesMenu tidak lihat tombol ini sama sekali
+
+    const expandBtn = document.getElementById('toggleExpandBtn');
+    if (!expandBtn) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'pok-btnHapusData';
+    btn.className = expandBtn.className; // ikut style tombol Expand All biar konsisten, warna dibedain lewat inline style
+    btn.style.background = 'var(--ios-red)';
+    btn.style.color = '#fff';
+    btn.style.marginRight = '8px';
+    btn.innerHTML = '<i class="fa-solid fa-trash"></i> Hapus Data POK';
+    btn.onclick = pokKonfirmasiHapusData;
+
+    expandBtn.parentNode.insertBefore(btn, expandBtn);
+}
+
+// Hapus SEMUA data POK utk kantor+tahun aktif sekarang. Perlu 2 tahap
+// konfirmasi (peringatan jelas + ketik ulang kode kantor) karena ini
+// aksi destruktif & tidak bisa dibatalkan.
+function pokKonfirmasiHapusData() {
+    const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+    getTahunAktif().then(tahunAktif => {
+        const { overlay, popup } = commonOpenOverlay(`
+            <div class="flex items-center gap-3 mb-1">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background: rgba(255,59,48,0.1); color: #FF3B30;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-800">Hapus SEMUA Data POK</h3>
+            </div>
+            <p class="text-sm text-slate-600">
+                Ini akan menghapus <strong>SELURUH data POK</strong> untuk kantor
+                <strong>${kantorAktif || '-'}</strong>, tahun anggaran
+                <strong>${tahunAktif}</strong> -- semua Seksi, semua baris.
+                Aksi ini <strong>TIDAK BISA DIBATALKAN</strong>.
+            </p>
+            <p class="text-sm text-slate-600 mt-1">
+                Ketik <strong>"${kantorAktif}"</strong> di bawah ini untuk konfirmasi:
+            </p>
+            <input id="pok-hapus-konfirmasiInput" type="text" placeholder="Ketik kode kantor di sini"
+                class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-red-500">
+            <div class="flex justify-end gap-2 mt-3">
+                <button id="pok-hapus-cancelBtn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">Batal</button>
+                <button id="pok-hapus-confirmBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">
+                    <i class="fa-solid fa-trash mr-1"></i> Hapus Semua
+                </button>
+            </div>
+        `, 'max-w-md');
+
+        popup.querySelector('#pok-hapus-cancelBtn').onclick = () => overlay.remove();
+        popup.querySelector('#pok-hapus-confirmBtn').onclick = async () => {
+            const inputEl = popup.querySelector('#pok-hapus-konfirmasiInput');
+            if (inputEl.value.trim() !== String(kantorAktif)) {
+                alert('Kode kantor yang diketik tidak cocok. Hapus dibatalkan.');
+                return;
+            }
+
+            const btn = popup.querySelector('#pok-hapus-confirmBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menghapus...';
+
+            try {
+                await waitSupabaseAuthReady();
+                const { error } = await sb.from('pok')
+                    .delete()
+                    .eq('kantor_id', kantorAktif)
+                    .eq('tahun', tahunAktif);
+                if (error) throw new Error(error.message);
+
+                overlay.remove();
+                showToast(`Semua data POK kantor ${kantorAktif} tahun ${tahunAktif} berhasil dihapus`);
+                window.rawPokData = [];
+                window.expandedCodes = new Set();
+                window.expandedSeksi = new Set();
+                renderPok();
+            } catch (e) {
+                alert('Gagal menghapus: ' + (e.message || 'Tidak diketahui'));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-trash mr-1"></i> Hapus Semua';
+            }
+        };
+    });
 }
 
 // Firebase Auth butuh waktu (async) buat "menghidupkan ulang" sesi login yang
