@@ -38,6 +38,16 @@ function getAksesLevel() {
 }
 window.getAksesLevel = getAksesLevel;
 
+// Kantor yang sedang aktif untuk sesi ini — diisi saat login (index.html),
+// dipakai SEMUA halaman utk filter query (.eq('kantor_id', getKantorAktif())).
+// Kalau kosong (harusnya tidak pernah terjadi setelah login normal), fallback
+// ke string kosong supaya query tetap terkontrol (tidak match apapun) alih-alih
+// error/undefined.
+function getKantorAktif() {
+    return localStorage.getItem('kantor') || '';
+}
+window.getKantorAktif = getKantorAktif;
+
 // Menu yang boleh diakses user tingkat 'biasa'. Selain ini akan ditolak &
 // diarahkan ke halaman Perbantuan.
 const RESTRICTED_ALLOWED_PAGES = ['perjadin', 'referensi', 'perbantuan'];
