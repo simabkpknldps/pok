@@ -246,7 +246,13 @@ async function kgLoadData(forceRefresh) {
         }
 
         await waitSupabaseAuthReady();
-        const rows = await sbFetchAll('kegiatan');
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        const isSuperadminView = localStorage.getItem('superadmin') === '1';
+        // Halaman Kegiatan SELALU dibatasi tahun aktif; kantor_id juga dibatasi
+        // KECUALI superadmin (lihat semua kantor sekaligus, buat monitoring).
+        const filters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
+        const rows = await sbFetchAll('kegiatan', '*', filters);
 
         kgAllRows = rows.map(d => ({
             A: d.id,
@@ -255,7 +261,8 @@ async function kgLoadData(forceRefresh) {
             I: d.tgl_lpt || '', J: d.tgl_bayar || '',
             M: Number(d.jumlah) || 0, N: d.user || '', O: d.tgl_rekam || '',
             P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '',
-            T: d.dokumen_link || '', U: d.spby_link || ''
+            T: d.dokumen_link || '', U: d.spby_link || '',
+            KANTOR: d.kantor_id || '', TAHUN: d.tahun || null
         }));
 
         kgShowLoading(false);
@@ -628,6 +635,8 @@ function kgOpenTambahKegiatanPopup() {
         try {
             await waitSupabaseAuthReady();
             const namaUser = localStorage.getItem('nama') || 'Guest';
+            const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+            const tahunAktif = await getTahunAktif();
             const { error } = await sb.from('kegiatan').insert({
                 id: idKegiatan,
                 mak: makTerpilih.kode,
@@ -641,7 +650,9 @@ function kgOpenTambahKegiatanPopup() {
                 status: 'Rekam Data',
                 tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
                 tgl_rekam: normDate(new Date().toISOString().split('T')[0]),
-                perbantuan: false
+                perbantuan: false,
+                kantor_id: kantorAktif,
+                tahun: tahunAktif
             });
             if (error) throw new Error(error.message);
 
@@ -783,21 +794,27 @@ async function kgOpenPilihMakPopup(onPilih) {
 
     try {
         await waitSupabaseAuthReady();
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
 
         // Ambil pok, kegiatan, & blokir SEGAR setiap kali popup ini dibuka (BUKAN
         // pakai cache) — popup ini nunjukin Realisasi/Sisa sebelum user commit
         // kegiatan baru, jadi akurasinya penting, lebih penting dari hemat baca.
-        // Cache global (window.kegiatanRowsCache/blokirRowsCache) tetap
-        // di-refresh juga di sini, supaya halaman lain yang dibuka setelah ini
-        // ikut kebagian data terbaru juga.
+        // SELALU dibatasi kantor+tahun AKTIF SESI INI (termasuk superadmin) —
+        // popup ini konteksnya menulis data baru, harus jelas masuk ke kantor
+        // mana, tidak boleh ikut "lihat semua" seperti mode monitoring/baca.
+        const pokFilters = { kantor_id: kantorAktif, tahun: tahunAktif };
         const [pokRows, kegiatanRowsFetched, blokirRowsFetched] = await Promise.all([
-            sbFetchAll('pok'),
-            sbFetchAll('kegiatan'),
-            sbFetchAll('blokir')
+            sbFetchAll('pok', '*', pokFilters),
+            sbFetchAll('kegiatan', '*', pokFilters),
+            sbFetchAll('blokir', '*', pokFilters)
         ]);
 
         const kegiatanRows = kegiatanRowsFetched;
-        window.kegiatanRowsCache = kegiatanRows;
+        // TIDAK menimpa window.kegiatanRowsCache di sini lagi -- cache global itu
+        // dipakai halaman lain (Perjadinku/Perbantuan) yang butuh data LINTAS
+        // kantor (by nama pegawai), jadi harus tetap RAW/tidak terfilter kantor.
+        // Popup ini pakai variabel lokal kegiatanRows sendiri saja.
         const blokirRows = blokirRowsFetched.map(d => ({ id: d.id, nilai: Number(d.nilai) || 0 }));
         window.blokirRowsCache = blokirRows;
 
@@ -1107,6 +1124,14 @@ function kgShowPelaksanaPopup(tr) {
             const namaUser = localStorage.getItem('nama') || user;
             const todayStr = new Date().toISOString().split('T')[0];
 
+            // Pertahankan kantor_id/tahun dari baris ASLI yang sedang diedit (bukan
+            // sesi login skrng) -- penting terutama utk superadmin yang bisa lihat
+            // lintas kantor: baris pengganti harus tetap masuk kantor/tahun yg SAMA
+            // dgn data lama, tidak boleh ketiban kantor aktif sesi superadmin.
+            const rowAsli = kgAllRows.find(r => String(r.A) === String(idKegiatan));
+            const kantorAsli = rowAsli ? rowAsli.KANTOR : ((typeof getKantorAktif === 'function') ? getKantorAktif() : '');
+            const tahunAsli = rowAsli ? rowAsli.TAHUN : await getTahunAktif();
+
             // 1. Hapus baris lama
             const { error: delError } = await sb.from('kegiatan').delete().eq('id', idKegiatan);
             if (delError) throw new Error(delError.message);
@@ -1121,7 +1146,8 @@ function kgShowPelaksanaPopup(tr) {
                     tgl_lpt: null, tgl_bayar: null, jumlah: p.jumlah,
                     user: namaUser, status, tgl_sp2d: null, nomor_spm: '',
                     dokumen_link: '', spby_link: '', tgl_rekam: normDate(todayStr),
-                    perbantuan: false
+                    perbantuan: false,
+                    kantor_id: kantorAsli, tahun: tahunAsli
                 };
             });
 
@@ -1510,12 +1536,27 @@ async function kgSyncDokLinksToDb(links, field) {
 
     try {
         await waitSupabaseAuthReady();
+        const kantorAktifFallback = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktifFallback = await getTahunAktif();
         // upsert (bukan update biasa) supaya tetap aman kalau barisnya ternyata
         // belum ada di tabel (mis. baris lama yang belum sempat ke-migrasi) —
         // update() akan diam-diam skip (0 baris kena) kalau id tidak ditemukan,
         // sedangkan upsert otomatis membuatnya kalau belum ada.
-        const rows = ids.map(id => ({ id, [dbField]: links[id] }));
-        const { error } = await sb.from('kegiatan').upsert(rows, { onConflict: 'id' });
+        // PENTING: kantor_id/tahun HARUS ikut baris ASLI-nya (dari kgAllRows),
+        // BUKAN sesi aktif skrng -- kalau blanket pakai sesi aktif, superadmin yang
+        // sedang lihat lintas kantor bisa TIDAK SENGAJA MEMINDAHKAN kepemilikan
+        // baris kantor lain ke kantor yg sedang dia pakai. Fallback ke sesi aktif
+        // HANYA kalau baris itu memang belum pernah ada sama sekali di kgAllRows.
+        const rows = ids.map(id => {
+            const rowAsli = kgAllRows.find(r => String(r.A) === String(id));
+            return {
+                id,
+                [dbField]: links[id],
+                kantor_id: rowAsli ? (rowAsli.KANTOR || kantorAktifFallback) : kantorAktifFallback,
+                tahun: rowAsli ? (rowAsli.TAHUN || tahunAktifFallback) : tahunAktifFallback
+            };
+        });
+        const { error } = await sb.from('kegiatan').upsert(rows, { onConflict: 'id', ignoreDuplicates: false });
         if (error) throw new Error(error.message);
     } catch (e) {
         console.error('Gagal sinkron link dokumen ke Supabase:', e);
