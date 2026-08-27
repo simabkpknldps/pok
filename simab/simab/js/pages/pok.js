@@ -945,14 +945,24 @@ async function openDetilModal(mak) {
     tbody.innerHTML = `<div class="flex justify-center items-center p-4 w-full"><i class="fa-solid fa-spinner fa-spin mr-2" style="color: var(--ios-blue);"></i><span style="color: var(--label-secondary);">Memuat...</span></div>`;
 
     try {
-        // Filter dari cache kalau sudah ada (dimuat pas loadPokData), kalau belum
-        // baru query Supabase.
+        // window.kegiatanRowsCache berisi SEMUA baris mentah lintas kantor+tahun
+        // (dipakai bareng halaman lain yg butuh lintas-kantor, mis. Perjadinku).
+        // WAJIB difilter kantor+tahun aktif DI SINI dulu -- popup Detil MAK ini
+        // BUKAN tampilan personal, harus konsisten sama konteks POK yang sedang
+        // dibuka (superadmin: semua kantor, tahun tetap dibatasi tahun aktif).
         await waitSupabaseAuthReady();
-        let rows = window.kegiatanRowsCache;
-        if (!rows) {
-            rows = await sbFetchAll('kegiatan');
-            window.kegiatanRowsCache = rows;
+        let rawRows = window.kegiatanRowsCache;
+        if (!rawRows) {
+            rawRows = await sbFetchAll('kegiatan');
+            window.kegiatanRowsCache = rawRows;
         }
+
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const rows = rawRows.filter(d =>
+            Number(d.tahun) === tahunAktif && (isSuperadminView || d.kantor_id === kantorAktif)
+        );
 
         const result = rows
             .filter(d => String(d.mak || '').trim() === String(mak || '').trim())
