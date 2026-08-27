@@ -4,15 +4,20 @@
  * Halaman "RPD" — FULL Supabase.
  *
  * Sumber data:
- *   - Tabel 'rpd': 12 baris tetap (id 1-12 = bulan Jan-Des), kolom 'nilai'
- *     = angka RPD (Rencana Penarikan Dana) bulan itu. SATU-SATUNYA nilai
- *     yang disimpan di database — sisanya dihitung live di browser.
+ *   - Tabel 'rpd': 12 baris per kantor+tahun (id = "{bulan}_{kodeKantor}",
+ *     mis. "1_538065", PK gabungan (id, tahun)), kolom 'nilai' = angka RPD
+ *     (Rencana Penarikan Dana) bulan itu. SATU-SATUNYA nilai yang disimpan
+ *     di database — sisanya dihitung live di browser.
  *   - Tabel 'kegiatan': dipakai hitung Realisasi per bulan (SUM jumlah utk
  *     kegiatan yang tgl_sp2d-nya jatuh di bulan tsb), pakai cache
  *     window.kegiatanRowsCache kalau sudah ada dari halaman lain.
  *
  * Kolom yang ditampilkan (per bulan): Bulan | RPD | Realisasi | Deviasi
  * (= RPD - Realisasi) | % Deviasi (= Deviasi / RPD) | Aksi.
+ *
+ * Kalau kantor+tahun aktif BELUM punya baris rpd sama sekali (satker baru /
+ * tahun anggaran baru), tabel diganti tombol "Generate RPD" yang membuat
+ * 12 baris (nilai=0) sekali jalan, baru admin/superadmin isi manual satu-satu.
  *
  * Alur edit per baris: cuma kolom RPD yang bisa diubah (klik pensil -> input
  * -> simpan -> update tabel 'rpd'). Realisasi/Deviasi/%Deviasi otomatis
@@ -25,6 +30,10 @@ const RPD_BULAN_LABEL = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu',
 
 let rpdComputedRows = []; // { bulanKe(1-12), bulan, rpd, realisasi, deviasi, persenDeviasi }
 
+function rpdBuatId(bulanKe, kantorId) {
+    return `${bulanKe}_${kantorId}`;
+}
+
 async function initRpdPage() {
     await rpdLoadData();
 }
@@ -35,12 +44,14 @@ async function rpdLoadData() {
     const errorEl = document.getElementById('rpd-error');
     const theadRow = document.getElementById('rpd-thead-row');
     const tbody = document.getElementById('rpd-tbody');
+    const emptyEl = document.getElementById('rpd-empty'); // ditambah di rpd.html, lihat catatan di bawah
 
     if (!loadingEl || !wrapperEl || !errorEl || !theadRow || !tbody) return; // halaman sudah berpindah
 
     loadingEl.classList.remove('hidden');
     wrapperEl.classList.add('hidden');
     errorEl.classList.add('hidden');
+    if (emptyEl) emptyEl.classList.add('hidden');
 
     try {
         await waitSupabaseAuthReady();
@@ -66,6 +77,33 @@ async function rpdLoadData() {
             })()
         ]);
 
+        // Kantor aktif (non-superadmin) belum pernah generate RPD tahun ini ->
+        // tampilkan tombol Generate, bukan tabel kosong yang membingungkan.
+        // (Superadmin lihat gabungan semua kantor -- kalau kosong berarti
+        // BENERAN belum ada satupun kantor yang generate, tombol Generate
+        // tetap disembunyikan buat superadmin karena tidak jelas generate
+        // buat kantor yang mana.)
+        if (rpdRows.length === 0 && !isSuperadminView) {
+            loadingEl.classList.add('hidden');
+            if (emptyEl) {
+                emptyEl.classList.remove('hidden');
+            } else {
+                // Fallback kalau elemen #rpd-empty belum ditambah ke rpd.html:
+                // pakai area wrapper yang sudah ada.
+                wrapperEl.classList.remove('hidden');
+                theadRow.innerHTML = '';
+                tbody.innerHTML = `<tr><td class="p-8 text-center" style="color: var(--label-secondary);">
+                    Belum ada data RPD untuk tahun ${tahunAktif}.
+                    <br><button id="rpd-btnGenerateFallback" class="btn-ios mt-3 px-4 py-2 text-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate RPD
+                    </button>
+                </td></tr>`;
+                const btn = document.getElementById('rpd-btnGenerateFallback');
+                if (btn) btn.onclick = () => rpdGenerate(kantorAktif, tahunAktif);
+            }
+            return;
+        }
+
         // window.kegiatanRowsCache berisi SEMUA baris mentah lintas kantor+tahun
         // (dipakai bareng oleh banyak halaman) -- filter dulu di sini sesuai
         // konteks RPD (kantor+tahun aktif, kecuali superadmin yg lihat semua kantor).
@@ -83,12 +121,14 @@ async function rpdLoadData() {
         });
 
         // rpdByBulan: DIJUMLAH (bukan ditimpa) -- penting utk superadmin yg lihat
-        // banyak kantor sekaligus (beberapa baris kantor berbeda bisa punya id
-        // (bulan) yang sama). Untuk user biasa/admin tetap aman krn cuma ada 1
+        // banyak kantor sekaligus (beberapa baris kantor berbeda bisa punya
+        // bulan_ke yang sama). Untuk user biasa/admin tetap aman krn cuma ada 1
         // baris per bulan (sudah difilter kantor_id+tahun di query di atas).
+        // Pakai kolom 'bulan_ke' (angka murni), BUKAN 'id' lagi -- 'id' sekarang
+        // format text "{bulan}_{kodeKantor}", tidak bisa langsung di-Number().
         const rpdByBulan = {};
         rpdRows.forEach(r => {
-            const b = Number(r.id);
+            const b = Number(r.bulan_ke);
             rpdByBulan[b] = (rpdByBulan[b] || 0) + (Number(r.nilai) || 0);
         });
 
@@ -237,12 +277,12 @@ async function rpdSaveRow(tr, actionsDiv) {
         await waitSupabaseAuthReady();
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        // Key gabungan (id, kantor_id, tahun) -- 'id' bulan saja sudah TIDAK
-        // unik lagi sejak PK diperluas (lihat supabase-fix-pk-multi-kantor-tahun.sql).
+        // 'id' sekarang format "{bulan}_{kodeKantor}" (mis. "3_538065"), sudah
+        // unik per bulan+kantor -- PK gabungan (id, tahun) yang bedain tahunnya.
+        const idRow = rpdBuatId(bulanKe, kantorAktif);
         const { error } = await sb.from('rpd')
             .update({ nilai: newValue })
-            .eq('id', bulanKe)
-            .eq('kantor_id', kantorAktif)
+            .eq('id', idRow)
             .eq('tahun', tahunAktif);
         if (error) throw new Error(error.message);
 
@@ -271,3 +311,40 @@ async function rpdSaveRow(tr, actionsDiv) {
 
 window.initRpdPage = initRpdPage;
 window.rpdLoadData = rpdLoadData;
+
+// Bikin 12 baris rpd (nilai=0) buat kantor+tahun aktif sekarang -- dipanggil
+// dari tombol "Generate RPD" saat kantor ini belum punya data rpd sama sekali
+// (kantor baru, atau tahun anggaran baru yang belum di-generate). Nilai
+// selanjutnya diisi manual satu-satu oleh admin/superadmin lewat pensil.
+async function rpdGenerate(kantorId, tahun) {
+    const btn = document.getElementById('rpd-btnGenerate') || document.getElementById('rpd-btnGenerateFallback');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Membuat data...';
+    }
+    try {
+        await waitSupabaseAuthReady();
+        const rows = [];
+        for (let bulanKe = 1; bulanKe <= 12; bulanKe++) {
+            rows.push({
+                id: rpdBuatId(bulanKe, kantorId),
+                bulan_ke: bulanKe,
+                kantor_id: kantorId,
+                tahun: tahun,
+                nilai: 0
+            });
+        }
+        const { error } = await sb.from('rpd').insert(rows);
+        if (error) throw new Error(error.message);
+
+        showToast(`Data RPD tahun ${tahun} berhasil dibuat, silakan isi tiap bulan.`);
+        await rpdLoadData();
+    } catch (e) {
+        alert('Gagal generate RPD: ' + (e.message || 'Tidak diketahui'));
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Generate RPD';
+        }
+    }
+}
+window.rpdGenerate = rpdGenerate;
