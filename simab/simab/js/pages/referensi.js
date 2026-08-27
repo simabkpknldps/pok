@@ -598,7 +598,11 @@ function refBindPegawaiRow(tr) {
 
         // Pegawai yang dinonaktifkan (status=0) otomatis kehilangan akses_menu
         // (nonaktif tidak boleh tetap punya akses penuh ke semua halaman).
+        // Sebaliknya, pegawai yang DIAKTIFKAN (status=1) otomatis DAPAT
+        // akses_menu='1' -- konsisten sama aturan login (kantor aktif +
+        // status aktif = akses penuh tanpa perlu toggle akses_menu terpisah).
         if (status === '0') updatePayload.akses_menu = '';
+        if (status === '1') updatePayload.akses_menu = '1';
 
         btnSave.disabled = true;
         const originalIcon = btnSave.innerHTML;
@@ -619,8 +623,9 @@ function refBindPegawaiRow(tr) {
                 item.kantorId = kantorId || '';
                 if (refIsSuperadmin()) item.admin = admin;
                 item.status = status;
+                item.akses_menu = updatePayload.akses_menu ?? item.akses_menu;
             }
-            showToast('Data pegawai berhasil diubah' + (status === '0' ? ' (akses menu ikut dicabut)' : ''));
+            showToast('Data pegawai berhasil diubah' + (status === '0' ? ' (akses menu ikut dicabut)' : (status === '1' ? ' (akses menu ikut diaktifkan)' : '')));
             setEditing(false);
 
             // Kalau viewer admin biasa (bukan superadmin) mereassign pegawai ini
