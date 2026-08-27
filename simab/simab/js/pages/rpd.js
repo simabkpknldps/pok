@@ -1,273 +1,282 @@
 /**
- * js/pages/rpd.js
- * -----------------------------------------------------------------------
- * Halaman "RPD" — FULL Supabase.
+ * Halaman Perjadinku
+ * - Entry point: initPerjadinPage()  (dipanggil oleh router.js lewat PAGE_INIT.perjadin)
+ * - Baca LANGSUNG dari Supabase (tabel 'kegiatan'), pakai cache
+ *   window.kegiatanRowsCache kalau sudah ada dari halaman lain (Dashboard/
+ *   POK/Kegiatan) — hemat baca, tidak query ulang kalau tidak perlu.
+ * - Filtering per nama pegawai (harus sama persis dgn localStorage.nama) &
+ *   per jenis MAK (524111/524113) dilakukan di client.
  *
- * Sumber data:
- *   - Tabel 'rpd': 12 baris tetap (id 1-12 = bulan Jan-Des), kolom 'nilai'
- *     = angka RPD (Rencana Penarikan Dana) bulan itu. SATU-SATUNYA nilai
- *     yang disimpan di database — sisanya dihitung live di browser.
- *   - Tabel 'kegiatan': dipakai hitung Realisasi per bulan (SUM jumlah utk
- *     kegiatan yang tgl_sp2d-nya jatuh di bulan tsb), pakai cache
- *     window.kegiatanRowsCache kalau sudah ada dari halaman lain.
- *
- * Kolom yang ditampilkan (per bulan): Bulan | RPD | Realisasi | Deviasi
- * (= RPD - Realisasi) | % Deviasi (= Deviasi / RPD) | Aksi.
- *
- * Alur edit per baris: cuma kolom RPD yang bisa diubah (klik pensil -> input
- * -> simpan -> update tabel 'rpd'). Realisasi/Deviasi/%Deviasi otomatis
- * ikut kehitung ulang begitu RPD diubah, karena semuanya dihitung di
- * browser, bukan tersimpan.
- * -----------------------------------------------------------------------
+ * Struktur baris pjAllRows (dipetakan dari kolom Supabase ke huruf-kolom,
+ * meniru pola lama, supaya kode render/filter di bawah tidak perlu diubah):
+ * B mak, C uraian, E tujuan, G tgl_mulai, H tgl_selesai, M jumlah, P status
  */
 
-const RPD_BULAN_LABEL = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+let pjAllRows = [];       // baris milik user login yang sedang login, sudah difilter MAK 524111/524113
+let pjChartInstance = null;
+let pjFirstLoad = true;
 
-let rpdComputedRows = []; // { bulanKe(1-12), bulan, rpd, realisasi, deviasi, persenDeviasi }
+async function initPerjadinPage() {
+    const root = document.getElementById('pj-detailBody');
+    if (!root) return; // fragment belum ter-render, batalkan
 
-async function initRpdPage() {
-    await rpdLoadData();
+    pjAllRows = [];
+    pjFirstLoad = true;
+
+    pjBindEvents();
+    await pjLoadData();
 }
 
-async function rpdLoadData() {
-    const loadingEl = document.getElementById('rpd-loading');
-    const wrapperEl = document.getElementById('rpd-wrapper');
-    const errorEl = document.getElementById('rpd-error');
-    const theadRow = document.getElementById('rpd-thead-row');
-    const tbody = document.getElementById('rpd-tbody');
+function pjBindEvents() {
+    document.getElementById('pj-searchBox').addEventListener('input', pjApplyFilter);
 
-    if (!loadingEl || !wrapperEl || !errorEl || !theadRow || !tbody) return; // halaman sudah berpindah
-
-    loadingEl.classList.remove('hidden');
-    wrapperEl.classList.add('hidden');
-    errorEl.classList.add('hidden');
-
-    try {
-        await waitSupabaseAuthReady();
-
-        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
-        const tahunAktif = await getTahunAktif();
-        // Superadmin: lihat SEMUA kantor sekaligus (dijumlah per bulan),
-        // TIDAK difilter kantor_id. User biasa/admin: kunci ke kantor+tahun
-        // aktif sesi ini.
-        const isSuperadminView = localStorage.getItem('superadmin') === '1';
-
-        const rpdFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
-
-        const [rpdRows, kegiatanRowsAll] = await Promise.all([
-            sbFetchAll('rpd', '*', rpdFilters),
-            (async () => {
-                let rows = window.kegiatanRowsCache;
-                if (!rows) {
-                    rows = await sbFetchAll('kegiatan');
-                    window.kegiatanRowsCache = rows;
-                }
-                return rows;
-            })()
-        ]);
-
-        // window.kegiatanRowsCache berisi SEMUA baris mentah lintas kantor+tahun
-        // (dipakai bareng oleh banyak halaman) -- filter dulu di sini sesuai
-        // konteks RPD (kantor+tahun aktif, kecuali superadmin yg lihat semua kantor).
-        const kegiatanRows = kegiatanRowsAll.filter(k =>
-            Number(k.tahun) === tahunAktif && (isSuperadminView || k.kantor_id === kantorAktif)
-        );
-
-        // Realisasi per bulan = SUM jumlah kegiatan yang tgl_sp2d-nya jatuh di bulan itu.
-        const realisasiPerBulan = new Array(13).fill(0); // index 1-12 dipakai, index 0 dibuang
-        kegiatanRows.forEach(k => {
-            if (!k.tgl_sp2d) return;
-            const d = new Date(k.tgl_sp2d);
-            if (isNaN(d.getTime())) return;
-            realisasiPerBulan[d.getMonth() + 1] += Number(k.jumlah) || 0;
-        });
-
-        // rpdByBulan: DIJUMLAH (bukan ditimpa) -- penting utk superadmin yg lihat
-        // banyak kantor sekaligus (beberapa baris kantor berbeda bisa punya id
-        // (bulan) yang sama). Untuk user biasa/admin tetap aman krn cuma ada 1
-        // baris per bulan (sudah difilter kantor_id+tahun di query di atas).
-        const rpdByBulan = {};
-        rpdRows.forEach(r => {
-            const b = Number(r.id);
-            rpdByBulan[b] = (rpdByBulan[b] || 0) + (Number(r.nilai) || 0);
-        });
-
-        rpdComputedRows = [];
-        for (let bulanKe = 1; bulanKe <= 12; bulanKe++) {
-            const rpdVal = rpdByBulan[bulanKe] || 0;
-            const realisasi = realisasiPerBulan[bulanKe] || 0;
-            const deviasi = rpdVal - realisasi;
-            const persenDeviasi = rpdVal !== 0 ? deviasi / rpdVal : 0;
-            rpdComputedRows.push({
-                bulanKe, bulan: RPD_BULAN_LABEL[bulanKe - 1],
-                rpd: rpdVal, realisasi, deviasi, persenDeviasi
-            });
-        }
-
-        theadRow.innerHTML = [
-            { label: 'Bulan', align: 'text-center' },
-            { label: 'RPD', align: 'text-right' },
-            { label: 'Realisasi', align: 'text-right' },
-            { label: 'Deviasi', align: 'text-right' },
-            { label: '% Deviasi', align: 'text-right' }
-        ].map(h => `<th class="px-3 py-1.5 font-semibold whitespace-nowrap ${h.align}">${h.label}</th>`).join('')
-            + `<th class="px-3 py-1.5 font-semibold text-center">Aksi</th>`;
-
-        tbody.innerHTML = rpdComputedRows.map(row => rpdRenderRow(row)).join('');
-
-        loadingEl.classList.add('hidden');
-        wrapperEl.classList.remove('hidden');
-
-        rpdBindRowButtons();
-    } catch (e) {
-        loadingEl.classList.add('hidden');
-        errorEl.classList.remove('hidden');
-        errorEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i>${e.message || 'Terjadi kesalahan'}`;
-    }
-}
-
-function rpdFormatPersen(v) {
-    const persenText = (v * 100).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
-    // Merah jika >= 5% atau <= -5%, hijau jika di antara -5% s/d 5% (termasuk 0%)
-    const colorClass = (v >= 0.05 || v <= -0.05) ? 'text-red-600' : 'text-green-600';
-    return `<span class="${colorClass} font-medium">${persenText}</span>`;
-}
-
-function rpdRenderRow(row) {
-    const isSuperadminView = localStorage.getItem('superadmin') === '1';
-    return `
-        <tr data-bulan-ke="${row.bulanKe}">
-            <td class="px-3 py-1.5 text-center">${row.bulan}</td>
-            <td class="px-3 py-1.5 rpd-cell-rpd text-right" data-value="${row.rpd}">${formatRibuan(row.rpd)}</td>
-            <td class="px-3 py-1.5 text-right">${formatRibuan(row.realisasi)}</td>
-            <td class="px-3 py-1.5 text-right">${formatRibuan(row.deviasi)}</td>
-            <td class="px-3 py-1.5 text-right">${rpdFormatPersen(row.persenDeviasi)}</td>
-            <td class="px-3 py-1.5 text-center">
-                <div class="rpd-actions inline-flex items-center gap-3">
-                    ${isSuperadminView
-                        ? `<span class="text-slate-300" title="Nilai gabungan semua kantor, ubah lewat akun kantor spesifik"><i class="fa-solid fa-lock"></i></span>`
-                        : `<button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD bulan ini"><i class="fa-solid fa-pen"></i></button>`}
-                </div>
-            </td>
-        </tr>
-    `;
-}
-
-function rpdEscapeAttr(v) {
-    return String(v ?? '').replace(/"/g, '&quot;');
-}
-
-function rpdBindRowButtons() {
-    document.querySelectorAll('#rpd-tbody .rpd-btn-ubah').forEach(btn => {
-        btn.onclick = function () {
-            const tr = btn.closest('tr');
-            const actionsDiv = btn.closest('.rpd-actions');
-            rpdEnterEditMode(tr, actionsDiv);
-        };
+    document.querySelectorAll('input[name="pj-statusFilter"]').forEach(rb => {
+        rb.addEventListener('change', pjApplyFilter);
     });
 }
 
-// Masuk mode edit: HANYA sel RPD yang jadi <input>, kolom lain tetap read-only.
-function rpdEnterEditMode(tr, actionsDiv) {
-    const td = tr.querySelector('.rpd-cell-rpd');
-    if (!td) return;
-
-    const currentValue = td.getAttribute('data-value') || '0';
-    td.innerHTML = `<input type="text"
-        class="rpd-input w-full px-2 py-1 border border-sky-300 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-sky-500"
-        value="${rpdEscapeAttr(formatRibuan(Number(currentValue)))}"
-        oninput="this.value = formatRibuan(this.value)">`;
-
-    actionsDiv.innerHTML = `
-        <button class="rpd-btn-simpan text-green-600 hover:text-green-800" title="Simpan">
-            <i class="fa-solid fa-floppy-disk"></i>
-        </button>
-        <button class="rpd-btn-batal text-slate-400 hover:text-red-600" title="Batal">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-    `;
-    actionsDiv.querySelector('.rpd-btn-simpan').onclick = function () {
-        rpdSaveRow(tr, actionsDiv);
-    };
-    actionsDiv.querySelector('.rpd-btn-batal').onclick = function () {
-        rpdCancelEdit(tr, actionsDiv);
-    };
-
-    const input = td.querySelector('.rpd-input');
-    if (input) input.focus();
+// MAK dianggap "perjalanan dinas" jika mengandung kode 524111 (luar kota) / 524113 (dalam kota)
+function pjIsPerjalananDinas(mak) {
+    const s = String(mak || '');
+    return s.includes('524111') || s.includes('524113');
 }
 
-// Batalkan edit: kembalikan sel RPD ke tampilan semula (tanpa kirim apapun ke backend)
-function rpdCancelEdit(tr, actionsDiv) {
-    const td = tr.querySelector('.rpd-cell-rpd');
-    if (td) {
-        const currentValue = Number(td.getAttribute('data-value')) || 0;
-        td.innerHTML = formatRibuan(currentValue);
-    }
-    rpdResetActionsToPencil(tr, actionsDiv);
+function pjJenis(mak) {
+    const s = String(mak || '');
+    if (s.includes('524111')) return 'luar';
+    if (s.includes('524113')) return 'dalam';
+    return null;
 }
 
-function rpdResetActionsToPencil(tr, actionsDiv) {
-    actionsDiv.innerHTML = `
-        <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD bulan ini">
-            <i class="fa-solid fa-pen"></i>
-        </button>
-    `;
-    actionsDiv.querySelector('.rpd-btn-ubah').onclick = function () {
-        rpdEnterEditMode(tr, actionsDiv);
-    };
-}
-
-// Simpan nilai RPD baru ke tabel 'rpd' (kolom nilai), lalu hitung ulang
-// Realisasi/Deviasi/%Deviasi baris ini di browser (tanpa perlu reload semua data).
-async function rpdSaveRow(tr, actionsDiv) {
-    const bulanKe = Number(tr.getAttribute('data-bulan-ke'));
-    const td = tr.querySelector('.rpd-cell-rpd');
-    const input = td ? td.querySelector('.rpd-input') : null;
-    const newValue = Number((input ? input.value : '0').replace(/\./g, '')) || 0;
-
-    const btnSimpan = actionsDiv.querySelector('.rpd-btn-simpan');
-    const originalIcon = btnSimpan ? btnSimpan.innerHTML : '';
-    if (btnSimpan) {
-        btnSimpan.disabled = true;
-        btnSimpan.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    }
+async function pjLoadData() {
+    const tbody = document.getElementById('pj-detailBody');
+    tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>`;
 
     try {
         await waitSupabaseAuthReady();
-        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+
+        // Pakai cache dari halaman lain (Dashboard/POK/Kegiatan) kalau sudah ada,
+        // hindari baca ulang tabel kegiatan dari nol.
+        let rows = window.kegiatanRowsCache;
+        if (!rows) {
+            rows = await sbFetchAll('kegiatan');
+            window.kegiatanRowsCache = rows;
+        }
+
+        const nama = (localStorage.getItem('nama') || '').trim().toLowerCase();
         const tahunAktif = await getTahunAktif();
-        // Key gabungan (id, kantor_id, tahun) -- 'id' bulan saja sudah TIDAK
-        // unik lagi sejak PK diperluas (lihat supabase-fix-pk-multi-kantor-tahun.sql).
-        const { error } = await sb.from('rpd')
-            .update({ nilai: newValue })
-            .eq('id', bulanKe)
-            .eq('kantor_id', kantorAktif)
-            .eq('tahun', tahunAktif);
-        if (error) throw new Error(error.message);
 
-        const row = rpdComputedRows.find(r => r.bulanKe === bulanKe);
-        if (row) {
-            row.rpd = newValue;
-            row.deviasi = row.rpd - row.realisasi;
-            row.persenDeviasi = row.rpd !== 0 ? row.deviasi / row.rpd : 0;
+        // Perjadinku = tampilan personal (data milik SAYA sendiri), sama seperti
+        // Perbantuan -- difilter nama + tahun aktif, BUKAN kantor_id. Ini supaya
+        // pegawai kantor-lain yang assist di kantor manapun tetap lihat riwayat
+        // perjalanan dinas pribadinya sendiri, apapun kantor yang sedang aktif.
+        pjAllRows = rows
+            .filter(r => {
+                const pelaksana = String(r.pelaksana || '').trim().toLowerCase();
+                return pelaksana === nama && pjIsPerjalananDinas(r.mak) && Number(r.tahun) === tahunAktif;
+            })
+            .map(r => ({
+                B: r.mak || '', C: r.uraian || '', E: r.tujuan || '',
+                G: r.tgl_mulai || '', H: r.tgl_selesai || '',
+                M: Number(r.jumlah) || 0, P: r.status || ''
+            }));
 
-            td.setAttribute('data-value', newValue);
-            td.innerHTML = formatRibuan(newValue);
-            tr.children[3].innerHTML = formatRibuan(row.deviasi);
-            tr.children[4].innerHTML = rpdFormatPersen(row.persenDeviasi);
-        }
+        pjRenderStatusSummary(pjAllRows);
+        pjUpdateLokasiFavorit(pjAllRows);
+        pjUpdateJenisPerjadin(pjAllRows);
+        pjUpdateChart(pjAllRows);
 
-        showToast('Data RPD berhasil diperbarui');
-        rpdResetActionsToPencil(tr, actionsDiv);
+        const defaultRadio = document.querySelector('input[name="pj-statusFilter"]:checked').value;
+        pjRenderDetailTable(pjFilterByStatus(pjAllRows, defaultRadio));
+
+        pjFirstLoad = false;
+
     } catch (e) {
-        alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
-        if (btnSimpan) {
-            btnSimpan.disabled = false;
-            btnSimpan.innerHTML = originalIcon;
-        }
+        console.error('Error loadData perjadin:', e);
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-500">❌ ${e.message || 'Gagal memuat data perjadin.'}</td></tr>`;
     }
 }
 
-window.initRpdPage = initRpdPage;
-window.rpdLoadData = rpdLoadData;
+function pjFilterByStatus(rows, status) {
+    if (status === 'Semua') return rows;
+    return rows.filter(r => r.P === status);
+}
+
+// search + radio hanya mempengaruhi tabel detail (ringkasan status & kartu bawah tetap dari semua data user)
+function pjApplyFilter() {
+    const keyword = document.getElementById('pj-searchBox').value.toLowerCase();
+    const status = document.querySelector('input[name="pj-statusFilter"]:checked').value;
+
+    let filtered = pjFilterByStatus(pjAllRows, status);
+    if (keyword) {
+        filtered = filtered.filter(r =>
+            String(r.B || '').toLowerCase().includes(keyword) ||
+            String(r.C || '').toLowerCase().includes(keyword) ||
+            String(r.E || '').toLowerCase().includes(keyword)
+        );
+    }
+    pjRenderDetailTable(filtered);
+}
+
+function pjFormatDate(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function pjStatusClasses(status) {
+    switch (status) {
+        case 'Rekam Data': return 'bg-red-300';
+        case 'Terlaksana': return 'bg-slate-300';
+        case 'LPT': return 'bg-yellow-300';
+        case 'Terbayar': return 'bg-green-400';
+        case 'Selesai': return 'bg-blue-400 text-white';
+        default: return '';
+    }
+}
+
+function pjRenderDetailTable(rows) {
+    const tbody = document.getElementById('pj-detailBody');
+    tbody.innerHTML = '';
+
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Tidak ada data</td></tr>`;
+        return;
+    }
+
+    rows.forEach(r => {
+        const jumlah = Number(r.M || 0);
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+        tr.innerHTML = `
+            <td class="p-2 align-top">${r.B ?? ''}</td>
+            <td class="p-2 align-top">${r.C ?? ''}</td>
+            <td class="p-2 align-top">${r.E ?? ''}</td>
+            <td class="p-2 align-top whitespace-nowrap">${pjFormatDate(r.G)}</td>
+            <td class="p-2 align-top whitespace-nowrap">${pjFormatDate(r.H)}</td>
+            <td class="p-2 align-top text-right whitespace-nowrap">${jumlah.toLocaleString('id-ID')}</td>
+            <td class="p-2 align-top text-center font-semibold rounded ${pjStatusClasses(r.P)}">${r.P ?? ''}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function pjRenderStatusSummary(rows) {
+    const statusList = ['Rekam Data', 'Terlaksana', 'LPT', 'Terbayar', 'Selesai'];
+    const summary = {};
+    statusList.forEach(s => summary[s] = { frek: 0, jumlah: 0 });
+
+    rows.forEach(r => {
+        const s = r.P;
+        if (summary[s]) {
+            summary[s].frek += 1;
+            summary[s].jumlah += Number(r.M || 0);
+        }
+    });
+
+    const tbody = document.getElementById('pj-statusSummary');
+    tbody.innerHTML = '';
+
+    let totalFrek = 0, totalJumlah = 0;
+    statusList.forEach(status => {
+        const item = summary[status];
+        totalFrek += item.frek;
+        totalJumlah += item.jumlah;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="p-2 border-b border-slate-100">${status}</td>
+            <td class="p-2 border-b border-slate-100 text-center">${item.frek}</td>
+            <td class="p-2 border-b border-slate-100 text-right">${item.jumlah.toLocaleString('id-ID')}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    const trTotal = document.createElement('tr');
+    trTotal.innerHTML = `
+        <td class="p-2 font-semibold">Total</td>
+        <td class="p-2 text-center font-semibold">${totalFrek}</td>
+        <td class="p-2 text-right font-semibold">${totalJumlah.toLocaleString('id-ID')}</td>
+    `;
+    tbody.appendChild(trTotal);
+}
+
+function pjUpdateLokasiFavorit(rows) {
+    const lokasiMap = {};
+    rows.forEach(r => {
+        const tujuan = String(r.E || '').trim();
+        if (!tujuan) return;
+        lokasiMap[tujuan] = (lokasiMap[tujuan] || 0) + 1;
+    });
+
+    const tbody = document.getElementById('pj-lokasiBody');
+    tbody.innerHTML = '';
+
+    const sorted = Object.entries(lokasiMap).sort((a, b) => b[1] - a[1]);
+    sorted.forEach(([lokasi, frek], idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="p-2 border-b border-slate-100">${idx + 1}</td>
+            <td class="p-2 border-b border-slate-100">${lokasi}</td>
+            <td class="p-2 border-b border-slate-100 text-right">${frek}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function pjUpdateJenisPerjadin(rows) {
+    let luar = 0, dalam = 0;
+    rows.forEach(r => {
+        const j = pjJenis(r.B);
+        if (j === 'luar') luar += 1;
+        else if (j === 'dalam') dalam += 1;
+    });
+
+    const tbody = document.getElementById('pj-jenisBody');
+    tbody.innerHTML = `
+        <tr><td class="p-2 border-b border-slate-100">Luar Kota</td><td class="p-2 border-b border-slate-100 text-right">${luar}</td></tr>
+        <tr><td class="p-2">Dalam Kota</td><td class="p-2 text-right">${dalam}</td></tr>
+    `;
+}
+
+function pjUpdateChart(rows) {
+    const monthCounts = new Array(12).fill(0);
+    rows.forEach(r => {
+        const d = new Date(r.G);
+        if (!isNaN(d.getTime())) monthCounts[d.getMonth()] += 1;
+    });
+
+    const canvas = document.getElementById('pj-chartPerjadin');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    if (pjChartInstance) pjChartInstance.destroy();
+
+    pjChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+            datasets: [{
+                label: 'Frekuensi Perjadin',
+                data: monthCounts,
+                borderColor: '#0071E3',
+                backgroundColor: 'rgba(0,113,227,0.12)',
+                tension: 0.3,
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#0071E3',
+                pointBorderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Jumlah' } },
+                x: { title: { display: true, text: 'Bulan' } }
+            }
+        }
+    });
+}
+
+window.initPerjadinPage = initPerjadinPage;
