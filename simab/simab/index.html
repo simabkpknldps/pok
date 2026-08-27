@@ -300,6 +300,16 @@
             localStorage.setItem('kepeg', profil.kepeg || '');
             localStorage.setItem('aksesMenu', forceAdmin ? '1' : (profil.akses_menu || ''));
             localStorage.setItem('superadmin', profil.superadmin || '');
+            // 'superadminMode' BEDA dari 'superadmin' -- 'superadmin' cuma nandain
+            // akun ini PUNYA hak istimewa itu (identitas), sedangkan 'superadminMode'
+            // nandain apakah SESI INI sedang dipakai dalam mode SuperAdmin (forceAdmin
+            // true = pilih "SuperAdmin" di popup mode) atau mode User Biasa (forceAdmin
+            // false, termasuk kalau yang login bukan superadmin sama sekali). Semua
+            // halaman yang mau nge-cek "apakah tampilkan data gabungan semua kantor"
+            // HARUS pakai 'superadminMode', BUKAN 'superadmin' -- supaya superadmin yang
+            // pilih "User Biasa" benar2 diperlakukan sama seperti admin biasa di
+            // kantornya sendiri, bukan otomatis lihat semua kantor.
+            localStorage.setItem('superadminMode', forceAdmin ? '1' : '0');
             localStorage.setItem('kantor', kantorId || '');
             localStorage.setItem('lastActivity', Date.now().toString());
 
