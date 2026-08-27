@@ -3,7 +3,7 @@
  */
 
 function logout() {
-    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'lastActivity']
+    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'superadmin', 'tahunAktif', 'lastActivity']
         .forEach(k => localStorage.removeItem(k));
     window.location.href = 'index.html?reason=logout';
 }
@@ -95,6 +95,76 @@ function commonOpenOverlay(innerHtml, widthClass) {
     document.body.appendChild(overlay);
     return { overlay, popup };
 }
+
+// ==========================================
+// Popup Switcher Tahun Anggaran
+// ==========================================
+
+// Dipanggil dari tombol "Tahun Anggaran <tahun>" di dashboard.html (sebelah
+// Logout). Nunjukin semua tahun yg beneran ada datanya (via
+// getTahunTersediaList) buat kantor aktif sekarang, biarin user pilih salah
+// satu, lalu reload halaman skrng biar semua query di halaman itu ke-refresh
+// pakai tahun baru (paling sederhana & paling aman drpd coba re-render
+// manual tiap halaman -- konsisten sama pola ganti kantor pas login).
+async function openTahunAnggaranSwitcher() {
+    const tahunSaatIni = await getTahunAktif();
+    const kantorId = (typeof getKantorAktif === 'function') ? getKantorAktif() : (localStorage.getItem('kantor') || '');
+
+    const { overlay, popup } = commonOpenOverlay(`
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background: rgba(0,113,227,0.1); color: var(--ios-blue);">
+                <i class="fa-solid fa-calendar-days"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-800">Tahun Anggaran</h3>
+        </div>
+        <p class="text-sm text-slate-500 -mt-1">Pilih tahun anggaran yang ingin ditampilkan. Data Kegiatan, Perjadin, dan POK akan menyesuaikan.</p>
+        <div id="tahunSwitcherList" class="space-y-2 mt-1">
+            <div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin text-slate-400"></i></div>
+        </div>
+    `, 'max-w-sm');
+
+    const listEl = popup.querySelector('#tahunSwitcherList');
+    try {
+        const daftarTahun = await getTahunTersediaList(kantorId);
+        listEl.innerHTML = daftarTahun.map(t => `
+            <button type="button" class="tahunSwitcher-opt w-full text-left px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between transition"
+                data-tahun="${t}"
+                style="background: ${t === tahunSaatIni ? 'rgba(0,113,227,0.1)' : 'rgba(118,118,128,0.1)'}; color: ${t === tahunSaatIni ? 'var(--ios-blue)' : 'var(--label)'};">
+                <span>${t}</span>
+                ${t === tahunSaatIni ? '<i class="fa-solid fa-check"></i>' : ''}
+            </button>
+        `).join('');
+
+        listEl.querySelectorAll('.tahunSwitcher-opt').forEach(btn => {
+            btn.onclick = () => {
+                const tahunBaru = Number(btn.getAttribute('data-tahun'));
+                setTahunAktif(tahunBaru);
+                overlay.remove();
+                showToast(`Tahun anggaran diganti ke ${tahunBaru}`);
+                setTimeout(() => window.location.reload(), 400);
+            };
+        });
+    } catch (e) {
+        listEl.innerHTML = `<p class="text-sm text-red-500 text-center py-4">Gagal memuat daftar tahun: ${e.message || 'Tidak diketahui'}</p>`;
+    }
+
+    // Tutup popup kalau klik area luar (di luar kotak putihnya)
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+}
+window.openTahunAnggaranSwitcher = openTahunAnggaranSwitcher;
+
+// Dipanggil dashboard.html saat halaman dimuat, buat isi label tombol
+// switcher-nya ("Tahun Anggaran 2026" dst) tanpa perlu buka popup dulu.
+async function initTahunAnggaranLabel() {
+    const el = document.getElementById('tahunAktifLabel');
+    if (!el) return;
+    try {
+        el.textContent = await getTahunAktif();
+    } catch (e) {
+        el.textContent = new Date().getFullYear();
+    }
+}
+window.initTahunAnggaranLabel = initTahunAnggaranLabel;
 
 function openSettings() {
     const nip = localStorage.getItem('nip') || '';
