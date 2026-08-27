@@ -361,21 +361,48 @@ function refBindSbmRow(tr) {
  * =================== TAB PEGAWAI =========================
  * ========================================================== */
 
+async function refGetKantorOptions(force) {
+    if (refKantorLoaded && !force) return refKantorData;
+    const rows = await sbFetchAll('kantor', 'id, nama, status');
+    refKantorData = rows.map(d => ({ id: d.id, nama: d.nama || '', status: d.status || 'aktif' }))
+        .sort((a, b) => a.nama.localeCompare(b.nama));
+    refKantorLoaded = true;
+    return refKantorData;
+}
+
+function refKantorSelectOptions(selected) {
+    const opts = refKantorData.map(k =>
+        `<option value="${k.id}" ${k.id === selected ? 'selected' : ''}>${k.nama}${k.status !== 'aktif' ? ' (nonaktif)' : ''}</option>`
+    ).join('');
+    return `<option value="" ${!selected ? 'selected' : ''}>-- Belum ada / Kantor Lain --</option>${opts}`;
+}
+
 async function refLoadPegawaiData() {
     const tbody = document.getElementById('ref-pegawai-tbody');
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
     try {
         await waitSupabaseAuthReady();
-        const rows = await sbFetchAll('pegawai');
+        await refGetKantorOptions();
+
+        // Superadmin lihat SEMUA pegawai lintas kantor (perlu ini utk bisa
+        // reassign kantor siapapun). Admin/aksesMenu HANYA lihat pegawai
+        // kantornya sendiri (kantor aktif sesi ini).
+        const isSuperadminView = refIsSuperadmin();
+        const filters = isSuperadminView
+            ? undefined
+            : { kantor_id: (typeof getKantorAktif === 'function' ? getKantorAktif() : '') };
+
+        const rows = await sbFetchAll('pegawai', '*', filters);
         refPegawaiData = rows.map(d => ({
             row: d.id, // 'row' dipertahankan sbg nama field spy kode lain di bawah tdk perlu diubah
             nama: d.nama || '', nip: d.id, jabatan: d.jabatan || '', pangkat: d.pangkat || '',
-            kepeg: d.kepeg || '0', admin: d.admin || '0', status: d.status ?? '1'
+            kepeg: d.kepeg || '0', admin: d.admin || '0', status: d.status ?? '1',
+            kantorId: d.kantor_id || ''
         }));
         refPegawaiLoaded = true;
         refRenderPegawaiTable('');
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-8">❌ Error koneksi: ${e.message || 'Tidak diketahui'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-red-500 py-8">❌ Error koneksi: ${e.message || 'Tidak diketahui'}</td></tr>`;
     }
 }
 
@@ -430,6 +457,9 @@ function refRenderPegawaiTable(keyword) {
                 <select class="ref-peg-pangkat ${refInputClass}" disabled>${refPangkatOptions(row.pangkat)}</select>
             </td>
             <td class="py-2 px-4">
+                <select class="ref-peg-kantor ${refInputClass}" disabled>${refKantorSelectOptions(row.kantorId)}</select>
+            </td>
+            <td class="py-2 px-4">
                 <div class="flex flex-col items-center gap-1">
                     ${refToggleSwitch('ref-peg-kepeg', String(row.kepeg) === '1')}
                     <span class="ref-peg-kepeg-label text-xs text-slate-500">${String(row.kepeg) === '1' ? 'PNS' : 'PPNPN'}</span>
@@ -470,6 +500,7 @@ function refBindPegawaiRow(tr) {
     const namaInput = tr.querySelector('.ref-peg-nama');
     const jabatanInput = tr.querySelector('.ref-peg-jabatan');
     const pangkatSelect = tr.querySelector('.ref-peg-pangkat');
+    const kantorSelect = tr.querySelector('.ref-peg-kantor');
     const kepegCheckbox = tr.querySelector('.ref-peg-kepeg');
     const kepegLabel = tr.querySelector('.ref-peg-kepeg-label');
     const adminCheckbox = tr.querySelector('.ref-peg-admin');
@@ -503,6 +534,9 @@ function refBindPegawaiRow(tr) {
         pangkatSelect.disabled = !on;
         pangkatSelect.classList.toggle('bg-slate-100', !on);
         pangkatSelect.classList.toggle('bg-white', on);
+        kantorSelect.disabled = !on;
+        kantorSelect.classList.toggle('bg-slate-100', !on);
+        kantorSelect.classList.toggle('bg-white', on);
         [kepegCheckbox, adminCheckbox, statusCheckbox].forEach(cb => cb.disabled = !on);
 
         btnEdit.classList.toggle('hidden', on);
@@ -516,6 +550,7 @@ function refBindPegawaiRow(tr) {
             nama: namaInput.value,
             jabatan: jabatanInput.value,
             pangkat: pangkatSelect.value,
+            kantor: kantorSelect.value,
             kepeg: kepegCheckbox.checked,
             admin: adminCheckbox.checked,
             status: statusCheckbox.checked
@@ -528,6 +563,7 @@ function refBindPegawaiRow(tr) {
         namaInput.value = originalValues.nama;
         jabatanInput.value = originalValues.jabatan;
         pangkatSelect.value = originalValues.pangkat;
+        kantorSelect.value = originalValues.kantor;
         kepegCheckbox.checked = originalValues.kepeg;
         kepegLabel.textContent = originalValues.kepeg ? 'PNS' : 'PPNPN';
         adminCheckbox.checked = originalValues.admin;
@@ -550,12 +586,14 @@ function refBindPegawaiRow(tr) {
         const kepeg = kepegCheckbox.checked ? '1' : '0';
         const admin = adminCheckbox.checked ? '1' : '0';
         const status = statusCheckbox.checked ? '1' : '0';
+        const kantorId = kantorSelect.value || null;
 
         // Field 'admin' CUMA diikutkan kalau viewer superadmin — admin biasa
         // tidak boleh mengubah siapa saja yang berstatus admin, walau
         // secara UI kolomnya sudah disembunyikan (ini pengaman tambahan,
-        // bukan cuma sembunyi visual).
-        const updatePayload = { nama, jabatan, pangkat, kepeg, status };
+        // bukan cuma sembunyi visual). Field 'kantor_id' BOLEH diubah baik
+        // oleh admin maupun superadmin (reassign pegawai ke kantor lain).
+        const updatePayload = { nama, jabatan, pangkat, kepeg, status, kantor_id: kantorId };
         if (refIsSuperadmin()) updatePayload.admin = admin;
 
         // Pegawai yang dinonaktifkan (status=0) otomatis kehilangan akses_menu
@@ -578,11 +616,21 @@ function refBindPegawaiRow(tr) {
                 item.jabatan = jabatan;
                 item.pangkat = pangkat;
                 item.kepeg = kepeg;
+                item.kantorId = kantorId || '';
                 if (refIsSuperadmin()) item.admin = admin;
                 item.status = status;
             }
             showToast('Data pegawai berhasil diubah' + (status === '0' ? ' (akses menu ikut dicabut)' : ''));
             setEditing(false);
+
+            // Kalau viewer admin biasa (bukan superadmin) mereassign pegawai ini
+            // KELUAR dari kantor aktifnya sendiri, baris ini otomatis hilang dari
+            // daftar setelah refresh berikutnya (karena filter kantor_id). Muat
+            // ulang sekarang juga supaya tabel langsung konsisten.
+            if (!refIsSuperadmin() && kantorId !== (typeof getKantorAktif === 'function' ? getKantorAktif() : '')) {
+                refPegawaiLoaded = false;
+                refLoadPegawaiData();
+            }
         } catch (e) {
             alert('Error koneksi: ' + (e.message || 'Tidak diketahui'));
         } finally {
@@ -854,10 +902,7 @@ async function refLoadKantorData() {
 
     try {
         await waitSupabaseAuthReady();
-        const rows = await sbFetchAll('kantor', 'id, nama, status');
-        refKantorData = rows.map(d => ({ id: d.id, nama: d.nama || '', status: d.status || 'aktif' }))
-            .sort((a, b) => a.nama.localeCompare(b.nama));
-        refKantorLoaded = true;
+        await refGetKantorOptions(true); // force refresh, jangan pakai cache basi
         refRenderKantorTable('');
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="4" class="text-center text-red-500 py-8">❌ Error koneksi: ${e.message || 'Tidak diketahui'}</td></tr>`;
