@@ -343,9 +343,16 @@ function renderPok() {
         const c = String(i.kode);
         const uraian = String(i.uraian || "").toLowerCase();
 
-        const isParent = c.split('.').length === 2; // level akar (Kegiatan.KRO) -- selalu tampil per grup Seksi
+        // "Akar" (isParent) sekarang RELATIF terhadap Seksi ini saja -- baris
+        // yang TIDAK punya leluhur lain di dalam groupItems (dataset Seksi
+        // yang sama) dianggap akar, TERLEPAS dari berapa segmen kode-nya.
+        // Ini WAJIB begini karena 1 baris kode & turunannya bisa saja
+        // ditandai Seksi yang BEDA-BEDA (mis. baris "4798.FAK" masuk Seksi
+        // "Umum", tapi turunan "4798.FAK.001.xxx" ditandai Seksi "HI") --
+        // patokan "selalu 2 segmen" salah total buat kasus begini.
         const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c + '.'));
-        const isLeaf = !hasChildren; // tidak ada baris lain yg lebih dalam di bawahnya -> baris aksi (Rekam/Detil/dst)
+        const isParent = !groupItems.some(other => String(other.kode) !== c && c.startsWith(String(other.kode) + '.'));
+        const isLeaf = !hasChildren;
         const isChildVisible = Array.from(window.expandedCodes).some(k => {
             if (!k.startsWith(seksi + '::')) return false;
             const p = k.slice((seksi + '::').length);
@@ -493,7 +500,7 @@ function searchPok() {
         window.selectedKode = window.searchResults[0].kode;
         const seksi = window.searchResults[0].bidang || 'Lainnya';
 
-        const parentCode = String(window.selectedKode).split('.').slice(0, 2).join('.');
+        const parentCode = pokFindAnchorForCode(String(window.selectedKode), seksi);
         window.expandedCodes.add(seksi + '::' + parentCode);
         window.expandedSeksi.add(seksi); // buka grup Seksi terkait
 
@@ -514,9 +521,10 @@ function gotoSearchResult() {
     const seksi = item.bidang || 'Lainnya';
     window.selectedKode = kode;
 
-    if (kode.split('.').length > 2) {
+    const parentCode = pokFindAnchorForCode(kode, seksi);
+    if (parentCode !== kode) {
         window.expandedCodes.clear();
-        window.expandedCodes.add(seksi + '::' + kode.split('.').slice(0, 2).join('.'));
+        window.expandedCodes.add(seksi + '::' + parentCode);
     }
     window.expandedSeksi.add(seksi); // buka grup Seksi terkait
 
@@ -528,8 +536,38 @@ function gotoSearchResult() {
     }, 50);
 }
 
+// Daftar item POK milik 1 Seksi tertentu (dedup per kode), dipakai buat
+// nentuin "akar relatif" (lihat komentar isParent di pokRenderRow).
+function pokGroupItemsForSeksi(seksi) {
+    const uniqueMap = new Map();
+    (window.rawPokData || []).forEach(item => {
+        const s = item.bidang || 'Lainnya';
+        if (s !== seksi) return;
+        uniqueMap.set(String(item.kode), item);
+    });
+    return Array.from(uniqueMap.values());
+}
+
+// Apakah kode ini "akar" (tidak punya leluhur lain) DI DALAM Seksi tsb.
+function pokIsAnchorCode(kode, seksi) {
+    const items = pokGroupItemsForSeksi(seksi);
+    return !items.some(other => String(other.kode) !== kode && kode.startsWith(String(other.kode) + '.'));
+}
+
+// Cari leluhur "akar" TERDEKAT dari sebuah kode di dalam Seksi tsb (leluhur
+// terpendek yg ada di data & termasuk akar) -- dipakai search/goto supaya
+// auto-expand ke titik yg benar, bukan asumsi selalu 2 segmen pertama.
+function pokFindAnchorForCode(kode, seksi) {
+    const items = pokGroupItemsForSeksi(seksi);
+    const candidates = items.filter(it => kode === String(it.kode) || kode.startsWith(String(it.kode) + '.'));
+    if (candidates.length === 0) return kode;
+    candidates.sort((a, b) => String(a.kode).length - String(b.kode).length);
+    return String(candidates[0].kode);
+}
+
 function toggleExpand(code, seksi) {
-    if (String(code).split('.').length !== 2) return; // cuma level akar (Kegiatan.KRO) yg bisa di-toggle
+    code = String(code);
+    if (!pokIsAnchorCode(code, seksi)) return; // cuma baris akar (relatif per-Seksi) yg bisa di-toggle
 
     const key = seksi + '::' + code;
     const wasOpen = window.expandedCodes.has(key);
@@ -551,22 +589,30 @@ function toggleExpandAll() {
     const btn = document.getElementById("toggleExpandBtn");
     
     if (window.expandedCodes.size === 0) {
-        // Expand all - tambah semua parent codes (12 digit) & buka semua grup Seksi
+        // Expand all - tambah semua kode AKAR (relatif per-Seksi, lihat
+        // pokIsAnchorCode) & buka semua grup Seksi.
         const uniqueMap = new Map();
         window.rawPokData.forEach(item => {
             uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
         });
         const uniqueData = Array.from(uniqueMap.values());
-        
+
+        const bySeksi = new Map();
         uniqueData.forEach(item => {
-            const code = String(item.kode);
             const seksi = item.bidang || 'Lainnya';
-            if (code.split('.').length === 2) {
-                window.expandedCodes.add(seksi + '::' + code);
-            }
+            if (!bySeksi.has(seksi)) bySeksi.set(seksi, []);
+            bySeksi.get(seksi).push(item);
+        });
+
+        bySeksi.forEach((items, seksi) => {
+            items.forEach(item => {
+                const code = String(item.kode);
+                const isAnchor = !items.some(other => String(other.kode) !== code && code.startsWith(String(other.kode) + '.'));
+                if (isAnchor) window.expandedCodes.add(seksi + '::' + code);
+            });
             window.expandedSeksi.add(seksi);
         });
-        
+
         btn.innerHTML = '<i class="fa-solid fa-compress"></i> Collapse All';
     } else {
         // Collapse all
