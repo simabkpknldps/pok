@@ -53,14 +53,27 @@ async function initStatistikPage() {
     // Baca SEMUA tabel yg dibutuhkan sekali di awal, dipakai bareng ke-4 bagian.
     try {
         await waitSupabaseAuthReady();
-        const [kegiatanRows, pokRows, blokirRows, mpRows] = await Promise.all([
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const scopeFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
+
+        // 'kegiatan' tetap RAW (pakai cache global kalau sudah ada) supaya
+        // halaman lain yang butuh pandangan lintas-kantor tidak terganggu.
+        // pok/blokir/mp_pnbp langsung difilter di query (kantor+tahun aktif,
+        // kecuali superadmin lihat gabungan semua kantor).
+        const [kegiatanRowsRaw, pokRows, blokirRows, mpRows] = await Promise.all([
             window.kegiatanRowsCache ? Promise.resolve(window.kegiatanRowsCache) : sbFetchAll('kegiatan'),
-            sbFetchAll('pok'),
-            sbFetchAll('blokir'),
-            sbFetchAll('mp_pnbp')
+            sbFetchAll('pok', '*', scopeFilters),
+            sbFetchAll('blokir', '*', scopeFilters),
+            sbFetchAll('mp_pnbp', '*', scopeFilters)
         ]);
-        window.kegiatanRowsCache = kegiatanRows;
-        stKegiatanRows = kegiatanRows;
+        window.kegiatanRowsCache = kegiatanRowsRaw;
+        // Subset kegiatan sesuai konteks Statistik (kantor+tahun aktif, kecuali
+        // superadmin yang lihat gabungan semua kantor).
+        stKegiatanRows = kegiatanRowsRaw.filter(k =>
+            Number(k.tahun) === tahunAktif && (isSuperadminView || k.kantor_id === kantorAktif)
+        );
         stPokRows = pokRows;
         stBlokirRows = blokirRows;
         stMpRows = mpRows;
