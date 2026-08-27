@@ -59,21 +59,37 @@ async function loadPokData() {
         // query ke database (lihat komentar waitSupabaseAuthReady di supabase-config.js).
         await waitSupabaseAuthReady();
 
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        // Superadmin (mode SuperAdmin): lihat POK/Blokir gabungan semua kantor.
+        // User biasa/admin: dikunci kantor+tahun aktif sesi ini.
+        const scopeFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
+
         // Ambil pok, kegiatan, & blokir BARENGAN — kegiatan dipakai utk hitung
-        // Realisasi LIVE, blokir dipakai utk hitung Blokir LIVE — sekaligus kegiatan
-        // di-cache global (window.kegiatanRowsCache) supaya fetchLokasiData/
-        // loadRefPegawai tidak perlu baca ulang tabel kegiatan dari nol lagi.
-        const [pokRows, kegiatanRows, blokirRows] = await Promise.all([
-            sbFetchAll('pok'),
+        // Realisasi LIVE, blokir dipakai utk hitung Blokir LIVE. Kegiatan tetap
+        // di-fetch RAW (semua kantor/tahun) & disimpan ke cache global
+        // (window.kegiatanRowsCache) TANPA filter -- cache ini dipakai bareng
+        // halaman lain (Perjadinku/Perbantuan) yang butuh pandangan lintas-kantor
+        // (by nama pegawai). Baru difilter LOKAL di sini sesuai konteks POK.
+        const [pokRows, kegiatanRowsRaw, blokirRows] = await Promise.all([
+            sbFetchAll('pok', '*', scopeFilters),
             sbFetchAll('kegiatan'),
-            sbFetchAll('blokir')
+            sbFetchAll('blokir', '*', scopeFilters)
         ]);
 
-        window.kegiatanRowsCache = kegiatanRows || [];
+        window.kegiatanRowsCache = kegiatanRowsRaw || [];
+
+        // Subset kegiatan sesuai konteks POK (kantor+tahun aktif, kecuali
+        // superadmin yang lihat gabungan semua kantor) -- dipakai HANYA utk
+        // hitung Realisasi di bawah, tidak menimpa cache global di atas.
+        const kegiatanRows = window.kegiatanRowsCache.filter(d =>
+            Number(d.tahun) === tahunAktif && (isSuperadminView || d.kantor_id === kantorAktif)
+        );
 
         // Realisasi = jumlah semua kegiatan yang MAK-nya sama dengan Kode POK ini.
         const realisasiByMak = {};
-        window.kegiatanRowsCache.forEach(d => {
+        kegiatanRows.forEach(d => {
             const mak = String(d.mak || '').trim();
             if (!mak) return;
             realisasiByMak[mak] = (realisasiByMak[mak] || 0) + (Number(d.jumlah) || 0);
@@ -728,6 +744,8 @@ async function simpanData() {
         // Struktur field mengikuti pola simpanKegiatan yg lama (kolom D/G-L kosong,
         // status selalu "Rekam Data" utk kegiatan baru).
         await waitSupabaseAuthReady();
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
         const { error } = await sb.from('kegiatan').insert({
             id: idKegiatan,
             mak: document.getElementById("mak").value,
@@ -747,7 +765,9 @@ async function simpanData() {
             dokumen_link: '',
             spby_link: '',
             tgl_rekam: normDate(new Date().toISOString().split('T')[0]),
-            perbantuan: document.getElementById("perbantuanToggle")?.dataset.on === '1'
+            perbantuan: document.getElementById("perbantuanToggle")?.dataset.on === '1',
+            kantor_id: kantorAktif,
+            tahun: tahunAktif
         });
         if (error) throw new Error(error.message);
 
@@ -1133,6 +1153,15 @@ async function simpanPelaksana() {
         // (helper generik, tidak spesifik-Firebase, tetap dipakai bersama).
         await waitSupabaseAuthReady();
 
+        // Pertahankan kantor_id/tahun dari baris ASLI (bukan sesi aktif) --
+        // penting utk superadmin yg bisa lihat lintas kantor, biar baris
+        // pengganti tidak nyasar pindah kepemilikan ke kantor sesi superadmin.
+        const rowLama = (window.kegiatanRowsCache || []).find(r => String(r.id) === String(idLama));
+        const kantorAktifFallback = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktifFallback = await getTahunAktif();
+        const kantorAsli = rowLama ? (rowLama.kantor_id || kantorAktifFallback) : kantorAktifFallback;
+        const tahunAsli = rowLama ? (rowLama.tahun || tahunAktifFallback) : tahunAktifFallback;
+
         const { error: delError } = await sb.from('kegiatan').delete().eq('id', idLama);
         if (delError) throw new Error(delError.message);
 
@@ -1145,7 +1174,8 @@ async function simpanPelaksana() {
                 tgl_lpt: null, tgl_bayar: null, jumlah: Number(p.jumlah) || 0,
                 user: namaUser, status, tgl_sp2d: null, nomor_spm: '',
                 dokumen_link: '', spby_link: '', tgl_rekam: normDate(todayStr),
-                perbantuan: isPerbantuan
+                perbantuan: isPerbantuan,
+                kantor_id: kantorAsli, tahun: tahunAsli
             };
         });
 
