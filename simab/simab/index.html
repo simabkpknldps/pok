@@ -337,7 +337,7 @@
             errEl.classList.add('hidden');
             subtitleEl.textContent = forceAdmin
                 ? 'Pilih kantor yang ingin Anda kelola sebagai SuperAdmin.'
-                : 'Kantor asal Anda belum terdaftar. Pilih kantor tujuan untuk data Perbantuan/Perjadin Anda.';
+                : 'Kantor asal Anda belum terdaftar / sedang nonaktif. Pilih kantor tujuan untuk data Perbantuan/Perjadin Anda.';
             listEl.innerHTML = '<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin" style="color: var(--label-secondary);"></i></div>';
             kantorPilihModal.classList.remove('hidden');
             kantorPilihModal.classList.add('flex');
@@ -429,16 +429,33 @@
 
                 // 4. Tentukan alur kantor/mode sebelum redirect:
                 //    - superadmin -> tanya mode (User Biasa / SuperAdmin)
-                //    - kantor_id terisi (bukan superadmin) -> langsung lanjut, kantor = kantor_id-nya
-                //    - kantor_id NULL (kantor belum terdaftar) -> paksa role biasa + tanya kantor tujuan
+                //    - kantor_id terisi DAN kantor itu berstatus 'aktif' -> langsung
+                //      lanjut sesuai role tersimpan (admin/aksesMenu/biasa), otomatis
+                //      pakai database kantor itu (walau POK/Kegiatan-nya masih kosong,
+                //      itu cuma soal data belum diisi, bukan soal akses).
+                //    - kantor_id NULL, ATAU kantor-nya ada tapi statusnya 'nonaktif'
+                //      -> paksa role biasa (Perjadinku/Perbantuan/Referensi saja),
+                //      terlepas dari flag admin/aksesMenu yg tersimpan, lalu tanya
+                //      kantor tujuan (dari kantor2 yg AKTIF saja).
                 profil.id = nipInput;
-                pendingProfil = profil;
+
+                let kantorAsalAktif = false;
+                if (profil.kantor_id) {
+                    const { data: kantorAsal } = await sb.from('kantor').select('status').eq('id', profil.kantor_id).maybeSingle();
+                    kantorAsalAktif = !!(kantorAsal && kantorAsal.status === 'aktif');
+                }
 
                 if (profil.superadmin === '1') {
+                    pendingProfil = profil;
                     showModePilihModal();
-                } else if (profil.kantor_id) {
+                } else if (profil.kantor_id && kantorAsalAktif) {
+                    pendingProfil = profil;
                     finishLogin(profil, profil.kantor_id, false);
                 } else {
+                    // Kantor asal tidak terdaftar / nonaktif -> paksa biasa, apapun
+                    // flag admin/aksesMenu yg mungkin masih tersimpan dari saat
+                    // kantornya dulu masih aktif.
+                    pendingProfil = { ...profil, admin: '', akses_menu: '' };
                     await showKantorPilihModal({ semuaKantor: false, forceAdmin: false });
                 }
             } catch (err) {
