@@ -110,8 +110,18 @@ async function klLoadCalendarData(forceRefresh) {
             window.kegiatanRowsCache = rows;
         }
 
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+
+        // Kalender difilter kantor+tahun aktif (superadmin: lihat semua kantor,
+        // tahun tetap dibatasi tahun aktif) -- sama pola dgn Kegiatan/Dashboard.
+        const scopedRows = rows.filter(r =>
+            Number(r.tahun) === tahunAktif && (isSuperadminView || r.kantor_id === kantorAktif)
+        );
+
         const grouped = {};
-        rows.forEach(r => {
+        scopedRows.forEach(r => {
             const key = klNormalizeDateKey(r.tgl_mulai);
             if (!key) return;
             if (!grouped[key]) grouped[key] = [];
