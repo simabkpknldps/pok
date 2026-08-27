@@ -286,6 +286,11 @@
         // forceAdmin=true dipakai saat superadmin memilih mode "SuperAdmin"
         // (dapat akses admin penuh di kantor manapun yg dipilih, terlepas
         // dari flag admin/aksesMenu pribadinya di kantor asal).
+        //
+        // Field 'akses_menu' pada profil yang dioper ke sini SUDAH final
+        // (termasuk auto-akses kalau kantor+status aktif -- lihat
+        // profilDenganAksesOtomatis), function ini tinggal simpan apa
+        // adanya, tidak menghitung ulang.
         function finishLogin(profil, kantorId, forceAdmin) {
             localStorage.setItem('nama', profil.nama || '');
             localStorage.setItem('nip', profil.id || '');
@@ -313,15 +318,35 @@
             window.location.href = redirectTarget;
         }
 
+        // Kantor aktif + status pegawai aktif ('1') -> OTOMATIS dapat akses
+        // penuh semua menu (setara tingkat 'aksesMenu'), TIDAK perlu admin
+        // toggle akses_menu manual lagi. Field 'admin' TETAP murni manual
+        // (tier admin/Data Rekening tidak ikut otomatis, harus tetap
+        // ditoggle sendiri oleh admin/superadmin lain).
+        // kantorAktifValid = status kantor (dari tabel kantor) utk kantor
+        // yang SEDANG dipakai login ini -- BUKAN cuma kantor_id pegawai.
+        function profilDenganAksesOtomatis(profil, kantorAktifValid) {
+            if (kantorAktifValid && String(profil.status) === '1') {
+                return { ...profil, akses_menu: '1' };
+            }
+            return profil;
+        }
+
         // --- Modal: Pilih Mode (khusus superadmin) ---
         const modePilihModal = document.getElementById('modePilihModal');
         function showModePilihModal() {
             modePilihModal.classList.remove('hidden');
             modePilihModal.classList.add('flex');
         }
-        document.getElementById('modePilihBiasaBtn').addEventListener('click', () => {
+        document.getElementById('modePilihBiasaBtn').addEventListener('click', async () => {
             modePilihModal.classList.replace('flex', 'hidden');
-            finishLogin(pendingProfil, pendingProfil.kantor_id || '', false);
+            let kantorAktifValid = false;
+            if (pendingProfil.kantor_id) {
+                const { data: kantorAsal } = await sb.from('kantor').select('status').eq('id', pendingProfil.kantor_id).maybeSingle();
+                kantorAktifValid = !!(kantorAsal && kantorAsal.status === 'aktif');
+            }
+            const profilFinal = profilDenganAksesOtomatis(pendingProfil, kantorAktifValid);
+            finishLogin(profilFinal, pendingProfil.kantor_id || '', false);
         });
         document.getElementById('modePilihSuperadminBtn').addEventListener('click', async () => {
             modePilihModal.classList.replace('flex', 'hidden');
@@ -449,8 +474,8 @@
                     pendingProfil = profil;
                     showModePilihModal();
                 } else if (profil.kantor_id && kantorAsalAktif) {
-                    pendingProfil = profil;
-                    finishLogin(profil, profil.kantor_id, false);
+                    pendingProfil = profilDenganAksesOtomatis(profil, kantorAsalAktif);
+                    finishLogin(pendingProfil, profil.kantor_id, false);
                 } else {
                     // Kantor asal tidak terdaftar / nonaktif -> paksa biasa, apapun
                     // flag admin/aksesMenu yg mungkin masih tersimpan dari saat
