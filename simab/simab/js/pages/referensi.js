@@ -44,8 +44,14 @@ function refIsAdmin() {
 // Superadmin: tingkat di atas admin biasa. Admin biasa TETAP boleh ubah data
 // pegawai lain (nama/jabatan/pangkat/status), TAPI TIDAK boleh melihat/ubah
 // siapa saja yang berstatus admin — itu cuma hak superadmin.
+//
+// PENTING: yang dicek di sini 'superadminMode' (mode SESI ini), BUKAN
+// 'superadmin' (identitas akun). Superadmin yang login pilih "User Biasa"
+// harus diperlakukan PERSIS seperti admin biasa di kantornya sendiri —
+// termasuk TIDAK melihat tab User Manager/Kantor & kolom Admin. Cuma pas
+// mereka pilih mode "SuperAdmin" (superadminMode='1') semua privilese ini aktif.
 function refIsSuperadmin() {
-    return localStorage.getItem('superadmin') === '1';
+    return localStorage.getItem('superadminMode') === '1';
 }
 
 // Aksi kolom Aksi: kalau bukan admin, tampilkan kunci sebagai pengganti tombol edit/hapus.
@@ -118,8 +124,9 @@ function initReferensiPage() {
     }
     // aksesLevel === 'admin' -> semua tab tetap ada apa adanya.
 
-    // Tab User Manager & Kantor: TERPISAH dari 3 tingkat di atas, cuma utk superadmin.
-    if (localStorage.getItem('superadmin') !== '1') {
+    // Tab User Manager & Kantor: TERPISAH dari 3 tingkat di atas, cuma utk superadmin
+    // yang SEDANG dalam mode SuperAdmin (bukan cuma punya identitas superadmin).
+    if (localStorage.getItem('superadminMode') !== '1') {
         tabBtnUserManager?.remove();
         tabUserManager?.remove();
         tabBtnKantor?.remove();
