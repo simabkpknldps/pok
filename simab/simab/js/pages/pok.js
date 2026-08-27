@@ -343,12 +343,13 @@ function renderPok() {
         const c = String(i.kode);
         const uraian = String(i.uraian || "").toLowerCase();
 
-        const isParent = c.length === 12;
-        const isLeaf = c.length > 27;
+        const isParent = c.split('.').length === 2; // level akar (Kegiatan.KRO) -- selalu tampil per grup Seksi
+        const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c + '.'));
+        const isLeaf = !hasChildren; // tidak ada baris lain yg lebih dalam di bawahnya -> baris aksi (Rekam/Detil/dst)
         const isChildVisible = Array.from(window.expandedCodes).some(k => {
             if (!k.startsWith(seksi + '::')) return false;
             const p = k.slice((seksi + '::').length);
-            return c.startsWith(p) && c !== p;
+            return c.startsWith(p + '.') || c === p;
         });
 
         if (!isParent && !isChildVisible) return '';
@@ -372,7 +373,6 @@ function renderPok() {
 
         const textStyle = depth <= 2 ? 'font-weight:700; color: var(--label);' : (isLeaf ? `font-weight:400; color: var(--label);` : 'font-weight:600; color: var(--label);');
 
-        const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
         const expandKey = seksi + '::' + c;
 
         const pagu = Number(i.pagu || 0);
@@ -493,7 +493,7 @@ function searchPok() {
         window.selectedKode = window.searchResults[0].kode;
         const seksi = window.searchResults[0].bidang || 'Lainnya';
 
-        const parentCode = String(window.selectedKode).substring(0, 12);
+        const parentCode = String(window.selectedKode).split('.').slice(0, 2).join('.');
         window.expandedCodes.add(seksi + '::' + parentCode);
         window.expandedSeksi.add(seksi); // buka grup Seksi terkait
 
@@ -514,9 +514,9 @@ function gotoSearchResult() {
     const seksi = item.bidang || 'Lainnya';
     window.selectedKode = kode;
 
-    if (kode.length > 12) {
+    if (kode.split('.').length > 2) {
         window.expandedCodes.clear();
-        window.expandedCodes.add(seksi + '::' + kode.substring(0, 12));
+        window.expandedCodes.add(seksi + '::' + kode.split('.').slice(0, 2).join('.'));
     }
     window.expandedSeksi.add(seksi); // buka grup Seksi terkait
 
@@ -529,7 +529,7 @@ function gotoSearchResult() {
 }
 
 function toggleExpand(code, seksi) {
-    if (String(code).length !== 12) return;
+    if (String(code).split('.').length !== 2) return; // cuma level akar (Kegiatan.KRO) yg bisa di-toggle
 
     const key = seksi + '::' + code;
     const wasOpen = window.expandedCodes.has(key);
@@ -561,7 +561,7 @@ function toggleExpandAll() {
         uniqueData.forEach(item => {
             const code = String(item.kode);
             const seksi = item.bidang || 'Lainnya';
-            if (code.length === 12) {
+            if (code.split('.').length === 2) {
                 window.expandedCodes.add(seksi + '::' + code);
             }
             window.expandedSeksi.add(seksi);
@@ -1378,7 +1378,10 @@ async function downloadSeksiPDF(seksi) {
             didParseCell: (data) => {
                 if (data.section !== 'body') return;
                 const rowItem = items[data.row.index];
-                if (rowItem && String(rowItem.kode).length > 27) {
+                if (!rowItem) return;
+                const kodeRow = String(rowItem.kode);
+                const adaTurunan = items.some(other => String(other.kode).startsWith(kodeRow + '.'));
+                if (!adaTurunan) {
                     data.cell.styles.fontStyle = 'bold';
                     data.cell.styles.textColor = [37, 99, 235];
                 }
