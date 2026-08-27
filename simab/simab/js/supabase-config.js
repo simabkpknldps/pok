@@ -92,15 +92,29 @@ async function sbFetchAll(table, selectCols, filters) {
 }
 window.sbFetchAll = sbFetchAll;
 
-// "Tahun aktif" pusat (tabel config, id='tahun_aktif') — SATU sumber
-// kebenaran dipakai SEMUA halaman utk filter data tahun anggaran berjalan
-// (kegiatan, pok, blokir, rpd, rpd_berjalan, mp_pnbp). Ganti tahun anggaran
-// = admin update baris ini SEKALI di Supabase, bukan restrukturisasi
-// database. Di-cache di memori (per sesi/reload halaman) supaya tidak baca
-// ulang tabel config berkali-kali dalam 1 kunjungan.
+// "Tahun aktif" — SEKARANG per-sesi (dipilih user lewat popup switcher di
+// sebelah tombol Logout), BUKAN satu nilai tunggal global lagi. Disimpan di
+// localStorage 'tahunAktif', dipakai SEMUA halaman utk filter data tahun
+// anggaran (kegiatan, pok, blokir, rpd, rpd_berjalan, mp_pnbp).
+//
+// Urutan penentuan nilai default (saat localStorage 'tahunAktif' belum ada,
+// mis. baru saja login): tabel config (id='tahun_aktif') sbg default sistem
+// -> kalau itu juga tidak ada, tahun kalender berjalan.
+//
+// Di-cache di memori (per sesi/reload halaman) spy tidak baca ulang config
+// berkali-kali dalam 1 kunjungan -- TAPI cache ini WAJIB direset (lihat
+// setTahunAktif di bawah) begitu user ganti tahun lewat popup, supaya
+// halaman lain yg baru dibuka setelahnya langsung ikut tahun yang baru.
 let _tahunAktifCache = null;
 async function getTahunAktif() {
     if (_tahunAktifCache !== null) return _tahunAktifCache;
+
+    const dariSesi = localStorage.getItem('tahunAktif');
+    if (dariSesi) {
+        _tahunAktifCache = Number(dariSesi);
+        return _tahunAktifCache;
+    }
+
     try {
         const { data, error } = await sb.from('config').select('data').eq('id', 'tahun_aktif').maybeSingle();
         if (error) throw error;
@@ -109,9 +123,40 @@ async function getTahunAktif() {
         console.error('Gagal baca tahun aktif, fallback ke tahun sistem:', e);
         _tahunAktifCache = new Date().getFullYear();
     }
+    localStorage.setItem('tahunAktif', String(_tahunAktifCache));
     return _tahunAktifCache;
 }
 window.getTahunAktif = getTahunAktif;
+
+// Dipanggil oleh popup switcher tahun anggaran (dashboard.html) saat user
+// pilih tahun baru. Reset cache in-memory supaya getTahunAktif() berikutnya
+// (di halaman manapun) langsung baca nilai baru, bukan nilai lama yg
+// ke-cache dari sebelum ganti.
+function setTahunAktif(tahun) {
+    localStorage.setItem('tahunAktif', String(tahun));
+    _tahunAktifCache = Number(tahun);
+}
+window.setTahunAktif = setTahunAktif;
+
+// Daftar tahun yang BENERAN ada datanya di database utk kantor yang sedang
+// aktif -- dipakai isi pilihan di popup switcher, supaya user tidak bisa
+// pilih tahun yang datanya belum pernah disiapkan sama sekali. Sumbernya
+// tabel 'pok' (SATU-SATUNYA tabel yg jumlah barisnya kecil & PASTI dibuat
+// duluan tiap kali tahun anggaran baru mulai, sebelum ada kegiatan apapun).
+async function getTahunTersediaList(kantorId) {
+    try {
+        const rows = await sbFetchAll('pok', 'tahun', { kantor_id: kantorId });
+        const tahunUnik = [...new Set(rows.map(r => Number(r.tahun)).filter(t => !isNaN(t)))];
+        tahunUnik.sort((a, b) => b - a); // terbaru dulu
+        if (tahunUnik.length > 0) return tahunUnik;
+    } catch (e) {
+        console.error('Gagal ambil daftar tahun tersedia:', e);
+    }
+    // Fallback kalau tabel pok utk kantor ini masih kosong total (mis. kantor
+    // baru banget) -- minimal tawarkan tahun sistem berjalan.
+    return [new Date().getFullYear()];
+}
+window.getTahunTersediaList = getTahunTersediaList;
 
 // Status kegiatan dihitung ulang di client tiap kali salah satu field tanggal
 // terkait (tgl_mulai/tgl_lpt/tgl_bayar/tgl_sp2d) berubah, lalu disimpan
