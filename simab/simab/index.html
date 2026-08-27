@@ -157,6 +157,11 @@
             </div>
 
             <div id="daftarStep1">
+                <label class="ios-label block mb-1.5 ml-0.5">Kantor</label>
+                <select id="daftarKantor" class="ios-field mb-3">
+                    <option value="">-- Memuat daftar kantor... --</option>
+                </select>
+
                 <label class="ios-label block mb-1.5 ml-0.5">NIP</label>
                 <div class="flex gap-2">
                     <input type="text" id="daftarCekNip" placeholder="Masukkan NIP" class="ios-field flex-1">
@@ -212,6 +217,35 @@
         </div>
     </div>
 
+    <!-- Modal: Pilih Mode (khusus akun superadmin) -->
+    <div id="modePilihModal" class="hidden fixed inset-0 items-center justify-center p-4 z-50" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(4px);">
+        <div class="glass-card w-full max-w-sm rounded-[24px] p-6" style="background: rgba(255,255,255,0.85);">
+            <h2 class="text-[1.1rem] font-semibold mb-1 text-center" style="color: var(--label);">Masuk sebagai?</h2>
+            <p class="text-[13px] text-center mb-5" style="color: var(--label-secondary);">Akun Anda punya akses SuperAdmin.</p>
+            <div class="space-y-2.5">
+                <button type="button" id="modePilihBiasaBtn" class="btn-ios w-full py-3 text-[14px]">
+                    User Biasa <span class="opacity-75">(kantor sendiri)</span>
+                </button>
+                <button type="button" id="modePilihSuperadminBtn" class="w-full py-3 text-[14px] rounded-xl font-medium"
+                    style="background: rgba(118,118,128,0.16); color: var(--label);">
+                    SuperAdmin <span class="opacity-75">(kelola kantor lain)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Pilih Kantor -->
+    <div id="kantorPilihModal" class="hidden fixed inset-0 items-center justify-center p-4 z-50" style="background: rgba(0,0,0,0.35); backdrop-filter: blur(4px);">
+        <div class="glass-card w-full max-w-sm rounded-[24px] p-6" style="background: rgba(255,255,255,0.85);">
+            <h2 class="text-[1.1rem] font-semibold mb-1 text-center" style="color: var(--label);">Pilih Kantor</h2>
+            <p id="kantorPilihSubtitle" class="text-[13px] text-center mb-5" style="color: var(--label-secondary);">Data yang Anda input akan tercatat di kantor ini.</p>
+            <div id="kantorPilihList" class="space-y-2 max-h-72 overflow-y-auto">
+                <!-- diisi JS -->
+            </div>
+            <p id="kantorPilihError" class="hidden text-[13px] px-3.5 py-2.5 rounded-xl text-center mt-3" style="background: rgba(255,59,48,0.1); color: #FF3B30;"></p>
+        </div>
+    </div>
+
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="js/supabase-config.js"></script>
@@ -239,6 +273,103 @@
 
         function nipToEmail(nip) {
             return `${String(nip).trim()}@simab.local`;
+        }
+
+        // Kode kantor utama (KPKNL Denpasar) -- satu-satunya yang punya
+        // integrasi GAS ref_pegawai untuk fitur Cek NIP di form Daftar.
+        const KANTOR_UTAMA_ID = '538065';
+
+        // Dipakai bareng oleh handler login & modal pilih mode/kantor.
+        let pendingProfil = null;
+
+        // Lengkapi proses login: simpan semua localStorage & redirect.
+        // forceAdmin=true dipakai saat superadmin memilih mode "SuperAdmin"
+        // (dapat akses admin penuh di kantor manapun yg dipilih, terlepas
+        // dari flag admin/aksesMenu pribadinya di kantor asal).
+        function finishLogin(profil, kantorId, forceAdmin) {
+            localStorage.setItem('nama', profil.nama || '');
+            localStorage.setItem('nip', profil.id || '');
+            localStorage.setItem('admin', forceAdmin ? '1' : (profil.admin || ''));
+            localStorage.setItem('jabatan', profil.jabatan || '');
+            localStorage.setItem('pangkat', profil.pangkat || '');
+            localStorage.setItem('kepeg', profil.kepeg || '');
+            localStorage.setItem('aksesMenu', forceAdmin ? '1' : (profil.akses_menu || ''));
+            localStorage.setItem('superadmin', profil.superadmin || '');
+            localStorage.setItem('kantor', kantorId || '');
+            localStorage.setItem('lastActivity', Date.now().toString());
+
+            let redirectTarget = 'dashboard.html';
+            try {
+                const raw = localStorage.getItem('postLoginRedirect');
+                if (raw) {
+                    const titipan = JSON.parse(raw);
+                    if (titipan && titipan.page && (Date.now() - titipan.ts) < 10 * 60 * 1000) {
+                        redirectTarget = titipan.page;
+                    }
+                }
+            } catch (e) { /* format titipan rusak -> abaikan */ }
+            localStorage.removeItem('postLoginRedirect');
+
+            window.location.href = redirectTarget;
+        }
+
+        // --- Modal: Pilih Mode (khusus superadmin) ---
+        const modePilihModal = document.getElementById('modePilihModal');
+        function showModePilihModal() {
+            modePilihModal.classList.remove('hidden');
+            modePilihModal.classList.add('flex');
+        }
+        document.getElementById('modePilihBiasaBtn').addEventListener('click', () => {
+            modePilihModal.classList.replace('flex', 'hidden');
+            finishLogin(pendingProfil, pendingProfil.kantor_id || '', false);
+        });
+        document.getElementById('modePilihSuperadminBtn').addEventListener('click', async () => {
+            modePilihModal.classList.replace('flex', 'hidden');
+            await showKantorPilihModal({ semuaKantor: true, forceAdmin: true });
+        });
+
+        // --- Modal: Pilih Kantor ---
+        const kantorPilihModal = document.getElementById('kantorPilihModal');
+        async function showKantorPilihModal({ semuaKantor, forceAdmin }) {
+            const listEl = document.getElementById('kantorPilihList');
+            const errEl = document.getElementById('kantorPilihError');
+            const subtitleEl = document.getElementById('kantorPilihSubtitle');
+            errEl.classList.add('hidden');
+            subtitleEl.textContent = forceAdmin
+                ? 'Pilih kantor yang ingin Anda kelola sebagai SuperAdmin.'
+                : 'Kantor asal Anda belum terdaftar. Pilih kantor tujuan untuk data Perbantuan/Perjadin Anda.';
+            listEl.innerHTML = '<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin" style="color: var(--label-secondary);"></i></div>';
+            kantorPilihModal.classList.remove('hidden');
+            kantorPilihModal.classList.add('flex');
+
+            try {
+                const { data, error } = await sb.from('kantor').select('id,nama').eq('status', 'aktif').order('nama');
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                    listEl.innerHTML = '';
+                    errEl.textContent = 'Belum ada kantor terdaftar. Hubungi admin.';
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+                listEl.innerHTML = '';
+                data.forEach(k => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'w-full text-left px-4 py-3 rounded-xl text-[14px] transition';
+                    btn.style.background = 'rgba(118,118,128,0.12)';
+                    btn.style.color = 'var(--label)';
+                    btn.textContent = k.nama;
+                    btn.addEventListener('click', () => {
+                        kantorPilihModal.classList.replace('flex', 'hidden');
+                        finishLogin(pendingProfil, k.id, !!forceAdmin);
+                    });
+                    listEl.appendChild(btn);
+                });
+            } catch (e) {
+                listEl.innerHTML = '';
+                errEl.textContent = 'Gagal memuat daftar kantor: ' + (e.message || e);
+                errEl.classList.remove('hidden');
+            }
         }
 
         // Toggle tampil/sembunyi password
@@ -294,36 +425,21 @@
                 //    hampir semua fitur lain di aplikasi selain login ini sendiri.
                 const resUrl = await fetch(redirectorUrl);
                 const realUrl = await resUrl.text();
+                localStorage.setItem('realUrl', realUrl);
 
-                {
-                    localStorage.setItem('nama', profil.nama || '');
-                    localStorage.setItem('nip', nipInput);
-                    localStorage.setItem('realUrl', realUrl); // Simpan agar dashboard tahu URL-nya
-                    localStorage.setItem('admin', profil.admin || '');
-                    localStorage.setItem('jabatan', profil.jabatan || '');
-                    localStorage.setItem('pangkat', profil.pangkat || '');
-                    localStorage.setItem('kepeg', profil.kepeg || '');
-                    localStorage.setItem('aksesMenu', profil.akses_menu || '');
-                    localStorage.setItem('superadmin', profil.superadmin || '');
-                    localStorage.setItem('lastActivity', Date.now().toString());
+                // 4. Tentukan alur kantor/mode sebelum redirect:
+                //    - superadmin -> tanya mode (User Biasa / SuperAdmin)
+                //    - kantor_id terisi (bukan superadmin) -> langsung lanjut, kantor = kantor_id-nya
+                //    - kantor_id NULL (kantor belum terdaftar) -> paksa role biasa + tanya kantor tujuan
+                profil.id = nipInput;
+                pendingProfil = profil;
 
-                    // Kalau tadi user dilempar ke sini oleh session.js (misal habis buka
-                    // dokumen-scan.html tapi belum login), balik ke halaman itu. Titipan
-                    // cuma berlaku 10 menit, biar tidak nyasar ke halaman lama kalau
-                    // ternyata baru login lagi jauh setelahnya.
-                    let redirectTarget = 'dashboard.html';
-                    try {
-                        const raw = localStorage.getItem('postLoginRedirect');
-                        if (raw) {
-                            const titipan = JSON.parse(raw);
-                            if (titipan && titipan.page && (Date.now() - titipan.ts) < 10 * 60 * 1000) {
-                                redirectTarget = titipan.page;
-                            }
-                        }
-                    } catch (e) { /* format titipan rusak -> abaikan, pakai default dashboard.html */ }
-                    localStorage.removeItem('postLoginRedirect');
-
-                    window.location.href = redirectTarget;
+                if (profil.superadmin === '1') {
+                    showModePilihModal();
+                } else if (profil.kantor_id) {
+                    finishLogin(profil, profil.kantor_id, false);
+                } else {
+                    await showKantorPilihModal({ semuaKantor: false, forceAdmin: false });
                 }
             } catch (err) {
                 const msg = (err && err.message || '').toLowerCase();
@@ -394,6 +510,7 @@
         }
 
         function resetDaftarModal() {
+            daftarSelectedKantor = '';
             daftarStep1.classList.remove('hidden');
             daftarStep2.classList.add('hidden');
             document.getElementById('daftarCekNip').value = '';
@@ -414,9 +531,27 @@
             setDaftarButtonAsDaftar();
         }
 
+        // Diisi saat Cek NIP diklik, dipakai lagi saat Simpan (supaya konsisten
+        // walau user sempat ganti-ganti pilihan dropdown sebelum submit).
+        let daftarSelectedKantor = '';
+
+        async function populateDaftarKantorDropdown() {
+            const sel = document.getElementById('daftarKantor');
+            sel.innerHTML = '<option value="">-- Memuat daftar kantor... --</option>';
+            try {
+                const { data, error } = await sb.from('kantor').select('id,nama').eq('status', 'aktif').order('nama');
+                if (error) throw error;
+                const opts = (data || []).map(k => `<option value="${k.id}">${k.nama}</option>`).join('');
+                sel.innerHTML = opts + `<option value="__LAIN__">-- Kantor Lain / Belum Terdaftar --</option>`;
+            } catch (e) {
+                sel.innerHTML = `<option value="__LAIN__">-- Kantor Lain / Belum Terdaftar --</option>`;
+            }
+        }
+
         document.getElementById('daftarLink').addEventListener('click', (e) => {
             e.preventDefault();
             resetDaftarModal();
+            populateDaftarKantorDropdown();
             daftarModal.classList.remove('hidden');
             daftarModal.classList.add('flex');
         });
@@ -457,10 +592,52 @@
             const nip = document.getElementById('daftarCekNip').value.trim();
             daftarCekMsg.classList.add('hidden');
 
+            const kantorPilihan = document.getElementById('daftarKantor').value;
+            if (!kantorPilihan) {
+                daftarCekMsg.textContent = 'Pilih kantor terlebih dahulu.';
+                daftarCekMsg.className = 'text-[13px] px-3.5 py-2.5 rounded-xl mt-3 text-center'; daftarCekMsg.style.background = 'rgba(255,59,48,0.1)'; daftarCekMsg.style.color = '#FF3B30';
+                daftarCekMsg.classList.remove('hidden');
+                return;
+            }
             if (!nip) {
                 daftarCekMsg.textContent = 'NIP harus diisi.';
                 daftarCekMsg.className = 'text-[13px] px-3.5 py-2.5 rounded-xl mt-3 text-center'; daftarCekMsg.style.background = 'rgba(255,59,48,0.1)'; daftarCekMsg.style.color = '#FF3B30';
                 daftarCekMsg.classList.remove('hidden');
+                return;
+            }
+            daftarSelectedKantor = kantorPilihan;
+
+            // Cek-ke-GAS (ref_pegawai) HANYA berlaku untuk kantor utama (Denpasar),
+            // karena itu satu-satunya sumber data ref_pegawai yang ada. Kantor lain
+            // (atau "Kantor Lain/Belum Terdaftar") langsung ke form manual kosong.
+            if (kantorPilihan !== KANTOR_UTAMA_ID) {
+                const namaEl = document.getElementById('daftarNama');
+                const nipEl = document.getElementById('daftarNip');
+                const jabatanEl = document.getElementById('daftarJabatan');
+                const pangkatEl = document.getElementById('daftarPangkat');
+                const statusTextEl = document.getElementById('daftarStatusText');
+                const statusSelectEl = document.getElementById('daftarStatusSelect');
+                const keteranganEl = document.getElementById('daftarKeteranganDitemukan');
+
+                daftarNipFound = false;
+                namaEl.value = '';
+                nipEl.value = nip;
+                jabatanEl.value = '';
+                daftarSetPangkatOptions('');
+                pangkatEl.disabled = false;
+                statusSelectEl.value = '1';
+
+                [namaEl, nipEl, jabatanEl].forEach(el => {
+                    el.readOnly = false;
+                    el.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                });
+                pangkatEl.classList.remove('bg-slate-100', 'text-slate-500', 'cursor-not-allowed');
+                statusTextEl.classList.add('hidden');
+                statusSelectEl.classList.remove('hidden');
+                keteranganEl.classList.add('hidden');
+
+                setDaftarButtonAsDaftar();
+                daftarStep2.classList.remove('hidden');
                 return;
             }
 
@@ -580,62 +757,71 @@
             const originalText = btnText.textContent;
             btnText.textContent = 'Memproses...';
 
-            try {
-                const realUrl = await getRealUrlForDaftar();
-                const res = await fetch(realUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'daftarPegawai',
-                        nama, nip, jabatan, pangkat, status
-                    })
+            // kantor_id yg disimpan ke tabel pegawai: NULL kalau "Kantor Lain",
+            // selain itu id kantor terdaftar yang dipilih.
+            const kantorIdUntukInsert = (daftarSelectedKantor === '__LAIN__') ? null : daftarSelectedKantor;
+
+            // Bikin akun Supabase Auth + baris pegawai (dipakai baik lewat jalur
+            // GAS Denpasar maupun jalur manual kantor lain). Instance KEDUA (client
+            // terpisah dgn storageKey unik) supaya tidak mengganggu sesi aktif.
+            async function buatAkunSupabase() {
+                const secondaryDbDaftar = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: { storageKey: 'sb-secondary-daftar-' + Date.now() }
                 });
-                const data = await res.json();
+                const { error: signUpError } = await secondaryDbDaftar.auth.signUp({ email: nipToEmail(nip), password: nip });
+                if (signUpError && !(signUpError.message || '').toLowerCase().includes('already registered')) {
+                    throw signUpError;
+                }
+                // Default akun BARU dari pendaftaran mandiri: status='0' (nonaktif,
+                // nunggu admin aktifkan manual lewat Referensi > Pegawai), admin &
+                // akses_menu KOSONG sampai admin memutuskan lain.
+                await secondaryDbDaftar.from('pegawai').upsert({
+                    id: nip, nama, jabatan, pangkat, kepeg: status,
+                    admin: '', akses_menu: '', status: '0', nama_bank: '', no_rekening: '',
+                    kantor_id: kantorIdUntukInsert
+                });
+                try { await secondaryDbDaftar.auth.signOut(); } catch (e2) { /* abaikan */ }
+            }
 
-                if (data.status === 'success') {
-                    // Selain nyatet ke sheet ref_pegawai (di atas, tetap dipertahankan supaya
-                    // fitur2 lain yg masih baca dari situ tidak rusak), sekalian bikinkan akun
-                    // Supabase Auth + profil-nya juga, supaya BISA LANGSUNG login tanpa perlu
-                    // proses migrasi manual terpisah lagi. Password default SAMA dgn yg
-                    // dipakai GAS di atas: NIP itu sendiri. Pakai instance KEDUA (client
-                    // terpisah dgn storageKey unik) supaya proses ini tidak mengganggu/
-                    // menimpa sesi login yang sedang aktif (kalau ada).
-                    try {
-                        const secondaryDbDaftar = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-                            auth: { storageKey: 'sb-secondary-daftar-' + Date.now() }
-                        });
-                        const { error: signUpError } = await secondaryDbDaftar.auth.signUp({ email: nipToEmail(nip), password: nip });
-                        if (signUpError && !(signUpError.message || '').toLowerCase().includes('already registered')) {
-                            throw signUpError;
+            try {
+                if (daftarSelectedKantor === KANTOR_UTAMA_ID) {
+                    // Jalur Denpasar: tetap catat ke GAS ref_pegawai dulu (dipertahankan
+                    // supaya fitur lain yg masih baca dari situ tidak rusak), baru bikin
+                    // akun Supabase.
+                    const realUrl = await getRealUrlForDaftar();
+                    const res = await fetch(realUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'daftarPegawai', nama, nip, jabatan, pangkat, status })
+                    });
+                    const data = await res.json();
+
+                    if (data.status === 'success') {
+                        try {
+                            await buatAkunSupabase();
+                        } catch (sbErr) {
+                            console.error('Gagal bikin akun Supabase utk pegawai ini:', sbErr);
+                            // Kalau NIP sudah pernah terdaftar, password Supabase-nya TIDAK ikut
+                            // ter-reset (keterbatasan client SDK) -- perlu reset manual lewat
+                            // Supabase Dashboard kalau memang dibutuhkan.
                         }
-                        // signUp otomatis login sbg user baru itu di instance kedua ini -> insert
-                        // profilnya SEKARANG (selagi sesi itu aktif, RLS self-write butuh ini).
-                        // Default akun BARU dari pendaftaran mandiri (index.html): status='0'
-                        // (nonaktif, nunggu admin aktifkan manual lewat Referensi > Pegawai),
-                        // admin & akses_menu KOSONG (bukan admin, bukan akses penuh) sampai
-                        // admin yang mutuskan lain. kepeg mengikuti pilihan form (PNS/PPNPN).
-                        await secondaryDbDaftar.from('pegawai').upsert({
-                            id: nip, nama, jabatan, pangkat, kepeg: status,
-                            admin: '', akses_menu: '', status: '0', nama_bank: '', no_rekening: ''
-                        });
-                        try { await secondaryDbDaftar.auth.signOut(); } catch (e2) { /* abaikan */ }
-                    } catch (sbErr) {
-                        console.error('Gagal bikin akun Supabase utk pegawai ini:', sbErr);
-                        // Kalau NIP sudah pernah terdaftar, password Supabase-nya TIDAK ikut
-                        // ter-reset (keterbatasan client SDK) -- perlu reset manual lewat
-                        // Supabase Dashboard kalau memang dibutuhkan.
+                        daftarSuccess.textContent = data.message || 'Pendaftaran berhasil.';
+                        daftarSuccess.classList.remove('hidden');
+                        setTimeout(() => { daftarModal.classList.replace('flex', 'hidden'); }, 2000);
+                    } else {
+                        daftarError.textContent = data.message || 'Gagal mendaftar.';
+                        daftarError.classList.remove('hidden');
                     }
-
-                    daftarSuccess.textContent = data.message || 'Pendaftaran berhasil.';
-                    daftarSuccess.classList.remove('hidden');
-                    setTimeout(() => {
-                        daftarModal.classList.replace('flex', 'hidden');
-                    }, 2000);
                 } else {
-                    daftarError.textContent = data.message || 'Gagal mendaftar.';
-                    daftarError.classList.remove('hidden');
+                    // Jalur kantor lain/belum terdaftar: TIDAK menyentuh GAS Denpasar
+                    // sama sekali, langsung bikin akun Supabase saja.
+                    await buatAkunSupabase();
+                    daftarSuccess.textContent = 'Pendaftaran berhasil. Akun akan aktif setelah disetujui admin.';
+                    daftarSuccess.classList.remove('hidden');
+                    setTimeout(() => { daftarModal.classList.replace('flex', 'hidden'); }, 2000);
                 }
             } catch (err) {
-                daftarError.textContent = 'Koneksi ke server gagal, pastikan redirector aktif.';
+                console.error(err);
+                daftarError.textContent = 'Gagal mendaftar: ' + (err.message || err);
                 daftarError.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
