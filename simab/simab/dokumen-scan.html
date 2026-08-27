@@ -1456,13 +1456,15 @@ async function dsGetPokRows(forceRefresh) {
     const blokirByKode = {};
     blokirRows.forEach(b => { blokirByKode[b.id] = Number(b.nilai) || 0; });
 
-    dsPokRowsCache = pokRows.map(d => {
-        const kode = d.kode || d.id;
-        const pagu = Number(d.pagu) || 0;
-        const blokir = blokirByKode[kode] || 0;
-        const realisasi = realisasiByMak[kode] || 0;
-        const sisa = pagu - blokir - realisasi;
-        return { kode, uraian: d.uraian || '', pagu, blokir, realisasi, sisa, sumber: d.sd || '', bidang: d.seksi || 'Lainnya' };
+    dsPokRowsCache = pokRows
+        .filter(d => String(d.kode || d.id).split('.').length >= 3) // <3 segmen tidak ditampilkan (cuma Kegiatan / Kegiatan+KRO)
+        .map(d => {
+            const kode = d.kode || d.id;
+            const pagu = Number(d.pagu) || 0;
+            const blokir = blokirByKode[kode] || 0;
+            const realisasi = realisasiByMak[kode] || 0;
+            const sisa = pagu - blokir - realisasi;
+            return { kode, uraian: d.uraian || '', pagu, blokir, realisasi, sisa, sumber: d.sd || '', bidang: d.seksi || 'Lainnya' };
     });
     dsPokRowsCacheKey = cacheKey;
     return dsPokRowsCache;
