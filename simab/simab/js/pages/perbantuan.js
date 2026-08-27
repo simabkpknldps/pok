@@ -97,15 +97,30 @@ async function initPerbantuanPage() {
             })()
         ]);
 
+        const tahunAktif = await getTahunAktif();
+        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const namaLogin = (localStorage.getItem('nama') || '').trim().toLowerCase();
+
+        // Perbantuan = tampilan personal (data milik SAYA sendiri sbg pelaksana),
+        // difilter nama + tahun aktif, BUKAN kantor_id -- pegawai kantor-lain yang
+        // assist di kantor manapun tetap lihat riwayat perbantuan pribadinya
+        // sendiri. Superadmin: lihat SEMUA (semua nama, semua kantor), tahun tetap
+        // dibatasi tahun aktif.
         const perbantuanRows = kegiatanRows
-            .filter(r => r.perbantuan === true)
+            .filter(r => {
+                if (r.perbantuan !== true) return false;
+                if (Number(r.tahun) !== tahunAktif) return false;
+                if (isSuperadminView) return true;
+                return String(r.pelaksana || '').trim().toLowerCase() === namaLogin;
+            })
             .map(r => ({
                 A: r.id, B: r.mak || '', C: r.uraian || '', D: r.pelaksana || '', E: r.tujuan || '',
                 F: r.tgl_st || '', G: r.tgl_mulai || '', H: r.tgl_selesai || '',
                 I: r.tgl_lpt || '', J: r.tgl_bayar || '',
                 M: Number(r.jumlah) || 0, N: r.user || '', P: r.status || '',
                 Q: r.tgl_sp2d || '', R: r.nomor_spm || '',
-                T: r.dokumen_link || '', U: r.spby_link || ''
+                T: r.dokumen_link || '', U: r.spby_link || '',
+                KANTOR: r.kantor_id || '', TAHUN: r.tahun || null
             }));
 
         pbAllRows = pbSortByTglMulai(perbantuanRows);
@@ -526,6 +541,8 @@ function pbOpenTambahUsulanModal() {
             const todayStr = new Date().toISOString().split('T')[0];
 
             await waitSupabaseAuthReady();
+            const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+            const tahunAktif = await getTahunAktif();
             const rowsBaru = pelaksanaData.map(p => ({
                 id: kgGenerateRandomId(10),
                 mak: '', uraian: uraianGabungan, pelaksana: p.nama, tujuan,
@@ -533,7 +550,8 @@ function pbOpenTambahUsulanModal() {
                 tgl_lpt: null, tgl_bayar: null, jumlah: Number(p.jumlah) || 0,
                 user: namaUser, status: 'Rekam Data', tgl_sp2d: null, nomor_spm: '',
                 dokumen_link: '', spby_link: '', tgl_rekam: normDate(todayStr),
-                perbantuan: true
+                perbantuan: true,
+                kantor_id: kantorAktif, tahun: tahunAktif
             }));
             const { error: insError } = await sb.from('kegiatan').insert(rowsBaru);
             if (insError) throw new Error(insError.message);
@@ -770,6 +788,14 @@ function pbOpenEditModal(row) {
 
             await waitSupabaseAuthReady();
 
+            // Pertahankan kantor_id/tahun dari grup ASLI (bukan sesi aktif) --
+            // penting utk superadmin yg bisa lihat lintas kantor, biar baris
+            // pengganti tidak nyasar pindah kepemilikan ke kantor sesi superadmin.
+            const kantorAktifFallback = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+            const tahunAktifFallback = await getTahunAktif();
+            const kantorAsli = (groupRows[0] && groupRows[0].KANTOR) || kantorAktifFallback;
+            const tahunAsli = (groupRows[0] && groupRows[0].TAHUN) || tahunAktifFallback;
+
             // 1. Hapus SEMUA baris di grup lama (mungkin ada pegawai yg dihapus di form)
             const idsLama = groupRows.map(r => r.A);
             const { error: delError } = await sb.from('kegiatan').delete().in('id', idsLama);
@@ -783,7 +809,8 @@ function pbOpenEditModal(row) {
                 tgl_lpt: null, tgl_bayar: null, jumlah: Number(p.jumlah) || 0,
                 user: namaUser, status: 'Rekam Data', tgl_sp2d: null, nomor_spm: '',
                 dokumen_link: '', spby_link: '', tgl_rekam: normDate(todayStr),
-                perbantuan: true
+                perbantuan: true,
+                kantor_id: kantorAsli, tahun: tahunAsli
             }));
             const { error: insError } = await sb.from('kegiatan').insert(rowsBaru);
             if (insError) throw new Error(insError.message);
@@ -925,8 +952,20 @@ async function pbSyncDokLinksToDb(links, field) {
 
     try {
         await waitSupabaseAuthReady();
-        const rows = ids.map(id => ({ id, [dbField]: links[id] }));
-        const { error } = await sb.from('kegiatan').upsert(rows, { onConflict: 'id' });
+        const kantorAktifFallback = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktifFallback = await getTahunAktif();
+        // kantor_id/tahun ikut baris ASLI-nya (dari pbAllRows), BUKAN sesi aktif --
+        // sama alasan spt di kegiatan.js kgSyncDokLinksToDb.
+        const rows = ids.map(id => {
+            const rowAsli = pbAllRows.find(r => String(r.A) === String(id));
+            return {
+                id,
+                [dbField]: links[id],
+                kantor_id: rowAsli ? (rowAsli.KANTOR || kantorAktifFallback) : kantorAktifFallback,
+                tahun: rowAsli ? (rowAsli.TAHUN || tahunAktifFallback) : tahunAktifFallback
+            };
+        });
+        const { error } = await sb.from('kegiatan').upsert(rows, { onConflict: 'id', ignoreDuplicates: false });
         if (error) throw new Error(error.message);
     } catch (e) {
         console.error('Gagal sinkron link dokumen ke Supabase:', e);
