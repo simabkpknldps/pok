@@ -79,6 +79,9 @@
                     </div>
                 </div>
                 <button onclick="openSettings()" class="text-[15px] transition" style="color: var(--label-secondary);" title="Settings"><i class="fa-solid fa-gear"></i></button>
+                <button onclick="openTahunAnggaranSwitcher()" class="text-[13px] font-medium flex items-center gap-1.5 transition px-3 py-1.5 rounded-lg" style="color: var(--ios-blue); background: rgba(0,113,227,0.08);" title="Ganti Tahun Anggaran">
+                    <i class="fa-solid fa-calendar-days"></i> Tahun Anggaran <span id="tahunAktifLabel">…</span>
+                </button>
                 <button onclick="logout()" class="text-[13px] font-medium flex items-center gap-1.5 transition" style="color: var(--ios-red);" title="Logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
             </div>
         </header>
@@ -110,5 +113,17 @@
     <script src="js/pages/referensi.js"></script>
     <script src="js/pages/perbantuan.js"></script>
     <script src="js/router.js"></script>
+    <script>
+        // Isi label "Tahun Anggaran <tahun>" di header begitu halaman dimuat.
+        // Dipisah dari router.js supaya tidak tercampur logic navigasi
+        // halaman -- ini murni tampilan header, sekali jalan tiap load.
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof waitSupabaseAuthReady === 'function') {
+                waitSupabaseAuthReady().then(() => initTahunAnggaranLabel());
+            } else {
+                initTahunAnggaranLabel();
+            }
+        });
+    </script>
 </body>
 </html>
