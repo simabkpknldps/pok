@@ -420,7 +420,9 @@ function renderPok() {
     window.rawPokData.forEach(item => {
         uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
     });
-    const uniqueData = Array.from(uniqueMap.values());
+    // Baris <3 segmen (cuma Kegiatan, atau Kegiatan+KRO) TIDAK ditampilkan
+    // sama sekali -- grup Seksi mulai dari level RO (3 segmen) ke bawah.
+    const uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
 
     const keyword = (document.getElementById("searchPok")?.value || "").toLowerCase().trim();
 
@@ -585,8 +587,8 @@ function searchPok() {
     }
 
     window.searchResults = window.rawPokData.filter(r =>
-        String(r.kode).toLowerCase().includes(keyword) ||
-        String(r.uraian).toLowerCase().includes(keyword)
+        String(r.kode).split('.').length >= 3 && // <3 segmen tidak ditampilkan, jangan ikut dicari
+        (String(r.kode).toLowerCase().includes(keyword) || String(r.uraian).toLowerCase().includes(keyword))
     );
 
     if (window.searchResults.length > 0) {
@@ -636,6 +638,7 @@ function pokGroupItemsForSeksi(seksi) {
     (window.rawPokData || []).forEach(item => {
         const s = item.bidang || 'Lainnya';
         if (s !== seksi) return;
+        if (String(item.kode).split('.').length < 3) return; // <3 segmen tidak ditampilkan
         uniqueMap.set(String(item.kode), item);
     });
     return Array.from(uniqueMap.values());
@@ -688,7 +691,7 @@ function toggleExpandAll() {
         window.rawPokData.forEach(item => {
             uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
         });
-        const uniqueData = Array.from(uniqueMap.values());
+        const uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
 
         const bySeksi = new Map();
         uniqueData.forEach(item => {
@@ -1389,7 +1392,7 @@ function getSeksiExportData(seksi) {
     (window.rawPokData || []).forEach(item => {
         uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
     });
-    const uniqueData = Array.from(uniqueMap.values());
+    const uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
     return uniqueData
         .filter(item => (item.bidang || 'Lainnya') === seksi)
         .sort((a, b) => String(a.kode).localeCompare(String(b.kode)));
