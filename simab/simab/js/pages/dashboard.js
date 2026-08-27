@@ -105,8 +105,12 @@ function computeDashboardData(kegiatanRows, pokRows, mpPnbpRows) {
 function computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows) {
     const currentMonth = new Date().getMonth() + 1; // 1-12
 
-    const rpdRow = rpdRows.find(r => Number(r.id) === currentMonth);
-    const rpdBerjalan = rpdRow ? Number(rpdRow.nilai) || 0 : 0;
+    // 'id' rpd sekarang format text "{bulan}_{kodeKantor}" -- cari berdasarkan
+    // kolom 'bulan_ke' (angka murni), BUKAN Number(id) lagi. Kalau superadmin
+    // lihat gabungan semua kantor, ada >1 baris dgn bulan_ke sama -> dijumlah.
+    const rpdBerjalan = rpdRows
+        .filter(r => Number(r.bulan_ke) === currentMonth)
+        .reduce((a, r) => a + (Number(r.nilai) || 0), 0);
 
     let sudahSp2d = 0, prosesRM = 0, prosesPNBP = 0, lpt = 0, terlaksana = 0;
 
@@ -354,7 +358,12 @@ async function syncMyIntressExcel(file) {
 
         progressText.textContent = 'Memuat data kegiatan dari database...';
         await waitSupabaseAuthReady();
-        const kegiatanRows = await sbFetchAll('kegiatan', 'id, nomor_spm, tgl_sp2d');
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        // SELALU dibatasi kantor+tahun AKTIF SESI INI (termasuk superadmin) —
+        // ini alur update data (tgl_sp2d), nomor SPM antar kantor bisa
+        // kebetulan sama tapi itu 2 kegiatan yang beda sama sekali.
+        const kegiatanRows = await sbFetchAll('kegiatan', 'id, nomor_spm, tgl_sp2d', { kantor_id: kantorAktif, tahun: tahunAktif });
 
         // Map Nomor SPM (numerik, tanpa nol di depan) -> daftar baris kegiatan yg sesuai.
         const spmMap = {};
@@ -440,21 +449,37 @@ async function initDashboardPage() {
     try {
         await waitSupabaseAuthReady();
 
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const scopeFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
+
         // 1x baca tabel kegiatan + pok + rpd + rpd_berjalan + mp_pnbp, dijalankan bareng.
         // sbFetchAll dipakai (bukan select('*') polos) supaya tidak kena limit
         // 1000 baris default Supabase/PostgREST.
-        const [kegiatanRows, pokRows, rpdRows, rpdBerjalanRows, mpPnbpRows] = await Promise.all([
+        // 'kegiatan' SENGAJA diambil RAW (semua kantor/tahun) supaya cache
+        // global (window.kegiatanRowsCache) tetap lengkap buat halaman lain
+        // (Perjadinku/Perbantuan butuh pandangan lintas-kantor by nama). Baru
+        // difilter LOKAL di bawah khusus buat perhitungan kartu Dashboard.
+        const [kegiatanRowsRaw, pokRows, rpdRows, rpdBerjalanRows, mpPnbpRows] = await Promise.all([
             sbFetchAll('kegiatan'),
-            sbFetchAll('pok'),
-            sbFetchAll('rpd'),
-            sbFetchAll('rpd_berjalan'),
-            sbFetchAll('mp_pnbp')
+            sbFetchAll('pok', '*', scopeFilters),
+            sbFetchAll('rpd', '*', scopeFilters),
+            sbFetchAll('rpd_berjalan', '*', scopeFilters),
+            sbFetchAll('mp_pnbp', '*', scopeFilters)
         ]);
 
         // Cache dipakai juga oleh pok.js (popup Detil/Rekam/Pelaksana) supaya
         // TIDAK perlu baca ulang tabel kegiatan lagi kalau user lanjut buka
         // halaman POK sesudah ini dalam sesi yang sama.
-        window.kegiatanRowsCache = kegiatanRows;
+        window.kegiatanRowsCache = kegiatanRowsRaw;
+
+        // Subset kegiatan sesuai konteks Dashboard (kantor+tahun aktif, kecuali
+        // superadmin yang lihat gabungan semua kantor) -- dipakai HANYA utk
+        // hitungan kartu di bawah, tidak menimpa cache global di atas.
+        const kegiatanRows = kegiatanRowsRaw.filter(k =>
+            Number(k.tahun) === tahunAktif && (isSuperadminView || k.kantor_id === kantorAktif)
+        );
 
         const data = computeDashboardData(kegiatanRows, pokRows, mpPnbpRows);
         const rpdBerjalanData = computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows);
@@ -630,11 +655,16 @@ function openRpdBerjalanRowForm(existing) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
         try {
             await waitSupabaseAuthReady();
+            const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+            const tahunAktif = await getTahunAktif();
             if (isEdit) {
                 const { error } = await sb.from('rpd_berjalan').update({ uraian, jumlah }).eq('id', existing.id);
                 if (error) throw new Error(error.message);
             } else {
-                const { error } = await sb.from('rpd_berjalan').insert({ id: kgGenerateRandomId(10), uraian, jumlah });
+                const { error } = await sb.from('rpd_berjalan').insert({
+                    id: kgGenerateRandomId(10), uraian, jumlah,
+                    kantor_id: kantorAktif, tahun: tahunAktif
+                });
                 if (error) throw new Error(error.message);
             }
             overlay.remove();
