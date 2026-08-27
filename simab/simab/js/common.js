@@ -3,7 +3,7 @@
  */
 
 function logout() {
-    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'superadmin', 'tahunAktif', 'lastActivity']
+    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'superadmin', 'superadminMode', 'tahunAktif', 'lastActivity']
         .forEach(k => localStorage.removeItem(k));
     window.location.href = 'index.html?reason=logout';
 }
