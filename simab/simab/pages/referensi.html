@@ -14,6 +14,9 @@
         <button id="ref-tabBtnUserManager" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
             <i class="fa-solid fa-user-shield mr-2"></i>User Manager
         </button>
+        <button id="ref-tabBtnKantor" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
+            <i class="fa-solid fa-building mr-2"></i>Kantor
+        </button>
     </div>
 
     <!-- ==================== TAB SBM ==================== -->
@@ -142,5 +145,39 @@
             </table>
         </div>
         <p id="ref-um-empty" class="hidden text-center text-slate-400 py-6 text-sm">Tidak ada data yang cocok.</p>
+    </div>
+
+    <!-- ==================== TAB KANTOR (superadmin saja) ==================== -->
+    <div id="ref-tabKantor" class="hidden p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div class="relative w-full sm:max-w-xs">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input id="ref-kantor-search" type="text" placeholder="Cari Kode / Nama Kantor..."
+                    class="w-full ios-field" style="padding-left: 2.4rem;">
+            </div>
+            <button id="ref-kantor-btnTambah" class="btn-ios px-4 py-2.5 text-sm shrink-0 whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i>Tambah Kantor
+            </button>
+        </div>
+        <div class="overflow-auto rounded-xl border border-slate-200 max-h-[65vh]">
+            <table class="w-full text-sm border-collapse">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-slate-500">
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Kode Kantor</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Nama Kantor</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium text-center border-b border-slate-200">Status</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium text-center border-b border-slate-200">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="ref-kantor-tbody" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="4" class="text-center text-slate-400 py-8">
+                            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p id="ref-kantor-empty" class="hidden text-center text-slate-400 py-6 text-sm">Tidak ada data yang cocok.</p>
     </div>
 </div>
