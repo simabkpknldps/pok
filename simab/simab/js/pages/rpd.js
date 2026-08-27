@@ -45,8 +45,17 @@ async function rpdLoadData() {
     try {
         await waitSupabaseAuthReady();
 
-        const [rpdRows, kegiatanRows] = await Promise.all([
-            sbFetchAll('rpd'),
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        // Superadmin: lihat SEMUA kantor sekaligus (dijumlah per bulan),
+        // TIDAK difilter kantor_id. User biasa/admin: kunci ke kantor+tahun
+        // aktif sesi ini.
+        const isSuperadminView = localStorage.getItem('superadmin') === '1';
+
+        const rpdFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
+
+        const [rpdRows, kegiatanRowsAll] = await Promise.all([
+            sbFetchAll('rpd', '*', rpdFilters),
             (async () => {
                 let rows = window.kegiatanRowsCache;
                 if (!rows) {
@@ -57,6 +66,13 @@ async function rpdLoadData() {
             })()
         ]);
 
+        // window.kegiatanRowsCache berisi SEMUA baris mentah lintas kantor+tahun
+        // (dipakai bareng oleh banyak halaman) -- filter dulu di sini sesuai
+        // konteks RPD (kantor+tahun aktif, kecuali superadmin yg lihat semua kantor).
+        const kegiatanRows = kegiatanRowsAll.filter(k =>
+            Number(k.tahun) === tahunAktif && (isSuperadminView || k.kantor_id === kantorAktif)
+        );
+
         // Realisasi per bulan = SUM jumlah kegiatan yang tgl_sp2d-nya jatuh di bulan itu.
         const realisasiPerBulan = new Array(13).fill(0); // index 1-12 dipakai, index 0 dibuang
         kegiatanRows.forEach(k => {
@@ -66,8 +82,15 @@ async function rpdLoadData() {
             realisasiPerBulan[d.getMonth() + 1] += Number(k.jumlah) || 0;
         });
 
+        // rpdByBulan: DIJUMLAH (bukan ditimpa) -- penting utk superadmin yg lihat
+        // banyak kantor sekaligus (beberapa baris kantor berbeda bisa punya id
+        // (bulan) yang sama). Untuk user biasa/admin tetap aman krn cuma ada 1
+        // baris per bulan (sudah difilter kantor_id+tahun di query di atas).
         const rpdByBulan = {};
-        rpdRows.forEach(r => { rpdByBulan[Number(r.id)] = Number(r.nilai) || 0; });
+        rpdRows.forEach(r => {
+            const b = Number(r.id);
+            rpdByBulan[b] = (rpdByBulan[b] || 0) + (Number(r.nilai) || 0);
+        });
 
         rpdComputedRows = [];
         for (let bulanKe = 1; bulanKe <= 12; bulanKe++) {
@@ -111,6 +134,7 @@ function rpdFormatPersen(v) {
 }
 
 function rpdRenderRow(row) {
+    const isSuperadminView = localStorage.getItem('superadmin') === '1';
     return `
         <tr data-bulan-ke="${row.bulanKe}">
             <td class="px-3 py-1.5 text-center">${row.bulan}</td>
@@ -120,9 +144,9 @@ function rpdRenderRow(row) {
             <td class="px-3 py-1.5 text-right">${rpdFormatPersen(row.persenDeviasi)}</td>
             <td class="px-3 py-1.5 text-center">
                 <div class="rpd-actions inline-flex items-center gap-3">
-                    <button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD bulan ini">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
+                    ${isSuperadminView
+                        ? `<span class="text-slate-300" title="Nilai gabungan semua kantor, ubah lewat akun kantor spesifik"><i class="fa-solid fa-lock"></i></span>`
+                        : `<button class="rpd-btn-ubah text-sky-600 hover:text-sky-800" title="Ubah RPD bulan ini"><i class="fa-solid fa-pen"></i></button>`}
                 </div>
             </td>
         </tr>
@@ -211,7 +235,15 @@ async function rpdSaveRow(tr, actionsDiv) {
 
     try {
         await waitSupabaseAuthReady();
-        const { error } = await sb.from('rpd').update({ nilai: newValue }).eq('id', bulanKe);
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        // Key gabungan (id, kantor_id, tahun) -- 'id' bulan saja sudah TIDAK
+        // unik lagi sejak PK diperluas (lihat supabase-fix-pk-multi-kantor-tahun.sql).
+        const { error } = await sb.from('rpd')
+            .update({ nilai: newValue })
+            .eq('id', bulanKe)
+            .eq('kantor_id', kantorAktif)
+            .eq('tahun', tahunAktif);
         if (error) throw new Error(error.message);
 
         const row = rpdComputedRows.find(r => r.bulanKe === bulanKe);
