@@ -98,7 +98,7 @@ function bindKegiatanEvents() {
         // Selain itu (user biasa/aksesMenu) -> begitu status BUKAN "Rekam
         // Data" lagi, cuma boleh: Salin, Detil, dan Dokumen (Dokumen pun
         // cuma boleh Lihat, diatur di kgShowDokumenPopup/slotHtml di atas).
-        const isPrivileged = localStorage.getItem('admin') === '1' || localStorage.getItem('superadmin') === '1';
+        const isPrivileged = localStorage.getItem('admin') === '1' || localStorage.getItem('superadminMode') === '1';
         const statusKegiatan = tr.cells[8].textContent.trim();
         const bolehAksiTerbatas = isPrivileged || statusKegiatan === 'Rekam Data';
         const pesanTolak = 'Kegiatan ini sudah diproses lebih lanjut (status bukan Rekam Data) — hubungi admin kalau perlu perubahan.';
@@ -248,7 +248,7 @@ async function kgLoadData(forceRefresh) {
         await waitSupabaseAuthReady();
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        const isSuperadminView = localStorage.getItem('superadmin') === '1';
+        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
         // Halaman Kegiatan SELALU dibatasi tahun aktif; kantor_id juga dibatasi
         // KECUALI superadmin (lihat semua kantor sekaligus, buat monitoring).
         const filters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
@@ -1782,7 +1782,7 @@ function kgShowDokumenPopup(tr) {
         </div>
     `;
 
-    const isPrivilegedDok = localStorage.getItem('admin') === '1' || localStorage.getItem('superadmin') === '1';
+    const isPrivilegedDok = localStorage.getItem('admin') === '1' || localStorage.getItem('superadminMode') === '1';
     const readOnlyDok = !isPrivilegedDok && rowData.P !== 'Rekam Data';
 
     const dokTag = kgParseDokumenTagClient(rowData.C);
