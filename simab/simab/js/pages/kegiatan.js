@@ -262,7 +262,7 @@ async function kgLoadData(forceRefresh) {
             M: Number(d.jumlah) || 0, N: d.user || '', O: d.tgl_rekam || '',
             P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '',
             T: d.dokumen_link || '', U: d.spby_link || '',
-            KANTOR: d.kantor_id || '', TAHUN: d.tahun || null
+            KANTOR: d.kantor_id || '', TAHUN: d.tahun || null, PERBANTUAN: d.perbantuan === true
         }));
 
         kgShowLoading(false);
@@ -677,15 +677,33 @@ function kgShowEditPopup(tr) {
     const tujuan = tr.cells[3].textContent;
     const tglST = tr.cells[4].textContent;
     const jumlah = tr.cells[6].textContent.replace(/\./g, '');
+    // Nilai perbantuan TIDAK ada di kolom tabel yg tampil -- ambil dari
+    // kgAllRows (state lengkap hasil load, sudah ada field PERBANTUAN).
+    // Default false kalau baris entah kenapa tidak ketemu di kgAllRows.
+    const rowData = kgAllRows.find(r => String(r.A) === String(idKegiatan));
+    const isPerbantuanAwal = !!(rowData && rowData.PERBANTUAN);
 
     const { overlay, popup } = kgOpenOverlay(`
         <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Ubah Kegiatan #${idKegiatan}</h3>
-        <label class="${kgLabelClass}">MAK</label>
-        <div class="flex gap-2">
-            <input id="kg-editMak" type="text" readonly value="${mak}" class="${kgInputClass} bg-slate-100 text-slate-500 cursor-not-allowed flex-1">
-            <button id="kg-editUbahMak" type="button" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium shrink-0 whitespace-nowrap">
-                <i class="fa-solid fa-list-check mr-1"></i> Ubah MAK
-            </button>
+        <div class="flex gap-3 items-start">
+            <div class="flex-1">
+                <label class="${kgLabelClass}">MAK</label>
+                <div class="flex gap-2">
+                    <input id="kg-editMak" type="text" readonly value="${mak}" class="${kgInputClass} bg-slate-100 text-slate-500 cursor-not-allowed flex-1">
+                    <button id="kg-editUbahMak" type="button" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium shrink-0 whitespace-nowrap">
+                        <i class="fa-solid fa-list-check mr-1"></i> Ubah MAK
+                    </button>
+                </div>
+            </div>
+            <div class="shrink-0">
+                <label class="${kgLabelClass}">Perbantuan</label>
+                <button type="button" id="kg-editPerbantuanToggle" data-on="${isPerbantuanAwal ? '1' : '0'}" aria-pressed="${isPerbantuanAwal ? 'true' : 'false'}"
+                    class="relative w-11 h-6 rounded-full ${isPerbantuanAwal ? 'ios-toggle-on' : 'ios-toggle-off'}" style="transition: background-color .2s ease;">
+                    <span id="kg-editPerbantuanKnob"
+                        class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow"
+                        style="transition: transform .2s ease; transform: translateX(${isPerbantuanAwal ? '20px' : '0'});"></span>
+                </button>
+            </div>
         </div>
         <label class="${kgLabelClass}">Uraian</label>
         <input id="kg-editUraian" type="text" value="${uraian}" class="${kgInputClass}">
@@ -709,6 +727,16 @@ function kgShowEditPopup(tr) {
         });
     };
 
+    popup.querySelector('#kg-editPerbantuanToggle').addEventListener('click', function () {
+        const nowOn = this.dataset.on !== '1';
+        this.dataset.on = nowOn ? '1' : '0';
+        this.setAttribute('aria-pressed', nowOn ? 'true' : 'false');
+        this.classList.toggle('ios-toggle-on', nowOn);
+        this.classList.toggle('ios-toggle-off', !nowOn);
+        const knob = document.getElementById('kg-editPerbantuanKnob');
+        if (knob) knob.style.transform = nowOn ? 'translateX(20px)' : 'translateX(0)';
+    });
+
     popup.querySelector('#kg-editCancel').onclick = () => overlay.remove();
     popup.querySelector('#kg-editUpdate').onclick = async function () {
         const btn = this;
@@ -721,7 +749,8 @@ function kgShowEditPopup(tr) {
                 pelaksana: document.getElementById('kg-editPelaksana').value,
                 tujuan: document.getElementById('kg-editTujuan').value,
                 tgl_st: normDate(document.getElementById('kg-editTglST').value),
-                jumlah: Number(document.getElementById('kg-editJumlah').value) || 0
+                jumlah: Number(document.getElementById('kg-editJumlah').value) || 0,
+                perbantuan: document.getElementById('kg-editPerbantuanToggle').dataset.on === '1'
             };
             // MAK cuma diikutkan kalau memang ada isinya (mis. diubah lewat popup "Pilih MAK dari POK")
             if (makBaru) updateFields.mak = makBaru;
@@ -860,7 +889,9 @@ function kgRenderMakTable(overlay) {
 
     const uniqueMap = new Map();
     kgMakPokData.forEach(item => uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item));
-    const uniqueData = Array.from(uniqueMap.values());
+    // Baris <3 segmen (cuma Kegiatan, atau Kegiatan+KRO) TIDAK ditampilkan --
+    // sama pola dgn pok.js/dokumen-scan.html.
+    const uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
 
     const keyword = (document.getElementById('kg-mak-search')?.value || '').toLowerCase().trim();
 
@@ -882,12 +913,16 @@ function kgRenderMakTable(overlay) {
     const rowHtml = (i, seksi, groupItems) => {
         const c = String(i.kode);
         const uraian = String(i.uraian || '').toLowerCase();
-        const isParent = c.length === 12;
-        const isLeaf = c.length > 27;
+        // Akar relatif per-Seksi & leaf dari struktur data -- sama fix seperti
+        // pok.js web (1 kode & turunannya bisa ditandai Seksi yg beda-beda,
+        // jadi patokan "selalu 12 karakter" salah total).
+        const isParent = !groupItems.some(other => String(other.kode) !== c && c.startsWith(String(other.kode) + '.'));
+        const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c + '.'));
+        const isLeaf = !hasChildren;
         const isChildVisible = Array.from(kgMakExpandedCodes).some(k => {
             if (!k.startsWith(seksi + '::')) return false;
             const p = k.slice((seksi + '::').length);
-            return c.startsWith(p) && c !== p;
+            return c.startsWith(p + '.') || c === p;
         });
         const isMatch = keyword && (c.toLowerCase().includes(keyword) || uraian.includes(keyword));
 
@@ -903,7 +938,6 @@ function kgRenderMakTable(overlay) {
         else if (depth <= 2) rowBg = 'bg-slate-50 hover:bg-slate-100';
 
         const textWeight = depth <= 2 ? 'font-bold text-slate-700' : (isLeaf ? 'font-normal text-slate-600' : 'font-semibold text-slate-700');
-        const hasChildren = groupItems.some(ch => String(ch.kode).startsWith(c) && String(ch.kode) !== c);
         const expandKey = seksi + '::' + c;
 
         const pagu = Number(i.pagu || 0);
