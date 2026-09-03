@@ -100,18 +100,21 @@ async function initPerbantuanPage() {
         const tahunAktif = await getTahunAktif();
         const isSuperadminView = localStorage.getItem('superadminMode') === '1';
         const namaLogin = (localStorage.getItem('nama') || '').trim().toLowerCase();
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
 
-        // Perbantuan = tampilan personal (data milik SAYA sendiri sbg pelaksana),
-        // difilter nama + tahun aktif, BUKAN kantor_id -- pegawai kantor-lain yang
-        // assist di kantor manapun tetap lihat riwayat perbantuan pribadinya
-        // sendiri. Superadmin: lihat SEMUA (semua nama, semua kantor), tahun tetap
-        // dibatasi tahun aktif.
+        // Perbantuan = tampilan personal (data milik SAYA sendiri sbg pelaksana)
+        // DITAMBAH semua perbantuan yang DANANYA dari kantor aktif saya (kantor_id
+        // cocok) -- biar semua pegawai kantor itu bisa saling pantau perbantuan yg
+        // dibiayai kantornya, bukan cuma yang jadi pelaksananya doang. Tahun tetap
+        // dibatasi tahun aktif. Superadmin: lihat SEMUA (semua nama, semua kantor).
         const perbantuanRows = kegiatanRows
             .filter(r => {
                 if (r.perbantuan !== true) return false;
                 if (Number(r.tahun) !== tahunAktif) return false;
                 if (isSuperadminView) return true;
-                return String(r.pelaksana || '').trim().toLowerCase() === namaLogin;
+                const namaCocok = String(r.pelaksana || '').trim().toLowerCase() === namaLogin;
+                const kantorCocok = kantorAktif && r.kantor_id === kantorAktif;
+                return namaCocok || kantorCocok;
             })
             .map(r => ({
                 A: r.id, B: r.mak || '', C: r.uraian || '', D: r.pelaksana || '', E: r.tujuan || '',
