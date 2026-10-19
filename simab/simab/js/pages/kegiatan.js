@@ -56,6 +56,7 @@ function bindKegiatanEvents() {
         }
     };
     document.getElementById('kg-btnDownloadExcel').onclick = kgDownloadExcel;
+    document.getElementById('kg-btnDownloadTelegram').onclick = kgDownloadExcelTelegram;
     document.getElementById('kg-btnOpenNominatif').onclick = kgOpenNominatifPopup;
     document.getElementById('kg-btnTambahKegiatan').onclick = kgOpenTambahKegiatanPopup;
 
@@ -324,6 +325,99 @@ function kgApplyFilterAndRender() {
 
     if (spmQuery && rows.length === 0) {
         alert('Data dengan Nomor SPM ' + spmQuery + ' tidak ditemukan.');
+    }
+}
+
+// ==========================================
+// Download Excel untuk Bot Telegram (3 kolom: COA Sakti, Uraian, Jumlah)
+// - Sumber: baris yang sedang tampil (kgCurrentTableRowsData)
+// - COA Sakti: kode MAK pendek -> format panjang (buildKodeSalin di pok.js),
+//   data ba/es1/prog/satker/kppn/sumber diambil dari tabel pok kantor+tahun
+// - MAK 524111/524113: uraian di-template jadi kalimat perjalanan dinas;
+//   baris dgn COA + nomor ST sama digabung (jumlah dijumlahkan, " dkk" bila >1)
+// ==========================================
+async function kgDownloadExcelTelegram() {
+    const btn = document.getElementById('kg-btnDownloadTelegram');
+    const rows = kgCurrentTableRowsData || [];
+    if (!rows.length) { alert('Tidak ada data untuk didownload.'); return; }
+    if (typeof buildKodeSalin !== 'function') { alert('Fungsi format COA (halaman POK) belum termuat. Muat ulang halaman lalu coba lagi.'); return; }
+
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+    try {
+        await waitSupabaseAuthReady();
+        const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const tahunAktif = await getTahunAktif();
+        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const pokFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
+        const pokRows = await sbFetchAll('pok', '*', pokFilters);
+
+        const pokByKode = {};
+        pokRows.forEach(p => {
+            const k = (p.kantor_id || '') + '|' + String(p.kode || '').trim();
+            if (!pokByKode[k]) pokByKode[k] = p;
+        });
+
+        const tglFmt = v => {
+            if (!v) return '';
+            const m = String(v).match(/^(\d{4}-\d{2}-\d{2})/);
+            if (m) return m[1];
+            const d = new Date(v);
+            return isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+
+        const tanpaPok = new Set();
+        const groups = new Map();
+        rows.forEach(r => {
+            const mak = String(r.B || '').trim();
+            const pok = pokByKode[(r.KANTOR || '') + '|' + mak] || pokByKode[(kantorAktif || '') + '|' + mak];
+            let coa = mak;
+            if (pok) coa = buildKodeSalin(pok);
+            else if (mak) tanpaPok.add(mak);
+
+            const isPerjadin = mak.includes('524111') || mak.includes('524113');
+            const uraianAsli = String(r.C || '').trim();
+            let key, nomorST = '';
+            if (isPerjadin) {
+                const m = uraianAsli.match(/ST-[^\s]+/i);
+                nomorST = m ? m[0] : uraianAsli;
+                key = coa + '||ST||' + nomorST;
+            } else {
+                key = coa + '||U||' + uraianAsli;
+            }
+            let g = groups.get(key);
+            if (!g) { g = { coa, isPerjadin, nomorST, uraianAsli, first: r, n: 0, jumlah: 0 }; groups.set(key, g); }
+            g.n += 1;
+            g.jumlah += Number(r.M) || 0;
+        });
+
+        const aoa = [['COA Sakti', 'Uraian', 'Jumlah']];
+        groups.forEach(g => {
+            let uraian = g.uraianAsli;
+            if (g.isPerjadin) {
+                const r = g.first;
+                uraian = `Belanja barang untuk keperluan perjalanan dinas sesuai surat tugas nomor ${g.nomorST} tanggal ${tglFmt(r.F)} tujuan ${String(r.E || '').trim()} an ${String(r.D || '').trim()}`;
+                if (g.n > 1) uraian += ' dkk';
+            }
+            aoa.push([g.coa, uraian, g.jumlah]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 62 }, { wch: 110 }, { wch: 16 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Bot Telegram');
+        XLSX.writeFile(wb, 'Daftar_Kegiatan_Bot_Telegram.xlsx');
+
+        if (tanpaPok.size) {
+            alert('Peringatan: ' + tanpaPok.size + ' kode MAK tidak ditemukan di data POK, kolom COA Sakti diisi kode pendek:\n\n' + Array.from(tanpaPok).slice(0, 10).join('\n'));
+        }
+    } catch (e) {
+        console.error('Gagal download Excel bot Telegram:', e);
+        alert('Gagal membuat file: ' + (e.message || e));
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
     }
 }
 
