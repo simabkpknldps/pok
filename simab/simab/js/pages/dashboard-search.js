@@ -75,6 +75,11 @@ function dashGsBuildPopupHtml() {
                         class="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition">
                         <i class="fa-solid fa-file-excel"></i> Download Excel
                     </button>
+                    <button id="kg-btnDownloadTelegram"
+                        class="flex items-center gap-2 px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition"
+                        title="Excel 3 kolom (COA Sakti, Uraian, Jumlah) untuk bot Telegram">
+                        <i class="fa-brands fa-telegram"></i> Excel Bot Telegram
+                    </button>
                     <button id="kg-btnOpenNominatif"
                         class="flex items-center gap-2 px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-lg transition">
                         <i class="fa-solid fa-print"></i> Cetak Daftar Nominatif
