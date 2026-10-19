@@ -56,7 +56,20 @@ function bindKegiatanEvents() {
         }
     };
     document.getElementById('kg-btnDownloadExcel').onclick = kgDownloadExcel;
-    document.getElementById('kg-btnDownloadTelegram').onclick = kgDownloadExcelTelegram;
+    // Tombol dibuat lewat JS (tidak perlu ubah dashboard-search.js) & aman bila sudah ada
+    let btnTg = document.getElementById('kg-btnDownloadTelegram');
+    if (!btnTg) {
+        const btnXls = document.getElementById('kg-btnDownloadExcel');
+        if (btnXls) {
+            btnTg = document.createElement('button');
+            btnTg.id = 'kg-btnDownloadTelegram';
+            btnTg.title = 'Excel 3 kolom (COA Sakti, Uraian, Jumlah) untuk bot Telegram';
+            btnTg.className = 'flex items-center gap-2 px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition';
+            btnTg.innerHTML = '<i class="fa-brands fa-telegram"></i> Excel Bot Telegram';
+            btnXls.insertAdjacentElement('afterend', btnTg);
+        }
+    }
+    if (btnTg) btnTg.onclick = kgDownloadExcelTelegram;
     document.getElementById('kg-btnOpenNominatif').onclick = kgOpenNominatifPopup;
     document.getElementById('kg-btnTambahKegiatan').onclick = kgOpenTambahKegiatanPopup;
 
