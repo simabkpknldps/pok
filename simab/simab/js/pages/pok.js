@@ -216,7 +216,9 @@ async function loadPokData() {
                 es1: d.es_i || '',
                 prog: d.prog || '',
                 satker: d.satker || '',
-                kppn: d.kppn || ''
+                kppn: d.kppn || '',
+                kantorId: d.kantor_id || kantorAktif,
+                tahun: d.tahun || tahunAktif
             };
         });
 
@@ -404,6 +406,80 @@ function openEditPokModal(idx) {
 }
 window.openEditPokModal = openEditPokModal;
 
+// ========================================
+// Atur Blokir (tabel 'blokir': id = Kode POK, nilai, kantor_id, tahun)
+// Hanya admin/superadmin. Blokir dikunci per Kode (sama seperti perhitungan
+// di loadPokData) -- jadi kalau Kode yang sama ada di beberapa Seksi, nilainya
+// berlaku untuk semuanya.
+// ========================================
+function openBlokirModal(idx) {
+    const item = window.rawPokData[idx];
+    if (!item) { alert('Data tidak ditemukan.'); return; }
+    if (localStorage.getItem('admin') !== '1' && localStorage.getItem('superadmin') !== '1') {
+        alert('Hanya admin yang dapat mengatur blokir.'); return;
+    }
+
+    const pagu = Number(item.pagu || 0);
+    const { overlay, popup } = commonOpenOverlay(`
+        <h3 class="text-[16px] font-semibold mb-1" style="color: var(--label);"><i class="fa-solid fa-ban mr-2"></i>Atur Blokir</h3>
+        <p class="text-xs mb-1 font-mono" style="color: var(--label-secondary);">${item.kode} <span style="opacity:0.6;">(${item.bidang || '-'})</span></p>
+        <p class="text-xs mb-3" style="color: var(--label);">${item.uraian || ''}</p>
+        <div class="space-y-3">
+            <div class="flex justify-between text-sm">
+                <span style="color: var(--label-secondary);">Pagu</span>
+                <span class="font-semibold">${pagu.toLocaleString('id-ID')}</span>
+            </div>
+            <div>
+                <label class="ios-label block mb-1">Nilai Blokir</label>
+                <input id="pok-blokirNilai" type="text" value="${Number(item.blokir || 0).toLocaleString('id-ID')}"
+                    oninput="this.value = formatRibuan(this.value)"
+                    class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 text-right">
+                <p class="text-[11px] mt-1" style="color: var(--label-secondary);">Isi 0 untuk menghapus blokir.</p>
+            </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-4">
+            <button id="pok-blokirCancel" class="btn-ios-secondary px-4 py-2 text-sm">Batal</button>
+            <button id="pok-blokirSave" class="btn-ios px-4 py-2 text-sm">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+            </button>
+        </div>
+    `, 'max-w-md');
+
+    popup.querySelector('#pok-blokirCancel').onclick = () => overlay.remove();
+    popup.querySelector('#pok-blokirSave').onclick = async function () {
+        const btn = this;
+        const nilai = Number(popup.querySelector('#pok-blokirNilai').value.replace(/\./g, '')) || 0;
+        if (nilai < 0) { alert('Nilai blokir tidak boleh negatif.'); return; }
+        if (nilai > pagu && !confirm(`Nilai blokir (${nilai.toLocaleString('id-ID')}) melebihi pagu (${pagu.toLocaleString('id-ID')}). Tetap simpan?`)) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+        try {
+            await waitSupabaseAuthReady();
+            const kantorId = item.kantorId, tahun = Number(item.tahun);
+            if (nilai === 0) {
+                const { error } = await sb.from('blokir').delete()
+                    .eq('id', item.kode).eq('kantor_id', kantorId).eq('tahun', tahun);
+                if (error) throw new Error(error.message);
+            } else {
+                const { error } = await sb.from('blokir').upsert(
+                    { id: item.kode, nilai, kantor_id: kantorId, tahun },
+                    { onConflict: 'id,kantor_id,tahun' }
+                );
+                if (error) throw new Error(error.message);
+            }
+            overlay.remove();
+            showToast('Blokir berhasil disimpan');
+            await loadPokData();
+        } catch (e) {
+            alert('Gagal menyimpan: ' + (e.message || e));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+window.openBlokirModal = openBlokirModal;
+
 function renderPok() {
     const tbody = document.getElementById('pok-tbody');
     if (!tbody) return;
@@ -519,9 +595,14 @@ function renderPok() {
                         <i class="fa-solid fa-copy text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                     <button onclick="event.stopPropagation();openEditPokModal(${window.rawPokData.indexOf(i)})"
-                        class="w-6 h-6 inline-flex items-center justify-center rounded-md transition" style="background: var(--label-secondary); color: #fff;" title="Ubah Uraian/Pagu">
+                        class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--label-secondary); color: #fff;" title="Ubah Uraian/Pagu">
                         <i class="fa-solid fa-pen text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
+                    ${(localStorage.getItem('admin') === '1' || localStorage.getItem('superadmin') === '1') ? `
+                    <button onclick="event.stopPropagation();openBlokirModal(${window.rawPokData.indexOf(i)})"
+                        class="w-6 h-6 inline-flex items-center justify-center rounded-md transition" style="background: var(--ios-red); color: #fff;" title="Atur Blokir">
+                        <i class="fa-solid fa-ban text-[11px] leading-none w-[11px] text-center"></i>
+                    </button>` : ''}
                 ` : ''}
             </td>
         </tr>`;
