@@ -118,6 +118,7 @@ function bindKegiatanEvents() {
         const pesanTolak = 'Kegiatan ini sudah diproses lebih lanjut (status bukan Rekam Data) — hubungi admin kalau perlu perubahan.';
 
         if (btn.classList.contains('kg-pelaksana-link')) { kgShowPegawaiDetilPopup(btn.dataset.nama); return; }
+        else if (btn.classList.contains('kg-jumlah-link')) { kgCopyAngka(btn.dataset.jumlah); return; }
         else if (btn.classList.contains('kg-btn-copy')) kgShowCopyPopup(tr); // selalu boleh, apapun status/role
         else if (btn.classList.contains('kg-btn-ubah')) {
             if (bolehAksiTerbatas) kgShowEditPopup(tr);
@@ -172,6 +173,29 @@ function kgDokBtnStyle(rowData) {
     return { cls: 'text-slate-400', title: 'Dokumen PDF (belum ada)' };
 }
 
+// Salin angka murni (tanpa titik pemisah) ke clipboard
+async function kgCopyAngka(angka) {
+    const text = String(angka);
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            throw new Error('no clipboard api');
+        }
+    } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand('copy'); } catch (err) { alert('Gagal menyalin. Angka: ' + text); document.body.removeChild(ta); return; }
+        document.body.removeChild(ta);
+    }
+    showToast('Jumlah ' + text + ' disalin');
+}
+
 function kgRenderTable(rows) {
     kgCurrentTableRowsData = rows;
     const tbody = document.getElementById('kg-dataTableBody');
@@ -197,7 +221,7 @@ function kgRenderTable(rows) {
             <td class="p-2.5 align-top">${r.E ?? ''}</td>
             <td class="p-2.5 align-top whitespace-nowrap">${formatDate(r.F)}</td>
             <td class="p-2.5 align-top whitespace-nowrap">${formatDate(r.G)}</td>
-            <td class="p-2.5 align-top text-right whitespace-nowrap">${jumlahFormatted}</td>
+            <td class="p-2.5 align-top text-right whitespace-nowrap"><button type="button" class="kg-jumlah-link text-sky-700 hover:text-sky-900 underline decoration-dotted underline-offset-2" data-jumlah="${Math.round(Number(r.M || 0))}" title="Klik untuk salin angka tanpa titik">${jumlahFormatted}</button></td>
             <td class="p-2.5 align-top">${r.N ?? ''}</td>
             <td class="p-2.5 align-top text-center font-semibold rounded ${kgStatusClasses(r.P)}">${r.P ?? ''}</td>
             <td class="p-2 align-top sticky right-0 bg-white">
