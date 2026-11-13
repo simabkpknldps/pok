@@ -684,7 +684,12 @@ async function refLoadRekeningDataAll() {
 
     try {
         await waitSupabaseAuthReady();
-        const rows = await sbFetchAll('pegawai');
+        // Rekening bank = data sensitif: non-superadmin HANYA melihat pegawai
+        // kantornya sendiri (sama dengan tab Pegawai).
+        const rekFilters = refIsSuperadmin()
+            ? undefined
+            : { kantor_id: (typeof getKantorAktif === 'function' ? getKantorAktif() : '') };
+        const rows = await sbFetchAll('pegawai', '*', rekFilters);
         refRekeningData = rows.map(d => ({
             row: d.id, nama: d.nama || '', nip: d.id,
             namaBank: d.nama_bank || '', norek: d.no_rekening || ''
