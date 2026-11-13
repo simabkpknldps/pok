@@ -135,7 +135,8 @@ function bindKegiatanEvents() {
             else alert(pesanTolak);
         }
         else if (btn.classList.contains('kg-btn-lpt')) {
-            if (bolehAksiTerbatas) kgShowLPTPopup(tr);
+            if (!kgButuhLPT(tr.cells[0].textContent)) alert('LPT hanya untuk perjalanan dinas (MAK 524111/524113). Kegiatan ini langsung ke tahap Bayar.');
+            else if (bolehAksiTerbatas) kgShowLPTPopup(tr);
             else alert(pesanTolak);
         }
         else if (btn.classList.contains('kg-btn-bayar')) {
@@ -171,6 +172,13 @@ function kgDokBtnStyle(rowData) {
     if (adaT) return { cls: 'text-amber-500', title: 'Dokumen PDF (kuitansi sudah ada, SPBy belum)' };
     if (adaU) return { cls: 'text-sky-500', title: 'Dokumen PDF (SPBy sudah ada, kuitansi belum)' };
     return { cls: 'text-slate-400', title: 'Dokumen PDF (belum ada)' };
+}
+
+// LPT (Laporan Perjalanan Dinas) hanya berlaku untuk MAK perjalanan dinas:
+// 524111 (luar kota) & 524113 (dalam kota). Kegiatan lain langsung ke Bayar.
+function kgButuhLPT(mak) {
+    const m = String(mak || '');
+    return m.includes('524111') || m.includes('524113');
 }
 
 // Salin angka murni (tanpa titik pemisah) ke clipboard
@@ -229,7 +237,7 @@ function kgRenderTable(rows) {
                     <button class="kg-btn-copy w-7 h-7 rounded hover:bg-slate-100" title="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
                     <button class="kg-btn-ubah w-7 h-7 rounded hover:bg-slate-100" title="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
                     <button class="kg-btn-pelaksana w-7 h-7 rounded hover:bg-slate-100" title="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
-                    <button class="kg-btn-lpt w-7 h-7 rounded hover:bg-slate-100" title="LPT"><i class="fa-solid fa-file-lines"></i></button>
+                    ${kgButuhLPT(r.B) ? `<button class="kg-btn-lpt w-7 h-7 rounded hover:bg-slate-100" title="LPT"><i class="fa-solid fa-file-lines"></i></button>` : ''}
                     <button class="kg-btn-bayar w-7 h-7 rounded hover:bg-slate-100" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
                     <button class="kg-btn-sp2d w-7 h-7 rounded hover:bg-slate-100" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
                     <button class="kg-btn-detil w-7 h-7 rounded hover:bg-slate-100 text-sky-600" title="Detil"><i class="fa-solid fa-circle-info"></i></button>
