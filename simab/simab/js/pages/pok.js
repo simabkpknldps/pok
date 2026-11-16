@@ -1287,6 +1287,10 @@ async function loadRefPegawai() {
             const p = String(d.pelaksana || '').trim();
             if (p) set.add(p);
         });
+        // + rekanan (supplier/penyedia jasa) kantor aktif
+        if (typeof fetchRekananNames === 'function') {
+            (await fetchRekananNames()).forEach(n => set.add(n));
+        }
         const data = Array.from(set).sort();
 
         datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
