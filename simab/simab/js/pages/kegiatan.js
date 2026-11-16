@@ -2096,6 +2096,15 @@ async function kgOpenNominatifPopup() {
 
     kgShowLoading(false);
 
+    // Penanda Sumber Dana (RM/PNBP) -- HANYA tampilan di popup ini.
+    const sdOf = (r) => (r.SD === 'PNBP' || r.SD === 'RM') ? r.SD : '';
+    const sdStyle = (sd) => sd === 'PNBP' ? 'background: rgba(255,45,85,0.12);'
+        : (sd === 'RM' ? 'background: rgba(0,113,227,0.08);' : '');
+    const sdBadge = (sd) => sd
+        ? `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${sd === 'PNBP' ? 'bg-pink-700 text-white' : 'bg-sky-600 text-white'}">${sd}</span>`
+        : '<span class="text-slate-300">-</span>';
+    const sdMAK = {};
+
     let totalBiaya = 0;
     const rekapMAK = {}, rekapWilayah = {}, rekapPeserta = {};
     let spmNomor = document.getElementById('kg-spmSearchBox') ? document.getElementById('kg-spmSearchBox').value.trim() : '';
@@ -2105,6 +2114,7 @@ async function kgOpenNominatifPopup() {
         const jml = Number(r.M || 0);
         totalBiaya += jml;
         rekapMAK[r.B] = (rekapMAK[r.B] || 0) + jml;
+        if (sdOf(r)) sdMAK[r.B] = sdOf(r);
         rekapWilayah[r.E] = (rekapWilayah[r.E] || 0) + jml;
         const keyPeserta = r.D;
         if (!rekapPeserta[keyPeserta]) {
@@ -2124,7 +2134,8 @@ async function kgOpenNominatifPopup() {
             const diff = new Date(r.H) - new Date(r.G);
             hari = Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)) + 1);
         }
-        rowsHtml += `<tr class="border-b border-slate-200">
+        const sd = sdOf(r);
+        rowsHtml += `<tr class="border-b border-slate-200" data-sd="${sd}" style="${sdStyle(sd)}">
             <td class="p-1.5 border-r border-slate-200">${r.D}</td>
             <td class="p-1.5 border-r border-slate-200">${r.B}</td>
             <td class="p-1.5 border-r border-slate-200">${r.C}</td>
@@ -2134,11 +2145,12 @@ async function kgOpenNominatifPopup() {
             <td class="p-1.5 border-r border-slate-200 text-center">${hari}</td>
             <td class="p-1.5 border-r border-slate-200">${r.E}</td>
             <td class="p-1.5 border-r border-slate-200 text-right" data-raw="${barisJml}">${barisJml.toLocaleString('id-ID')},00</td>
+            <td class="p-1.5 border-r border-slate-200 text-center">${sdBadge(sd)}</td>
             <td class="p-1.5 text-center"><button class="kg-nominatif-del text-red-600"><i class="fa-solid fa-trash"></i></button></td>
         </tr>`;
     });
 
-    const rekapBlock = (title, obj, cols) => `
+    const rekapBlock = (title, obj, cols, labelFn) => `
         <div class="flex flex-col gap-1">
             <h4 class="text-xs font-semibold text-slate-600">${title}</h4>
             <div class="bg-white border border-slate-300 rounded-md flex-1 overflow-y-auto max-h-44">
@@ -2146,7 +2158,7 @@ async function kgOpenNominatifPopup() {
                     <thead class="bg-slate-50 border-b border-slate-300 sticky top-0"><tr>${cols}</tr></thead>
                     <tbody>${Object.keys(obj).map(k => typeof obj[k] === 'object'
                         ? `<tr class="border-b border-slate-100"><td class="p-1 border-r border-slate-100">${obj[k].nama}</td><td class="p-1 border-r border-slate-100">${obj[k].uraian}</td><td class="p-1 text-right">${obj[k].jumlah.toLocaleString('id-ID')}</td></tr>`
-                        : `<tr class="border-b border-slate-100"><td class="p-1 border-r border-slate-100">${k}</td><td class="p-1 text-right">${obj[k].toLocaleString('id-ID')}</td></tr>`
+                        : `<tr class="border-b border-slate-100"><td class="p-1 border-r border-slate-100">${labelFn ? labelFn(k) : k}</td><td class="p-1 text-right">${obj[k].toLocaleString('id-ID')}</td></tr>`
                     ).join('')}</tbody>
                 </table>
             </div>
@@ -2162,7 +2174,8 @@ async function kgOpenNominatifPopup() {
                         <th class="p-2 border-r border-slate-200">Nomor ST</th><th class="p-2 border-r border-slate-200">Tanggal ST</th>
                         <th class="p-2 border-r border-slate-200">Tanggal Mulai</th><th class="p-2 border-r border-slate-200">Tanggal Selesai</th>
                         <th class="p-2 border-r border-slate-200">Hari</th><th class="p-2 border-r border-slate-200">Tujuan</th>
-                        <th class="p-2 border-r border-slate-200 text-right">Jumlah</th><th class="p-2 text-center">Aksi</th>
+                        <th class="p-2 border-r border-slate-200 text-right">Jumlah</th>
+                        <th class="p-2 border-r border-slate-200 text-center" title="Sumber Dana">SD</th><th class="p-2 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>${rowsHtml}</tbody>
@@ -2171,6 +2184,7 @@ async function kgOpenNominatifPopup() {
         <div class="flex flex-wrap items-center gap-3 text-sm">
             <label class="font-medium">Total Daftar Nominatif</label>
             <input id="kg-nominatifTotalInput" type="text" value="${totalBiaya.toLocaleString('id-ID')}" readonly class="px-2.5 py-1.5 border border-slate-300 rounded-md bg-white font-semibold text-right w-40">
+            <span id="kg-nominatifSdInfo" class="text-xs flex items-center gap-2"></span>
             <label class="font-medium ml-3">Nomor SPM</label>
             <input id="kg-nominatifSpmInput" type="text" value="${spmNomor}" class="px-2.5 py-1.5 border border-slate-300 rounded-md bg-white font-semibold text-center w-24">
             <div class="flex gap-2 ml-auto">
@@ -2179,7 +2193,7 @@ async function kgOpenNominatifPopup() {
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            ${rekapBlock('Rekapitulasi Per MAK', rekapMAK, '<th class="p-1.5 border-r border-slate-200">MAK</th><th class="p-1.5 text-right">Jumlah</th>')}
+            ${rekapBlock('Rekapitulasi Per MAK', rekapMAK, '<th class="p-1.5 border-r border-slate-200">MAK</th><th class="p-1.5 text-right">Jumlah</th>', (k) => `${k} ${sdMAK[k] ? sdBadge(sdMAK[k]) : ''}`)}
             ${rekapBlock('Rekapitulasi Per Wilayah', rekapWilayah, '<th class="p-1.5 border-r border-slate-200">Wilayah</th><th class="p-1.5 text-right">Jumlah</th>')}
             ${rekapBlock('Rekapitulasi Per Peserta', rekapPeserta, '<th class="p-1.5 border-r border-slate-200">Nama</th><th class="p-1.5 border-r border-slate-200">Uraian</th><th class="p-1.5 text-right">Jumlah</th>')}
         </div>
@@ -2187,6 +2201,21 @@ async function kgOpenNominatifPopup() {
     popup.classList.add('bg-slate-100');
 
     const mainTableWrapper = popup.querySelector('#kg-popupMainTable').closest('div');
+
+    // Subtotal per Sumber Dana (ikut berkurang saat baris dihapus dari daftar)
+    const updateSdInfo = () => {
+        const sub = { RM: 0, PNBP: 0, '': 0 };
+        mainTableWrapper.querySelectorAll('tbody tr').forEach(rowEl => {
+            const key = rowEl.getAttribute('data-sd') || '';
+            sub[key] += Number(rowEl.cells[8]?.getAttribute('data-raw') || 0);
+        });
+        const chip = (label, val, cls) => `<span class="px-2 py-1 rounded-md font-semibold ${cls}">${label}: ${val.toLocaleString('id-ID')}</span>`;
+        popup.querySelector('#kg-nominatifSdInfo').innerHTML =
+            chip('RM', sub.RM, 'bg-sky-100 text-sky-800') +
+            chip('PNBP', sub.PNBP, 'bg-pink-200 text-pink-800') +
+            (sub[''] ? chip('Belum diketahui', sub[''], 'bg-slate-200 text-slate-600') : '');
+    };
+    updateSdInfo();
     mainTableWrapper.addEventListener('click', function (e) {
         const delBtn = e.target.closest('.kg-nominatif-del');
         if (!delBtn) return;
@@ -2197,6 +2226,7 @@ async function kgOpenNominatifPopup() {
             newTotal += Number(rowEl.cells[8]?.getAttribute('data-raw') || 0);
         });
         popup.querySelector('#kg-nominatifTotalInput').value = newTotal.toLocaleString('id-ID');
+        updateSdInfo();
     });
 
     popup.querySelector('#kg-nominatifCancel').onclick = () => overlay.remove();
