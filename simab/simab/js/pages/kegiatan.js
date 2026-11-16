@@ -838,14 +838,17 @@ function kgShowEditPopup(tr) {
                     </button>
                 </div>
             </div>
-            <div class="shrink-0">
-                <label class="${kgLabelClass}">Perbantuan</label>
-                <button type="button" id="kg-editPerbantuanToggle" data-on="${isPerbantuanAwal ? '1' : '0'}" aria-pressed="${isPerbantuanAwal ? 'true' : 'false'}"
-                    class="relative w-11 h-6 rounded-full ${isPerbantuanAwal ? 'ios-toggle-on' : 'ios-toggle-off'}" style="transition: background-color .2s ease;">
-                    <span id="kg-editPerbantuanKnob"
-                        class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow"
-                        style="transition: transform .2s ease; transform: translateX(${isPerbantuanAwal ? '20px' : '0'});"></span>
-                </button>
+            <div class="shrink-0 flex flex-col items-center">
+                <label class="${kgLabelClass} text-center">Perbantuan</label>
+                <div class="h-10 flex items-center">
+                    <button type="button" id="kg-editPerbantuanToggle" data-on="${isPerbantuanAwal ? '1' : '0'}" aria-pressed="${isPerbantuanAwal ? 'true' : 'false'}"
+                        class="relative rounded-full shrink-0"
+                        style="width: 48px; height: 28px; background-color: ${isPerbantuanAwal ? '#34C759' : '#C7C7CC'}; transition: background-color .2s ease;">
+                        <span id="kg-editPerbantuanKnob"
+                            class="absolute rounded-full bg-white"
+                            style="top: 2px; left: 2px; width: 24px; height: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform .2s ease; transform: translateX(${isPerbantuanAwal ? '20px' : '0'});"></span>
+                    </button>
+                </div>
             </div>
         </div>
         <label class="${kgLabelClass}">Sumber Dana</label>
@@ -880,8 +883,7 @@ function kgShowEditPopup(tr) {
         const nowOn = this.dataset.on !== '1';
         this.dataset.on = nowOn ? '1' : '0';
         this.setAttribute('aria-pressed', nowOn ? 'true' : 'false');
-        this.classList.toggle('ios-toggle-on', nowOn);
-        this.classList.toggle('ios-toggle-off', !nowOn);
+        this.style.backgroundColor = nowOn ? '#34C759' : '#C7C7CC';
         const knob = document.getElementById('kg-editPerbantuanKnob');
         if (knob) knob.style.transform = nowOn ? 'translateX(20px)' : 'translateX(0)';
     });
