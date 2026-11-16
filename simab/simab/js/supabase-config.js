@@ -204,6 +204,19 @@ async function fetchRekananNames(force) {
 }
 window.fetchRekananNames = fetchRekananNames;
 
+// Sumber Dana kegiatan: 'RM' / 'PNBP' / ''. Utama = kolom `sd` (terisi otomatis dari
+// POK oleh trigger database). Cadangan utk data lama yg kolom sd-nya masih kosong:
+// penanda "(PNBP)" / "(RM)" di uraian.
+function kgSumberDana(k) {
+    const sd = String((k && (k.sd ?? k.SD)) || '').trim().toUpperCase();
+    if (sd === 'PNBP' || sd === 'RM') return sd;
+    const u = String((k && (k.uraian ?? k.C)) || '');
+    if (u.includes('(PNBP)')) return 'PNBP';
+    if (u.includes('(RM)')) return 'RM';
+    return '';
+}
+window.kgSumberDana = kgSumberDana;
+
 function kgGenerateRandomId(len) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let id = '';
