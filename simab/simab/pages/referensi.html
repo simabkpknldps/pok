@@ -11,6 +11,9 @@
         <button id="ref-tabBtnRekening" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
             <i class="fa-solid fa-building-columns mr-2"></i>Data Rekening
         </button>
+        <button id="ref-tabBtnRekanan" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
+            <i class="fa-solid fa-truck-field mr-2"></i>Rekanan
+        </button>
         <button id="ref-tabBtnUserManager" class="ref-tab-btn px-3 sm:px-4 py-4 text-sm font-medium border-b-2 whitespace-nowrap transition">
             <i class="fa-solid fa-user-shield mr-2"></i>User Manager
         </button>
@@ -117,6 +120,43 @@
             </table>
         </div>
         <p id="ref-rekening-empty" class="hidden text-center text-slate-400 py-6 text-sm">Tidak ada data yang cocok.</p>
+    </div>
+
+    <!-- ==================== TAB REKANAN (admin) ==================== -->
+    <div id="ref-tabRekanan" class="hidden p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div class="relative w-full sm:max-w-xs">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input id="ref-rekanan-search" type="text" placeholder="Cari nama / jenis / identitas..."
+                    class="w-full ios-field" style="padding-left: 2.4rem;">
+            </div>
+            <button id="ref-rekanan-btnTambah" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i> Tambah Rekanan
+            </button>
+        </div>
+        <p class="text-xs text-slate-400 mb-3">Supplier, penyedia jasa, dan narasumber (tidak login). Nama yang tersimpan di sini muncul sebagai pilihan Pelaksana. Nomor identitas boleh dikosongkan.</p>
+        <div class="overflow-auto rounded-xl border border-slate-200 max-h-[65vh]">
+            <table class="w-full text-sm border-collapse">
+                <thead class="bg-slate-50">
+                    <tr class="text-left text-slate-500">
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Nama</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Jenis</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Identitas</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">Bank</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium border-b border-slate-200">No. Rekening</th>
+                        <th class="sticky top-0 z-10 bg-slate-50 py-3 px-4 font-medium text-center border-b border-slate-200">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="ref-rekanan-tbody" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="6" class="text-center text-slate-400 py-8">
+                            <i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p id="ref-rekanan-empty" class="hidden text-center text-slate-400 py-6 text-sm">Belum ada rekanan / tidak ada yang cocok.</p>
     </div>
 
     <!-- ==================== TAB USER MANAGER (superadmin saja) ==================== -->
