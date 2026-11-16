@@ -316,7 +316,9 @@ async function kgLoadData(forceRefresh) {
         if (kgFirstLoad) {
             // Daftar Pegawai/Lokasi utk datalist diturunkan dari data yang ada
             // (nilai unik kolom Pelaksana/Tujuan) — bukan lagi action terpisah.
-            kgPegawaiList = [...new Set(kgAllRows.map(r => r.D).filter(Boolean))].sort();
+            // + rekanan (supplier/penyedia jasa) kantor aktif, supaya bisa dipilih sebagai Pelaksana
+            const rekananNames = (typeof fetchRekananNames === 'function') ? await fetchRekananNames() : [];
+            kgPegawaiList = [...new Set([...kgAllRows.map(r => r.D).filter(Boolean), ...rekananNames])].sort();
             kgLokasiList = [...new Set(kgAllRows.map(r => r.E).filter(Boolean))].sort();
             kgPopulateDatalist();
         }
