@@ -6,7 +6,7 @@
  *   1. Search global (popup pencarian kegiatan)
  *   2. Card Belanja Barang  (akun MAK diawali 52)
  *   3. Card Belanja Modal   (akun MAK diawali 53)
- *   4. Card Maksimum Pencairan PNBP (uraian mengandung "(PNBP)" & status "Selesai")
+ *   4. Card Maksimum Pencairan PNBP (Sumber Dana PNBP — kolom `sd`, cadangan "(PNBP)" di uraian — & status "Selesai")
  *   5. Card Kegiatan Hari Ini (tglMulai = hari ini)
  *   6. Card Top 3 Perjadin + Grafik Rp/Frek (MAK mengandung 524111/524113)
  *
@@ -64,7 +64,7 @@ function computeDashboardData(kegiatanRows, pokRows, mpPnbpRows) {
         else if (akun.startsWith('53')) realisasiModal += jumlah;
 
         const uraian = String(k.uraian || '');
-        if (uraian.includes('(PNBP)') && k.status === 'Selesai') {
+        if (kgSumberDana(k) === 'PNBP' && k.status === 'Selesai') {
             realisasiMP += jumlah;
         }
 
@@ -131,8 +131,9 @@ function computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows) {
         // Baris 4-7 (semua baris di bawah Deviasi RPD): TANPA filter tanggal/
         // bulan sama sekali — cuma baris 1 (RPD Berjalan) & 2 (Sudah SP2D) yg
         // pakai filter bulan berjalan.
-        if (k.status === 'Terbayar' && uraian.includes('(RM)')) prosesRM += jumlah;
-        if (k.status === 'Terbayar' && uraian.includes('(PNBP)')) prosesPNBP += jumlah;
+        const sumberDana = kgSumberDana(k);
+        if (k.status === 'Terbayar' && sumberDana === 'RM') prosesRM += jumlah;
+        if (k.status === 'Terbayar' && sumberDana === 'PNBP') prosesPNBP += jumlah;
         if (k.status === 'LPT') lpt += jumlah;
         if (k.status === 'Terlaksana') terlaksana += jumlah;
     });
