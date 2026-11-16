@@ -557,7 +557,7 @@ function stLoadMPData() {
     // nilainya SAMA di semua baris (bukan kumulatif per tahap MP).
     let totalRealisasiBruto = 0;
     stKegiatanRows.forEach(k => {
-        if (String(k.uraian || '').includes('(PNBP)')) totalRealisasiBruto += Number(k.jumlah) || 0;
+        if (kgSumberDana(k) === 'PNBP') totalRealisasiBruto += Number(k.jumlah) || 0;
     });
 
     // Urutkan berdasarkan tgl_mp ASC -> Realisasi SP2D = akumulasi kegiatan
@@ -570,7 +570,7 @@ function stLoadMPData() {
 
         let realisasiSP2D = 0;
         stKegiatanRows.forEach(k => {
-            if (!String(k.uraian || '').includes('(PNBP)') || !tglMp || !k.tgl_sp2d) return;
+            if (kgSumberDana(k) !== 'PNBP' || !tglMp || !k.tgl_sp2d) return;
             const dSp2d = new Date(k.tgl_sp2d);
             if (!isNaN(dSp2d.getTime()) && dSp2d <= tglMp) realisasiSP2D += Number(k.jumlah) || 0;
         });
