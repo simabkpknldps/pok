@@ -28,6 +28,8 @@ let refUserManagerData = [];
 let refUserManagerLoaded = false;
 let refKantorData = [];
 let refKantorLoaded = false;
+let refRekananData = [];
+let refRekananLoaded = false;
 
 const refInputClass = 'w-full px-2 py-1.5 border border-slate-300 rounded-lg text-sm bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500';
 
@@ -96,12 +98,15 @@ function initReferensiPage() {
     refRekeningLoaded = false;
     refUserManagerLoaded = false;
     refKantorLoaded = false;
+    refRekananLoaded = false;
 
     const tabBtnSbm = document.getElementById('ref-tabBtnSbm');
     const tabBtnPegawai = document.getElementById('ref-tabBtnPegawai');
     const tabBtnRekening = document.getElementById('ref-tabBtnRekening');
     const tabBtnUserManager = document.getElementById('ref-tabBtnUserManager');
     const tabBtnKantor = document.getElementById('ref-tabBtnKantor');
+    const tabBtnRekanan = document.getElementById('ref-tabBtnRekanan');
+    const tabRekanan = document.getElementById('ref-tabRekanan');
     const tabSbm = document.getElementById('ref-tabSbm');
     const tabPegawai = document.getElementById('ref-tabPegawai');
     const tabRekening = document.getElementById('ref-tabRekening');
@@ -116,11 +121,15 @@ function initReferensiPage() {
         tabPegawai?.remove();
         tabBtnRekening?.remove();
         tabRekening?.remove();
+        tabBtnRekanan?.remove();
+        tabRekanan?.remove();
     } else if (aksesLevel === 'aksesMenu') {
         // Tab Pegawai tetap ada, tapi kolom Admin disembunyikan (lihat
         // refRenderPegawaiTable). Tab Rekening tetap cuma utk admin.
         tabBtnRekening?.remove();
         tabRekening?.remove();
+        tabBtnRekanan?.remove();
+        tabRekanan?.remove();
     }
     // aksesLevel === 'admin' -> semua tab tetap ada apa adanya.
 
@@ -139,6 +148,7 @@ function initReferensiPage() {
         sbm: { btn: tabBtnSbm, content: tabSbm },
         pegawai: { btn: document.getElementById('ref-tabBtnPegawai'), content: document.getElementById('ref-tabPegawai') },
         rekening: { btn: document.getElementById('ref-tabBtnRekening'), content: document.getElementById('ref-tabRekening') },
+        rekanan: { btn: document.getElementById('ref-tabBtnRekanan'), content: document.getElementById('ref-tabRekanan') },
         userManager: { btn: document.getElementById('ref-tabBtnUserManager'), content: document.getElementById('ref-tabUserManager') },
         kantor: { btn: document.getElementById('ref-tabBtnKantor'), content: document.getElementById('ref-tabKantor') }
     };
@@ -146,6 +156,7 @@ function initReferensiPage() {
     function activateTab(tab) {
         if (isRestricted) tab = 'sbm'; // paksa selalu di tab SBM untuk user terbatas
         if (tab === 'rekening' && !tabs.rekening.btn) tab = 'sbm'; // jaga-jaga kalau tab rekening tidak ada (non-admin)
+        if (tab === 'rekanan' && !tabs.rekanan.btn) tab = 'sbm'; // hanya admin
         if (tab === 'userManager' && !tabs.userManager.btn) tab = 'sbm'; // jaga-jaga kalau tab ini tidak ada (non-superadmin)
         if (tab === 'kantor' && !tabs.kantor.btn) tab = 'sbm'; // jaga-jaga kalau tab ini tidak ada (non-superadmin)
 
@@ -167,6 +178,8 @@ function initReferensiPage() {
             refPegawaiLoaded ? refRenderPegawaiTable(document.getElementById('ref-pegawai-search')?.value || '') : refLoadPegawaiData();
         } else if (tab === 'rekening') {
             refRekeningLoaded ? refRenderRekeningTable(document.getElementById('ref-rekening-search')?.value || '') : refLoadRekeningDataAll();
+        } else if (tab === 'rekanan') {
+            refRekananLoaded ? refRenderRekananTable(document.getElementById('ref-rekanan-search')?.value || '') : refLoadRekananData();
         } else if (tab === 'userManager') {
             refUserManagerLoaded ? refRenderUserManagerTable(document.getElementById('ref-um-search')?.value || '') : refLoadUserManagerData();
         } else if (tab === 'kantor') {
@@ -177,6 +190,7 @@ function initReferensiPage() {
     if (tabBtnSbm) tabBtnSbm.onclick = () => activateTab('sbm');
     if (tabBtnPegawai) tabBtnPegawai.onclick = () => activateTab('pegawai');
     if (tabs.rekening.btn) tabs.rekening.btn.onclick = () => activateTab('rekening');
+    if (tabs.rekanan.btn) tabs.rekanan.btn.onclick = () => activateTab('rekanan');
     if (tabs.userManager.btn) tabs.userManager.btn.onclick = () => activateTab('userManager');
     if (tabs.kantor.btn) tabs.kantor.btn.onclick = () => activateTab('kantor');
 
@@ -186,6 +200,10 @@ function initReferensiPage() {
     if (pegawaiSearchEl) pegawaiSearchEl.oninput = (e) => refRenderPegawaiTable(e.target.value);
     const rekeningSearchEl = document.getElementById('ref-rekening-search');
     if (rekeningSearchEl) rekeningSearchEl.oninput = (e) => refRenderRekeningTable(e.target.value);
+    const rekananSearchEl = document.getElementById('ref-rekanan-search');
+    if (rekananSearchEl) rekananSearchEl.oninput = (e) => refRenderRekananTable(e.target.value);
+    const rekananBtnTambah = document.getElementById('ref-rekanan-btnTambah');
+    if (rekananBtnTambah) rekananBtnTambah.onclick = () => refRekananPopup(null);
     const umSearchEl = document.getElementById('ref-um-search');
     if (umSearchEl) umSearchEl.oninput = (e) => refRenderUserManagerTable(e.target.value);
     const kantorSearchEl = document.getElementById('ref-kantor-search');
@@ -1047,6 +1065,212 @@ function refRenderKantorTable(keyword) {
             );
         };
     });
+}
+
+/* ==========================================================
+ * ==================== TAB REKANAN ========================
+ * Supplier / penyedia jasa / narasumber -- referensi saja (tidak login).
+ * Tabel 'rekanan', per kantor (kantor aktif sesi ini). Hanya admin.
+ * ========================================================== */
+const REF_REKANAN_JENIS = ['Supplier', 'Penyedia Jasa', 'Narasumber', 'Lainnya'];
+const REF_REKANAN_IDENTITAS = ['', 'NIK', 'NPWP', 'NIP', 'NIB'];
+
+function refEsc(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function refLoadRekananData() {
+    const tbody = document.getElementById('ref-rekanan-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>`;
+    try {
+        await waitSupabaseAuthReady();
+        const kantor = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        const rows = await sbFetchAll('rekanan', '*', { kantor_id: kantor });
+        refRekananData = rows.sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || ''), 'id'));
+        refRekananLoaded = true;
+        refRenderRekananTable(document.getElementById('ref-rekanan-search')?.value || '');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-red-500 py-8">❌ ${refEsc(e.message || 'Gagal memuat. Pastikan tabel rekanan sudah dibuat di Supabase.')}</td></tr>`;
+    }
+}
+
+function refRenderRekananTable(keyword) {
+    const tbody = document.getElementById('ref-rekanan-tbody');
+    const emptyMsg = document.getElementById('ref-rekanan-empty');
+    if (!tbody) return;
+    const kw = (keyword || '').trim().toLowerCase();
+
+    const filtered = refRekananData.filter(r =>
+        !kw || [r.nama, r.jenis, r.identitas_no, r.nama_bank, r.no_rekening].some(v => String(v || '').toLowerCase().includes(kw))
+    );
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        return;
+    }
+    emptyMsg.classList.add('hidden');
+
+    tbody.innerHTML = filtered.map(r => `
+        <tr data-id="${refEsc(r.id)}" class="hover:bg-slate-50 ${String(r.status) === '0' ? 'opacity-50' : ''}">
+            <td class="py-2 px-4 font-medium text-slate-700">${refEsc(r.nama)}${String(r.status) === '0' ? ' <span class="text-xs text-slate-400">(nonaktif)</span>' : ''}</td>
+            <td class="py-2 px-4">${refEsc(r.jenis)}</td>
+            <td class="py-2 px-4">${r.identitas_no ? `${refEsc(r.identitas_tipe || '')} ${refEsc(r.identitas_no)}` : '<span class="text-slate-300">-</span>'}</td>
+            <td class="py-2 px-4">${refEsc(r.nama_bank) || '<span class="text-slate-300">-</span>'}</td>
+            <td class="py-2 px-4">${refEsc(r.no_rekening) || '<span class="text-slate-300">-</span>'}</td>
+            <td class="py-2 px-4 text-center whitespace-nowrap">
+                <button class="ref-rekanan-btnEdit text-sky-600 hover:text-sky-800 mr-3" title="Ubah"><i class="fa-solid fa-pen"></i></button>
+                <button class="ref-rekanan-btnHapus text-red-500 hover:text-red-700" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+
+    tbody.querySelectorAll('tr').forEach(tr => {
+        const id = tr.getAttribute('data-id');
+        const row = refRekananData.find(r => r.id === id);
+        tr.querySelector('.ref-rekanan-btnEdit').onclick = () => refRekananPopup(row);
+        tr.querySelector('.ref-rekanan-btnHapus').onclick = () => {
+            refConfirmHapusPopup(
+                `Yakin menghapus rekanan <span class="font-medium text-slate-800">${refEsc(row.nama)}</span>? Kegiatan lama yang sudah memakai nama ini tidak berubah.`,
+                async () => {
+                    try {
+                        await waitSupabaseAuthReady();
+                        const { error } = await sb.from('rekanan').delete().eq('id', id);
+                        if (error) throw error;
+                        refRekananData = refRekananData.filter(r => r.id !== id);
+                        window.rekananNamesCache = null;
+                        refRenderRekananTable(document.getElementById('ref-rekanan-search')?.value || '');
+                        showToast('Rekanan dihapus');
+                    } catch (e) {
+                        alert('Gagal menghapus: ' + (e.message || 'Tidak diketahui'));
+                    }
+                }
+            );
+        };
+    });
+}
+
+// row = null -> tambah baru; row = objek -> ubah
+function refRekananPopup(row) {
+    const isEdit = !!row;
+    const v = (k) => refEsc(row ? row[k] : '');
+    const opt = (list, sel) => list.map(x => `<option value="${refEsc(x)}" ${x === (sel || '') ? 'selected' : ''}>${x || '(tidak ada)'}</option>`).join('');
+
+    const { overlay, popup } = commonOpenOverlay(`
+        <div class="flex items-center gap-3 mb-1">
+            <div class="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 shrink-0">
+                <i class="fa-solid fa-truck-field"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-800">${isEdit ? 'Ubah Rekanan' : 'Tambah Rekanan'}</h3>
+        </div>
+        <div class="space-y-3 mt-3 max-h-[65vh] overflow-y-auto pr-1">
+            <div>
+                <label class="text-xs font-medium text-slate-500 block mb-1">Nama *</label>
+                <input id="ref-rkn-nama" type="text" value="${v('nama')}" placeholder="mis. CV Maju Jaya" class="${refInputClass} bg-white">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-medium text-slate-500 block mb-1">Jenis</label>
+                    <select id="ref-rkn-jenis" class="${refInputClass} bg-white">${opt(REF_REKANAN_JENIS, row ? row.jenis : 'Supplier')}</select>
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-slate-500 block mb-1">Status</label>
+                    <select id="ref-rkn-status" class="${refInputClass} bg-white">
+                        <option value="1" ${!row || String(row.status) !== '0' ? 'selected' : ''}>Aktif</option>
+                        <option value="0" ${row && String(row.status) === '0' ? 'selected' : ''}>Nonaktif</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="text-xs font-medium text-slate-500 block mb-1">Identitas</label>
+                    <select id="ref-rkn-idTipe" class="${refInputClass} bg-white">${opt(REF_REKANAN_IDENTITAS, row ? row.identitas_tipe : '')}</select>
+                </div>
+                <div class="col-span-2">
+                    <label class="text-xs font-medium text-slate-500 block mb-1">Nomor (boleh kosong)</label>
+                    <input id="ref-rkn-idNo" type="text" value="${v('identitas_no')}" class="${refInputClass} bg-white">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-slate-500 block mb-1">Alamat</label>
+                <input id="ref-rkn-alamat" type="text" value="${v('alamat')}" class="${refInputClass} bg-white">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-medium text-slate-500 block mb-1">Bank</label>
+                    <select id="ref-rkn-bank" class="${refInputClass} bg-white">${refBankOptions(row ? row.nama_bank : '')}</select>
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-slate-500 block mb-1">No. Rekening</label>
+                    <input id="ref-rkn-norek" type="text" value="${v('no_rekening')}" class="${refInputClass} bg-white">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-medium text-slate-500 block mb-1">Atas Nama Rekening (bila beda)</label>
+                <input id="ref-rkn-atasNama" type="text" value="${v('atas_nama')}" class="${refInputClass} bg-white">
+            </div>
+        </div>
+        <p id="ref-rkn-error" class="hidden text-[13px] px-3.5 py-2.5 rounded-xl text-center mt-3 bg-red-50 text-red-600"></p>
+        <div class="flex justify-end gap-2 mt-4">
+            <button id="ref-rkn-cancel" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium">Batal</button>
+            <button id="ref-rkn-save" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+            </button>
+        </div>
+    `, 'max-w-lg');
+
+    popup.querySelector('#ref-rkn-cancel').onclick = () => overlay.remove();
+    popup.querySelector('#ref-rkn-save').onclick = async () => {
+        const g = (id) => popup.querySelector(id).value.trim();
+        const errEl = popup.querySelector('#ref-rkn-error');
+        errEl.classList.add('hidden');
+
+        const nama = g('#ref-rkn-nama').replace(/\s+/g, ' ');
+        if (!nama) {
+            errEl.textContent = 'Nama rekanan harus diisi.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+        const payload = {
+            nama,
+            jenis: g('#ref-rkn-jenis') || 'Supplier',
+            status: g('#ref-rkn-status') || '1',
+            identitas_tipe: g('#ref-rkn-idTipe') || null,
+            identitas_no: g('#ref-rkn-idNo') || null,
+            alamat: g('#ref-rkn-alamat') || null,
+            nama_bank: g('#ref-rkn-bank') || null,
+            no_rekening: g('#ref-rkn-norek') || null,
+            atas_nama: g('#ref-rkn-atasNama') || null,
+            updated_at: new Date().toISOString()
+        };
+
+        const btn = popup.querySelector('#ref-rkn-save');
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            await waitSupabaseAuthReady();
+            let error;
+            if (isEdit) {
+                ({ error } = await sb.from('rekanan').update(payload).eq('id', row.id));
+            } else {
+                const kantor = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+                ({ error } = await sb.from('rekanan').insert({ ...payload, kantor_id: kantor }));
+            }
+            if (error) throw error;
+            overlay.remove();
+            window.rekananNamesCache = null;
+            showToast(isEdit ? 'Rekanan diubah' : 'Rekanan ditambahkan');
+            refLoadRekananData();
+        } catch (e) {
+            const dup = e && (e.code === '23505' || /duplicate|unique/i.test(e.message || ''));
+            errEl.textContent = dup ? 'Nama rekanan sudah ada di kantor ini.' : ('Gagal menyimpan: ' + (e.message || 'Tidak diketahui'));
+            errEl.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    };
 }
 
 function refTambahKantorPopup() {
