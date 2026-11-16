@@ -223,7 +223,7 @@ function kgRenderTable(rows) {
         tr.dataset.id = r.A;
 
         tr.innerHTML = `
-            <td class="p-2.5 align-top">${r.B ?? ''}</td>
+            <td class="p-2.5 align-top ${r.SD === 'PNBP' ? 'text-pink-700 font-semibold' : ''}" title="${r.SD ? 'Sumber dana: ' + r.SD : ''}">${r.B ?? ''}</td>
             <td class="p-2.5 align-top">${r.C ?? ''}</td>
             <td class="p-2.5 align-top">${r.D ? `<button type="button" class="kg-pelaksana-link text-sky-700 hover:text-sky-900 underline decoration-dotted underline-offset-2 text-left" data-nama="${String(r.D).replace(/"/g, '&quot;')}">${r.D}</button>` : ''}</td>
             <td class="p-2.5 align-top">${r.E ?? ''}</td>
@@ -308,7 +308,8 @@ async function kgLoadData(forceRefresh) {
             M: Number(d.jumlah) || 0, N: d.user || '', O: d.tgl_rekam || '',
             P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '',
             T: d.dokumen_link || '', U: d.spby_link || '',
-            KANTOR: d.kantor_id || '', TAHUN: d.tahun || null, PERBANTUAN: d.perbantuan === true
+            KANTOR: d.kantor_id || '', TAHUN: d.tahun || null, PERBANTUAN: d.perbantuan === true,
+            SD: kgSumberDana(d)
         }));
 
         kgShowLoading(false);
@@ -823,6 +824,7 @@ function kgShowEditPopup(tr) {
     // Default false kalau baris entah kenapa tidak ketemu di kgAllRows.
     const rowData = kgAllRows.find(r => String(r.A) === String(idKegiatan));
     const isPerbantuanAwal = !!(rowData && rowData.PERBANTUAN);
+    const sdAwal = (rowData && rowData.SD) || '';
 
     const { overlay, popup } = kgOpenOverlay(`
         <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Ubah Kegiatan #${idKegiatan}</h3>
@@ -835,6 +837,14 @@ function kgShowEditPopup(tr) {
                         <i class="fa-solid fa-list-check mr-1"></i> Ubah MAK
                     </button>
                 </div>
+            </div>
+            <div class="shrink-0">
+                <label class="${kgLabelClass}">Sumber Dana</label>
+                <select id="kg-editSd" class="${kgInputClass}" title="Otomatis dari POK saat MAK dipilih">
+                    <option value="" ${sdAwal === '' ? 'selected' : ''}>Otomatis</option>
+                    <option value="RM" ${sdAwal === 'RM' ? 'selected' : ''}>RM</option>
+                    <option value="PNBP" ${sdAwal === 'PNBP' ? 'selected' : ''}>PNBP</option>
+                </select>
             </div>
             <div class="shrink-0">
                 <label class="${kgLabelClass}">Perbantuan</label>
@@ -895,6 +905,10 @@ function kgShowEditPopup(tr) {
             };
             // MAK cuma diikutkan kalau memang ada isinya (mis. diubah lewat popup "Pilih MAK dari POK")
             if (makBaru) updateFields.mak = makBaru;
+            // Sumber Dana hanya dikirim kalau user MENGUBAHNYA di dropdown. Kalau tidak,
+            // trigger database mengisinya otomatis dari POK (termasuk saat MAK diganti).
+            const sdBaru = document.getElementById('kg-editSd').value;
+            if (sdBaru !== sdAwal) updateFields.sd = sdBaru || null;
 
             await waitSupabaseAuthReady();
             const { error } = await sb.from('kegiatan').update(updateFields).eq('id', idKegiatan);
