@@ -181,6 +181,29 @@ window.kgComputeStatus = kgComputeStatus;
 // ID baris kegiatan baru (dipakai fitur Pelaksana Kegiatan / Tambah Usulan
 // yg generate baris baru per pelaksana). Dipakai bersama oleh kegiatan.js,
 // pok.js, & perbantuan.js.
+// Daftar nama REKANAN (supplier/penyedia jasa/narasumber) kantor aktif, utk
+// pilihan Pelaksana. Cache di window.rekananNamesCache; set null utk refresh.
+// Aman kalau tabel belum dibuat / gagal baca -> kembalikan [].
+async function fetchRekananNames(force) {
+    if (!force && Array.isArray(window.rekananNamesCache)) return window.rekananNamesCache;
+    try {
+        await waitSupabaseAuthReady();
+        const kantor = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+        if (!kantor) return [];
+        const rows = await sbFetchAll('rekanan', 'nama,status', { kantor_id: kantor });
+        window.rekananNamesCache = rows
+            .filter(r => String(r.status) !== '0')
+            .map(r => String(r.nama || '').trim())
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b, 'id'));
+    } catch (e) {
+        console.warn('Gagal memuat daftar rekanan:', e);
+        window.rekananNamesCache = [];
+    }
+    return window.rekananNamesCache;
+}
+window.fetchRekananNames = fetchRekananNames;
+
 function kgGenerateRandomId(len) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let id = '';
