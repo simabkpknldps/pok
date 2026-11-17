@@ -150,47 +150,56 @@ function bindKegiatanEvents() {
     });
 }
 
-// Toggle "Hanya PNBP" di baris filter status. Dibuat lewat JS supaya otomatis
-// muncul di halaman Kegiatan DAN popup Pencarian Kegiatan (dashboard-search.js)
-// tanpa mengubah HTML keduanya. Off = semua sumber dana, On = hanya SD PNBP.
+// Toggle Sumber Dana (PNBP / RM) di baris filter status. Dibuat lewat JS supaya
+// otomatis muncul di halaman Kegiatan DAN popup Pencarian Kegiatan
+// (dashboard-search.js) tanpa mengubah HTML keduanya.
+// Semua off = semua sumber dana; PNBP on = hanya PNBP; RM on = hanya RM;
+// keduanya on = PNBP + RM (yang SD-nya belum diketahui tidak ikut).
+const KG_SD_TOGGLES = [
+    { sd: 'PNBP', warna: '#D6005C', teks: '#B8004E' },
+    { sd: 'RM', warna: '#0071E3', teks: '#0059B3' }
+];
+
 function kgSetupPnbpToggle() {
     const radio = document.querySelector('input[name="kg-statusFilter"]');
     const bar = radio ? radio.closest('div') : null;
     if (!bar) return;
+    if (!Array.isArray(kgQuery.sdFilter)) kgQuery.sdFilter = [];
 
-    let wrap = document.getElementById('kg-pnbpToggleWrap');
-    if (!wrap) {
-        wrap = document.createElement('label');
-        wrap.id = 'kg-pnbpToggleWrap';
-        wrap.className = 'flex items-center gap-2 cursor-pointer select-none ml-2 pl-4 border-l border-slate-300';
-        wrap.title = 'Aktif: hanya tampilkan kegiatan dengan sumber dana PNBP';
-        wrap.innerHTML = `
-            <button type="button" id="kg-pnbpToggle" role="switch" aria-checked="false"
-                class="relative rounded-full shrink-0"
-                style="position: relative; width: 40px; height: 24px; border: 0; padding: 0; border-radius: 999px; background-color: #C7C7CC; transition: background-color .2s ease; cursor: pointer;">
-                <span id="kg-pnbpKnob" class="absolute rounded-full bg-white"
-                    style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform .2s ease;"></span>
-            </button>
-            <span class="font-medium">Hanya PNBP</span>`;
-        bar.appendChild(wrap);
+    let grup = document.getElementById('kg-sdToggleWrap');
+    if (!grup) {
+        grup = document.createElement('div');
+        grup.id = 'kg-sdToggleWrap';
+        grup.className = 'flex items-center gap-4 ml-2 pl-4 border-l border-slate-300';
+        grup.innerHTML = KG_SD_TOGGLES.map(t => `
+            <label class="flex items-center gap-2 cursor-pointer select-none" title="Aktif: hanya tampilkan kegiatan dengan sumber dana ${t.sd}">
+                <button type="button" data-sd="${t.sd}" class="kg-sdToggle" role="switch" aria-checked="false"
+                    style="position: relative; width: 40px; height: 24px; border: 0; padding: 0; border-radius: 999px; background-color: #C7C7CC; transition: background-color .2s ease; cursor: pointer;">
+                    <span style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform .2s ease;"></span>
+                </button>
+                <span class="font-medium">${t.sd}</span>
+            </label>`).join('');
+        bar.appendChild(grup);
     }
 
-    const btn = document.getElementById('kg-pnbpToggle');
-    const knob = document.getElementById('kg-pnbpKnob');
-    const paint = () => {
-        const on = !!kgQuery.pnbpOnly;
-        btn.setAttribute('aria-checked', on ? 'true' : 'false');
-        btn.style.backgroundColor = on ? '#D6005C' : '#C7C7CC';
-        knob.style.transform = on ? 'translateX(16px)' : 'translateX(0)';
-        wrap.querySelector('span:last-child').style.color = on ? '#B8004E' : '';
-    };
-    paint();
-    btn.onclick = (e) => {
-        e.preventDefault();
-        kgQuery.pnbpOnly = !kgQuery.pnbpOnly;
+    grup.querySelectorAll('.kg-sdToggle').forEach(btn => {
+        const t = KG_SD_TOGGLES.find(x => x.sd === btn.dataset.sd);
+        const paint = () => {
+            const on = kgQuery.sdFilter.includes(t.sd);
+            btn.setAttribute('aria-checked', on ? 'true' : 'false');
+            btn.style.backgroundColor = on ? t.warna : '#C7C7CC';
+            btn.firstElementChild.style.transform = on ? 'translateX(16px)' : 'translateX(0)';
+            btn.nextElementSibling.style.color = on ? t.teks : '';
+        };
         paint();
-        kgApplyFilterAndRender();
-    };
+        btn.onclick = (e) => {
+            e.preventDefault();
+            const f = kgQuery.sdFilter;
+            kgQuery.sdFilter = f.includes(t.sd) ? f.filter(x => x !== t.sd) : [...f, t.sd];
+            paint();
+            kgApplyFilterAndRender();
+        };
+    });
 }
 
 function kgSetTotalJumlahLabel(total) {
@@ -410,8 +419,9 @@ function kgApplyFilterAndRender() {
         }
     }
 
-    // Toggle "Hanya PNBP" (berlaku juga di mode Cari SPM)
-    if (kgQuery.pnbpOnly) rows = rows.filter(r => r.SD === 'PNBP');
+    // Toggle Sumber Dana PNBP/RM (berlaku juga di mode Cari SPM)
+    const sdFilter = Array.isArray(kgQuery.sdFilter) ? kgQuery.sdFilter : [];
+    if (sdFilter.length) rows = rows.filter(r => sdFilter.includes(r.SD));
 
     kgCurrentTableRowsData = rows;
     kgRenderTable(rows);
@@ -420,7 +430,7 @@ function kgApplyFilterAndRender() {
     kgSetTotalJumlahLabel(totalJumlah);
 
     if (spmQuery && rows.length === 0) {
-        alert('Data dengan Nomor SPM ' + spmQuery + ' tidak ditemukan' + (kgQuery.pnbpOnly ? ' (filter Hanya PNBP sedang aktif).' : '.'));
+        alert('Data dengan Nomor SPM ' + spmQuery + ' tidak ditemukan' + ((kgQuery.sdFilter || []).length ? ' (filter sumber dana ' + kgQuery.sdFilter.join('/') + ' sedang aktif).' : '.'));
     }
 }
 
