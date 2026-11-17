@@ -88,6 +88,8 @@ const TOOLS = [
     parameters: { type: "object", properties: { kata: SEL, topik: SEL, tahun: SEL } } },
   { name: "cek_pok", description: "Cari baris POK (kode, uraian, pagu, sumber dana, seksi) berdasarkan kata kunci; opsional filter seksi.",
     parameters: { type: "object", properties: { kata: SEL, seksi: SEL } } },
+  { name: "baca_url", description: "Membaca isi halaman web/PDF dari sebuah URL (mis. peraturan, berita, hasil cari_web) dan mengembalikan teksnya. Pakai bila pengguna memberi tautan atau perlu isi lengkap sebuah halaman.",
+    parameters: { type: "object", properties: { url: SEL }, required: ["url"] } },
   { name: "cari_web", description: "Cari informasi terkini di web (aturan, tarif, berita).",
     parameters: { type: "object", properties: { query: SEL }, required: ["query"] } },
 ];
@@ -253,14 +255,35 @@ async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
     const k = q(a.kata || "");
     return await c.db(`pok?select=kode,uraian,pagu,sd,seksi&${base}&or=(kode.ilike.*${k}*,uraian.ilike.*${k}*)&limit=15`);
   }
+  if (name === "baca_url") {
+    const u = String(a.url || "").trim();
+    if (!/^https?:\/\//i.test(u)) return { error: "URL harus diawali http:// atau https://" };
+    try {
+      const t = await withKeys("JINA_KEYS", async (key) => {
+        const r = await fetch("https://r.jina.ai/" + u, { headers: { Authorization: `Bearer ${key}`, Accept: "text/plain", "X-Return-Format": "markdown" }, signal: AbortSignal.timeout(30000) });
+        if (!r.ok) throw new Error(`jina ${r.status} ${(await r.text()).slice(0, 120)}`);
+        return await r.text();
+      });
+      return { url: u, isi: t.slice(0, 7000), terpotong: t.length > 7000 };
+    } catch (e) { return { error: "Gagal membaca halaman: " + String(e).slice(0, 200) }; }
+  }
   if (name === "cari_web") {
     try {
       const r = await withKeys("TAVILY_KEYS", (key) => post("https://api.tavily.com/search", { api_key: key, query: a.query, max_results: 4 }, {}));
       return (r.results || []).map((x: any) => ({ judul: x.title, url: x.url, isi: String(x.content || "").slice(0, 400) }));
-    } catch {
+    } catch { /* lanjut ke penyedia berikutnya */ }
+    try {
       const r = await withKeys("SERPER_KEYS", (key) => post("https://google.serper.dev/search", { q: a.query, gl: "id", hl: "id", num: 4 }, { "X-API-KEY": key }));
       return (r.organic || []).map((x: any) => ({ judul: x.title, url: x.link, isi: x.snippet }));
-    }
+    } catch { /* lanjut */ }
+    try {
+      return await withKeys("JINA_KEYS", async (key) => {
+        const r = await fetch("https://s.jina.ai/?q=" + encodeURIComponent(String(a.query || "")), { headers: { Authorization: `Bearer ${key}`, Accept: "application/json", "X-Respond-With": "no-content" }, signal: AbortSignal.timeout(30000) });
+        if (!r.ok) throw new Error(`jina ${r.status}`);
+        const j = await r.json();
+        return (j.data || []).slice(0, 4).map((x: any) => ({ judul: x.title, url: x.url, isi: String(x.description || x.content || "").slice(0, 400) }));
+      });
+    } catch (e) { return { error: "Pencarian web gagal: " + String(e).slice(0, 160) }; }
   }
   return { error: "tool tidak dikenal" };
 }
@@ -270,7 +293,7 @@ const SYSTEM = (c: Ctx) =>
   `Kamu Jarwo, asisten AI aplikasi SiMAB (Sistem Monitoring Anggaran Belanja) KPKNL. Jawab Bahasa Indonesia, singkat, jelas, sopan.
 Kantor aktif: ${c.kantor}, tahun anggaran ${c.tahun}. Data kegiatan/POK ambil lewat tool; jangan mengarang angka. Format rupiah: Rp 1.234.567.
 Perjadin = akun 524111/524113 (pakai akun="perjadin"). Seksi (mis. Umum) ada di POK; gunakan filter seksi pada ringkasan_anggaran. Jika sebuah filter tidak menemukan data, coba lagi tanpa filter atau lihat seksi_tersedia sebelum menyimpulkan data tidak ada.\nPerjadin = akun 524111 (biasa) dan 524113 (paket meeting); akun 5241 mencakup keduanya. "Seksi" adalah pemilik baris POK (mis. Umum). Bila diminta file/Excel/PDF/rekap/laporan, panggil buat_laporan (tombol unduh muncul otomatis; jangan menulis ulang tabel panjang). Gunakan filter tool (akun, seksi, sd, tanggal) alih-alih meminta pengguna mengunggah dokumen untuk pertanyaan data; bila tool mengembalikan kosong, sebutkan filter yang dipakai dan tawarkan alternatif. Untuk pertanyaan SBM/tarif (uang harian, penginapan, tiket, transport, honor, konsumsi, dll.) gunakan tool cek_sbm (data PMK SBM per tahun di SiMAB), jangan cari_web; sebutkan tahun & kolom yang dipakai. MAK perjadin 524111/524113 melalui status Rekam Data → Terlaksana → LPT → Terbayar → Selesai; MAK lain tanpa LPT.
-Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nBila diminta membuat/menggenerate gambar, panggil buat_gambar dengan prompt bahasa Inggris yang rinci. Jangan membuat gambar tokoh/karakter berhak cipta atau orang nyata tertentu.\nKamu tidak menyimpan data sendiri; untuk merekam, minta pengguna mengunggah foto/PDF dokumen lewat tombol lampiran.`;
+Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nBila pengguna memberi tautan/URL atau butuh isi lengkap suatu halaman, gunakan baca_url. Bila diminta membuat/menggenerate gambar, panggil buat_gambar dengan prompt bahasa Inggris yang rinci. Jangan membuat gambar tokoh/karakter berhak cipta atau orang nyata tertentu.\nKamu tidak menyimpan data sendiri; untuk merekam, minta pengguna mengunggah foto/PDF dokumen lewat tombol lampiran.`;
 
 async function chatGemini(msgs: any[], c: Ctx) {
   const contents = msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content) }] }));
