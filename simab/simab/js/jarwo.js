@@ -1,0 +1,193 @@
+// Jarwo — asisten AI SiMAB (tombol mengambang + panel chat + rekam dari foto/PDF).
+// Semua penyimpanan dilakukan di sini (browser) dengan sesi user, setelah user menekan Simpan.
+(function () {
+  if (window.__jarwoLoaded) return; window.__jarwoLoaded = true;
+  const FN = SUPABASE_URL + '/functions/v1/jarwo';
+  const hist = [];
+  let panel, list, input, busy = false;
+
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const rp = n => 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
+
+  async function call(body) {
+    await waitSupabaseAuthReady();
+    const { data } = await sb.auth.getSession();
+    const jwt = data?.session?.access_token;
+    if (!jwt) throw new Error('Sesi login habis, silakan login ulang.');
+    const r = await fetch(FN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt, apikey: SUPABASE_KEY },
+      body: JSON.stringify({ ...body, kantor: getKantorAktif(), tahun: await getTahunAktif() })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('Error ' + r.status));
+    return j;
+  }
+
+  function bubble(html, who) {
+    const d = document.createElement('div');
+    d.className = 'jw-b ' + who;
+    d.innerHTML = html;
+    list.appendChild(d); list.scrollTop = list.scrollHeight;
+    return d;
+  }
+
+  function build() {
+    const st = document.createElement('style');
+    st.textContent = `
+#jw-fab{position:fixed;right:16px;bottom:16px;z-index:9000;width:56px;height:56px;border-radius:50%;border:0;background:#007aff;color:#fff;font-size:22px;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer}
+#jw-panel{position:fixed;right:16px;bottom:84px;z-index:9001;width:min(380px,calc(100vw - 24px));height:min(560px,calc(100vh - 110px));background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden;font-size:14px}
+#jw-panel.open{display:flex}
+#jw-head{padding:10px 14px;background:#007aff;color:#fff;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+#jw-list{flex:1;overflow:auto;padding:10px;background:#f2f2f7}
+.jw-b{max-width:92%;margin:6px 0;padding:8px 11px;border-radius:12px;white-space:pre-wrap;word-break:break-word}
+.jw-b.u{background:#007aff;color:#fff;margin-left:auto}
+.jw-b.a{background:#fff;color:#111}
+.jw-b.card{background:#fff;border:1px solid #c7c7cc;max-width:100%;width:100%;white-space:normal}
+.jw-b.card label{display:block;font-size:11px;color:#666;margin-top:6px}
+.jw-b.card input,.jw-b.card select{width:100%;border:1px solid #d1d1d6;border-radius:8px;padding:4px 6px;font-size:13px}
+.jw-b.card .row{display:flex;gap:6px}.jw-b.card .row>*{flex:1}
+.jw-b.card button{margin-top:8px;padding:6px 12px;border-radius:8px;border:0;cursor:pointer;font-size:13px}
+.jw-ok{background:#34c759;color:#fff}.jw-no{background:#e5e5ea}
+#jw-foot{display:flex;gap:6px;padding:8px;border-top:1px solid #e5e5ea}
+#jw-foot input[type=text]{flex:1;border:1px solid #d1d1d6;border-radius:18px;padding:7px 12px;font-size:14px}
+#jw-foot button{border:0;background:none;font-size:18px;cursor:pointer;color:#007aff}`;
+    document.head.appendChild(st);
+    const fab = document.createElement('button');
+    fab.id = 'jw-fab'; fab.title = 'Jarwo'; fab.innerHTML = '<i class="fa-solid fa-robot"></i>';
+    panel = document.createElement('div'); panel.id = 'jw-panel';
+    panel.innerHTML = `<div id="jw-head"><span>Jarwo · Asisten SiMAB</span><span id="jw-x" style="cursor:pointer">✕</span></div>
+      <div id="jw-list"></div>
+      <div id="jw-foot"><button id="jw-att" title="Unggah foto/PDF"><i class="fa-solid fa-paperclip"></i></button>
+      <input type="text" id="jw-in" placeholder="Tanya Jarwo atau unggah dokumen..."><button id="jw-send"><i class="fa-solid fa-paper-plane"></i></button>
+      <input type="file" id="jw-file" accept="image/*,application/pdf" style="display:none"></div>`;
+    document.body.append(fab, panel);
+    list = panel.querySelector('#jw-list'); input = panel.querySelector('#jw-in');
+    fab.onclick = () => { panel.classList.toggle('open'); if (panel.classList.contains('open') && !list.children.length) bubble('Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau unggah foto/PDF (surat tugas, kuitansi, SPBy/SPM/SP2D) lewat ikon klip untuk direkam.', 'a'); };
+    panel.querySelector('#jw-x').onclick = () => panel.classList.remove('open');
+    panel.querySelector('#jw-send').onclick = send;
+    input.onkeydown = e => { if (e.key === 'Enter') send(); };
+    const f = panel.querySelector('#jw-file');
+    panel.querySelector('#jw-att').onclick = () => f.click();
+    f.onchange = () => { if (f.files[0]) upload(f.files[0]); f.value = ''; };
+  }
+
+  async function send() {
+    const t = input.value.trim(); if (!t || busy) return;
+    input.value = ''; bubble(esc(t), 'u'); hist.push({ role: 'user', content: t });
+    busy = true; const w = bubble('…', 'a');
+    try { const r = await call({ mode: 'chat', messages: hist }); w.textContent = r.reply || '(kosong)'; hist.push({ role: 'assistant', content: r.reply }); }
+    catch (e) { w.textContent = 'Maaf: ' + e.message; }
+    busy = false;
+  }
+
+  function toB64(file) {
+    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(file); });
+  }
+  // kecilkan foto agar upload ringan
+  async function shrink(file) {
+    if (!file.type.startsWith('image/')) return file;
+    const bmp = await createImageBitmap(file); const s = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = bmp.width * s; c.height = bmp.height * s;
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(b => r(new File([b], 'foto.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.85));
+  }
+
+  async function upload(file) {
+    if (busy) return;
+    if (file.size > 10 * 1024 * 1024) { bubble('File terlalu besar (maks 10 MB).', 'a'); return; }
+    bubble('📎 ' + esc(file.name), 'u'); busy = true; const w = bubble('Membaca dokumen…', 'a');
+    try {
+      const f = await shrink(file);
+      const r = await call({ mode: 'extract', file: { mime: f.type, data: await toB64(f) }, hint: input.value.trim() });
+      w.remove(); drafCard(r.draft);
+    } catch (e) { w.textContent = 'Gagal membaca dokumen: ' + e.message; }
+    busy = false;
+  }
+
+  const field = (l, id, v, type) => `<label>${l}</label><input id="${id}" type="${type || 'text'}" value="${esc(v)}">`;
+
+  function drafCard(d) {
+    const jenis = d.jenis || 'lainnya';
+    const c = bubble('', 'card'); const id = 'jw' + Date.now();
+    const makOpts = (d.saran_mak || []).map(m => `<option value="${esc(m.kode)}">${esc(m.kode)} — ${esc(m.uraian || '')} (${esc(m.sd || '')})</option>`).join('');
+    const head = `<b>Draft: ${{ surat_tugas: 'Surat Tugas / ND', kuitansi: 'Kuitansi / Nota', spby_spm_sp2d: 'SPBy / SPM / SP2D', lainnya: 'Dokumen lain' }[jenis] || jenis}</b><div style="font-size:12px;color:#555">${esc(d.ringkasan || '')}</div>`;
+    const warn = d.catatan ? `<div style="font-size:12px;color:#b45309;margin-top:4px">⚠ ${esc(d.catatan)}</div>` : '';
+    if (jenis === 'lainnya') { c.innerHTML = head + warn + '<div style="margin-top:6px;font-size:12px">Jenis dokumen ini belum bisa direkam otomatis. Silakan bertanya soal isinya lewat chat.</div>'; return; }
+
+    let body = '';
+    if (jenis === 'surat_tugas') {
+      body = field('Uraian', id + 'ur', d.uraian) + field('Tujuan', id + 'tj', d.tujuan) + field('No. / Tgl ST', id + 'st', d.tanggal_dokumen, 'date') +
+        `<div class="row"><div>${field('Mulai', id + 'm', d.tgl_mulai, 'date')}</div><div>${field('Selesai', id + 's', d.tgl_selesai, 'date')}</div></div>` +
+        `<label>MAK</label>${makOpts ? `<select id="${id}mk">${makOpts}</select>` : `<input id="${id}mk" placeholder="kode MAK, mis. 524111">`}` +
+        '<label>Pelaksana</label>' + (d.pelaksana || []).map((p, i) =>
+          `<div class="row"><input data-p="${i}" data-f="nama" value="${esc(p.cocok || p.nama)}" title="${p.cocok ? 'cocok dengan pegawai' : 'tidak cocok dgn pegawai'}"><input data-p="${i}" data-f="jumlah" type="number" value="${p.jumlah || 0}">${p.cocok ? '' : '<span title="Tidak ditemukan di daftar pegawai">⚠</span>'}</div>`).join('');
+    } else if (jenis === 'kuitansi') {
+      body = field('Uraian', id + 'ur', d.uraian) + field('Penyedia / Rekanan', id + 'pv', d.rekanan_cocok || d.penyedia) +
+        (d.penyedia && !d.rekanan_cocok ? '<div style="font-size:11px;color:#b45309">⚠ Belum ada di Referensi › Rekanan (nama dicatat apa adanya)</div>' : '') +
+        field('Jumlah', id + 'jm', d.jumlah_total, 'number') + field('Tanggal bayar/nota', id + 'tb', d.tgl_bayar || d.tanggal_dokumen, 'date') +
+        `<label>MAK</label>${makOpts ? `<select id="${id}mk">${makOpts}</select>` : `<input id="${id}mk" placeholder="kode MAK">`}`;
+    } else {
+      body = field('No. SPM', id + 'spm', d.nomor_spm) + field('Tgl SP2D', id + 'sp', d.tgl_sp2d, 'date') + field('Tgl Bayar', id + 'tb', d.tgl_bayar || d.tgl_sp2d, 'date') +
+        field('Cari kegiatan (nama/uraian)', id + 'q', (d.pelaksana?.[0]?.nama) || d.uraian || '') + '<button class="jw-no" id="' + id + 'cari">Cari</button><div id="' + id + 'hasil" style="font-size:12px"></div>';
+    }
+    c.innerHTML = head + warn + body + `<div><button class="jw-ok" id="${id}ok">Simpan</button> <button class="jw-no" id="${id}no">Batal</button></div>`;
+    c.querySelector('#' + id + 'no').onclick = () => c.remove();
+    const v = k => c.querySelector('#' + id + k)?.value ?? '';
+    if (jenis === 'spby_spm_sp2d') c.querySelector('#' + id + 'cari').onclick = async () => {
+      const k = v('q').trim(); const box = c.querySelector('#' + id + 'hasil');
+      const { data } = await sb.from('kegiatan').select('id,mak,uraian,pelaksana,jumlah,status').eq('kantor_id', getKantorAktif()).eq('tahun', await getTahunAktif())
+        .or(`pelaksana.ilike.%${k}%,uraian.ilike.%${k}%`).limit(10);
+      box.innerHTML = (data || []).map(r => `<label style="display:block"><input type="radio" name="${id}t" value="${r.id}"> ${esc(r.pelaksana)} — ${esc((r.uraian || '').slice(0, 50))} (${rp(r.jumlah)}, ${esc(r.status)})</label>`).join('') || 'Tidak ada yang cocok.';
+    };
+    c.querySelector('#' + id + 'ok').onclick = async function () {
+      this.disabled = true;
+      try { await simpan(jenis, c, id, v, d); c.innerHTML = '<b>✅ Tersimpan.</b>'; if (window.kgLoadData) try { kgLoadData(true); } catch (_) {} }
+      catch (e) { alert('Gagal menyimpan: ' + e.message); this.disabled = false; }
+    };
+  }
+
+  async function simpan(jenis, c, id, v, d) {
+    await waitSupabaseAuthReady();
+    const kantor = getKantorAktif(), tahun = await getTahunAktif();
+    const user = localStorage.getItem('nama') || '';
+    const today = new Date().toISOString().split('T')[0];
+    if (jenis === 'surat_tugas') {
+      const mak = v('mk').trim(); if (!mak) throw new Error('MAK wajib diisi');
+      const rows = [...c.querySelectorAll('[data-f="nama"]')].map(el => ({ nama: el.value.trim(), jumlah: Number(c.querySelector(`[data-p="${el.dataset.p}"][data-f="jumlah"]`).value) || 0 })).filter(p => p.nama);
+      if (!rows.length) throw new Error('Pelaksana kosong');
+      const lpt = /52411[13]/.test(mak);
+      const ins = rows.map(p => ({
+        id: kgGenerateRandomId(10), mak, uraian: v('ur'), pelaksana: p.nama, tujuan: v('tj'),
+        tgl_st: normDate(v('st')), tgl_mulai: normDate(v('m')), tgl_selesai: normDate(v('s')), tgl_lpt: null, tgl_bayar: null,
+        jumlah: p.jumlah, user, status: kgComputeStatus(v('m'), '', '', ''), tgl_sp2d: null, nomor_spm: '', dokumen_link: '', spby_link: '',
+        tgl_rekam: normDate(today), perbantuan: false, kantor_id: kantor, tahun
+      }));
+      const { error } = await sb.from('kegiatan').insert(ins); if (error) throw new Error(error.message);
+      void lpt;
+    } else if (jenis === 'kuitansi') {
+      const mak = v('mk').trim(); if (!mak) throw new Error('MAK wajib diisi');
+      if (/52411[13]/.test(mak)) throw new Error('MAK perjadin (524111/524113) direkam lewat Surat Tugas.');
+      const tb = v('tb') || today;
+      const { error } = await sb.from('kegiatan').insert({
+        id: kgGenerateRandomId(10), mak, uraian: v('ur'), pelaksana: v('pv'), tujuan: '', tgl_st: null, tgl_mulai: normDate(tb), tgl_selesai: normDate(tb),
+        tgl_lpt: null, tgl_bayar: normDate(tb), jumlah: Number(v('jm')) || 0, user, status: kgComputeStatus(tb, '', tb, ''), tgl_sp2d: null,
+        nomor_spm: '', dokumen_link: '', spby_link: '', tgl_rekam: normDate(today), perbantuan: false, kantor_id: kantor, tahun
+      });
+      if (error) throw new Error(error.message);
+    } else {
+      const t = c.querySelector(`input[name="${id}t"]:checked`)?.value; if (!t) throw new Error('Pilih kegiatan yang dituju (klik Cari).');
+      const { data: row } = await sb.from('kegiatan').select('tgl_mulai,tgl_lpt').eq('id', t).single();
+      const sp = v('sp'), tb = v('tb');
+      const { error } = await sb.from('kegiatan').update({
+        nomor_spm: v('spm'), tgl_sp2d: normDate(sp) || null, tgl_bayar: normDate(tb) || null,
+        status: kgComputeStatus(row?.tgl_mulai, row?.tgl_lpt, tb, sp)
+      }).eq('id', t);
+      if (error) throw new Error(error.message);
+    }
+    try { await sb.from('jarwo_log').insert({ kantor_id: kantor, aksi: 'simpan', keterangan: jenis }); } catch (_) {}
+  }
+
+  function init() { if (!localStorage.getItem('nip') && !localStorage.getItem('nama')) return; build(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
