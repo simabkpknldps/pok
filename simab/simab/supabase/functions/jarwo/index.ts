@@ -433,7 +433,9 @@ async function hitungUangHarian(d: any, c: Ctx) {
   const pk = key(prov);
   let cand = rows.filter((r) => key(r.nama) === pk);
   if (!cand.length) cand = rows.filter((r) => key(r.nama).includes(pk) || pk.includes(key(r.nama)));
-  if (cand.length !== 1) throw new Error(cand.length ? "provinsi '" + prov + "' ambigu di tabel SBM" : "provinsi '" + prov + "' tidak ada di tabel SBM");
+  if (!cand.length) throw new Error("provinsi '" + prov + "' tidak ada di tabel SBM");
+  // kecocokan persis boleh berulang (data ganda): ambil yang pertama; kecocokan sebagian harus tunggal
+  if (cand.length > 1 && key(cand[0].nama) !== pk) throw new Error("provinsi '" + prov + "' cocok dengan beberapa baris SBM: " + cand.slice(0, 4).map((r) => r.nama).join(", "));
   const best = cand[0];
   const tarif = Number(best.nilai?.[jenis]); if (!tarif) throw new Error("tarif kosong");
   d.uang_harian = { provinsi: best.nama, tarif, hari, jenis: ["luar kota", "dalam kota (>8 jam)", "diklat"][jenis], sumber: d.sbm_tahun };
