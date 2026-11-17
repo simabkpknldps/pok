@@ -3,6 +3,7 @@
 (function () {
   if (window.__jarwoLoaded) return; window.__jarwoLoaded = true;
   const FN = SUPABASE_URL + '/functions/v1/jarwo';
+  const MOBILE = !!window.JARWO_KUITANSI_ONLY; // mode SOH (HP): hanya rekam foto kuitansi
   const hist = [];
   let panel, list, input, busy = false;
 
@@ -70,18 +71,24 @@
 #jw-foot{display:flex;gap:6px;padding:8px;border-top:1px solid #e5e5ea}
 #jw-foot textarea{resize:none;max-height:110px;line-height:1.35;font-family:inherit;outline:none;overflow-y:auto;flex:1;border:1px solid #d1d1d6;border-radius:18px;padding:7px 12px;font-size:14px}
 #jw-foot button{border:0;background:none;font-size:18px;cursor:pointer;color:#007aff}`;
+    if (MOBILE) st.textContent += `
+#jw-fab{bottom:84px;right:14px;width:52px;height:52px}
+#jw-panel{left:8px;right:8px;width:auto;bottom:76px;height:min(70vh,520px)}
+#jw-foot #jw-in,#jw-foot #jw-send{display:none}
+#jw-foot #jw-att{flex:1;background:#007aff;color:#fff;border-radius:12px;padding:12px;font-size:15px;font-weight:600}`;
     document.head.appendChild(st);
     const fab = document.createElement('button');
     fab.id = 'jw-fab'; fab.title = 'Jarwo'; fab.innerHTML = '<i class="fa-solid fa-robot"></i>';
     panel = document.createElement('div'); panel.id = 'jw-panel';
     panel.innerHTML = `<div id="jw-head"><span>Jarwo · Asisten SiMAB</span><span id="jw-x" style="cursor:pointer">✕</span></div>
       <div id="jw-list"></div>
-      <div id="jw-foot"><button id="jw-att" title="Unggah foto/PDF"><i class="fa-solid fa-paperclip"></i></button>
+      <div id="jw-foot"><button id="jw-att" title="Unggah foto/PDF"><i class="fa-solid fa-paperclip"></i>${MOBILE ? ' Foto / unggah kuitansi' : ''}</button>
       <textarea id="jw-in" rows="1" placeholder="Tanya Jarwo atau unggah dokumen..."></textarea><button id="jw-send"><i class="fa-solid fa-paper-plane"></i></button>
       <input type="file" id="jw-file" accept="image/*,application/pdf" style="display:none"></div>`;
     document.body.append(fab, panel);
     list = panel.querySelector('#jw-list'); input = panel.querySelector('#jw-in');
-    const toggle = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) setTimeout(() => input.focus(), 50); if (panel.classList.contains('open') && !list.children.length) bubble('Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau unggah foto/PDF (surat tugas, kuitansi, SPBy/SPM/SP2D) lewat ikon klip untuk direkam.', 'a'); };
+    const sapa = MOBILE ? 'Halo, saya Jarwo 👋 Ketuk tombol biru di bawah untuk memotret atau memilih foto kuitansi/nota/bukti bayar, nanti saya isikan drafnya untuk Anda cek dan simpan.' : null;
+    const toggle = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) setTimeout(() => input.focus(), 50); if (panel.classList.contains('open') && !list.children.length) bubble(sapa || 'Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau unggah foto/PDF (surat tugas, kuitansi, SPBy/SPM/SP2D) lewat ikon klip untuk direkam.', 'a'); };
     window.toggleJarwo = toggle;
     fab.onclick = toggle;
     panel.querySelector('#jw-x').onclick = () => panel.classList.remove('open');
@@ -170,7 +177,7 @@
     bubble('📎 ' + esc(file.name), 'u'); busy = true; const w = bubble('Membaca dokumen…', 'a');
     try {
       const f = await shrink(file);
-      const r = await call({ mode: 'extract', file: { mime: f.type, data: await toB64(f) }, hint: input.value.trim() });
+      const r = await call({ mode: 'extract', file: { mime: f.type, data: await toB64(f) }, hint: MOBILE ? 'kuitansi' : input.value.trim() });
       w.remove(); drafCard(r.draft);
     } catch (e) { w.textContent = 'Gagal membaca dokumen: ' + e.message; }
     busy = false;
@@ -186,6 +193,7 @@
       `<input id="${id}mk2" list="${id}dl" placeholder="${makOpts ? 'Ganti MAK (opsional): ketik kode/uraian' : 'Kode MAK, mis. 4798.ABA.002.005.B.524111'}" style="margin-top:4px"><datalist id="${id}dl"></datalist>`;
     const head = `<b>Draft: ${{ surat_tugas: 'Surat Tugas / ND', kuitansi: 'Kuitansi / Nota', spby_spm_sp2d: 'SPBy / SPM / SP2D', lainnya: 'Dokumen lain' }[jenis] || jenis}</b><div style="font-size:12px;color:#555">${esc(d.ringkasan || '')}</div>`;
     const warn = d.catatan ? `<div style="font-size:12px;color:#b45309;margin-top:4px">⚠ ${esc(d.catatan)}</div>` : '';
+    if (MOBILE && jenis !== 'kuitansi') { c.innerHTML = head + warn + '<div style="margin-top:6px;font-size:12px">Di aplikasi HP ini Jarwo hanya merekam kuitansi/nota/bukti bayar. Untuk dokumen jenis ini, gunakan SiMAB versi web.</div>'; return; }
     if (jenis === 'lainnya') { c.innerHTML = head + warn + '<div style="margin-top:6px;font-size:12px">Jenis dokumen ini belum bisa direkam otomatis. Silakan bertanya soal isinya lewat chat.</div>'; return; }
 
     let body = '';
