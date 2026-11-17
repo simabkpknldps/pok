@@ -10,6 +10,7 @@ const env = (k: string, d = "") => Deno.env.get(k) || d;
 const keys = (k: string) => env(k).split(",").map((s) => s.trim()).filter(Boolean);
 // Model boleh lebih dari satu, dipisah koma; dicoba berurutan sampai ada yang berhasil.
 const models = (k: string, d: string) => env(k, d).split(",").map((s) => s.trim()).filter(Boolean);
+const GEMINI_EXTRACT_MODELS = models("GEMINI_EXTRACT_MODEL", "gemini-3.5-flash-lite,gemini-3.8-flash");
 const GEMINI_MODELS = models("GEMINI_MODEL", "gemini-3.8-flash,gemini-3.5-flash-lite");
 const GROQ_MODELS = models("GROQ_MODEL", "openai/gpt-oss-120b");
 const OR_MODELS = models("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free");
@@ -42,7 +43,7 @@ async function withKeys<T>(name: string, fn: (key: string) => Promise<T>): Promi
   throw last;
 }
 async function post(url: string, body: unknown, headers: Record<string, string>) {
-  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) });
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(45000) });
   const t = await r.text();
   if (!r.ok) throw new Error(`${r.status} ${t.slice(0, 200)}`);
   return JSON.parse(t);
@@ -313,7 +314,7 @@ async function extract(file: { mime: string; data: string }, hint: string) {
   const text = EXTRACT_PROMPT + (hint ? `\nPetunjuk pengguna: ${hint}` : "");
   if (keys("GEMINI_KEYS").length) {
     try {
-      const r = await withModels(GEMINI_MODELS, (mdl) => withKeys("GEMINI_KEYS", (key) =>
+      const r = await withModels(GEMINI_EXTRACT_MODELS, (mdl) => withKeys("GEMINI_KEYS", (key) =>
         post(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,
           { contents: [{ parts: [{ text }, { inlineData: { mimeType: file.mime, data: file.data } }] }],
             generationConfig: { responseMimeType: "application/json", temperature: 0 } }, { "x-goog-api-key": key })));
