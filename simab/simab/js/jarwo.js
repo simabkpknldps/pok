@@ -164,7 +164,7 @@
 
     let body = '';
     if (jenis === 'surat_tugas') {
-      body = field('Uraian (No. ST)', id + 'ur', d.nomor_dokumen || d.uraian) + field('Tujuan', id + 'tj', d.tujuan) + field('Tgl ST', id + 'st', d.tanggal_dokumen, 'date') +
+      body = field('Uraian (No. ST)', id + 'ur', d.nomor_dokumen || d.uraian) + field('Tujuan (kabupaten/kota)', id + 'tj', String(d.tujuan || '').split(',')[0].replace(/^\s*(kabupaten|kab\.?|kota)\s+/i, '').trim()) + field('Tgl ST', id + 'st', d.tanggal_dokumen, 'date') +
         `<div class="row"><div>${field('Mulai', id + 'm', d.tgl_mulai, 'date')}</div><div>${field('Selesai', id + 's', d.tgl_selesai, 'date')}</div></div>` +
         makField() +
         '<label>Pelaksana</label>' + (d.pelaksana || []).map((p, i) =>
