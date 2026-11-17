@@ -63,7 +63,9 @@
       <input type="file" id="jw-file" accept="image/*,application/pdf" style="display:none"></div>`;
     document.body.append(fab, panel);
     list = panel.querySelector('#jw-list'); input = panel.querySelector('#jw-in');
-    fab.onclick = () => { panel.classList.toggle('open'); if (panel.classList.contains('open') && !list.children.length) bubble('Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau unggah foto/PDF (surat tugas, kuitansi, SPBy/SPM/SP2D) lewat ikon klip untuk direkam.', 'a'); };
+    const toggle = () => { panel.classList.toggle('open'); if (panel.classList.contains('open') && !list.children.length) bubble('Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau unggah foto/PDF (surat tugas, kuitansi, SPBy/SPM/SP2D) lewat ikon klip untuk direkam.', 'a'); };
+    window.toggleJarwo = toggle;
+    fab.onclick = toggle;
     panel.querySelector('#jw-x').onclick = () => panel.classList.remove('open');
     panel.querySelector('#jw-send').onclick = send;
     input.onkeydown = e => { if (e.key === 'Enter') send(); };
