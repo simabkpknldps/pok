@@ -118,7 +118,20 @@
   const slug = t => String(t || 'laporan').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'laporan';
   function addImageCard(g) {
     const src = 'data:' + g.mime + ';base64,' + g.data;
-    const c = bubble(`<img src="${src}" alt="Gambar buatan Jarwo" style="max-width:100%;border-radius:10px;display:block"><div style="margin-top:6px"><a class="jw-ok" style="display:inline-block;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:13px" download="jarwo-${Date.now()}.${g.mime.includes('png') ? 'png' : 'jpg'}" href="${src}">⬇ Unduh gambar</a></div>`, 'card');
+    const ext = g.mime.includes('png') ? 'png' : 'jpg', nama = 'jarwo-' + Date.now() + '.' + ext;
+    const c = bubble(`<img src="${src}" alt="Gambar buatan Jarwo" style="max-width:100%;border-radius:10px;display:block"><div style="margin-top:6px"><button class="jw-ok" data-f="dl">⬇ Unduh / simpan gambar</button></div>`, 'card');
+    c.querySelector('[data-f=dl]').onclick = async () => {
+      const bin = atob(g.data), arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const blob = new Blob([arr], { type: g.mime }), file = new File([blob], nama, { type: g.mime });
+      // PWA/HP: lembar bagikan (ada "Simpan Gambar"); desktop: unduh biasa
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = nama; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    };
     list.scrollTop = list.scrollHeight; return c;
   }
   function addFileCard(t) {
