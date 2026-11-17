@@ -74,20 +74,19 @@
     if (MOBILE) st.textContent += `
 #jw-fab{bottom:84px;right:14px;width:52px;height:52px}
 #jw-panel{left:8px;right:8px;width:auto;bottom:76px;height:min(70vh,520px)}
-#jw-foot #jw-in,#jw-foot #jw-send{display:none}
-#jw-foot #jw-att{flex:1;background:#007aff;color:#fff;border-radius:12px;padding:12px;font-size:15px;font-weight:600}`;
+#jw-foot #jw-in{font-size:16px}`;
     document.head.appendChild(st);
     const fab = document.createElement('button');
     fab.id = 'jw-fab'; fab.title = 'Jarwo'; fab.innerHTML = '<i class="fa-solid fa-robot"></i>';
     panel = document.createElement('div'); panel.id = 'jw-panel';
     panel.innerHTML = `<div id="jw-head"><span>Jarwo · Asisten SiMAB</span><span id="jw-x" style="cursor:pointer">✕</span></div>
       <div id="jw-list"></div>
-      <div id="jw-foot"><button id="jw-att" title="Unggah foto/PDF"><i class="fa-solid fa-paperclip"></i>${MOBILE ? ' Foto / unggah kuitansi' : ''}</button>
+      <div id="jw-foot"><button id="jw-att" title="Unggah foto/PDF"><i class="fa-solid fa-paperclip"></i></button>
       <textarea id="jw-in" rows="1" placeholder="Tanya Jarwo atau unggah dokumen..."></textarea><button id="jw-send"><i class="fa-solid fa-paper-plane"></i></button>
       <input type="file" id="jw-file" accept="image/*,application/pdf" style="display:none"></div>`;
     document.body.append(fab, panel);
     list = panel.querySelector('#jw-list'); input = panel.querySelector('#jw-in');
-    const sapa = MOBILE ? 'Halo, saya Jarwo 👋 Ketuk tombol biru di bawah untuk memotret atau memilih foto kuitansi/nota/bukti bayar, nanti saya isikan drafnya untuk Anda cek dan simpan.' : null;
+    const sapa = MOBILE ? 'Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau ketuk ikon klip untuk memotret/memilih foto kuitansi, nota, atau bukti bayar. Nanti saya isikan drafnya untuk Anda cek dan simpan.' : null;
     const toggle = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) setTimeout(() => input.focus(), 50); if (panel.classList.contains('open') && !list.children.length) bubble(sapa || 'Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau unggah foto/PDF (surat tugas, kuitansi, SPBy/SPM/SP2D) lewat ikon klip untuk direkam.', 'a'); };
     window.toggleJarwo = toggle;
     fab.onclick = toggle;
@@ -205,7 +204,9 @@
     } else if (jenis === 'kuitansi') {
       body = field('Uraian', id + 'ur', d.uraian) + field('Penyedia / Rekanan', id + 'pv', d.rekanan_cocok || d.penyedia) +
         (d.penyedia && !d.rekanan_cocok ? '<div style="font-size:11px;color:#b45309">⚠ Belum ada di Referensi › Rekanan (nama dicatat apa adanya)</div>' : '') +
-        field('Jumlah', id + 'jm', d.jumlah_total, 'number') + field('Tanggal bayar/nota', id + 'tb', d.tgl_bayar || d.tanggal_dokumen, 'date') +
+        field('Jumlah', id + 'jm', d.jumlah_total, 'number') +
+        `<div class="row"><div>${field('Tgl kuitansi/nota', id + 'tk', d.tanggal_dokumen || d.tgl_bayar, 'date')}</div><div>${field('Tgl bayar', id + 'tb', d.tgl_bayar || d.tanggal_dokumen, 'date')}</div></div>` +
+        `<label>Lokasi</label><input id="${id}lk" value="${esc(String(d.tujuan || '').split(',')[0])}" placeholder="Ketik lokasi atau pilih di bawah"><select id="${id}lks" style="margin-top:4px"><option value="">— pilih lokasi yang pernah dipakai —</option></select>` +
         makField();
     } else {
       body = field('No. SPM', id + 'spm', d.nomor_spm) + field('Tgl SP2D', id + 'sp', d.tgl_sp2d, 'date') + field('Tgl Bayar', id + 'tb', d.tgl_bayar || d.tgl_sp2d, 'date') +
@@ -214,6 +215,17 @@
     c.innerHTML = head + warn + body + `<div><button class="jw-ok" id="${id}ok">Simpan</button> <button class="jw-no" id="${id}no">Batal</button></div>`;
     c.querySelector('#' + id + 'no').onclick = () => c.remove();
     const v = k => c.querySelector('#' + id + k)?.value ?? '';
+    const lks = c.querySelector('#' + id + 'lks');
+    if (lks) {
+      lks.onchange = () => { if (lks.value) c.querySelector('#' + id + 'lk').value = lks.value; };
+      (async () => { try {
+        await waitSupabaseAuthReady();
+        const { data } = await sb.from('kegiatan').select('tujuan').eq('kantor_id', getKantorAktif()).eq('tahun', await getTahunAktif()).neq('tujuan', '').limit(1000);
+        const set = new Set(['Kota Denpasar', 'Kabupaten Badung', 'Kabupaten Gianyar', 'Kabupaten Tabanan', 'Kabupaten Buleleng', 'Kabupaten Klungkung', 'Kabupaten Bangli', 'Kabupaten Karangasem', 'Kabupaten Jembrana']);
+        (data || []).forEach(r => { const t = String(r.tujuan || '').trim(); if (t) set.add(t); });
+        [...set].sort((a, b) => a.localeCompare(b, 'id')).forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; lks.appendChild(o); });
+      } catch (_) {} })();
+    }
     const mkSel = c.querySelector('#' + id + 'mk');
     if (mkSel) (async () => {
       const q0 = c.querySelector('#' + id + 'mkq'), info = c.querySelector('#' + id + 'mkinfo');
@@ -272,10 +284,10 @@
     } else if (jenis === 'kuitansi') {
       const mak = v('mk').trim(); if (!mak) throw new Error('MAK wajib diisi');
       if (/52411[13]/.test(mak)) throw new Error('MAK perjadin (524111/524113) direkam lewat Surat Tugas.');
-      const tb = v('tb') || today;
+      const tb = v('tb') || v('tk') || today, tk = v('tk') || tb;
       const { error } = await sb.from('kegiatan').insert({
-        id: kgGenerateRandomId(10), mak, uraian: v('ur'), pelaksana: v('pv'), tujuan: '', tgl_st: null, tgl_mulai: normDate(tb), tgl_selesai: normDate(tb),
-        tgl_lpt: null, tgl_bayar: normDate(tb), jumlah: Number(v('jm')) || 0, user, status: kgComputeStatus(tb, '', tb, ''), tgl_sp2d: null,
+        id: kgGenerateRandomId(10), mak, uraian: v('ur'), pelaksana: v('pv'), tujuan: v('lk').trim(), tgl_st: null, tgl_mulai: normDate(tk), tgl_selesai: normDate(tk),
+        tgl_lpt: null, tgl_bayar: normDate(tb), jumlah: Number(v('jm')) || 0, user, status: kgComputeStatus(tk, '', tb, ''), tgl_sp2d: null,
         nomor_spm: '', dokumen_link: '', spby_link: '', tgl_rekam: normDate(today), perbantuan: false, kantor_id: kantor, tahun
       });
       if (error) throw new Error(error.message);
