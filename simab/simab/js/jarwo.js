@@ -68,7 +68,7 @@
 .jw-b.card button{margin-top:8px;padding:6px 12px;border-radius:8px;border:0;cursor:pointer;font-size:13px}
 .jw-ok{background:#34c759;color:#fff}.jw-no{background:#e5e5ea}
 #jw-foot{display:flex;gap:6px;padding:8px;border-top:1px solid #e5e5ea}
-#jw-foot input[type=text]{flex:1;border:1px solid #d1d1d6;border-radius:18px;padding:7px 12px;font-size:14px}
+#jw-foot textarea{resize:none;max-height:110px;line-height:1.35;font-family:inherit;outline:none;overflow-y:auto;flex:1;border:1px solid #d1d1d6;border-radius:18px;padding:7px 12px;font-size:14px}
 #jw-foot button{border:0;background:none;font-size:18px;cursor:pointer;color:#007aff}`;
     document.head.appendChild(st);
     const fab = document.createElement('button');
@@ -77,7 +77,7 @@
     panel.innerHTML = `<div id="jw-head"><span>Jarwo · Asisten SiMAB</span><span id="jw-x" style="cursor:pointer">✕</span></div>
       <div id="jw-list"></div>
       <div id="jw-foot"><button id="jw-att" title="Unggah foto/PDF"><i class="fa-solid fa-paperclip"></i></button>
-      <input type="text" id="jw-in" placeholder="Tanya Jarwo atau unggah dokumen..."><button id="jw-send"><i class="fa-solid fa-paper-plane"></i></button>
+      <textarea id="jw-in" rows="1" placeholder="Tanya Jarwo atau unggah dokumen..."></textarea><button id="jw-send"><i class="fa-solid fa-paper-plane"></i></button>
       <input type="file" id="jw-file" accept="image/*,application/pdf" style="display:none"></div>`;
     document.body.append(fab, panel);
     list = panel.querySelector('#jw-list'); input = panel.querySelector('#jw-in');
@@ -86,7 +86,9 @@
     fab.onclick = toggle;
     panel.querySelector('#jw-x').onclick = () => panel.classList.remove('open');
     panel.querySelector('#jw-send').onclick = send;
-    input.onkeydown = e => { if (e.key === 'Enter') send(); };
+    const grow = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 110) + 'px'; };
+    input.oninput = grow;
+    input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } };
     const f = panel.querySelector('#jw-file');
     panel.querySelector('#jw-att').onclick = () => f.click();
     f.onchange = () => { if (f.files[0]) upload(f.files[0]); f.value = ''; };
@@ -94,7 +96,7 @@
 
   async function send() {
     const t = input.value.trim(); if (!t || busy) return;
-    input.value = ''; bubble(esc(t), 'u'); hist.push({ role: 'user', content: t });
+    input.value = ''; input.style.height = 'auto'; bubble(esc(t), 'u'); hist.push({ role: 'user', content: t });
     busy = true; const w = bubble('…', 'a');
     try {
       const r = await call({ mode: 'chat', messages: hist });
