@@ -189,8 +189,7 @@
     const jenis = d.jenis || 'lainnya';
     const c = bubble('', 'card'); const id = 'jw' + Date.now();
     const makOpts = (d.saran_mak || []).map(m => `<option value="${esc(m.kode)}">${esc(m.kode)} — ${esc(m.uraian || '')} (${esc(m.sd || '')})</option>`).join('');
-    const makField = () => `<label>MAK</label>${makOpts ? `<select id="${id}mk">${makOpts}</select>` : ''}` +
-      `<input id="${id}mk2" list="${id}dl" placeholder="${makOpts ? 'Ganti MAK (opsional): ketik kode/uraian' : 'Kode MAK, mis. 4798.ABA.002.005.B.524111'}" style="margin-top:4px"><datalist id="${id}dl"></datalist>`;
+    const makField = () => `<label>MAK</label><input id="${id}mkq" placeholder="Cari MAK: ketik kode atau uraian (mis. 521811, printer)" autocomplete="off"><select id="${id}mk" size="5" style="margin-top:4px;height:auto">${makOpts}</select><div id="${id}mkinfo" style="font-size:11px;color:#666"></div>`;
     const head = `<b>Draft: ${{ surat_tugas: 'Surat Tugas / ND', kuitansi: 'Kuitansi / Nota', spby_spm_sp2d: 'SPBy / SPM / SP2D', lainnya: 'Dokumen lain' }[jenis] || jenis}</b><div style="font-size:12px;color:#555">${esc(d.ringkasan || '')}</div>`;
     const warn = d.catatan ? `<div style="font-size:12px;color:#b45309;margin-top:4px">⚠ ${esc(d.catatan)}</div>` : '';
     if (MOBILE && jenis !== 'kuitansi') { c.innerHTML = head + warn + '<div style="margin-top:6px;font-size:12px">Di aplikasi HP ini Jarwo hanya merekam kuitansi/nota/bukti bayar. Untuk dokumen jenis ini, gunakan SiMAB versi web.</div>'; return; }
@@ -214,11 +213,31 @@
     }
     c.innerHTML = head + warn + body + `<div><button class="jw-ok" id="${id}ok">Simpan</button> <button class="jw-no" id="${id}no">Batal</button></div>`;
     c.querySelector('#' + id + 'no').onclick = () => c.remove();
-    const v = k => k === 'mk' ? ((c.querySelector('#' + id + 'mk2')?.value || '').trim().split(/\s+—\s+/)[0] || c.querySelector('#' + id + 'mk')?.value || '') : (c.querySelector('#' + id + k)?.value ?? '');
-    const dl = c.querySelector('#' + id + 'dl');
-    if (dl) (async () => { try { await waitSupabaseAuthReady();
-      const { data } = await sb.from('pok').select('kode,uraian').eq('kantor_id', getKantorAktif()).eq('tahun', await getTahunAktif()).limit(1000);
-      dl.innerHTML = (data || []).map(r => `<option value="${esc(r.kode)}">${esc((r.uraian || '').slice(0, 60))}</option>`).join(''); } catch (_) {} })();
+    const v = k => c.querySelector('#' + id + k)?.value ?? '';
+    const mkSel = c.querySelector('#' + id + 'mk');
+    if (mkSel) (async () => {
+      const q0 = c.querySelector('#' + id + 'mkq'), info = c.querySelector('#' + id + 'mkinfo');
+      let all = [];
+      const saran = (d.saran_mak || []).map(m => ({ kode: m.kode, uraian: m.uraian, sd: m.sd }));
+      const akunHint = String(d.mak_petunjuk || '').replace(/\D/g, '').slice(-6);
+      const draw = q => {
+        const t = String(q || '').toLowerCase().trim();
+        let rows = t ? all.filter(r => (r.kode + ' ' + (r.uraian || '')).toLowerCase().includes(t)) : (saran.length ? saran : all);
+        const cur = mkSel.value; const shown = rows.slice(0, 60);
+        mkSel.innerHTML = shown.map(r => `<option value="${esc(r.kode)}">${esc(r.kode)} — ${esc((r.uraian || '').slice(0, 70))}${r.sd ? ' (' + esc(r.sd) + ')' : ''}</option>`).join('');
+        if (shown.some(r => r.kode === cur)) mkSel.value = cur; else if (shown.length) mkSel.selectedIndex = 0;
+        info.textContent = shown.length ? (rows.length > 60 ? 'Menampilkan 60 dari ' + rows.length + ' — persempit pencarian.' : shown.length + ' pilihan.') : 'Tidak ada MAK yang cocok.';
+      };
+      q0.oninput = () => draw(q0.value);
+      draw('');
+      try {
+        await waitSupabaseAuthReady();
+        const { data } = await sb.from('pok').select('kode,uraian,sd').eq('kantor_id', getKantorAktif()).eq('tahun', await getTahunAktif()).limit(1000);
+        all = data || [];
+        if (!saran.length && akunHint.length === 6) q0.value = akunHint;
+        draw(q0.value);
+      } catch (_) { info.textContent = 'Daftar MAK belum bisa dimuat.'; }
+    })();
     if (jenis === 'spby_spm_sp2d') c.querySelector('#' + id + 'cari').onclick = async () => {
       const k = v('q').trim(); const box = c.querySelector('#' + id + 'hasil');
       const { data } = await sb.from('kegiatan').select('id,mak,uraian,pelaksana,jumlah,status').eq('kantor_id', getKantorAktif()).eq('tahun', await getTahunAktif())
