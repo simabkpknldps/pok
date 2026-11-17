@@ -27,7 +27,17 @@
   }
 
   // markdown ringan -> HTML aman (tebal, miring, daftar, tabel sederhana jadi teks)
+  // LaTeX sederhana -> teks biasa (cadangan bila AI tetap menulis rumus dengan $...$)
+  function tex(t) {
+    const unwrap = x => { let o; do { o = x; x = x.replace(/\\(?:text|mathbf|mathrm|textbf|mathit)\{([^{}]*)\}/g, '$1'); } while (x !== o); return x; };
+    return String(t || '').replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$|\\\[([\s\S]+?)\\\]|\\\((.+?)\\\)/g, (_, a, b, c, d) => {
+      let x = unwrap(a || b || c || d || '');
+      for (let i = 0; i < 3; i++) x = x.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1) / ($2)');
+      return x.replace(/\\times/g, '×').replace(/\\cdot/g, '·').replace(/\\div/g, '÷').replace(/\\approx/g, '≈').replace(/\\(?:leq?|le)\b/g, '≤').replace(/\\(?:geq?|ge)\b/g, '≥').replace(/\\(?:,|;|!|quad|qquad)/g, ' ').replace(/\\%/g, '%').replace(/\\([a-zA-Z]+)/g, '$1').replace(/[{}]/g, '').replace(/\s+/g, ' ').trim();
+    });
+  }
   function md(t) {
+    t = tex(t);
     const inl = x => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,]|$)/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '<code>$1</code>');
     const out = []; let ul = false;
     const close = () => { if (ul) { out.push('</ul>'); ul = false; } };
