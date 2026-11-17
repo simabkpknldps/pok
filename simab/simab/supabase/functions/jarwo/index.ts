@@ -291,14 +291,14 @@ const EXTRACT_PROMPT = `Kamu membaca dokumen administrasi keuangan pemerintah In
  "jenis": "surat_tugas" | "kuitansi" | "spby_spm_sp2d" | "lainnya",
  "ringkasan": "1 kalimat",
  "uraian": "uraian kegiatan/pekerjaan",
- "nomor_dokumen": "", "tanggal_dokumen": "YYYY-MM-DD atau ''",
+ "nomor_dokumen": "nomor surat lengkap persis seperti tertulis, mis. ST-1533/KNL.1401/2026", "tanggal_dokumen": "YYYY-MM-DD atau ''",
  "tujuan": "kota/lokasi tujuan (surat tugas)",
  "tgl_mulai": "YYYY-MM-DD", "tgl_selesai": "YYYY-MM-DD",
  "pelaksana": [{"nama":"", "nip":"", "jumlah": 0}],
  "penyedia": "nama toko/perusahaan/rekanan (kuitansi/invoice)",
  "jumlah_total": 0,
  "nomor_spm": "", "nomor_sp2d": "", "tgl_sp2d": "YYYY-MM-DD", "tgl_bayar": "YYYY-MM-DD",
- "mak_petunjuk": "kode akun 6 digit bila tertulis, mis. 524111",
+ "mak_petunjuk": "kode MAK selengkap yang tertulis di dokumen (mis. 4798.ABA.002.005.B.524111); bila hanya akun, 6 digit (524111)",
  "catatan": "hal yang meragukan/tidak terbaca"
 }
 Jumlah dalam rupiah angka tanpa titik. Kosongkan field yang tidak ada; jangan menebak.`;
@@ -356,11 +356,16 @@ async function enrich(d: any, c: Ctx) {
     for (const x of rekanan) { const s = score(d.penyedia, x.nama); if (s > bs) { bs = s; best = x; } }
     d.rekanan_cocok = bs >= 0.6 ? best.nama : null;
   }
-  const mak = String(d.mak_petunjuk || "").replace(/\D/g, "");
+  const makRaw = String(d.mak_petunjuk || "").trim();
+  const mak = /\d+\.[A-Za-z]/.test(makRaw) ? makRaw.replace(/[^A-Za-z0-9.]/g, "") : makRaw.replace(/\D/g, "");
   const kata = String(d.uraian || "").split(" ").filter((w: string) => w.length > 3).slice(0, 3).join(" ");
   d.saran_mak = [];
   if (mak) {
     try { d.saran_mak = await c.db(`pok?select=kode,uraian,sd,pagu&kantor_id=eq.${q(c.kantor)}&tahun=eq.${c.tahun}&kode=like.*${mak}*&limit=8`); } catch { /* */ }
+    if (!d.saran_mak.length && mak.includes(".")) {
+      const akun = mak.split(".").pop() || "";
+      try { d.saran_mak = await c.db(`pok?select=kode,uraian,sd,pagu&kantor_id=eq.${q(c.kantor)}&tahun=eq.${c.tahun}&kode=like.*${akun}*&limit=8`); } catch { /* */ }
+    }
   }
   if (!d.saran_mak.length && kata) {
     try { d.saran_mak = await c.db(`pok?select=kode,uraian,sd,pagu&kantor_id=eq.${q(c.kantor)}&tahun=eq.${c.tahun}&uraian=ilike.*${q(kata.split(" ")[0])}*&limit=8`); } catch { /* */ }
