@@ -67,6 +67,13 @@
 .jw-ul{margin:4px 0;padding-left:18px;list-style:disc}.jw-ul li{margin:2px 0}.jw-b code{background:#f2f2f7;padding:0 4px;border-radius:4px}
 .jw-b.card button{margin-top:8px;padding:6px 12px;border-radius:8px;border:0;cursor:pointer;font-size:13px}
 .jw-ok{background:#34c759;color:#fff}.jw-no{background:#e5e5ea}
+.jw-b.card{box-sizing:border-box}.jw-sum{font-size:13px}.jw-sum code{font-size:11.5px;word-break:break-all}.jw-sum td.k{width:30%}.jw-sum .jw-sh{display:flex;align-items:center;gap:6px;font-weight:600;color:#1d6e31;margin-bottom:6px}
+.jw-sum table{width:100%;border-collapse:collapse}.jw-sum td{padding:3px 0;vertical-align:top}.jw-sum td.k{color:#6e6e73;padding-right:8px;font-size:12px}
+.jw-sum .jw-pl{margin-top:8px;border-top:1px solid #e5e5ea;padding-top:6px}.jw-sum .jw-pl div{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+.jw-sum .jw-pl .tot{border-top:1px dashed #c7c7cc;margin-top:4px;padding-top:4px;font-weight:600}
+.jw-sum .jw-id{font-size:10.5px;color:#8e8e93;font-family:ui-monospace,monospace}
+.jw-sum a.jw-st{color:#007aff;text-decoration:underline;cursor:pointer;font-weight:600}
+.jw-badge{display:inline-block;padding:1px 8px;border-radius:999px;background:#fff1d6;color:#c77400;font-size:11.5px;font-weight:600}
 #jw-foot{display:flex;gap:6px;padding:8px;border-top:1px solid #e5e5ea}
 #jw-foot textarea{resize:none;max-height:110px;line-height:1.35;font-family:inherit;outline:none;overflow-y:auto;flex:1;border:1px solid #d1d1d6;border-radius:18px;padding:7px 12px;font-size:14px}
 #jw-foot button{border:0;background:none;font-size:18px;cursor:pointer;color:#007aff}`;
@@ -219,7 +226,11 @@
     };
     c.querySelector('#' + id + 'ok').onclick = async function () {
       this.disabled = true;
-      try { await simpan(jenis, c, id, v, d); c.innerHTML = '<b>✅ Tersimpan.</b>'; if (window.kgLoadData) try { kgLoadData(true); } catch (_) {} }
+      try {
+        const s = await simpan(jenis, c, id, v, d);
+        tampilRingkasan(c, s);
+        if (document.getElementById('kg-dataTableBody') && window.kgLoadData) try { kgLoadData(true); } catch (_) {}
+      }
       catch (e) { alert('Gagal menyimpan: ' + e.message); this.disabled = false; }
     };
   }
@@ -229,6 +240,7 @@
     const kantor = getKantorAktif(), tahun = await getTahunAktif();
     const user = localStorage.getItem('nama') || '';
     const today = new Date().toISOString().split('T')[0];
+    let ringkas = null;
     if (jenis === 'surat_tugas') {
       const mak = v('mk').trim(); if (!mak) throw new Error('MAK wajib diisi');
       const rows = [...c.querySelectorAll('[data-f="nama"]')].map(el => ({ nama: el.value.trim(), jumlah: Number(c.querySelector(`[data-p="${el.dataset.p}"][data-f="jumlah"]`).value) || 0 })).filter(p => p.nama);
@@ -242,27 +254,106 @@
       }));
       const { error } = await sb.from('kegiatan').insert(ins); if (error) throw new Error(error.message);
       void lpt;
+      ringkas = { jenis, uraian: v('ur'), tujuan: v('tj'), tgl_st: v('st'), mulai: v('m'), selesai: v('s'), mak, mak_uraian: uraianMak(c, id, d, mak),
+        status: ins[0].status, baris: ins.map(r => ({ id: r.id, nama: r.pelaksana, jumlah: r.jumlah })) };
     } else if (jenis === 'kuitansi') {
       const mak = v('mk').trim(); if (!mak) throw new Error('MAK wajib diisi');
       if (/52411[13]/.test(mak)) throw new Error('MAK perjadin (524111/524113) direkam lewat Surat Tugas.');
       const tb = v('tb') || today;
-      const { error } = await sb.from('kegiatan').insert({
+      const rec = {
         id: kgGenerateRandomId(10), mak, uraian: v('ur'), pelaksana: v('pv'), tujuan: '', tgl_st: null, tgl_mulai: normDate(tb), tgl_selesai: normDate(tb),
         tgl_lpt: null, tgl_bayar: normDate(tb), jumlah: Number(v('jm')) || 0, user, status: kgComputeStatus(tb, '', tb, ''), tgl_sp2d: null,
         nomor_spm: '', dokumen_link: '', spby_link: '', tgl_rekam: normDate(today), perbantuan: false, kantor_id: kantor, tahun
-      });
+      };
+      const { error } = await sb.from('kegiatan').insert(rec);
       if (error) throw new Error(error.message);
+      ringkas = { jenis, uraian: rec.uraian, penyedia: rec.pelaksana, tgl_bayar: tb, mak, mak_uraian: uraianMak(c, id, d, mak),
+        status: rec.status, baris: [{ id: rec.id, nama: rec.pelaksana, jumlah: rec.jumlah }] };
     } else {
       const t = c.querySelector(`input[name="${id}t"]:checked`)?.value; if (!t) throw new Error('Pilih kegiatan yang dituju (klik Cari).');
-      const { data: row } = await sb.from('kegiatan').select('tgl_mulai,tgl_lpt').eq('id', t).single();
+      const { data: row } = await sb.from('kegiatan').select('tgl_mulai,tgl_lpt,mak,uraian,pelaksana,jumlah').eq('id', t).single();
       const sp = v('sp'), tb = v('tb');
+      const status = kgComputeStatus(row?.tgl_mulai, row?.tgl_lpt, tb, sp);
       const { error } = await sb.from('kegiatan').update({
-        nomor_spm: v('spm'), tgl_sp2d: normDate(sp) || null, tgl_bayar: normDate(tb) || null,
-        status: kgComputeStatus(row?.tgl_mulai, row?.tgl_lpt, tb, sp)
+        nomor_spm: v('spm'), tgl_sp2d: normDate(sp) || null, tgl_bayar: normDate(tb) || null, status
       }).eq('id', t);
       if (error) throw new Error(error.message);
+      ringkas = { jenis, spm: v('spm'), tgl_sp2d: sp, tgl_bayar: tb, uraian: row?.uraian || '', mak: row?.mak || '', status,
+        baris: [{ id: t, nama: row?.pelaksana || '', jumlah: row?.jumlah || 0 }] };
     }
     try { await sb.from('jarwo_log').insert({ kantor_id: kantor, aksi: 'simpan', keterangan: jenis }); } catch (_) {}
+    return ringkas;
+  }
+
+  // ---------- ringkasan setelah tersimpan ----------
+  const BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  function tgl(s) {
+    if (!s) return '-';
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/) || String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (!m) return esc(s);
+    const [y, mo, dd] = m[1].length === 4 ? [m[1], m[2], m[3]] : [m[3], m[2], m[1]];
+    return `${+dd} ${BLN[+mo - 1]} ${y}`;
+  }
+  function periode(a, b) {
+    if (!a) return '-';
+    if (!b || a === b) return tgl(a);
+    const [ya, ma] = a.split('-'), [yb, mb] = b.split('-');
+    if (ya === yb && ma === mb) return `${+a.slice(8, 10)}–${tgl(b)}`;
+    return `${tgl(a)} – ${tgl(b)}`;
+  }
+  function uraianMak(c, id, d, mak) {
+    const s = (d.saran_mak || []).find(m => m.kode === mak);
+    if (s) return s.uraian || '';
+    const o = [...(c.querySelector('#' + id + 'dl')?.options || [])].find(o => o.value === mak);
+    return o ? o.textContent : '';
+  }
+
+  // Buka popup Pencarian Kegiatan (dashboard-search.js) dengan kata kunci.
+  // Kalau halaman Kegiatan sedang terbuka, pakai kotak cari di halaman itu
+  // saja (popup memakai id yang sama dengan kegiatan.html, jadi tidak boleh dobel).
+  function cariKegiatan(term, viaSpm) {
+    const halamanKg = document.querySelector('#app #kg-searchBox');
+    if (halamanKg) {
+      const box = document.querySelector(viaSpm ? '#app #kg-spmSearchBox' : '#app #kg-searchBox');
+      box.value = term;
+      document.querySelector(viaSpm ? '#app #kg-btnSearchSPM' : '#app #kg-btnSearch')?.click();
+      if (window.kgLoadData) try { kgLoadData(true); } catch (_) {}
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (typeof window.bukaPencarianKegiatanGlobal !== 'function') { alert('Fitur pencarian belum termuat.'); return; }
+    document.querySelectorAll('#dash-gsClose').forEach(b => b.click()); // tutup popup lama kalau ada
+    panel.classList.remove('open'); // panel Jarwo di atas overlay; tutup dulu (riwayat chat tetap ada)
+    window.bukaPencarianKegiatanGlobal(term, !!viaSpm);
+    // Ambil data terbaru (bukan cache) supaya baris yang baru direkam ikut muncul
+    if (window.kgLoadData) try { kgLoadData(true); } catch (_) {}
+  }
+
+  function tampilRingkasan(c, s) {
+    const judul = { surat_tugas: 'Surat Tugas / ND', kuitansi: 'Kuitansi / Nota', spby_spm_sp2d: 'SPBy / SPM / SP2D' }[s.jenis] || s.jenis;
+    const row = (k, val) => `<tr><td class="k">${k}</td><td>${val}</td></tr>`;
+    const link = (txt, term, spm) => txt ? `<a class="jw-st" data-term="${esc(term)}" data-spm="${spm ? 1 : ''}" title="Klik untuk mencari di Daftar Kegiatan">${esc(txt)}</a>` : '-';
+    const makTxt = s.mak ? `<code>${esc(s.mak)}</code>${s.mak_uraian ? `<div style="font-size:12px;color:#555">${esc(s.mak_uraian)}</div>` : ''}` : '-';
+    let rows = row('Jenis', esc(judul));
+    if (s.jenis === 'surat_tugas') {
+      rows += row('No. ST', link(s.uraian, s.uraian)) + row('Tujuan', esc(s.tujuan || '-')) + row('Tgl ST', tgl(s.tgl_st)) +
+        row('Pelaksanaan', periode(s.mulai, s.selesai)) + row('MAK', makTxt);
+    } else if (s.jenis === 'kuitansi') {
+      rows += row('Uraian', link(s.uraian, s.uraian)) + row('Penyedia', esc(s.penyedia || '-')) + row('Tgl bayar', tgl(s.tgl_bayar)) + row('MAK', makTxt);
+    } else {
+      rows += row('No. SPM', link(s.spm, s.spm, true)) + row('Tgl SP2D', tgl(s.tgl_sp2d)) + row('Tgl bayar', tgl(s.tgl_bayar)) +
+        row('Kegiatan', link(s.uraian, s.uraian)) + row('MAK', makTxt);
+    }
+    rows += row('Status', `<span class="jw-badge">${esc(s.status || '-')}</span>`);
+    const total = s.baris.reduce((a, b) => a + (Number(b.jumlah) || 0), 0);
+    const label = s.jenis === 'surat_tugas' ? `Pelaksana (${s.baris.length} orang)` : s.jenis === 'kuitansi' ? 'Nilai' : 'Kegiatan yang diperbarui';
+    const pl = `<div class="jw-pl"><div style="font-size:12px;color:#6e6e73">${label}</div>` +
+      s.baris.map(b => `<div><span>${esc(b.nama || '-')}<br><span class="jw-id">ID ${esc(b.id)}</span></span><span>${rp(b.jumlah)}</span></div>`).join('') +
+      (s.baris.length > 1 ? `<div class="tot"><span>Total</span><span>${rp(total)}</span></div>` : '') + '</div>';
+    const verb = s.jenis === 'spby_spm_sp2d' ? 'Data pembayaran diperbarui' : 'Tersimpan ke Daftar Kegiatan';
+    c.innerHTML = `<div class="jw-sum"><div class="jw-sh">✅ ${verb}</div><table>${rows}</table>${pl}</div>`;
+    c.querySelectorAll('a.jw-st').forEach(a => a.onclick = () => cariKegiatan(a.dataset.term, !!a.dataset.spm));
+    list.scrollTop = list.scrollHeight;
   }
 
   function init() { if (!localStorage.getItem('nip') && !localStorage.getItem('nama')) return; build(); }
