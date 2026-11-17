@@ -301,6 +301,7 @@ const EXTRACT_PROMPT = `Kamu membaca dokumen administrasi keuangan pemerintah In
  "mak_petunjuk": "kode MAK selengkap yang tertulis di dokumen (mis. 4798.ABA.002.005.B.524111); bila hanya akun, 6 digit (524111)",
  "catatan": "hal yang meragukan/tidak terbaca"
 }
+Panduan jenis: "kuitansi" mencakup kuitansi, nota, invoice, struk, faktur, DAN bukti pembayaran/transfer/QRIS/m-banking/e-wallet (isi penyedia = nama merchant/penerima, jumlah_total = nominal, tgl_bayar = tanggal transaksi, uraian = barang/jasa yang dibeli bila terlihat, jika tidak ada isi "Pembayaran kepada <merchant>"). Pakai "lainnya" hanya bila benar-benar bukan dokumen keuangan. Untuk makanan/minuman/kudapan, mak_petunjuk boleh dikosongkan (pengguna memilih MAK).
 Jumlah dalam rupiah angka tanpa titik. Kosongkan field yang tidak ada; jangan menebak.`;
 
 function parseJson(t: string) {
