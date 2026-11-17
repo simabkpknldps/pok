@@ -8,10 +8,17 @@ const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const env = (k: string, d = "") => Deno.env.get(k) || d;
 const keys = (k: string) => env(k).split(",").map((s) => s.trim()).filter(Boolean);
-const GEMINI_MODEL = env("GEMINI_MODEL", "gemini-2.5-flash");
-const GROQ_MODEL = env("GROQ_MODEL", "llama-3.3-70b-versatile");
-const OR_MODEL = env("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free");
-const OR_VISION = env("OPENROUTER_VISION_MODEL", "google/gemini-2.0-flash-001");
+// Model boleh lebih dari satu, dipisah koma; dicoba berurutan sampai ada yang berhasil.
+const models = (k: string, d: string) => env(k, d).split(",").map((s) => s.trim()).filter(Boolean);
+const GEMINI_MODELS = models("GEMINI_MODEL", "gemini-2.5-flash");
+const GROQ_MODELS = models("GROQ_MODEL", "openai/gpt-oss-120b");
+const OR_MODELS = models("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free");
+const OR_VISION_MODELS = models("OPENROUTER_VISION_MODEL", "google/gemini-2.0-flash-001");
+async function withModels<T>(list: string[], fn: (model: string) => Promise<T>): Promise<T> {
+  let last: unknown;
+  for (const m of list) { try { return await fn(m); } catch (e) { last = e; } }
+  throw last;
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -43,50 +50,168 @@ async function post(url: string, body: unknown, headers: Record<string, string>)
 
 // ---------- akses data (JWT user -> RLS tetap berlaku) ----------
 function rest(jwt: string) {
-  return async (path: string) => {
-    const r = await fetch(`${SB_URL}/rest/v1/${path}`, { headers: { apikey: SB_ANON, Authorization: `Bearer ${jwt}` } });
-    if (!r.ok) throw new Error(`db ${r.status}`);
-    return await r.json();
+  return async (path: string, all = false) => {
+    const get = async (from: number, to: number) => {
+      const r = await fetch(`${SB_URL}/rest/v1/${path}`, { headers: { apikey: SB_ANON, Authorization: `Bearer ${jwt}`, Range: `${from}-${to}`, "Range-Unit": "items" } });
+      if (!r.ok && r.status !== 206) throw new Error(`db ${r.status}`);
+      return await r.json();
+    };
+    if (!all) return await get(0, 999);
+    const out: any[] = [];   // PostgREST membatasi 1000 baris/permintaan -> ambil bertahap
+    for (let i = 0; i < 50; i++) { const part = await get(i * 1000, i * 1000 + 999); out.push(...part); if (part.length < 1000) break; }
+    return out;
   };
 }
 const q = (s: string) => encodeURIComponent(s.replace(/[(),*%]/g, " ").trim());
 
-type Ctx = { kantor: string; tahun: number; db: (p: string) => Promise<any> };
+type Ctx = { kantor: string; tahun: number; db: (p: string, all?: boolean) => Promise<any>; lampiran: any[] };
 
+const SEL = { type: "string" };
 const TOOLS = [
-  { name: "cari_kegiatan", description: "Cari kegiatan/perjadin/pembayaran berdasarkan kata kunci (nama pelaksana, uraian, tujuan, MAK). Mengembalikan maks 15 baris.",
-    parameters: { type: "object", properties: { kata: { type: "string" }, status: { type: "string", description: "Rekam Data/Terlaksana/LPT/Terbayar/Selesai" } }, required: ["kata"] } },
-  { name: "ringkasan_anggaran", description: "Ringkasan pagu vs realisasi (jumlah kegiatan) per sumber dana RM/PNBP, opsional filter awalan kode akun/MAK.",
-    parameters: { type: "object", properties: { awalan_kode: { type: "string" } } } },
-  { name: "cek_pok", description: "Cari baris POK (kode, uraian, pagu, sumber dana) berdasarkan kata kunci.",
-    parameters: { type: "object", properties: { kata: { type: "string" } }, required: ["kata"] } },
+  { name: "cari_kegiatan", description: "Cari/daftar kegiatan dengan filter bebas (semua opsional): kata (nama pelaksana/uraian/tujuan), akun (awalan kode akun mis. 524111, 5241, 52), seksi (nama seksi pemilik POK mis. Umum), status, sd (RM/PNBP), dari & sampai (tanggal mulai YYYY-MM-DD). Mengembalikan maks 25 baris + total jumlah & banyaknya.",
+    parameters: { type: "object", properties: { kata: SEL, akun: SEL, seksi: SEL, status: SEL, sd: SEL, dari: SEL, sampai: SEL } } },
+  { name: "buat_laporan", description: "Menyiapkan tabel yang bisa diunduh pengguna sebagai Excel/PDF (tombol muncul otomatis di chat). Pakai bila pengguna minta file/Excel/PDF/rekap/laporan/unduh. jenis: 'pok' = rincian per baris POK (pagu, realisasi, sisa), 'kegiatan' = daftar kegiatan, 'pelaksana' = peringkat pelaksana. Filter opsional sama seperti tool lain: kata, akun, seksi, sd, status, dari, sampai. judul = judul laporan.",
+    parameters: { type: "object", properties: { jenis: SEL, judul: SEL, kata: SEL, akun: SEL, seksi: SEL, sd: SEL, status: SEL, dari: SEL, sampai: SEL }, required: ["jenis"] } },
+  { name: "ringkasan_anggaran", description: "Pagu vs realisasi vs sisa. Filter opsional: kata (kata kunci uraian/kode POK, mis. 'printer', 'pemeliharaan', 'ATK' -> menyertakan rincian per baris POK dengan sisa masing-masing), akun (awalan kode akun, mis. 524111 untuk perjadin biasa, 524113 perjadin paket meeting, 5241 semua perjadin, 52 belanja barang, 53 modal), seksi, sd (RM/PNBP). Selalu menyertakan rincian per sumber dana dan per seksi.",
+    parameters: { type: "object", properties: { kata: SEL, akun: SEL, seksi: SEL, sd: SEL } } },
+  { name: "peringkat_pelaksana", description: "Peringkat pegawai/pelaksana berdasarkan jumlah kegiatan dan total rupiah (mis. perjadin terbanyak). Filter opsional: akun, seksi, sd, dari, sampai.",
+    parameters: { type: "object", properties: { akun: SEL, seksi: SEL, sd: SEL, dari: SEL, sampai: SEL } } },
+  { name: "cek_sbm", description: "Cari Standar Biaya Masukan (SBM) dari PMK per tahun: uang harian perjalanan dinas, penginapan, tiket pesawat, transport, honorarium, konsumsi, uang makan, sewa kendaraan, dll. kata = kata kunci uraian/wilayah (mis. 'Bali', 'Denpasar', 'penginapan', 'Surabaya'); topik = kata kunci judul satuan biaya (mis. 'uang harian', 'penginapan', 'tiket pesawat'); tahun default tahun anggaran aktif. Hasil menyertakan judul tabel dan header kolom; urutan angka 'nilai' mengikuti header.",
+    parameters: { type: "object", properties: { kata: SEL, topik: SEL, tahun: SEL } } },
+  { name: "cek_pok", description: "Cari baris POK (kode, uraian, pagu, sumber dana, seksi) berdasarkan kata kunci; opsional filter seksi.",
+    parameters: { type: "object", properties: { kata: SEL, seksi: SEL } } },
   { name: "cari_web", description: "Cari informasi terkini di web (aturan, tarif, berita).",
-    parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } },
+    parameters: { type: "object", properties: { query: SEL }, required: ["query"] } },
 ];
 
-async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
+const akunOf = (m: string) => (String(m || "").split(".").find((x) => /^\d{6}$/.test(x)) || "");
+const nrm = (x: string) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+// Muat POK + kegiatan sekali per permintaan, tambahkan seksi & sumber dana ke tiap kegiatan.
+async function loadAll(c: Ctx) {
   const base = `kantor_id=eq.${q(c.kantor)}&tahun=eq.${c.tahun}`;
-  if (name === "cari_kegiatan") {
-    const k = q(a.kata || "");
-    const st = a.status ? `&status=eq.${q(a.status)}` : "";
-    return await c.db(`kegiatan?select=id,mak,uraian,pelaksana,tujuan,tgl_mulai,tgl_selesai,tgl_bayar,jumlah,status&${base}${st}` +
-      `&or=(pelaksana.ilike.*${k}*,uraian.ilike.*${k}*,tujuan.ilike.*${k}*,mak.ilike.*${k}*)&order=tgl_mulai.desc&limit=15`);
+  const pok = await c.db(`pok?select=kode,uraian,pagu,sd,seksi&${base}`, true);
+  const keg = await c.db(`kegiatan?select=id,mak,uraian,pelaksana,tujuan,tgl_mulai,tgl_selesai,tgl_bayar,jumlah,sd,status&${base}`, true);
+  const sdPok: Record<string, Set<string>> = {}, sksPok: Record<string, Set<string>> = {};
+  for (const p of pok) {
+    if (p.sd) (sdPok[p.kode] ||= new Set()).add(p.sd);
+    if (p.seksi) (sksPok[p.kode] ||= new Set()).add(p.seksi);
+  }
+  const one = (st?: Set<string>) => (st && st.size === 1 ? [...st][0] : "");
+  for (const k of keg) {
+    k._akun = akunOf(k.mak);
+    k._sd = k.sd || one(sdPok[k.mak]) || (/\(PNBP\)/i.test(k.uraian || "") ? "PNBP" : /\(RM\)/i.test(k.uraian || "") ? "RM" : "tidak_diketahui");
+    k._seksi = one(sksPok[k.mak]) || "tidak_diketahui";
+  }
+  return { pok, keg };
+}
+const okSeksi = (v: string, f?: string) => !f || nrm(v).includes(nrm(f));
+const okAkun = (v: string, f?: string) => !f || String(v).startsWith(String(f).replace(/\D/g, ""));
+
+// Rincian per baris POK: pagu, realisasi (kegiatan ber-MAK = kode POK), sisa.
+async function rincianPok(c: Ctx, a: any) {
+  const { pok, keg } = await loadAll(c);
+  const kata = nrm(a.kata || ""), sdF = a.sd ? String(a.sd).toUpperCase() : "";
+  const real: Record<string, { total: number; byr: number; n: number }> = {};
+  for (const k of keg) { const o = (real[k.mak] ||= { total: 0, byr: 0, n: 0 }); const j = Number(k.jumlah) || 0; o.total += j; o.n++; if (k.status === "Terbayar" || k.status === "Selesai") o.byr += j; }
+  const rows = pok.filter((p: any) => okAkun(akunOf(p.kode), a.akun) && okSeksi(p.seksi || "", a.seksi) && (!sdF || p.sd === sdF) &&
+    (!kata || nrm(`${p.kode} ${p.uraian}`).includes(kata)) && (Number(p.pagu) || 0) > 0)
+    .map((p: any) => { const r = real[p.kode] || { total: 0, byr: 0, n: 0 }; const pagu = Number(p.pagu) || 0;
+      return { kode: p.kode, uraian: p.uraian, seksi: p.seksi || "", sd: p.sd || "", pagu, realisasi_total: r.total, realisasi_terbayar_selesai: r.byr, sisa_pagu: pagu - r.total, jumlah_kegiatan: r.n }; });
+  rows.sort((x: any, y: any) => String(x.kode).localeCompare(String(y.kode)));
+  const tot = rows.reduce((t: any, r: any) => ({ pagu: t.pagu + r.pagu, realisasi_total: t.realisasi_total + r.realisasi_total, realisasi_terbayar_selesai: t.realisasi_terbayar_selesai + r.realisasi_terbayar_selesai, sisa_pagu: t.sisa_pagu + r.sisa_pagu }), { pagu: 0, realisasi_total: 0, realisasi_terbayar_selesai: 0, sisa_pagu: 0 });
+  return { rows, tot };
+}
+
+async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
+  if (name === "buat_laporan") {
+    const judul = String(a.judul || "Laporan SiMAB");
+    const meta = `Kantor ${c.kantor} · TA ${c.tahun}`;
+    if (a.jenis === "pok") {
+      const { rows, tot } = await rincianPok(c, a);
+      c.lampiran.push({ judul, meta, kolom: ["Kode", "Uraian", "Seksi", "SD", "Pagu", "Realisasi Total", "Terbayar/Selesai", "Sisa Pagu"],
+        baris: rows.map((r: any) => [r.kode, r.uraian, r.seksi, r.sd, r.pagu, r.realisasi_total, r.realisasi_terbayar_selesai, r.sisa_pagu]),
+        total: ["", "TOTAL", "", "", tot.pagu, tot.realisasi_total, tot.realisasi_terbayar_selesai, tot.sisa_pagu] });
+      return { siap: true, baris: rows.length, total: tot, catatan: "Tabel siap; tombol unduh Excel/PDF muncul untuk pengguna. Jangan menulis ulang seluruh tabel di jawaban, cukup ringkasan." };
+    }
+    const { keg } = await loadAll(c);
+    const kata = nrm(a.kata || "");
+    const rows = keg.filter((k: any) => okAkun(k._akun, a.akun) && okSeksi(k._seksi, a.seksi) && (!a.sd || k._sd === String(a.sd).toUpperCase()) &&
+      (!a.status || nrm(k.status) === nrm(a.status)) && (!a.dari || String(k.tgl_mulai || "") >= a.dari) && (!a.sampai || String(k.tgl_mulai || "") <= a.sampai) &&
+      (!kata || nrm([k.pelaksana, k.uraian, k.tujuan, k.mak].join(" ")).includes(kata)));
+    if (a.jenis === "pelaksana") {
+      const m: Record<string, any> = {};
+      for (const k of rows) { const n = String(k.pelaksana || "").trim() || "(kosong)"; const o = (m[n] ||= [n, 0, 0]); o[1]++; o[2] += Number(k.jumlah) || 0; }
+      const baris = Object.values(m).sort((x: any, y: any) => y[1] - x[1] || y[2] - x[2]);
+      c.lampiran.push({ judul, meta, kolom: ["Pelaksana", "Jumlah Kegiatan", "Total (Rp)"], baris, total: ["TOTAL", baris.reduce((t: number, r: any) => t + r[1], 0), baris.reduce((t: number, r: any) => t + r[2], 0)] });
+      return { siap: true, baris: baris.length };
+    }
+    rows.sort((x: any, y: any) => String(x.tgl_mulai || "").localeCompare(String(y.tgl_mulai || "")));
+    c.lampiran.push({ judul, meta, kolom: ["Tgl Mulai", "Tgl Selesai", "MAK", "Uraian", "Pelaksana", "Tujuan", "Jumlah", "Status", "SD", "Seksi"],
+      baris: rows.map((k: any) => [k.tgl_mulai || "", k.tgl_selesai || "", k.mak, k.uraian, k.pelaksana, k.tujuan || "", Number(k.jumlah) || 0, k.status, k._sd, k._seksi]),
+      total: ["", "", "", "", "", "TOTAL", rows.reduce((t: number, k: any) => t + (Number(k.jumlah) || 0), 0), "", "", ""] });
+    return { siap: true, baris: rows.length, catatan: "Tabel siap; tombol unduh muncul untuk pengguna." };
+  }
+  const base = `kantor_id=eq.${q(c.kantor)}&tahun=eq.${c.tahun}`;
+  if (name === "cari_kegiatan" || name === "peringkat_pelaksana") {
+    const { keg } = await loadAll(c);
+    const kata = nrm(a.kata || "");
+    const rows = keg.filter((k: any) =>
+      okAkun(k._akun, a.akun) && okSeksi(k._seksi, a.seksi) && (!a.sd || k._sd === String(a.sd).toUpperCase()) &&
+      (!a.status || nrm(k.status) === nrm(a.status)) && (!a.dari || String(k.tgl_mulai || "") >= a.dari) && (!a.sampai || String(k.tgl_mulai || "") <= a.sampai) &&
+      (!kata || nrm([k.pelaksana, k.uraian, k.tujuan, k.mak].join(" ")).includes(kata)));
+    const total = rows.reduce((t: number, k: any) => t + (Number(k.jumlah) || 0), 0);
+    if (name === "peringkat_pelaksana") {
+      const m: Record<string, { pelaksana: string; kegiatan: number; total_rp: number }> = {};
+      for (const k of rows) { const n = String(k.pelaksana || "").trim() || "(kosong)"; const o = (m[n] ||= { pelaksana: n, kegiatan: 0, total_rp: 0 }); o.kegiatan++; o.total_rp += Number(k.jumlah) || 0; }
+      return { jumlah_kegiatan: rows.length, total_rp: total, peringkat: Object.values(m).sort((x, y) => y.kegiatan - x.kegiatan || y.total_rp - x.total_rp).slice(0, 15) };
+    }
+    rows.sort((x: any, y: any) => String(y.tgl_mulai || "").localeCompare(String(x.tgl_mulai || "")));
+    return { jumlah_kegiatan: rows.length, total_rp: total, contoh: rows.slice(0, 25).map((k: any) => ({ mak: k.mak, uraian: k.uraian, pelaksana: k.pelaksana, tujuan: k.tujuan, mulai: k.tgl_mulai, jumlah: k.jumlah, status: k.status, sd: k._sd, seksi: k._seksi })) };
+  }
+  if (name === "ringkasan_anggaran" && a.kata) {
+    const { rows, tot } = await rincianPok(c, a);
+    return { filter: { kata: a.kata, akun: a.akun || "semua", seksi: a.seksi || "semua", sd: a.sd || "semua" }, jumlah_baris_pok: rows.length, total: tot,
+      rincian: rows.slice(0, 25), catatan: rows.length > 25 ? "Hanya 25 baris pertama; tawarkan file Excel/PDF (buat_laporan jenis pok)." : "Realisasi per baris POK dihitung dari kegiatan ber-MAK sama dengan kode POK; realisasi_total = semua status." };
   }
   if (name === "ringkasan_anggaran") {
-    const aw = a.awalan_kode ? `&kode=like.${q(a.awalan_kode)}*` : "";
-    const pok = await c.db(`pok?select=kode,pagu,sd&${base}${aw}&limit=5000`);
-    const keg = await c.db(`kegiatan?select=mak,jumlah,sd&${base}&limit=5000`);
-    const out: any = { RM: { pagu: 0, realisasi: 0 }, PNBP: { pagu: 0, realisasi: 0 } };
-    for (const p of pok) if (out[p.sd]) out[p.sd].pagu += Number(p.pagu) || 0;
-    for (const k of keg) {
-      if (a.awalan_kode && !String(k.mak || "").includes(a.awalan_kode)) continue;
-      if (out[k.sd]) out[k.sd].realisasi += Number(k.jumlah) || 0;
+    const { pok, keg } = await loadAll(c);
+    const sdF = a.sd ? String(a.sd).toUpperCase() : "";
+    const mk = () => ({ pagu: 0, realisasi_total: 0, realisasi_terbayar_selesai: 0, sisa_pagu: 0, jumlah_kegiatan: 0 });
+    const tot = mk(), perSd: any = {}, perSeksi: any = {};
+    const add = (o: any, pagu: number, real: number, byr: number, n: number) => { o.pagu += pagu; o.realisasi_total += real; o.realisasi_terbayar_selesai += byr; o.jumlah_kegiatan += n; o.sisa_pagu = o.pagu - o.realisasi_total; };
+    for (const p of pok) {
+      if (!okAkun(akunOf(p.kode), a.akun) || !okSeksi(p.seksi || "", a.seksi) || (sdF && p.sd !== sdF)) continue;
+      const g = Number(p.pagu) || 0;
+      add(tot, g, 0, 0, 0); add(perSd[p.sd || "tidak_diketahui"] ||= mk(), g, 0, 0, 0); add(perSeksi[p.seksi || "tidak_diketahui"] ||= mk(), g, 0, 0, 0);
     }
-    return out;
+    for (const k of keg) {
+      if (!okAkun(k._akun, a.akun) || !okSeksi(k._seksi, a.seksi) || (sdF && k._sd !== sdF)) continue;
+      const j = Number(k.jumlah) || 0, b = k.status === "Terbayar" || k.status === "Selesai" ? j : 0;
+      add(tot, 0, j, b, 1); add(perSd[k._sd] ||= mk(), 0, j, b, 1); add(perSeksi[k._seksi] ||= mk(), 0, j, b, 1);
+    }
+    return { filter: { akun: a.akun || "semua", seksi: a.seksi || "semua", sd: sdF || "semua" }, total: tot, per_sumber_dana: perSd, per_seksi: perSeksi,
+      catatan: "realisasi_total = jumlah semua kegiatan terekam (semua status), seperti di Dashboard; realisasi_terbayar_selesai hanya status Terbayar/Selesai. Kegiatan dikaitkan ke seksi lewat kode MAK = kode POK." };
+  }
+  if (name === "cek_sbm") {
+    const th = Number(a.tahun) || c.tahun;
+    const k = q(a.kata || ""), tp = q(a.topik || "");
+    let tabs: any[] = await c.db(`sbm_tabel?select=lampiran,bab_no,sub_no,bab,sub,header,mata_uang&tahun=eq.${th}${tp ? `&or=(bab.ilike.*${tp}*,sub.ilike.*${tp}*)` : ""}&limit=60`);
+    if (!tabs.length && tp) return { jumlah: 0, catatan: `Tidak ada satuan biaya bertopik "${a.topik}" untuk tahun ${th}.` };
+    let flt = `tahun=eq.${th}`;
+    if (tp) flt += `&or=(${tabs.map((t) => `and(lampiran.eq.${t.lampiran},bab_no.eq.${t.bab_no})`).join(",")})`;
+    if (k) flt += `&or=(uraian.ilike.*${k}*,uraian2.ilike.*${k}*,kelompok.ilike.*${k}*)`;
+    if (!k && !tp) return { catatan: "Beri kata kunci (kata) atau topik.", daftar_topik: (await c.db(`sbm_tabel?select=lampiran,bab_no,bab&tahun=eq.${th}&sub_no=eq.&order=lampiran,bab_no&limit=80`)).map((t: any) => `${t.lampiran}.${t.bab_no} ${t.bab}`) };
+    const rows = await c.db(`sbm_baris?select=lampiran,bab_no,sub_no,kelompok,no,uraian,uraian2,satuan,nilai,mata_uang&${flt}&order=urut&limit=40`);
+    const need = new Set(rows.map((r: any) => `${r.lampiran}|${r.bab_no}`));
+    if (!tabs.length || !tp) tabs = await c.db(`sbm_tabel?select=lampiran,bab_no,sub_no,bab,sub,header,mata_uang&tahun=eq.${th}&limit=300`);
+    const info = tabs.filter((t: any) => need.has(`${t.lampiran}|${t.bab_no}`)).map((t: any) => ({ tabel: `${t.lampiran}.${t.bab_no}${t.sub_no ? " (" + t.sub_no + ")" : ""}`, judul: t.bab + (t.sub ? " — " + t.sub : ""), header_kolom: t.header, mata_uang: t.mata_uang }));
+    return { tahun: th, jumlah: rows.length, tabel: info, baris: rows.map((r: any) => ({ tabel: `${r.lampiran}.${r.bab_no}${r.sub_no ? "/" + r.sub_no : ""}`, kelompok: r.kelompok, uraian: r.uraian, uraian2: r.uraian2, satuan: r.satuan, nilai: r.nilai, mata_uang: r.mata_uang })),
+      catatan: "Nilai mengikuti urutan kolom pada header_kolom tabelnya. Rupiah kecuali mata_uang=USD. Jika baris terpotong 40, minta pengguna mempersempit kata kunci." };
   }
   if (name === "cek_pok") {
     const k = q(a.kata || "");
-    return await c.db(`pok?select=kode,uraian,pagu,sd&${base}&or=(kode.ilike.*${k}*,uraian.ilike.*${k}*)&limit=15`);
+    return await c.db(`pok?select=kode,uraian,pagu,sd,seksi&${base}&or=(kode.ilike.*${k}*,uraian.ilike.*${k}*)&limit=15`);
   }
   if (name === "cari_web") {
     try {
@@ -104,16 +229,16 @@ async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
 const SYSTEM = (c: Ctx) =>
   `Kamu Jarwo, asisten AI aplikasi SiMAB (Sistem Monitoring Anggaran Belanja) KPKNL. Jawab Bahasa Indonesia, singkat, jelas, sopan.
 Kantor aktif: ${c.kantor}, tahun anggaran ${c.tahun}. Data kegiatan/POK ambil lewat tool; jangan mengarang angka. Format rupiah: Rp 1.234.567.
-MAK perjadin 524111/524113 melalui status Rekam Data → Terlaksana → LPT → Terbayar → Selesai; MAK lain tanpa LPT.
-Kamu tidak menyimpan data sendiri; untuk merekam, minta pengguna mengunggah foto/PDF dokumen lewat tombol lampiran.`;
+Perjadin = akun 524111/524113 (pakai akun="perjadin"). Seksi (mis. Umum) ada di POK; gunakan filter seksi pada ringkasan_anggaran. Jika sebuah filter tidak menemukan data, coba lagi tanpa filter atau lihat seksi_tersedia sebelum menyimpulkan data tidak ada.\nPerjadin = akun 524111 (biasa) dan 524113 (paket meeting); akun 5241 mencakup keduanya. "Seksi" adalah pemilik baris POK (mis. Umum). Bila diminta file/Excel/PDF/rekap/laporan, panggil buat_laporan (tombol unduh muncul otomatis; jangan menulis ulang tabel panjang). Gunakan filter tool (akun, seksi, sd, tanggal) alih-alih meminta pengguna mengunggah dokumen untuk pertanyaan data; bila tool mengembalikan kosong, sebutkan filter yang dipakai dan tawarkan alternatif. Untuk pertanyaan SBM/tarif (uang harian, penginapan, tiket, transport, honor, konsumsi, dll.) gunakan tool cek_sbm (data PMK SBM per tahun di SiMAB), jangan cari_web; sebutkan tahun & kolom yang dipakai. MAK perjadin 524111/524113 melalui status Rekam Data → Terlaksana → LPT → Terbayar → Selesai; MAK lain tanpa LPT.
+Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nKamu tidak menyimpan data sendiri; untuk merekam, minta pengguna mengunggah foto/PDF dokumen lewat tombol lampiran.`;
 
 async function chatGemini(msgs: any[], c: Ctx) {
   const contents = msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content) }] }));
   const decl = [{ functionDeclarations: TOOLS }];
-  for (let step = 0; step < 5; step++) {
-    const r = await withKeys("GEMINI_KEYS", (key) =>
-      post(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-        { systemInstruction: { parts: [{ text: SYSTEM(c) }] }, contents, tools: decl }, { "x-goog-api-key": key }));
+  for (let step = 0; step < 8; step++) {
+    const r = await withModels(GEMINI_MODELS, (mdl) => withKeys("GEMINI_KEYS", (key) =>
+      post(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,
+        { systemInstruction: { parts: [{ text: SYSTEM(c) }] }, contents, tools: decl }, { "x-goog-api-key": key })));
     const parts = r.candidates?.[0]?.content?.parts || [];
     const calls = parts.filter((p: any) => p.functionCall);
     if (!calls.length) return parts.map((p: any) => p.text || "").join("").trim();
@@ -128,11 +253,11 @@ async function chatGemini(msgs: any[], c: Ctx) {
   return "Maaf, saya belum bisa menyelesaikan pencarian itu.";
 }
 
-async function chatOpenAI(url: string, keyName: string, model: string, msgs: any[], c: Ctx) {
+async function chatOpenAI(url: string, keyName: string, modelList: string[], msgs: any[], c: Ctx) {
   const m: any[] = [{ role: "system", content: SYSTEM(c) }, ...msgs.map((x) => ({ role: x.role, content: String(x.content) }))];
   const tools = TOOLS.map((t) => ({ type: "function", function: t }));
-  for (let step = 0; step < 5; step++) {
-    const r = await withKeys(keyName, (key) => post(url, { model, messages: m, tools }, { Authorization: `Bearer ${key}` }));
+  for (let step = 0; step < 8; step++) {
+    const r = await withModels(modelList, (model) => withKeys(keyName, (key) => post(url, { model, messages: m, tools }, { Authorization: `Bearer ${key}` })));
     const msg = r.choices?.[0]?.message;
     if (!msg?.tool_calls?.length) return String(msg?.content || "").trim();
     m.push(msg);
@@ -149,8 +274,8 @@ async function chat(msgs: any[], c: Ctx) {
   const errs: string[] = [];
   const tries: [string, () => Promise<string>][] = [
     ["gemini", () => chatGemini(msgs, c)],
-    ["groq", () => chatOpenAI("https://api.groq.com/openai/v1/chat/completions", "GROQ_KEYS", GROQ_MODEL, msgs, c)],
-    ["openrouter", () => chatOpenAI("https://openrouter.ai/api/v1/chat/completions", "OPENROUTER_KEYS", OR_MODEL, msgs, c)],
+    ["groq", () => chatOpenAI("https://api.groq.com/openai/v1/chat/completions", "GROQ_KEYS", GROQ_MODELS, msgs, c)],
+    ["openrouter", () => chatOpenAI("https://openrouter.ai/api/v1/chat/completions", "OPENROUTER_KEYS", OR_MODELS, msgs, c)],
   ];
   for (const [n, f] of tries) {
     if (!keys(n.toUpperCase() + "_KEYS").length) continue;
@@ -188,19 +313,19 @@ async function extract(file: { mime: string; data: string }, hint: string) {
   const text = EXTRACT_PROMPT + (hint ? `\nPetunjuk pengguna: ${hint}` : "");
   if (keys("GEMINI_KEYS").length) {
     try {
-      const r = await withKeys("GEMINI_KEYS", (key) =>
-        post(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      const r = await withModels(GEMINI_MODELS, (mdl) => withKeys("GEMINI_KEYS", (key) =>
+        post(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,
           { contents: [{ parts: [{ text }, { inlineData: { mimeType: file.mime, data: file.data } }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0 } }, { "x-goog-api-key": key }));
+            generationConfig: { responseMimeType: "application/json", temperature: 0 } }, { "x-goog-api-key": key })));
       return { data: parseJson(r.candidates?.[0]?.content?.parts?.[0]?.text || "{}"), provider: "gemini" };
     } catch (e) { errs.push("gemini: " + String(e).slice(0, 120)); }
   }
   if (file.mime.startsWith("image/") && keys("OPENROUTER_KEYS").length) {
     try {
-      const r = await withKeys("OPENROUTER_KEYS", (key) =>
-        post("https://openrouter.ai/api/v1/chat/completions", { model: OR_VISION, temperature: 0,
+      const r = await withModels(OR_VISION_MODELS, (model) => withKeys("OPENROUTER_KEYS", (key) =>
+        post("https://openrouter.ai/api/v1/chat/completions", { model, temperature: 0,
           messages: [{ role: "user", content: [{ type: "text", text }, { type: "image_url", image_url: { url: `data:${file.mime};base64,${file.data}` } }] }] },
-          { Authorization: `Bearer ${key}` }));
+          { Authorization: `Bearer ${key}` })));
       return { data: parseJson(r.choices?.[0]?.message?.content || "{}"), provider: "openrouter" };
     } catch (e) { errs.push("openrouter: " + String(e).slice(0, 120)); }
   }
@@ -249,7 +374,7 @@ Deno.serve(async (req: Request) => {
     const u = await fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON, Authorization: `Bearer ${jwt}` } });
     if (!jwt || !u.ok) return json({ error: "Belum login" }, 401);
     const b = await req.json();
-    const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt) };
+    const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt), lampiran: [] };
     if (!c.kantor) return json({ error: "kantor kosong" }, 400);
 
     if (b.mode === "extract") {
@@ -260,7 +385,8 @@ Deno.serve(async (req: Request) => {
     }
     const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-12);
     if (!msgs.length) return json({ error: "pesan kosong" }, 400);
-    return json(await chat(msgs, c));
+    const rr = await chat(msgs, c);
+    return json({ ...rr, lampiran: c.lampiran });
   } catch (e) {
     return json({ error: String((e as Error).message || e) }, 500);
   }
