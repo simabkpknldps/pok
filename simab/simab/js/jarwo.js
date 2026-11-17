@@ -17,8 +17,9 @@
     const r = await fetch(FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt, apikey: SUPABASE_KEY },
-      body: JSON.stringify({ ...body, kantor: getKantorAktif(), tahun: await getTahunAktif() })
-    });
+      body: JSON.stringify({ ...body, kantor: getKantorAktif(), tahun: await getTahunAktif() }),
+      signal: AbortSignal.timeout(130000)
+    }).catch(e => { throw new Error(e.name === 'TimeoutError' ? 'Jarwo terlalu lama menjawab, coba lagi sebentar.' : e.message); });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || ('Error ' + r.status));
     return j;
