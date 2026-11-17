@@ -25,6 +25,22 @@
     return j;
   }
 
+  // markdown ringan -> HTML aman (tebal, miring, daftar, tabel sederhana jadi teks)
+  function md(t) {
+    const inl = x => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,]|$)/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '<code>$1</code>');
+    const out = []; let ul = false;
+    const close = () => { if (ul) { out.push('</ul>'); ul = false; } };
+    String(t || '').split(/\n/).forEach(line => {
+      const m = line.match(/^\s*(?:[*\-•]|\d+[.)])\s+(.*)$/);
+      if (m) { if (!ul) { out.push('<ul class="jw-ul">'); ul = true; } out.push('<li>' + inl(m[1]) + '</li>'); return; }
+      close();
+      if (!line.trim()) { out.push('<div style="height:6px"></div>'); return; }
+      const h = line.match(/^#{1,4}\s+(.*)$/);
+      out.push(h ? '<div><b>' + inl(h[1]) + '</b></div>' : '<div>' + inl(line) + '</div>');
+    });
+    close(); return out.join('');
+  }
+
   function bubble(html, who) {
     const d = document.createElement('div');
     d.className = 'jw-b ' + who;
@@ -48,6 +64,7 @@
 .jw-b.card label{display:block;font-size:11px;color:#666;margin-top:6px}
 .jw-b.card input,.jw-b.card select{width:100%;border:1px solid #d1d1d6;border-radius:8px;padding:4px 6px;font-size:13px}
 .jw-b.card .row{display:flex;gap:6px}.jw-b.card .row>*{flex:1}
+.jw-ul{margin:4px 0;padding-left:18px;list-style:disc}.jw-ul li{margin:2px 0}.jw-b code{background:#f2f2f7;padding:0 4px;border-radius:4px}
 .jw-b.card button{margin-top:8px;padding:6px 12px;border-radius:8px;border:0;cursor:pointer;font-size:13px}
 .jw-ok{background:#34c759;color:#fff}.jw-no{background:#e5e5ea}
 #jw-foot{display:flex;gap:6px;padding:8px;border-top:1px solid #e5e5ea}
@@ -81,7 +98,7 @@
     busy = true; const w = bubble('…', 'a');
     try {
       const r = await call({ mode: 'chat', messages: hist });
-      w.textContent = r.reply || '(kosong)'; hist.push({ role: 'assistant', content: r.reply });
+      w.innerHTML = md(r.reply || '(kosong)'); hist.push({ role: 'assistant', content: r.reply });
       (r.lampiran || []).forEach(addFileCard);
     }
     catch (e) { w.textContent = 'Maaf: ' + e.message; }
