@@ -156,29 +156,35 @@
     const jenis = d.jenis || 'lainnya';
     const c = bubble('', 'card'); const id = 'jw' + Date.now();
     const makOpts = (d.saran_mak || []).map(m => `<option value="${esc(m.kode)}">${esc(m.kode)} — ${esc(m.uraian || '')} (${esc(m.sd || '')})</option>`).join('');
+    const makField = () => `<label>MAK</label>${makOpts ? `<select id="${id}mk">${makOpts}</select>` : ''}` +
+      `<input id="${id}mk2" list="${id}dl" placeholder="${makOpts ? 'Ganti MAK (opsional): ketik kode/uraian' : 'Kode MAK, mis. 4798.ABA.002.005.B.524111'}" style="margin-top:4px"><datalist id="${id}dl"></datalist>`;
     const head = `<b>Draft: ${{ surat_tugas: 'Surat Tugas / ND', kuitansi: 'Kuitansi / Nota', spby_spm_sp2d: 'SPBy / SPM / SP2D', lainnya: 'Dokumen lain' }[jenis] || jenis}</b><div style="font-size:12px;color:#555">${esc(d.ringkasan || '')}</div>`;
     const warn = d.catatan ? `<div style="font-size:12px;color:#b45309;margin-top:4px">⚠ ${esc(d.catatan)}</div>` : '';
     if (jenis === 'lainnya') { c.innerHTML = head + warn + '<div style="margin-top:6px;font-size:12px">Jenis dokumen ini belum bisa direkam otomatis. Silakan bertanya soal isinya lewat chat.</div>'; return; }
 
     let body = '';
     if (jenis === 'surat_tugas') {
-      body = field('Uraian', id + 'ur', d.uraian) + field('Tujuan', id + 'tj', d.tujuan) + field('No. / Tgl ST', id + 'st', d.tanggal_dokumen, 'date') +
+      body = field('Uraian (No. ST)', id + 'ur', d.nomor_dokumen || d.uraian) + field('Tujuan', id + 'tj', d.tujuan) + field('Tgl ST', id + 'st', d.tanggal_dokumen, 'date') +
         `<div class="row"><div>${field('Mulai', id + 'm', d.tgl_mulai, 'date')}</div><div>${field('Selesai', id + 's', d.tgl_selesai, 'date')}</div></div>` +
-        `<label>MAK</label>${makOpts ? `<select id="${id}mk">${makOpts}</select>` : `<input id="${id}mk" placeholder="kode MAK, mis. 524111">`}` +
+        makField() +
         '<label>Pelaksana</label>' + (d.pelaksana || []).map((p, i) =>
           `<div class="row"><input data-p="${i}" data-f="nama" value="${esc(p.cocok || p.nama)}" title="${p.cocok ? 'cocok dengan pegawai' : 'tidak cocok dgn pegawai'}"><input data-p="${i}" data-f="jumlah" type="number" value="${p.jumlah || 0}">${p.cocok ? '' : '<span title="Tidak ditemukan di daftar pegawai">⚠</span>'}</div>`).join('');
     } else if (jenis === 'kuitansi') {
       body = field('Uraian', id + 'ur', d.uraian) + field('Penyedia / Rekanan', id + 'pv', d.rekanan_cocok || d.penyedia) +
         (d.penyedia && !d.rekanan_cocok ? '<div style="font-size:11px;color:#b45309">⚠ Belum ada di Referensi › Rekanan (nama dicatat apa adanya)</div>' : '') +
         field('Jumlah', id + 'jm', d.jumlah_total, 'number') + field('Tanggal bayar/nota', id + 'tb', d.tgl_bayar || d.tanggal_dokumen, 'date') +
-        `<label>MAK</label>${makOpts ? `<select id="${id}mk">${makOpts}</select>` : `<input id="${id}mk" placeholder="kode MAK">`}`;
+        makField();
     } else {
       body = field('No. SPM', id + 'spm', d.nomor_spm) + field('Tgl SP2D', id + 'sp', d.tgl_sp2d, 'date') + field('Tgl Bayar', id + 'tb', d.tgl_bayar || d.tgl_sp2d, 'date') +
         field('Cari kegiatan (nama/uraian)', id + 'q', (d.pelaksana?.[0]?.nama) || d.uraian || '') + '<button class="jw-no" id="' + id + 'cari">Cari</button><div id="' + id + 'hasil" style="font-size:12px"></div>';
     }
     c.innerHTML = head + warn + body + `<div><button class="jw-ok" id="${id}ok">Simpan</button> <button class="jw-no" id="${id}no">Batal</button></div>`;
     c.querySelector('#' + id + 'no').onclick = () => c.remove();
-    const v = k => c.querySelector('#' + id + k)?.value ?? '';
+    const v = k => k === 'mk' ? ((c.querySelector('#' + id + 'mk2')?.value || '').trim().split(/\s+—\s+/)[0] || c.querySelector('#' + id + 'mk')?.value || '') : (c.querySelector('#' + id + k)?.value ?? '');
+    const dl = c.querySelector('#' + id + 'dl');
+    if (dl) (async () => { try { await waitSupabaseAuthReady();
+      const { data } = await sb.from('pok').select('kode,uraian').eq('kantor_id', getKantorAktif()).eq('tahun', await getTahunAktif()).limit(1000);
+      dl.innerHTML = (data || []).map(r => `<option value="${esc(r.kode)}">${esc((r.uraian || '').slice(0, 60))}</option>`).join(''); } catch (_) {} })();
     if (jenis === 'spby_spm_sp2d') c.querySelector('#' + id + 'cari').onclick = async () => {
       const k = v('q').trim(); const box = c.querySelector('#' + id + 'hasil');
       const { data } = await sb.from('kegiatan').select('id,mak,uraian,pelaksana,jumlah,status').eq('kantor_id', getKantorAktif()).eq('tahun', await getTahunAktif())
