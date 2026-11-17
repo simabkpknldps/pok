@@ -259,9 +259,29 @@
     };
     c.querySelector('#' + id + 'ok').onclick = async function () {
       this.disabled = true;
-      try { await simpan(jenis, c, id, v, d); c.innerHTML = '<b>✅ Tersimpan.</b>'; if (window.kgLoadData) try { kgLoadData(true); } catch (_) {} }
+      try { const ring = ringkasan(jenis, c, id, v); await simpan(jenis, c, id, v, d); c.innerHTML = '<b>✅ Tersimpan.</b>' + ring; if (window.kgLoadData) try { kgLoadData(true); } catch (_) {} }
       catch (e) { alert('Gagal menyimpan: ' + e.message); this.disabled = false; }
     };
+  }
+
+  // ringkasan data yang baru disimpan (diambil dari isian kartu sebelum disimpan)
+  function ringkasan(jenis, c, id, v) {
+    const tg = x => { const m = String(x || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : (x || '-'); };
+    const baris = (k, val) => `<tr><td style="color:#666;padding:1px 8px 1px 0;vertical-align:top;white-space:nowrap">${k}</td><td>${esc(val || '-')}</td></tr>`;
+    let rows = '', extra = '';
+    if (jenis === 'surat_tugas') {
+      const pel = [...c.querySelectorAll('[data-f="nama"]')].map(el => ({ n: el.value.trim(), j: Number(c.querySelector(`[data-p="${el.dataset.p}"][data-f="jumlah"]`).value) || 0 })).filter(p => p.n);
+      const tot = pel.reduce((t, p) => t + p.j, 0);
+      rows = baris('No. ST', v('ur')) + baris('Tujuan', v('tj')) + baris('Tgl ST', tg(v('st'))) + baris('Pelaksanaan', tg(v('m')) + ' s.d. ' + tg(v('s'))) + baris('MAK', v('mk'));
+      extra = '<div style="margin-top:4px;color:#666">Pelaksana</div>' + pel.map(p => `<div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(p.n)}</span><span>${rp(p.j)}</span></div>`).join('') +
+        `<div style="display:flex;justify-content:space-between;gap:8px;border-top:1px solid #e5e5ea;margin-top:3px;padding-top:3px"><b>Total (${pel.length} kegiatan)</b><b>${rp(tot)}</b></div>`;
+    } else if (jenis === 'kuitansi') {
+      rows = baris('Uraian', v('ur')) + baris('Penyedia', v('pv')) + baris('Jumlah', rp(v('jm'))) + baris('Tgl kuitansi', tg(v('tk'))) + baris('Tgl bayar', tg(v('tb'))) + baris('Lokasi', v('lk')) + baris('MAK', v('mk'));
+    } else {
+      const sel = c.querySelector(`input[name="${id}t"]:checked`);
+      rows = baris('Kegiatan', (sel?.parentElement?.textContent || '').trim()) + baris('No. SPM', v('spm')) + baris('Tgl SP2D', tg(v('sp'))) + baris('Tgl bayar', tg(v('tb')));
+    }
+    return `<table style="font-size:12px;margin-top:6px;border-collapse:collapse">${rows}</table>${extra}`;
   }
 
   async function simpan(jenis, c, id, v, d) {
