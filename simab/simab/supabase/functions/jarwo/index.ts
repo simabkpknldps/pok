@@ -11,6 +11,7 @@ const keys = (k: string) => env(k).split(",").map((s) => s.trim()).filter(Boolea
 // Model boleh lebih dari satu, dipisah koma; dicoba berurutan sampai ada yang berhasil.
 const models = (k: string, d: string) => env(k, d).split(",").map((s) => s.trim()).filter(Boolean);
 const GEMINI_EXTRACT_MODELS = models("GEMINI_EXTRACT_MODEL", "gemini-3.5-flash-lite,gemini-3.8-flash");
+const CF_IMAGE_MODELS = models("CLOUDFLARE_IMAGE_MODEL", "@cf/black-forest-labs/flux-1-schnell,@cf/stabilityai/stable-diffusion-xl-base-1.0");
 const GEMINI_MODELS = models("GEMINI_MODEL", "gemini-3.5-flash-lite,gemini-3.8-flash");
 const GROQ_MODELS = models("GROQ_MODEL", "openai/gpt-oss-120b");
 const OR_MODELS = models("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free");
@@ -69,10 +70,12 @@ function rest(jwt: string) {
 }
 const q = (s: string) => encodeURIComponent(s.replace(/[(),*%]/g, " ").trim());
 
-type Ctx = { kantor: string; tahun: number; db: (p: string, all?: boolean) => Promise<any>; lampiran: any[] };
+type Ctx = { kantor: string; tahun: number; db: (p: string, all?: boolean) => Promise<any>; lampiran: any[]; gambar: any[] };
 
 const SEL = { type: "string" };
 const TOOLS = [
+  { name: "buat_gambar", description: "Membuat/menghasilkan gambar (ilustrasi, poster, foto, logo, desain) dari deskripsi. Pakai bila pengguna meminta dibuatkan/digenerate gambar. prompt = deskripsi visual rinci DALAM BAHASA INGGRIS (subjek, suasana, gaya, warna, komposisi); terjemahkan permintaan pengguna. Gambar muncul otomatis di chat.",
+    parameters: { type: "object", properties: { prompt: SEL }, required: ["prompt"] } },
   { name: "cari_kegiatan", description: "Cari/daftar kegiatan dengan filter bebas (semua opsional): kata (nama pelaksana/uraian/tujuan), akun (awalan kode akun mis. 524111, 5241, 52), seksi (nama seksi pemilik POK mis. Umum), status, sd (RM/PNBP), dari & sampai (tanggal mulai YYYY-MM-DD). Mengembalikan maks 25 baris + total jumlah & banyaknya.",
     parameters: { type: "object", properties: { kata: SEL, akun: SEL, seksi: SEL, status: SEL, sd: SEL, dari: SEL, sampai: SEL } } },
   { name: "buat_laporan", description: "Menyiapkan tabel yang bisa diunduh pengguna sebagai Excel/PDF (tombol muncul otomatis di chat). Pakai bila pengguna minta file/Excel/PDF/rekap/laporan/unduh. jenis: 'pok' = rincian per baris POK (pagu, realisasi, sisa), 'kegiatan' = daftar kegiatan, 'pelaksana' = peringkat pelaksana. Filter opsional sama seperti tool lain: kata, akun, seksi, sd, status, dari, sampai. judul = judul laporan.",
@@ -128,7 +131,39 @@ async function rincianPok(c: Ctx, a: any) {
   return { rows, tot };
 }
 
+async function cfImage(prompt: string) {
+  const acc = env("CLOUDFLARE_ACCOUNT_ID");
+  const errs: string[] = [];
+  return await withModels(CF_IMAGE_MODELS, (model) => withKeys("CLOUDFLARE_KEYS", async (raw) => {
+    // kunci boleh "TOKEN" (dengan CLOUDFLARE_ACCOUNT_ID) atau "ACCOUNT_ID:TOKEN"
+    const [a1, a2] = raw.includes(":") ? raw.split(":") : [acc, raw];
+    if (!a1) throw new Error("CLOUDFLARE_ACCOUNT_ID kosong");
+    const body: Record<string, unknown> = { prompt };
+    if (model.includes("flux")) body.steps = 4;
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${a1}/ai/run/${model}`, {
+      method: "POST", headers: { Authorization: `Bearer ${a2}`, "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(45000) });
+    const ct = r.headers.get("content-type") || "";
+    if (!r.ok) throw new Error(`cloudflare ${r.status} ${(await r.text()).slice(0, 160)}`);
+    if (ct.startsWith("image/")) {
+      const buf = new Uint8Array(await r.arrayBuffer()); let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      return { mime: ct.split(";")[0], data: btoa(bin) };
+    }
+    const j = await r.json(); const img = j?.result?.image;
+    if (!img) { errs.push(JSON.stringify(j).slice(0, 120)); throw new Error("respons tanpa gambar " + errs.join()); }
+    return { mime: img.startsWith("/9j/") ? "image/jpeg" : "image/png", data: img };
+  }));
+}
+
 async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
+  if (name === "buat_gambar") {
+    const prompt = String(a.prompt || "").trim().slice(0, 1500);
+    if (!prompt) return { error: "prompt kosong" };
+    try {
+      const g = await cfImage(prompt);
+      c.gambar.push({ ...g, prompt });
+      return { siap: true, catatan: "Gambar sudah tampil untuk pengguna. Jangan menulis ulang prompt panjang; cukup satu-dua kalimat dan tawarkan revisi." };
+    } catch (e) { return { error: "Gagal membuat gambar: " + String(e).slice(0, 200) }; }
+  }
   if (name === "buat_laporan") {
     const judul = String(a.judul || "Laporan SiMAB");
     const meta = `Kantor ${c.kantor} · TA ${c.tahun}`;
@@ -235,7 +270,7 @@ const SYSTEM = (c: Ctx) =>
   `Kamu Jarwo, asisten AI aplikasi SiMAB (Sistem Monitoring Anggaran Belanja) KPKNL. Jawab Bahasa Indonesia, singkat, jelas, sopan.
 Kantor aktif: ${c.kantor}, tahun anggaran ${c.tahun}. Data kegiatan/POK ambil lewat tool; jangan mengarang angka. Format rupiah: Rp 1.234.567.
 Perjadin = akun 524111/524113 (pakai akun="perjadin"). Seksi (mis. Umum) ada di POK; gunakan filter seksi pada ringkasan_anggaran. Jika sebuah filter tidak menemukan data, coba lagi tanpa filter atau lihat seksi_tersedia sebelum menyimpulkan data tidak ada.\nPerjadin = akun 524111 (biasa) dan 524113 (paket meeting); akun 5241 mencakup keduanya. "Seksi" adalah pemilik baris POK (mis. Umum). Bila diminta file/Excel/PDF/rekap/laporan, panggil buat_laporan (tombol unduh muncul otomatis; jangan menulis ulang tabel panjang). Gunakan filter tool (akun, seksi, sd, tanggal) alih-alih meminta pengguna mengunggah dokumen untuk pertanyaan data; bila tool mengembalikan kosong, sebutkan filter yang dipakai dan tawarkan alternatif. Untuk pertanyaan SBM/tarif (uang harian, penginapan, tiket, transport, honor, konsumsi, dll.) gunakan tool cek_sbm (data PMK SBM per tahun di SiMAB), jangan cari_web; sebutkan tahun & kolom yang dipakai. MAK perjadin 524111/524113 melalui status Rekam Data → Terlaksana → LPT → Terbayar → Selesai; MAK lain tanpa LPT.
-Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nKamu tidak menyimpan data sendiri; untuk merekam, minta pengguna mengunggah foto/PDF dokumen lewat tombol lampiran.`;
+Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nBila diminta membuat/menggenerate gambar, panggil buat_gambar dengan prompt bahasa Inggris yang rinci. Jangan membuat gambar tokoh/karakter berhak cipta atau orang nyata tertentu.\nKamu tidak menyimpan data sendiri; untuk merekam, minta pengguna mengunggah foto/PDF dokumen lewat tombol lampiran.`;
 
 async function chatGemini(msgs: any[], c: Ctx) {
   const contents = msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content) }] }));
@@ -386,7 +421,7 @@ Deno.serve(async (req: Request) => {
     const u = await fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON, Authorization: `Bearer ${jwt}` } });
     if (!jwt || !u.ok) return json({ error: "Belum login" }, 401);
     const b = await req.json();
-    const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt), lampiran: [] };
+    const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt), lampiran: [], gambar: [] };
     if (!c.kantor) return json({ error: "kantor kosong" }, 400);
 
     if (b.mode === "extract") {
@@ -398,7 +433,7 @@ Deno.serve(async (req: Request) => {
     const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-12);
     if (!msgs.length) return json({ error: "pesan kosong" }, 400);
     const rr = await chat(msgs, c);
-    return json({ ...rr, lampiran: c.lampiran });
+    return json({ ...rr, lampiran: c.lampiran, gambar: c.gambar });
   } catch (e) {
     return json({ error: String((e as Error).message || e) }, 500);
   }

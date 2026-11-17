@@ -100,6 +100,7 @@
       const r = await call({ mode: 'chat', messages: hist });
       w.innerHTML = md(r.reply || '(kosong)'); hist.push({ role: 'assistant', content: r.reply });
       (r.lampiran || []).forEach(addFileCard);
+      (r.gambar || []).forEach(addImageCard);
     }
     catch (e) { w.textContent = 'Maaf: ' + e.message; }
     busy = false;
@@ -107,6 +108,11 @@
 
   // ---------- unduh Excel / PDF dari tabel hasil Jarwo ----------
   const slug = t => String(t || 'laporan').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'laporan';
+  function addImageCard(g) {
+    const src = 'data:' + g.mime + ';base64,' + g.data;
+    const c = bubble(`<img src="${src}" alt="Gambar buatan Jarwo" style="max-width:100%;border-radius:10px;display:block"><div style="margin-top:6px"><a class="jw-ok" style="display:inline-block;padding:6px 12px;border-radius:8px;text-decoration:none;font-size:13px" download="jarwo-${Date.now()}.${g.mime.includes('png') ? 'png' : 'jpg'}" href="${src}">⬇ Unduh gambar</a></div>`, 'card');
+    list.scrollTop = list.scrollHeight; return c;
+  }
   function addFileCard(t) {
     const c = bubble(`<b>📄 ${esc(t.judul)}</b><div style="font-size:12px;color:#555">${esc(t.meta || '')} · ${t.baris.length} baris</div>
       <div style="margin-top:6px"><button class="jw-ok" data-f="xlsx">⬇ Excel</button> <button class="jw-ok" data-f="pdf" style="background:#007aff">⬇ PDF</button></div>`, 'card');
