@@ -200,7 +200,8 @@
         `<div class="row"><div>${field('Mulai', id + 'm', d.tgl_mulai, 'date')}</div><div>${field('Selesai', id + 's', d.tgl_selesai, 'date')}</div></div>` +
         makField() +
         '<label>Pelaksana</label>' + (d.pelaksana || []).map((p, i) =>
-          `<div class="row"><input data-p="${i}" data-f="nama" value="${esc(p.cocok || p.nama)}" title="${p.cocok ? 'cocok dengan pegawai' : 'tidak cocok dgn pegawai'}"><input data-p="${i}" data-f="jumlah" type="number" value="${p.jumlah || 0}">${p.cocok ? '' : '<span title="Tidak ditemukan di daftar pegawai">⚠</span>'}</div>`).join('');
+          `<div class="row"><input data-p="${i}" data-f="nama" value="${esc(p.cocok || p.nama)}" title="${p.cocok ? 'cocok dengan pegawai' : 'tidak cocok dgn pegawai'}"><input data-p="${i}" data-f="jumlah" type="number" value="${p.jumlah || 0}">${p.cocok ? '' : '<span title="Tidak ditemukan di daftar pegawai">⚠</span>'}</div>${p.hitung ? `<div style="font-size:11px;color:#666;margin:-2px 0 4px">${esc(p.hitung)}</div>` : ''}`).join('') +
+        (d.uang_harian ? `<div style="font-size:11px;color:#0f766e;margin-top:4px">Uang harian dihitung otomatis: ${esc(d.uang_harian.provinsi)}, ${esc(d.uang_harian.jenis)}, ${rp(d.uang_harian.tarif)}/hari × ${d.uang_harian.hari} hari (SBM ${esc(d.uang_harian.sumber)}). PNS 100%, PPNPN 50%. Mohon dicek sebelum Simpan.</div>` : '');
     } else if (jenis === 'kuitansi') {
       body = field('Uraian', id + 'ur', d.uraian) + field('Penyedia / Rekanan', id + 'pv', d.rekanan_cocok || d.penyedia) +
         (d.penyedia && !d.rekanan_cocok ? '<div style="font-size:11px;color:#b45309">⚠ Belum ada di Referensi › Rekanan (nama dicatat apa adanya)</div>' : '') +

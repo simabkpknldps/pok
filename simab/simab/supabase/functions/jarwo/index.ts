@@ -354,6 +354,8 @@ const EXTRACT_PROMPT = `Kamu membaca dokumen administrasi keuangan pemerintah In
  "ringkasan": "1 kalimat",
  "uraian": "uraian kegiatan/pekerjaan",
  "nomor_dokumen": "nomor surat lengkap persis seperti tertulis, mis. ST-1533/KNL.1401/2026", "tanggal_dokumen": "YYYY-MM-DD atau ''",
+ "provinsi_tujuan": "provinsi tempat tujuan (surat tugas), mis. Bali",
+ "jenis_perjalanan": "luar_kota (bawaan) | dalam_kota (bila tertulis perjalanan dinas dalam kota) | diklat (bila untuk pendidikan/pelatihan)",
  "tujuan": "HANYA nama kabupaten/kota tujuan, tanpa kata Kab./Kota/Kabupaten dan tanpa provinsi, mis. Badung (surat tugas)",
  "tgl_mulai": "YYYY-MM-DD", "tgl_selesai": "YYYY-MM-DD",
  "pelaksana": [{"nama":"", "nip":"", "jumlah": 0}],
@@ -405,15 +407,54 @@ function score(a: string, b: string) {
   return n / Math.max(A.size, B.size);
 }
 
+
+// Uang harian otomatis: tarif SBM provinsi tujuan x jumlah hari; PNS 100%, PPNPN 50%.
+async function hitungUangHarian(d: any, c: Ctx) {
+  const t1 = Date.parse(d.tgl_mulai), t2 = Date.parse(d.tgl_selesai);
+  if (!isFinite(t1) || !isFinite(t2) || t2 < t1) throw new Error("tanggal tugas tidak terbaca");
+  const hari = Math.round((t2 - t1) / 86400000) + 1;
+  const jenis = d.jenis_perjalanan === "dalam_kota" ? 1 : d.jenis_perjalanan === "diklat" ? 2 : 0;
+  const prov = String(d.provinsi_tujuan || "").trim();
+  if (!prov) throw new Error("provinsi tujuan tidak terbaca");
+  // sumber utama: tabel SBM per tahun (Lampiran I, 28.1); cadangan: tabel sbm lama
+  let rows: { nama: string; nilai: number[] }[] = [];
+  try {
+    for (const th of [c.tahun, c.tahun - 1]) {
+      const r = await c.db(`sbm_baris?select=uraian,nilai&tahun=eq.${th}&lampiran=eq.I&bab_no=eq.28&sub_no=eq.28.1&limit=100`);
+      if (r.length) { rows = r.map((x: any) => ({ nama: x.uraian, nilai: x.nilai })); d.sbm_tahun = th; break; }
+    }
+  } catch { /* tabel belum ada */ }
+  if (!rows.length) {
+    const r = await c.db(`sbm?select=id,luar_kota,dalam_kota,diklat&limit=100`);
+    rows = r.map((x: any) => ({ nama: x.id, nilai: [Number(x.luar_kota), Number(x.dalam_kota), Number(x.diklat)] }));
+    d.sbm_tahun = "tabel sbm";
+  }
+  const key = (x: string) => nrm(String(x).replace(/provinsi/gi, "").replace(/daerah istimewa/gi, "di").replace(/sumatera/gi, "sumatra").replace(/d\.?k\.?i\.?/gi, "dki").replace(/d\.?i\.?\s/gi, "di "));
+  const pk = key(prov);
+  let cand = rows.filter((r) => key(r.nama) === pk);
+  if (!cand.length) cand = rows.filter((r) => key(r.nama).includes(pk) || pk.includes(key(r.nama)));
+  if (cand.length !== 1) throw new Error(cand.length ? "provinsi '" + prov + "' ambigu di tabel SBM" : "provinsi '" + prov + "' tidak ada di tabel SBM");
+  const best = cand[0];
+  const tarif = Number(best.nilai?.[jenis]); if (!tarif) throw new Error("tarif kosong");
+  d.uang_harian = { provinsi: best.nama, tarif, hari, jenis: ["luar kota", "dalam kota (>8 jam)", "diklat"][jenis], sumber: d.sbm_tahun };
+  d.pelaksana = (d.pelaksana || []).map((p: any) => {
+    const ppnpn = p.kepeg === "0";
+    const persen = ppnpn ? 0.5 : 1;
+    return { ...p, jumlah_dokumen: p.jumlah || 0, jumlah: Math.round(tarif * hari * persen),
+      hitung: `${tarif.toLocaleString("id-ID")} × ${hari} hari × ${persen * 100}% (${p.kepeg === "1" ? "PNS" : ppnpn ? "PPNPN" : "status tidak diketahui, dihitung penuh"})` };
+  });
+}
+
 async function enrich(d: any, c: Ctx) {
-  const pegawai = await c.db(`pegawai?select=id,nama&kantor_id=eq.${q(c.kantor)}&limit=1000`);
+  const pegawai = await c.db(`pegawai?select=id,nama,kepeg&kantor_id=eq.${q(c.kantor)}&limit=1000`);
   let rekanan: any[] = [];
   try { rekanan = await c.db(`rekanan?select=id,nama&kantor_id=eq.${q(c.kantor)}&limit=1000`); } catch { /* tabel opsional */ }
   d.pelaksana = (d.pelaksana || []).map((p: any) => {
     let best: any = null, bs = 0;
     for (const x of pegawai) { const s = p.nip && String(p.nip).replace(/\D/g, "") === x.id ? 1 : score(p.nama, x.nama); if (s > bs) { bs = s; best = x; } }
-    return { ...p, cocok: bs >= 0.6 ? best.nama : null, cocok_skor: Math.round(bs * 100) / 100 };
+    return { ...p, cocok: bs >= 0.6 ? best.nama : null, cocok_skor: Math.round(bs * 100) / 100, kepeg: bs >= 0.6 ? String(best.kepeg ?? "") : "" };
   });
+  if (d.jenis === "surat_tugas") { try { await hitungUangHarian(d, c); } catch (e) { d.catatan = ((d.catatan || "") + " Uang harian tidak dihitung otomatis: " + String(e).slice(0, 120)).trim(); } }
   if (d.penyedia) {
     let best: any = null, bs = 0;
     for (const x of rekanan) { const s = score(d.penyedia, x.nama); if (s > bs) { bs = s; best = x; } }
