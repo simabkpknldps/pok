@@ -11,15 +11,18 @@ const keys = (k: string) => env(k).split(",").map((s) => s.trim()).filter(Boolea
 // Model boleh lebih dari satu, dipisah koma; dicoba berurutan sampai ada yang berhasil.
 const models = (k: string, d: string) => env(k, d).split(",").map((s) => s.trim()).filter(Boolean);
 const GEMINI_EXTRACT_MODELS = models("GEMINI_EXTRACT_MODEL", "gemini-3.5-flash-lite,gemini-3.8-flash");
-const GEMINI_MODELS = models("GEMINI_MODEL", "gemini-3.8-flash,gemini-3.5-flash-lite");
+const GEMINI_MODELS = models("GEMINI_MODEL", "gemini-3.5-flash-lite,gemini-3.8-flash");
 const GROQ_MODELS = models("GROQ_MODEL", "openai/gpt-oss-120b");
 const OR_MODELS = models("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free");
 const OR_VISION_MODELS = models("OPENROUTER_VISION_MODEL", "google/gemini-2.0-flash-001");
 async function withModels<T>(list: string[], fn: (model: string) => Promise<T>): Promise<T> {
   let last: unknown;
-  for (const m of list) { try { return await fn(m); } catch (e) { last = e; } }
+  for (const m of list) { overtime(); try { return await fn(m); } catch (e) { last = e; } }
   throw last;
 }
+
+let deadline = Infinity;
+const overtime = () => { if (Date.now() > deadline) throw new Error("waktu habis (terlalu lama menunggu penyedia AI)"); };
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -38,12 +41,13 @@ async function withKeys<T>(name: string, fn: (key: string) => Promise<T>): Promi
   const start = (cursor[name] = ((cursor[name] ?? -1) + 1) % list.length);
   for (let i = 0; i < list.length; i++) {
     const k = list[(start + i) % list.length];
+    overtime();
     try { return await fn(k); } catch (e) { last = e; }
   }
   throw last;
 }
 async function post(url: string, body: unknown, headers: Record<string, string>) {
-  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(45000) });
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) });
   const t = await r.text();
   if (!r.ok) throw new Error(`${r.status} ${t.slice(0, 200)}`);
   return JSON.parse(t);
@@ -375,6 +379,7 @@ async function enrich(d: any, c: Ctx) {
 }
 
 Deno.serve(async (req: Request) => {
+  deadline = Date.now() + 100_000;
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
     const jwt = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
