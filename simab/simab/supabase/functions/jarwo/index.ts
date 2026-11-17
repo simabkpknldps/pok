@@ -292,7 +292,7 @@ const EXTRACT_PROMPT = `Kamu membaca dokumen administrasi keuangan pemerintah In
  "ringkasan": "1 kalimat",
  "uraian": "uraian kegiatan/pekerjaan",
  "nomor_dokumen": "nomor surat lengkap persis seperti tertulis, mis. ST-1533/KNL.1401/2026", "tanggal_dokumen": "YYYY-MM-DD atau ''",
- "tujuan": "kota/lokasi tujuan (surat tugas)",
+ "tujuan": "HANYA nama kabupaten/kota tujuan, tanpa kata Kab./Kota/Kabupaten dan tanpa provinsi, mis. Badung (surat tugas)",
  "tgl_mulai": "YYYY-MM-DD", "tgl_selesai": "YYYY-MM-DD",
  "pelaksana": [{"nama":"", "nip":"", "jumlah": 0}],
  "penyedia": "nama toko/perusahaan/rekanan (kuitansi/invoice)",
