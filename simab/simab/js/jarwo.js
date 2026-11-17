@@ -76,9 +76,52 @@
     const t = input.value.trim(); if (!t || busy) return;
     input.value = ''; bubble(esc(t), 'u'); hist.push({ role: 'user', content: t });
     busy = true; const w = bubble('…', 'a');
-    try { const r = await call({ mode: 'chat', messages: hist }); w.textContent = r.reply || '(kosong)'; hist.push({ role: 'assistant', content: r.reply }); }
+    try {
+      const r = await call({ mode: 'chat', messages: hist });
+      w.textContent = r.reply || '(kosong)'; hist.push({ role: 'assistant', content: r.reply });
+      (r.lampiran || []).forEach(addFileCard);
+    }
     catch (e) { w.textContent = 'Maaf: ' + e.message; }
     busy = false;
+  }
+
+  // ---------- unduh Excel / PDF dari tabel hasil Jarwo ----------
+  const slug = t => String(t || 'laporan').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'laporan';
+  function addFileCard(t) {
+    const c = bubble(`<b>📄 ${esc(t.judul)}</b><div style="font-size:12px;color:#555">${esc(t.meta || '')} · ${t.baris.length} baris</div>
+      <div style="margin-top:6px"><button class="jw-ok" data-f="xlsx">⬇ Excel</button> <button class="jw-ok" data-f="pdf" style="background:#007aff">⬇ PDF</button></div>`, 'card');
+    c.querySelector('[data-f=xlsx]').onclick = () => unduhExcel(t);
+    c.querySelector('[data-f=pdf]').onclick = e => unduhPdf(t, e.target);
+  }
+  function unduhExcel(t) {
+    if (!window.XLSX) { alert('Library Excel belum termuat.'); return; }
+    const aoa = [[t.judul], [t.meta || ''], [], t.kolom, ...t.baris];
+    if (t.total) aoa.push(t.total);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = t.kolom.map((k, i) => ({ wch: Math.min(60, Math.max(String(k).length + 2, ...t.baris.slice(0, 200).map(r => String(r[i] ?? '').length + 2))) }));
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: Math.max(0, t.kolom.length - 1) } }];
+    const rng = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = 4; R <= rng.e.r; R++) for (let C = 0; C <= rng.e.c; C++) { const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })]; if (cell && cell.t === 'n') cell.z = '#,##0'; }
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
+    XLSX.writeFile(wb, slug(t.judul) + '.xlsx');
+  }
+  function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Gagal memuat ' + src)); document.head.appendChild(s); }); }
+  async function unduhPdf(t, btn) {
+    const old = btn.textContent; btn.textContent = '…'; btn.disabled = true;
+    try {
+      if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      if (!(window.jspdf && window.jspdf.jsPDF.API.autoTable)) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js');
+      const doc = new window.jspdf.jsPDF({ orientation: t.kolom.length > 5 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' });
+      doc.setFontSize(13); doc.text(String(t.judul), 40, 38);
+      doc.setFontSize(9); doc.text(String(t.meta || '') + ' · dicetak ' + new Date().toLocaleDateString('id-ID'), 40, 54);
+      const fmt = v => typeof v === 'number' ? v.toLocaleString('id-ID') : String(v ?? '');
+      const numCols = {}; t.kolom.forEach((k, i) => { if (t.baris.some(r => typeof r[i] === 'number')) numCols[i] = { halign: 'right' }; });
+      doc.autoTable({ startY: 66, head: [t.kolom], body: t.baris.map(r => r.map(fmt)), foot: t.total ? [t.total.map(fmt)] : undefined,
+        styles: { fontSize: 7.5, cellPadding: 3 }, headStyles: { fillColor: [0, 122, 255] }, footStyles: { fillColor: [235, 235, 240], textColor: 20, fontStyle: 'bold' }, columnStyles: numCols,
+        didDrawPage: () => { doc.setFontSize(8); doc.text('Halaman ' + doc.internal.getNumberOfPages(), doc.internal.pageSize.getWidth() - 80, doc.internal.pageSize.getHeight() - 20); } });
+      doc.save(slug(t.judul) + '.pdf');
+    } catch (e) { alert('Gagal membuat PDF: ' + e.message); }
+    btn.textContent = old; btn.disabled = false;
   }
 
   function toB64(file) {
