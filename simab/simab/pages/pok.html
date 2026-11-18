@@ -1,3 +1,10 @@
+<style>
+  /* Tampilan tabel POK ala Kertas Kerja DIPA: garis grid di setiap sel */
+  #pok-tbody { --pok-grid: #9ca3af; }
+  #pok-tbody td { border: 1px solid var(--pok-grid); }
+  #pok-tbody tr.select-none td { border-color: transparent; }
+  #pok-tbody tr { border-bottom: 0 !important; }
+</style>
 <div class="ios-panel p-5">
     <div class="flex flex-col md:flex-row gap-3 mb-4 items-center">
         <input type="text" id="searchPok" oninput="searchPok()" placeholder="Cari kode / uraian..." class="ios-field flex-1">
@@ -8,7 +15,7 @@
     </div>
 
     <div class="pok-table-container rounded-xl max-h-[70vh] overflow-y-auto" style="border: 1px solid var(--divider);">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm" style="border-collapse: collapse;">
             <tbody id="pok-tbody">
                 <tr><td colspan="8" class="text-center p-6" style="color: var(--label-secondary);"><i class="fa-solid fa-spinner fa-spin mr-2" style="color: var(--ios-blue);"></i>Memuat data...</td></tr>
             </tbody>

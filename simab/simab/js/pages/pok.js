@@ -538,22 +538,21 @@ function renderPok() {
 
         const isMatch = keyword && (c.toLowerCase().includes(keyword) || uraian.includes(keyword));
 
-        // Level hierarki berdasarkan jumlah segmen kode (dipisah titik), untuk indentasi visual
+        // Tampilan ala Kertas Kerja DIPA (hanya visual; data/aksi tidak berubah):
+        // RO/Komponen = normal, Sub Output (huruf) = miring, Akun = bergaris bawah,
+        // Detail = menjorok + awalan "- " berwarna menurut sumber dana (RM hijau, PNBP merah).
         const depth = c.split('.').length;
-        const indentPx = Math.min(depth - 1, 5) * 18;
-
-        let rowStyle = 'background: #fff;';
-        if (isMatch) {
-            rowStyle = 'background: rgba(255,214,10,0.22);';
-        } else if (isLeaf) {
-            rowStyle = i.sumber === 'PNBP' ? 'background: rgba(255,45,85,0.08);' : 'background: rgba(0,113,227,0.07);';
-        } else if (isParent) {
-            rowStyle = 'background: rgba(0,113,227,0.045);'; // penanda visual: baris ini bisa diklik untuk expand/collapse
-        } else if (depth <= 2) {
-            rowStyle = 'background: var(--sidebar-bg);';
-        }
-
-        const textStyle = depth <= 2 ? 'font-weight:700; color: var(--label);' : (isLeaf ? `font-weight:400; color: var(--label);` : 'font-weight:600; color: var(--label);');
+        const isDetail = depth >= 7;
+        const sdColor = i.sumber === 'PNBP' ? '#dc2626' : '#16a34a';
+        const rowStyle = isMatch ? 'background: rgba(255,214,10,0.22);' : 'background:#fff;';
+        let textStyle = 'font-weight:400; color: var(--label);';
+        if (depth === 5) textStyle += ' font-style:italic;';
+        if (depth === 6) textStyle += ' font-size:12px;';
+        if (isDetail) textStyle = `font-weight:400; font-size:11.5px; color:${sdColor};`;
+        const paddingLeft = isDetail ? 30 : 10;
+        const segs = c.split('.');
+        const kodeTampil = depth <= 3 ? c : (isDetail ? '' : segs[segs.length - 1]);
+        const uraianHtml = (depth === 6 ? '<span style="text-decoration:underline;">' + i.uraian + '</span>' : (isDetail ? '- ' + i.uraian : i.uraian));
 
         const expandKey = seksi + '::' + c;
 
@@ -567,14 +566,14 @@ function renderPok() {
         const sisaStyle = sisa < 0 ? 'color: #FF3B30; font-weight:600;' : 'color: var(--label);';
 
         return `<tr data-kode="${c}" data-seksi="${seksi}" class="cursor-pointer transition" style="${rowStyle} border-bottom: 1px solid var(--divider);" onmouseover="this.style.filter='brightness(0.97)'" onmouseout="this.style.filter=''" onclick="toggleExpand('${c}', '${seksi}')">
-            <td class="p-3 font-mono text-[11px] whitespace-nowrap" style="${isLeaf ? 'font-weight:700; color: var(--label);' : 'color: var(--label-secondary);'}">${c}</td>
-            <td class="p-3" style="${textStyle} padding-left:${12 + indentPx}px">
-                <span class="whitespace-normal break-words">${i.uraian}</span>
+            <td class="p-2 text-[11.5px] whitespace-nowrap text-right align-top" style="color: var(--label);" title="${c}">${kodeTampil}</td>
+            <td class="p-2 align-top" style="${textStyle} padding-left:${paddingLeft}px">
+                <span class="whitespace-normal break-words">${uraianHtml}</span>
                 ${hasChildren ? (window.expandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px]" style="color: var(--label-secondary);"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]" style="color: var(--label-secondary);"></i>') : ''}
             </td>
-            <td class="p-3 text-right whitespace-nowrap" style="color: var(--label);">${pagu.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-right whitespace-nowrap" style="color: var(--label);">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
-            <td class="p-3 text-right whitespace-nowrap">
+            <td class="p-2 text-right whitespace-nowrap align-top" style="color: ${isDetail ? sdColor : 'var(--label)'};">${pagu.toLocaleString('id-ID')}</td>
+            <td class="p-2 text-right whitespace-nowrap align-top" style="color: var(--label);">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
+            <td class="p-2 text-right whitespace-nowrap align-top">
                 <div style="color: var(--label);">${realisasi.toLocaleString('id-ID')}</div>
                 ${paguEfektif > 0 ? `
                     <div class="w-full h-1.5 rounded-full overflow-hidden mt-1" style="background: var(--field-bg);">
@@ -583,9 +582,9 @@ function renderPok() {
                     <div class="text-[10px] mt-0.5" style="color: var(--label-secondary);">${persenRealisasi.toFixed(1)}%</div>
                 ` : ''}
             </td>
-            <td class="p-3 text-right whitespace-nowrap" style="${sisaStyle}">${sisa.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-center whitespace-nowrap" style="color: var(--label-secondary);">${i.sumber || '-'}</td>
-            <td class="p-3 text-center whitespace-nowrap">
+            <td class="p-2 text-right whitespace-nowrap align-top" style="${sisaStyle}">${sisa.toLocaleString('id-ID')}</td>
+            <td class="p-2 text-center whitespace-nowrap align-top" style="color: var(--label-secondary);">${i.sumber || '-'}</td>
+            <td class="p-2 text-center whitespace-nowrap align-top">
                 ${isLeaf ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
                         class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--ios-blue); color: #fff;" title="Rekam">
@@ -636,15 +635,15 @@ function renderPok() {
         </tr>`;
 
     const columnSubHeaderRow = () => `
-        <tr class="text-[11px] uppercase" style="color: var(--label-secondary);">
-            <td class="p-2 text-left font-semibold" style="background: var(--sidebar-bg);">Kode</td>
-            <td class="p-2 text-left font-semibold" style="background: var(--sidebar-bg);">Uraian</td>
-            <td class="p-2 text-right font-semibold" style="background: var(--sidebar-bg);">Pagu</td>
-            <td class="p-2 text-right font-semibold" style="background: var(--sidebar-bg);">Blokir</td>
-            <td class="p-2 text-right font-semibold" style="background: var(--sidebar-bg);">Realisasi</td>
-            <td class="p-2 text-right font-semibold" style="background: var(--sidebar-bg);">Sisa</td>
-            <td class="p-2 text-center font-semibold" style="background: var(--sidebar-bg);">SD</td>
-            <td class="p-2 text-center font-semibold" style="background: var(--sidebar-bg);">Aksi</td>
+        <tr class="text-[12px]" style="color: var(--label);">
+            <td class="p-2 text-center font-bold" style="background:#fff;">Kode</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Program/ Kegiatan/ Output/ Sub Output/ Komponen</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Pagu</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Blokir</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Realisasi</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Sisa</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">SD/CP</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Aksi</td>
         </tr>`;
 
     let html = '';
