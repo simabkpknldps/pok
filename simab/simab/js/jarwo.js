@@ -119,6 +119,7 @@
       w.innerHTML = md(r.reply || '(kosong)'); hist.push({ role: 'assistant', content: r.reply });
       (r.lampiran || []).forEach(addFileCard);
       (r.gambar || []).forEach(addImageCard);
+      (r.draf || []).forEach(drafCard);
     }
     catch (e) { w.textContent = 'Maaf: ' + e.message; }
     busy = false;
