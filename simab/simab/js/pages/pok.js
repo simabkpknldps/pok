@@ -573,7 +573,7 @@ function renderPok() {
         if (isDetail) textStyle = `font-weight:400; font-size:11.5px; color:${sdColor};`;
         const paddingLeft = isDetail ? 30 : 10;
         const segs = c.split('.');
-        const kodeTampil = depth <= 3 ? c : (isDetail ? '' : segs[segs.length - 1]);
+        const kodeTampil = depth <= 3 ? c : segs[segs.length - 1];
         const uraianHtml = (depth === 6 ? '<span style="text-decoration:underline;">' + i.uraian + '</span>' : (isDetail ? '- ' + i.uraian : i.uraian));
 
         const expandKey = seksi + '::' + c;
@@ -1600,7 +1600,7 @@ async function downloadSeksiPDF(seksi) {
         const body = items.map((i, idx) => {
             const { depth, detail } = info[idx];
             const segs = String(i.kode).split('.');
-            const kodeTampil = depth <= 3 ? String(i.kode) : (detail ? '' : segs[segs.length - 1]);
+            const kodeTampil = depth <= 3 ? String(i.kode) : segs[segs.length - 1];
             const uraian = (detail ? '- ' : '') + String(i.uraian || '');
             const angka = n => Number(n || 0).toLocaleString('id-ID');
             return [kodeTampil, uraian, angka(i.pagu), angka(i.blokir), angka(i.realisasi), angka(i.sisa), i.sumber || '-'];
