@@ -219,7 +219,7 @@
 
     let body = '';
     if (jenis === 'surat_tugas') {
-      body = field('Uraian (No. ST)', id + 'ur', d.nomor_dokumen || d.uraian) + field('Tujuan (kabupaten/kota)', id + 'tj', String(d.tujuan || '').split(',')[0].replace(/^\s*(kabupaten|kab\.?|kota)\s+/i, '').trim()) + field('Tgl ST', id + 'st', d.tanggal_dokumen, 'date') +
+      body = field('Uraian (No. ST)', id + 'ur', d.nomor_dokumen || d.uraian) + `<div id="${id}dup"></div>` + field('Tujuan (kabupaten/kota)', id + 'tj', String(d.tujuan || '').split(',')[0].replace(/^\s*(kabupaten|kab\.?|kota)\s+/i, '').trim()) + field('Tgl ST', id + 'st', d.tanggal_dokumen, 'date') +
         `<div class="row"><div>${field('Mulai', id + 'm', d.tgl_mulai, 'date')}</div><div>${field('Selesai', id + 's', d.tgl_selesai, 'date')}</div></div>` +
         makField() +
         '<label>Pelaksana</label>' + (d.pelaksana || []).map((p, i) =>
@@ -239,6 +239,14 @@
     c.innerHTML = head + warn + body + `<div><button class="jw-ok" id="${id}ok">Simpan</button> <button class="jw-no" id="${id}no">Batal</button></div>`;
     c.querySelector('#' + id + 'no').onclick = () => c.remove();
     const v = k => c.querySelector('#' + id + k)?.value ?? '';
+    if (jenis === 'surat_tugas') {
+      const dupEl = c.querySelector('#' + id + 'dup'), urEl = c.querySelector('#' + id + 'ur');
+      const tampil = async () => {
+        const r = await cekSTGanda(urEl.value);
+        dupEl.innerHTML = r.length ? `<div style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:8px;padding:6px 8px;font-size:12px;margin:4px 0">⚠ Nomor ST ini sudah ada di ${r.length} kegiatan (${esc(r.slice(0, 3).map(x => x.pelaksana).join(', '))}${r.length > 3 ? ', …' : ''}). Pastikan bukan duplikat.</div>` : '';
+      };
+      tampil(); urEl.addEventListener('change', tampil);
+    }
     const lks = c.querySelector('#' + id + 'lks');
     if (lks) {
       lks.onchange = () => { if (lks.value) c.querySelector('#' + id + 'lk').value = lks.value; };
@@ -282,7 +290,7 @@
     };
     c.querySelector('#' + id + 'ok').onclick = async function () {
       this.disabled = true;
-      try { const ring = ringkasan(jenis, c, id, v); await simpan(jenis, c, id, v, d); c.innerHTML = '<b>✅ Tersimpan.</b>' + ring; c.querySelectorAll('a[data-q]').forEach(a => { a.onclick = e => { e.preventDefault(); bukaCari(a.dataset.q); }; }); if (window.kgLoadData) try { kgLoadData(true); } catch (_) {} }
+      try { if (jenis === 'surat_tugas') { const dup = await cekSTGanda(v('ur')); if (dup.length && !confirm('Nomor ST "' + v('ur') + '" sudah tercatat di ' + dup.length + ' kegiatan (' + dup.slice(0, 3).map(x => x.pelaksana).join(', ') + '). Tetap simpan?')) { this.disabled = false; return; } } const ring = ringkasan(jenis, c, id, v); await simpan(jenis, c, id, v, d); c.innerHTML = '<b>✅ Tersimpan.</b>' + ring; c.querySelectorAll('a[data-q]').forEach(a => { a.onclick = e => { e.preventDefault(); bukaCari(a.dataset.q); }; }); if (window.kgLoadData) try { kgLoadData(true); } catch (_) {} }
       catch (e) { alert('Gagal menyimpan: ' + e.message); this.disabled = false; }
     };
   }
@@ -303,6 +311,18 @@
         if (box) { box.value = q; document.getElementById('kg-btnSearch')?.click(); }
       }
     } catch (e) { console.warn('bukaCari', e); }
+  }
+
+  // cek nomor ST yang sama sudah tercatat di kegiatan (kantor aktif, semua tahun/RLS)
+  async function cekSTGanda(no) {
+    const t = String(no || '').trim();
+    if (t.length < 5) return [];
+    try {
+      await waitSupabaseAuthReady();
+      const { data } = await sb.from('kegiatan').select('id,uraian,pelaksana,tgl_mulai,jumlah,status')
+        .eq('kantor_id', getKantorAktif()).ilike('uraian', '%' + t.replace(/[%_,()]/g, ' ').trim() + '%').limit(8);
+      return data || [];
+    } catch (_) { return []; }
   }
 
   // ringkasan data yang baru disimpan (diambil dari isian kartu sebelum disimpan)
