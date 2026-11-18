@@ -597,11 +597,6 @@ function renderPok() {
             <td class="p-2 text-right whitespace-nowrap align-top" style="color: var(--label);">${Number(i.blokir || 0).toLocaleString('id-ID')}</td>
             <td class="p-2 text-right whitespace-nowrap align-top">
                 <div style="color: var(--label);">${realisasi.toLocaleString('id-ID')}</div>
-                ${paguEfektif > 0 ? `
-                    <div class="w-full h-1.5 rounded-full overflow-hidden mt-1" style="background: var(--field-bg);">
-                        <div class="h-full rounded-full" style="width:${persenRealisasi}%; background: ${barColor};"></div>
-                    </div>
-                ` : ''}
             </td>
             <td class="p-2 text-right whitespace-nowrap align-top" style="${sisaStyle}">${sisa.toLocaleString('id-ID')}</td>
             <td class="p-2 text-center whitespace-nowrap align-top" style="color: var(--label-secondary);">${i.sumber || '-'}</td>
@@ -1590,58 +1585,87 @@ async function downloadSeksiPDF(seksi) {
         doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 40, 46);
         doc.setTextColor(0);
 
-        const body = items.map(i => {
-            const pagu = Number(i.pagu || 0);
-            const blokir = Number(i.blokir || 0);
-            const realisasi = Number(i.realisasi || 0);
-            const sisa = Number(i.sisa || 0);
-            return [
-                String(i.kode),
-                String(i.uraian || ''),
-                pagu.toLocaleString('id-ID'),
-                blokir.toLocaleString('id-ID'),
-                realisasi.toLocaleString('id-ID'),
-                sisa.toLocaleString('id-ID'),
-                i.sumber || '-'
-            ];
+        // Tampilan sama dengan tabel POK di SiMAB (ala Kertas Kerja DIPA):
+        // kode ringkas rata kanan, Sub Output miring, Akun bergaris bawah,
+        // Detail menjorok + "- " berwarna menurut sumber dana (RM hijau, PNBP merah).
+        const HIJAU = [22, 163, 74], MERAH = [220, 38, 38];
+        const info = items.map(i => {
+            const segs = String(i.kode).split('.');
+            const depth = segs.length;
+            const detail = depth >= 7;
+            const warna = String(i.sumber || '').toUpperCase() === 'PNBP' ? MERAH : HIJAU;
+            return { depth, detail, warna };
+        });
+
+        const body = items.map((i, idx) => {
+            const { depth, detail } = info[idx];
+            const segs = String(i.kode).split('.');
+            const kodeTampil = depth <= 3 ? String(i.kode) : (detail ? '' : segs[segs.length - 1]);
+            const uraian = (detail ? '- ' : '') + String(i.uraian || '');
+            const angka = n => Number(n || 0).toLocaleString('id-ID');
+            return [kodeTampil, uraian, angka(i.pagu), angka(i.blokir), angka(i.realisasi), angka(i.sisa), i.sumber || '-'];
         });
 
         doc.autoTable({
             startY: 58,
-            head: [['Kode', 'Uraian', 'Pagu', 'Blokir', 'Realisasi', 'Sisa', 'SD']],
+            head: [['Kode', 'Program/ Kegiatan/ Output/ Sub Output/ Komponen', 'Pagu', 'Blokir', 'Realisasi', 'Sisa', 'SD/CP']],
             body,
+            theme: 'plain',
             styles: {
-                fontSize: 7,
+                fontSize: 7.5,
                 cellPadding: 3,
-                overflow: 'linebreak'
+                overflow: 'linebreak',
+                lineWidth: 0.5,
+                lineColor: [156, 163, 175],
+                textColor: 20,
+                valign: 'top'
             },
             headStyles: {
-                fillColor: [2, 132, 199],
-                textColor: 255,
+                fillColor: [255, 255, 255],
+                textColor: 20,
                 fontStyle: 'bold',
                 halign: 'center',
                 valign: 'middle'
             },
             columnStyles: {
-                0: { cellWidth: 130, overflow: 'visible' },
-                1: { cellWidth: 230 },
-                2: { cellWidth: 80, halign: 'right' },
-                3: { cellWidth: 70, halign: 'right' },
-                4: { cellWidth: 80, halign: 'right' },
+                0: { cellWidth: 80, halign: 'right', overflow: 'visible' },
+                1: { cellWidth: 270 },
+                2: { cellWidth: 70, halign: 'right' },
+                3: { cellWidth: 55, halign: 'right' },
+                4: { cellWidth: 70, halign: 'right' },
                 5: { cellWidth: 70, halign: 'right' },
                 6: { cellWidth: 40, halign: 'center' }
             },
             margin: { left: 40, right: 40 },
             didParseCell: (data) => {
                 if (data.section !== 'body') return;
-                const rowItem = items[data.row.index];
-                if (!rowItem) return;
-                const kodeRow = String(rowItem.kode);
-                const adaTurunan = items.some(other => String(other.kode).startsWith(kodeRow + '.'));
-                if (!adaTurunan) {
-                    data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.textColor = [37, 99, 235];
+                const inf = info[data.row.index];
+                if (!inf) return;
+                if (data.column.index === 1) {
+                    if (inf.depth === 5) data.cell.styles.fontStyle = 'italic';
+                    if (inf.detail) {
+                        data.cell.styles.fontSize = 7;
+                        data.cell.styles.cellPadding = { top: 3, right: 3, bottom: 3, left: 22 };
+                    }
                 }
+                if (inf.detail && (data.column.index === 1 || data.column.index === 2)) data.cell.styles.textColor = inf.warna;
+            },
+            // Garis bawah untuk uraian Akun (level 6), seperti di tampilan SiMAB
+            didDrawCell: (data) => {
+                if (data.section !== 'body' || data.column.index !== 1) return;
+                const inf = info[data.row.index];
+                if (!inf || inf.depth !== 6) return;
+                const fs = data.cell.styles.fontSize;
+                const lh = fs * doc.getLineHeightFactor();
+                const pad = data.cell.padding('left');
+                const top = data.cell.y + data.cell.padding('top');
+                doc.setLineWidth(0.4);
+                doc.setDrawColor(20);
+                data.cell.text.forEach((line, k) => {
+                    const w = doc.getTextWidth(line);
+                    const y = top + k * lh + fs * 0.95;
+                    doc.line(data.cell.x + pad, y, data.cell.x + pad + w, y);
+                });
             }
         });
 
