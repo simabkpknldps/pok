@@ -249,6 +249,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="js/supabase-config.js"></script>
+    <script src="js/pimpinan.js"></script>
 
     <script>
         document.getElementById('tahunFooter').textContent = new Date().getFullYear();
@@ -314,16 +315,26 @@
             localStorage.setItem('lastActivity', Date.now().toString());
 
             let redirectTarget = 'dashboard.html';
+            let adaTitipan = false;
             try {
                 const raw = localStorage.getItem('postLoginRedirect');
                 if (raw) {
                     const titipan = JSON.parse(raw);
                     if (titipan && titipan.page && (Date.now() - titipan.ts) < 10 * 60 * 1000) {
                         redirectTarget = titipan.page;
+                        adaTitipan = true;
                     }
                 }
             } catch (e) { /* format titipan rusak -> abaikan */ }
             localStorage.removeItem('postLoginRedirect');
+
+            // Kepala Kantor: setelah login muncul Dashboard Pimpinan (overlay di
+            // halaman ini, URL tetap index.html). Kalau login dipicu karena user
+            // tadi membuka halaman tertentu (titipan redirect), tetap ke halaman itu.
+            if (!adaTitipan && window.isKepalaKantor && window.isKepalaKantor(profil.jabatan) && window.bukaDashboardPimpinan) {
+                window.bukaDashboardPimpinan({ dariLogin: true });
+                return;
+            }
 
             window.location.href = redirectTarget;
         }
