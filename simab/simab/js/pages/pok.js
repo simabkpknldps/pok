@@ -41,6 +41,9 @@ async function initPokPage() {
     window.expandedSeksi = new Set();
     window.searchResults = [];
     window.selectedKode = "";
+    window.pokSdFilter = 'ALL';
+    const wd = document.getElementById('pok-sd-toggle');
+    if (wd) commonRenderSumberToggle(wd, 'ALL', v => { window.pokSdFilter = v; renderPok(); });
     pokInjectHapusDataBtn();
     await loadPokData();
 }
@@ -498,7 +501,8 @@ function renderPok() {
     });
     // Baris <3 segmen (cuma Kegiatan, atau Kegiatan+KRO) TIDAK ditampilkan
     // sama sekali -- grup Seksi mulai dari level RO (3 segmen) ke bawah.
-    const uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
+    let uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
+    uniqueData = commonFilterSumber(uniqueData, window.pokSdFilter, i => i.kode, i => i.sumber);
 
     const keyword = (document.getElementById("searchPok")?.value || "").toLowerCase().trim();
 
@@ -1287,10 +1291,6 @@ async function loadRefPegawai() {
             const p = String(d.pelaksana || '').trim();
             if (p) set.add(p);
         });
-        // + rekanan (supplier/penyedia jasa) kantor aktif
-        if (typeof fetchRekananNames === 'function') {
-            (await fetchRekananNames()).forEach(n => set.add(n));
-        }
         const data = Array.from(set).sort();
 
         datalist.innerHTML = data.map(item => `<option value="${item}">`).join('');
