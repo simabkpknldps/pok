@@ -115,23 +115,26 @@ async function loadAll(c: Ctx) {
     k._sd = k.sd || one(sdPok[k.mak]) || (/\(PNBP\)/i.test(k.uraian || "") ? "PNBP" : /\(RM\)/i.test(k.uraian || "") ? "RM" : "tidak_diketahui");
     k._seksi = one(sksPok[k.mak]) || "tidak_diketahui";
   }
-  return { pok, keg };
+  // Blokir per kode POK (tabel blokir: id = kode POK, nilai) — mengurangi sisa pagu
+  const blk: Record<string, number> = {};
+  try { for (const b of await c.db(`blokir?select=id,nilai&${base}`, true)) blk[b.id] = Number(b.nilai) || 0; } catch { /* tabel opsional */ }
+  return { pok, keg, blk };
 }
 const okSeksi = (v: string, f?: string) => !f || nrm(v).includes(nrm(f));
 const okAkun = (v: string, f?: string) => !f || String(v).startsWith(String(f).replace(/\D/g, ""));
 
 // Rincian per baris POK: pagu, realisasi (kegiatan ber-MAK = kode POK), sisa.
 async function rincianPok(c: Ctx, a: any) {
-  const { pok, keg } = await loadAll(c);
+  const { pok, keg, blk } = await loadAll(c);
   const kata = nrm(a.kata || ""), sdF = a.sd ? String(a.sd).toUpperCase() : "";
   const real: Record<string, { total: number; byr: number; n: number }> = {};
   for (const k of keg) { const o = (real[k.mak] ||= { total: 0, byr: 0, n: 0 }); const j = Number(k.jumlah) || 0; o.total += j; o.n++; if (k.status === "Terbayar" || k.status === "Selesai") o.byr += j; }
   const rows = pok.filter((p: any) => okAkun(akunOf(p.kode), a.akun) && okSeksi(p.seksi || "", a.seksi) && (!sdF || p.sd === sdF) &&
     (!kata || nrm(`${p.kode} ${p.uraian}`).includes(kata)) && (Number(p.pagu) || 0) > 0)
-    .map((p: any) => { const r = real[p.kode] || { total: 0, byr: 0, n: 0 }; const pagu = Number(p.pagu) || 0;
-      return { kode: p.kode, uraian: p.uraian, seksi: p.seksi || "", sd: p.sd || "", pagu, realisasi_total: r.total, realisasi_terbayar_selesai: r.byr, sisa_pagu: pagu - r.total, jumlah_kegiatan: r.n }; });
+    .map((p: any) => { const r = real[p.kode] || { total: 0, byr: 0, n: 0 }; const pagu = Number(p.pagu) || 0; const blokir = blk[p.kode] || 0;
+      return { kode: p.kode, uraian: p.uraian, seksi: p.seksi || "", sd: p.sd || "", pagu, blokir, realisasi_total: r.total, realisasi_terbayar_selesai: r.byr, sisa_pagu: pagu - blokir - r.total, jumlah_kegiatan: r.n }; });
   rows.sort((x: any, y: any) => String(x.kode).localeCompare(String(y.kode)));
-  const tot = rows.reduce((t: any, r: any) => ({ pagu: t.pagu + r.pagu, realisasi_total: t.realisasi_total + r.realisasi_total, realisasi_terbayar_selesai: t.realisasi_terbayar_selesai + r.realisasi_terbayar_selesai, sisa_pagu: t.sisa_pagu + r.sisa_pagu }), { pagu: 0, realisasi_total: 0, realisasi_terbayar_selesai: 0, sisa_pagu: 0 });
+  const tot = rows.reduce((t: any, r: any) => ({ pagu: t.pagu + r.pagu, blokir: t.blokir + r.blokir, realisasi_total: t.realisasi_total + r.realisasi_total, realisasi_terbayar_selesai: t.realisasi_terbayar_selesai + r.realisasi_terbayar_selesai, sisa_pagu: t.sisa_pagu + r.sisa_pagu }), { pagu: 0, blokir: 0, realisasi_total: 0, realisasi_terbayar_selesai: 0, sisa_pagu: 0 });
   return { rows, tot };
 }
 
@@ -187,9 +190,9 @@ async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
     const meta = `Kantor ${c.kantor} · TA ${c.tahun}`;
     if (a.jenis === "pok") {
       const { rows, tot } = await rincianPok(c, a);
-      c.lampiran.push({ judul, meta, kolom: ["Kode", "Uraian", "Seksi", "SD", "Pagu", "Realisasi Total", "Terbayar/Selesai", "Sisa Pagu"],
-        baris: rows.map((r: any) => [r.kode, r.uraian, r.seksi, r.sd, r.pagu, r.realisasi_total, r.realisasi_terbayar_selesai, r.sisa_pagu]),
-        total: ["", "TOTAL", "", "", tot.pagu, tot.realisasi_total, tot.realisasi_terbayar_selesai, tot.sisa_pagu] });
+      c.lampiran.push({ judul, meta, kolom: ["Kode", "Uraian", "Seksi", "SD", "Pagu", "Blokir", "Realisasi Total", "Terbayar/Selesai", "Sisa Pagu"],
+        baris: rows.map((r: any) => [r.kode, r.uraian, r.seksi, r.sd, r.pagu, r.blokir, r.realisasi_total, r.realisasi_terbayar_selesai, r.sisa_pagu]),
+        total: ["", "TOTAL", "", "", tot.pagu, tot.blokir, tot.realisasi_total, tot.realisasi_terbayar_selesai, tot.sisa_pagu] });
       return { siap: true, baris: rows.length, total: tot, catatan: "Tabel siap; tombol unduh Excel/PDF muncul untuk pengguna. Jangan menulis ulang seluruh tabel di jawaban, cukup ringkasan." };
     }
     const { keg } = await loadAll(c);
@@ -230,18 +233,19 @@ async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
   if (name === "ringkasan_anggaran" && a.kata) {
     const { rows, tot } = await rincianPok(c, a);
     return { filter: { kata: a.kata, akun: a.akun || "semua", seksi: a.seksi || "semua", sd: a.sd || "semua" }, jumlah_baris_pok: rows.length, total: tot,
-      rincian: rows.slice(0, 25), catatan: rows.length > 25 ? "Hanya 25 baris pertama; tawarkan file Excel/PDF (buat_laporan jenis pok)." : "Realisasi per baris POK dihitung dari kegiatan ber-MAK sama dengan kode POK; realisasi_total = semua status." };
+      rincian: rows.slice(0, 25), catatan: rows.length > 25 ? "Hanya 25 baris pertama; tawarkan file Excel/PDF (buat_laporan jenis pok)." : "Realisasi per baris POK dihitung dari kegiatan ber-MAK sama dengan kode POK; realisasi_total = semua status; sisa_pagu = pagu - blokir - realisasi_total." };
   }
   if (name === "ringkasan_anggaran") {
-    const { pok, keg } = await loadAll(c);
+    const { pok, keg, blk } = await loadAll(c);
     const sdF = a.sd ? String(a.sd).toUpperCase() : "";
-    const mk = () => ({ pagu: 0, realisasi_total: 0, realisasi_terbayar_selesai: 0, sisa_pagu: 0, jumlah_kegiatan: 0 });
+    const mk = () => ({ pagu: 0, blokir: 0, realisasi_total: 0, realisasi_terbayar_selesai: 0, sisa_pagu: 0, jumlah_kegiatan: 0 });
     const tot = mk(), perSd: any = {}, perSeksi: any = {};
-    const add = (o: any, pagu: number, real: number, byr: number, n: number) => { o.pagu += pagu; o.realisasi_total += real; o.realisasi_terbayar_selesai += byr; o.jumlah_kegiatan += n; o.sisa_pagu = o.pagu - o.realisasi_total; };
+    const add = (o: any, pagu: number, real: number, byr: number, n: number, blokir = 0) => { o.pagu += pagu; o.blokir += blokir; o.realisasi_total += real; o.realisasi_terbayar_selesai += byr; o.jumlah_kegiatan += n; o.sisa_pagu = o.pagu - o.blokir - o.realisasi_total; };
     for (const p of pok) {
       if (!okAkun(akunOf(p.kode), a.akun) || !okSeksi(p.seksi || "", a.seksi) || (sdF && p.sd !== sdF)) continue;
       const g = Number(p.pagu) || 0;
-      add(tot, g, 0, 0, 0); add(perSd[p.sd || "tidak_diketahui"] ||= mk(), g, 0, 0, 0); add(perSeksi[p.seksi || "tidak_diketahui"] ||= mk(), g, 0, 0, 0);
+      const bl = blk[p.kode] || 0;
+      add(tot, g, 0, 0, 0, bl); add(perSd[p.sd || "tidak_diketahui"] ||= mk(), g, 0, 0, 0, bl); add(perSeksi[p.seksi || "tidak_diketahui"] ||= mk(), g, 0, 0, 0, bl);
     }
     for (const k of keg) {
       if (!okAkun(k._akun, a.akun) || !okSeksi(k._seksi, a.seksi) || (sdF && k._sd !== sdF)) continue;
@@ -249,7 +253,7 @@ async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
       add(tot, 0, j, b, 1); add(perSd[k._sd] ||= mk(), 0, j, b, 1); add(perSeksi[k._seksi] ||= mk(), 0, j, b, 1);
     }
     return { filter: { akun: a.akun || "semua", seksi: a.seksi || "semua", sd: sdF || "semua" }, total: tot, per_sumber_dana: perSd, per_seksi: perSeksi,
-      catatan: "realisasi_total = jumlah semua kegiatan terekam (semua status), seperti di Dashboard; realisasi_terbayar_selesai hanya status Terbayar/Selesai. Kegiatan dikaitkan ke seksi lewat kode MAK = kode POK." };
+      catatan: "sisa_pagu = pagu - blokir - realisasi_total. realisasi_total = jumlah semua kegiatan terekam (semua status), seperti di Dashboard; realisasi_terbayar_selesai hanya status Terbayar/Selesai. Kegiatan dikaitkan ke seksi lewat kode MAK = kode POK." };
   }
   if (name === "cek_sbm") {
     const th = Number(a.tahun) || c.tahun;
