@@ -214,12 +214,22 @@ async function kgCopyAngka(angka) {
     showToast('Jumlah ' + text + ' disalin');
 }
 
-// Penanda sumber dana di samping MAK: RM = biru, PNBP = merah muda
+// Penanda sumber dana di samping MAK: RM = biru, PNBP = merah muda.
+// Tulisan RM/PNBP dibuat lewat CSS (::after), BUKAN teks di DOM, supaya textContent sel MAK
+// tetap murni kode MAK (banyak fungsi membaca MAK dari tr.cells[0].textContent).
 function kgSdBadge(mak) {
     const sd = kgSdByMak[String(mak || '').trim()];
     if (!sd) return '';
-    const warna = sd === 'PNBP' ? 'background:#fce7f3;color:#be185d' : 'background:#dbeafe;color:#1d4ed8';
-    return ` <span style="${warna};border-radius:999px;padding:0 6px;font-size:10px;font-weight:700;vertical-align:middle">${sd}</span>`;
+    if (!document.getElementById('kg-sd-style')) {
+        const st = document.createElement('style');
+        st.id = 'kg-sd-style';
+        st.textContent = '.kg-sd-badge{margin-left:4px;border-radius:999px;padding:0 6px;font-size:10px;font-weight:700;vertical-align:middle}' +
+            '.kg-sd-badge::after{content:attr(data-sd)}' +
+            '.kg-sd-badge[data-sd="RM"]{background:#dbeafe;color:#1d4ed8}' +
+            '.kg-sd-badge[data-sd="PNBP"]{background:#fce7f3;color:#be185d}';
+        document.head.appendChild(st);
+    }
+    return `<span class="kg-sd-badge" data-sd="${sd}"></span>`;
 }
 
 function kgRenderTable(rows) {
@@ -1411,10 +1421,8 @@ function kgShowLPTPopup(tr) {
         const pelaksana = row.cells[2].textContent;
         const newRow = document.createElement('tr');
         newRow.className = 'border-t border-slate-100';
-        const barisData = kgAllRows.find(x => String(x.A) === String(id));
-        newRow.dataset.sd = (barisData && kgSdByMak[String(barisData.B || '').trim()]) || '';
         newRow.innerHTML = `
-            <td class="p-1.5">${id}</td><td class="p-1.5">${uraian}${newRow.dataset.sd ? kgSdBadge(barisData.B) : ''}</td><td class="p-1.5">${pelaksana}</td>
+            <td class="p-1.5">${id}</td><td class="p-1.5">${uraian}</td><td class="p-1.5">${pelaksana}</td>
             <td class="p-1.5 text-center"><button class="text-red-500"><i class="fa-solid fa-trash"></i></button></td>
         `;
         newRow.querySelector('button').onclick = () => newRow.remove();
@@ -1569,8 +1577,10 @@ function kgShowSP2DPopup(tr) {
         const jumlah = row.cells[6].textContent;
         const newRow = document.createElement('tr');
         newRow.className = 'border-t border-slate-100';
+        const barisData = kgAllRows.find(x => String(x.A) === String(id));
+        newRow.dataset.sd = (barisData && kgSdByMak[String(barisData.B || '').trim()]) || '';
         newRow.innerHTML = `
-            <td class="p-1.5">${id}</td><td class="p-1.5">${uraian}</td><td class="p-1.5">${nama}</td>
+            <td class="p-1.5">${id}</td><td class="p-1.5">${uraian}${newRow.dataset.sd ? kgSdBadge(barisData.B) : ''}</td><td class="p-1.5">${nama}</td>
             <td class="p-1.5">${tujuan}</td><td class="p-1.5 text-right">${jumlah}</td>
             <td class="p-1.5 text-center"><button class="text-red-500"><i class="fa-solid fa-trash"></i></button></td>
         `;
