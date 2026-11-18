@@ -601,7 +601,6 @@ function renderPok() {
                     <div class="w-full h-1.5 rounded-full overflow-hidden mt-1" style="background: var(--field-bg);">
                         <div class="h-full rounded-full" style="width:${persenRealisasi}%; background: ${barColor};"></div>
                     </div>
-                    <div class="text-[10px] mt-0.5" style="color: var(--label-secondary);">${persenRealisasi.toFixed(1)}%</div>
                 ` : ''}
             </td>
             <td class="p-2 text-right whitespace-nowrap align-top" style="${sisaStyle}">${sisa.toLocaleString('id-ID')}</td>
