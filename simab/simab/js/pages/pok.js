@@ -315,12 +315,34 @@ function buildKodeSalin(item) {
     ].join('.');
 }
 
-async function copyKodeAkun(idx) {
+// Tombol salin: tampilkan pilihan -- COA SAKTI (perilaku lama, tidak berubah) atau MAK SiMAB.
+function copyKodeAkun(idx) {
     const item = window.rawPokData[idx];
     if (!item) return;
 
-    const kode = buildKodeSalin(item);
-    await copyTextToClipboard(kode);
+    const kodeSakti = buildKodeSalin(item);
+    const makSimab = String(item.kode || '');
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    const { overlay, popup } = pokOpenOverlay(`
+        <h3 class="text-[16px] font-semibold" style="color: var(--label);"><i class="fa-solid fa-copy mr-2"></i>Salin Kode</h3>
+        <div class="text-xs" style="color: var(--label-secondary);">${esc(item.uraian || '')}</div>
+        <button type="button" id="pokSalinSakti" class="text-left rounded-xl p-3 transition" style="border: 1px solid var(--divider); background: var(--sidebar-bg);">
+            <div class="text-sm font-semibold" style="color: var(--label);">COA SAKTI</div>
+            <div class="font-mono text-[11px] break-all mt-0.5" style="color: var(--label-secondary);">${esc(kodeSakti)}</div>
+        </button>
+        <button type="button" id="pokSalinMak" class="text-left rounded-xl p-3 transition" style="border: 1px solid var(--divider); background: var(--sidebar-bg);">
+            <div class="text-sm font-semibold" style="color: var(--label);">MAK SiMAB</div>
+            <div class="font-mono text-[11px] break-all mt-0.5" style="color: var(--label-secondary);">${esc(makSimab)}</div>
+        </button>
+        <button type="button" id="pokSalinBatal" class="btn-ios-secondary px-4 py-2 text-sm self-end">Batal</button>
+    `, 'max-w-md');
+
+    const tutup = () => overlay.remove();
+    overlay.addEventListener('click', e => { if (e.target === overlay) tutup(); });
+    popup.querySelector('#pokSalinBatal').onclick = tutup;
+    popup.querySelector('#pokSalinSakti').onclick = async () => { tutup(); await copyTextToClipboard(kodeSakti); };
+    popup.querySelector('#pokSalinMak').onclick = async () => { tutup(); await copyTextToClipboard(makSimab); };
 }
 
 async function copyTextToClipboard(text) {
