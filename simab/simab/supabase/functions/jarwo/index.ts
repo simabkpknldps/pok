@@ -80,10 +80,10 @@ const TOOLS = [
     parameters: { type: "object", properties: { prompt: SEL }, required: ["prompt"] } },
   { name: "cari_kegiatan", description: "Cari/daftar kegiatan dengan filter bebas (semua opsional): kata (nama pelaksana/uraian/tujuan), akun (awalan kode akun mis. 524111, 5241, 52), seksi (nama seksi pemilik POK mis. Umum), status, sd (RM/PNBP), dari & sampai (tanggal mulai YYYY-MM-DD). Mengembalikan maks 25 baris + total jumlah & banyaknya.",
     parameters: { type: "object", properties: { kata: SEL, akun: SEL, seksi: SEL, status: SEL, sd: SEL, dari: SEL, sampai: SEL } } },
-  { name: "buat_laporan", description: "Menyiapkan tabel yang bisa diunduh pengguna sebagai Excel/PDF (tombol muncul otomatis di chat). Pakai bila pengguna minta file/Excel/PDF/rekap/laporan/unduh. jenis: 'pok' = rincian per baris POK (pagu, realisasi, sisa), 'kegiatan' = daftar kegiatan, 'pelaksana' = peringkat pelaksana. Filter opsional sama seperti tool lain: kata, akun, seksi, sd, status, dari, sampai. judul = judul laporan.",
-    parameters: { type: "object", properties: { jenis: SEL, judul: SEL, kata: SEL, akun: SEL, seksi: SEL, sd: SEL, status: SEL, dari: SEL, sampai: SEL }, required: ["jenis"] } },
-  { name: "ringkasan_anggaran", description: "Pagu vs realisasi vs sisa. Filter opsional: kata (kata kunci uraian/kode POK, mis. 'printer', 'pemeliharaan', 'ATK' -> menyertakan rincian per baris POK dengan sisa masing-masing), akun (awalan kode akun, mis. 524111 untuk perjadin biasa, 524113 perjadin paket meeting, 5241 semua perjadin, 52 belanja barang, 53 modal), seksi, sd (RM/PNBP). Selalu menyertakan rincian per sumber dana dan per seksi.",
-    parameters: { type: "object", properties: { kata: SEL, akun: SEL, seksi: SEL, sd: SEL } } },
+  { name: "buat_laporan", description: "Menyiapkan tabel yang bisa diunduh pengguna sebagai Excel/PDF (tombol muncul otomatis di chat). Pakai bila pengguna minta file/Excel/PDF/rekap/laporan/unduh. jenis: 'pok' = rincian per baris POK (pagu, realisasi, sisa), 'kegiatan' = daftar kegiatan, 'pelaksana' = peringkat pelaksana. Filter opsional sama seperti tool lain: kata, akun, seksi, sd, status, dari, sampai. judul = judul laporan. Untuk laporan peringkat (mis. '10 MAK dengan sisa terbanyak') isi urut ('sisa'|'pagu'|'realisasi'|'blokir') dan limit (N); tanpa itu semua baris dimuat urut kode.",
+    parameters: { type: "object", properties: { jenis: SEL, judul: SEL, kata: SEL, akun: SEL, seksi: SEL, sd: SEL, status: SEL, dari: SEL, sampai: SEL, urut: SEL, limit: { type: "number" } }, required: ["jenis"] } },
+  { name: "ringkasan_anggaran", description: "Pagu vs realisasi vs sisa. Untuk peringkat/'N MAK dengan sisa terbanyak/terkecil' isi urut ('sisa'|'pagu'|'realisasi'|'blokir') dan limit (N); hasil berupa rincian per baris POK yang SUDAH terurut dari terbesar (tambah arah='naik' untuk terkecil) — jawab langsung di chat dengan daftar tersebut. Filter opsional: kata (kata kunci uraian/kode POK, mis. 'printer', 'pemeliharaan', 'ATK' -> menyertakan rincian per baris POK dengan sisa masing-masing), akun (awalan kode akun, mis. 524111 untuk perjadin biasa, 524113 perjadin paket meeting, 5241 semua perjadin, 52 belanja barang, 53 modal), seksi, sd (RM/PNBP). Selalu menyertakan rincian per sumber dana dan per seksi.",
+    parameters: { type: "object", properties: { kata: SEL, akun: SEL, seksi: SEL, sd: SEL, urut: SEL, arah: SEL, limit: { type: "number" } } } },
   { name: "peringkat_pelaksana", description: "Peringkat pegawai/pelaksana berdasarkan jumlah kegiatan dan total rupiah (mis. perjadin terbanyak). Filter opsional: akun, seksi, sd, dari, sampai.",
     parameters: { type: "object", properties: { akun: SEL, seksi: SEL, sd: SEL, dari: SEL, sampai: SEL } } },
   { name: "cek_sbm", description: "Cari Standar Biaya Masukan (SBM) dari PMK per tahun: uang harian perjalanan dinas, penginapan, tiket pesawat, transport, honorarium, konsumsi, uang makan, sewa kendaraan, dll. kata = kata kunci uraian/wilayah (mis. 'Bali', 'Denpasar', 'penginapan', 'Surabaya'); topik = kata kunci judul satuan biaya (mis. 'uang harian', 'penginapan', 'tiket pesawat'); tahun default tahun anggaran aktif. Hasil menyertakan judul tabel dan header kolom; urutan angka 'nilai' mengikuti header.",
@@ -133,7 +133,12 @@ async function rincianPok(c: Ctx, a: any) {
     (!kata || nrm(`${p.kode} ${p.uraian}`).includes(kata)) && (Number(p.pagu) || 0) > 0)
     .map((p: any) => { const r = real[p.kode] || { total: 0, byr: 0, n: 0 }; const pagu = Number(p.pagu) || 0; const blokir = blk[p.kode] || 0;
       return { kode: p.kode, uraian: p.uraian, seksi: p.seksi || "", sd: p.sd || "", pagu, blokir, realisasi_total: r.total, realisasi_terbayar_selesai: r.byr, sisa_pagu: pagu - blokir - r.total, jumlah_kegiatan: r.n }; });
-  rows.sort((x: any, y: any) => String(x.kode).localeCompare(String(y.kode)));
+  const kolom: Record<string, string> = { sisa: "sisa_pagu", pagu: "pagu", realisasi: "realisasi_total", blokir: "blokir" };
+  const uk = kolom[String(a.urut || "").toLowerCase()];
+  if (uk) { const dir = String(a.arah || "").toLowerCase() === "naik" ? 1 : -1; rows.sort((x: any, y: any) => dir * (x[uk] - y[uk]) || String(x.kode).localeCompare(String(y.kode))); }
+  else rows.sort((x: any, y: any) => String(x.kode).localeCompare(String(y.kode)));
+  const lim = Math.floor(Number(a.limit) || 0);
+  if (lim > 0) rows.splice(lim);
   const tot = rows.reduce((t: any, r: any) => ({ pagu: t.pagu + r.pagu, blokir: t.blokir + r.blokir, realisasi_total: t.realisasi_total + r.realisasi_total, realisasi_terbayar_selesai: t.realisasi_terbayar_selesai + r.realisasi_terbayar_selesai, sisa_pagu: t.sisa_pagu + r.sisa_pagu }), { pagu: 0, blokir: 0, realisasi_total: 0, realisasi_terbayar_selesai: 0, sisa_pagu: 0 });
   return { rows, tot };
 }
@@ -230,9 +235,9 @@ async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
     rows.sort((x: any, y: any) => String(y.tgl_mulai || "").localeCompare(String(x.tgl_mulai || "")));
     return { jumlah_kegiatan: rows.length, total_rp: total, contoh: rows.slice(0, 25).map((k: any) => ({ mak: k.mak, uraian: k.uraian, pelaksana: k.pelaksana, tujuan: k.tujuan, mulai: k.tgl_mulai, jumlah: k.jumlah, status: k.status, sd: k._sd, seksi: k._seksi })) };
   }
-  if (name === "ringkasan_anggaran" && a.kata) {
+  if (name === "ringkasan_anggaran" && (a.kata || a.urut || a.limit)) {
     const { rows, tot } = await rincianPok(c, a);
-    return { filter: { kata: a.kata, akun: a.akun || "semua", seksi: a.seksi || "semua", sd: a.sd || "semua" }, jumlah_baris_pok: rows.length, total: tot,
+    return { filter: { kata: a.kata || "", urut: a.urut || "", limit: a.limit || "", akun: a.akun || "semua", seksi: a.seksi || "semua", sd: a.sd || "semua" }, jumlah_baris_pok: rows.length, total: tot,
       rincian: rows.slice(0, 25), catatan: rows.length > 25 ? "Hanya 25 baris pertama; tawarkan file Excel/PDF (buat_laporan jenis pok)." : "Realisasi per baris POK dihitung dari kegiatan ber-MAK sama dengan kode POK; realisasi_total = semua status; sisa_pagu = pagu - blokir - realisasi_total." };
   }
   if (name === "ringkasan_anggaran") {
