@@ -1411,8 +1411,10 @@ function kgShowLPTPopup(tr) {
         const pelaksana = row.cells[2].textContent;
         const newRow = document.createElement('tr');
         newRow.className = 'border-t border-slate-100';
+        const barisData = kgAllRows.find(x => String(x.A) === String(id));
+        newRow.dataset.sd = (barisData && kgSdByMak[String(barisData.B || '').trim()]) || '';
         newRow.innerHTML = `
-            <td class="p-1.5">${id}</td><td class="p-1.5">${uraian}</td><td class="p-1.5">${pelaksana}</td>
+            <td class="p-1.5">${id}</td><td class="p-1.5">${uraian}${newRow.dataset.sd ? kgSdBadge(barisData.B) : ''}</td><td class="p-1.5">${pelaksana}</td>
             <td class="p-1.5 text-center"><button class="text-red-500"><i class="fa-solid fa-trash"></i></button></td>
         `;
         newRow.querySelector('button').onclick = () => newRow.remove();
@@ -1536,6 +1538,9 @@ function kgShowSP2DPopup(tr) {
         <input id="kg-spmNomor" type="text" placeholder="0000" maxlength="4" class="${kgInputClass}">
         <label class="${kgLabelClass}">Tanggal SP2D</label>
         <input id="kg-tglSP2D" type="date" class="${kgInputClass}">
+        <label class="${kgLabelClass}">Sumber dana (hanya baris yang tampil yang disimpan)</label>
+        <div id="kg-sp2dSd" class="flex gap-2"></div>
+        <div id="kg-sp2dSdInfo" class="text-xs text-slate-500"></div>
         <label class="${kgLabelClass}">Cari di tabel</label>
         <input id="kg-sp2dSearch" type="text" placeholder="Cari..." class="${kgInputClass}">
         <div class="border border-slate-200 rounded-lg max-h-72 overflow-y-auto">
@@ -1573,12 +1578,28 @@ function kgShowSP2DPopup(tr) {
         tbody.appendChild(newRow);
     });
 
+    // Filter sumber dana (RM / PNBP): baris yang tidak cocok disembunyikan DAN tidak ikut disimpan,
+    // supaya satu SPM/SP2D hanya berisi satu sumber dana.
+    let sp2dSd = 'ALL';
+    const terapkanSd = () => {
+        let tampil = 0;
+        tbody.querySelectorAll('tr').forEach(r => {
+            const sembunyi = sp2dSd !== 'ALL' && r.dataset.sd !== sp2dSd;
+            r.dataset.sdHide = sembunyi ? '1' : '';
+            r.style.display = sembunyi ? 'none' : '';
+            if (!sembunyi) tampil++;
+        });
+        popup.querySelector('#kg-sp2dSdInfo').textContent = `${tampil} baris akan disimpan`;
+    };
+    commonRenderSumberToggle(popup.querySelector('#kg-sp2dSd'), 'ALL', v => { sp2dSd = v; terapkanSd(); });
+    terapkanSd();
+
     popup.querySelector('#kg-sp2dCancel').onclick = () => overlay.remove();
     popup.querySelector('#kg-sp2dSearch').addEventListener('input', function () {
         const val = this.value.toLowerCase();
         tbody.querySelectorAll('tr').forEach(tr2 => {
             const match = Array.from(tr2.cells).some(td => td.textContent.toLowerCase().includes(val));
-            tr2.style.display = match ? '' : 'none';
+            tr2.style.display = (match && tr2.dataset.sdHide !== '1') ? '' : 'none';
         });
     });
     popup.querySelector('#kg-spmNomor').addEventListener('blur', function () {
@@ -1591,8 +1612,9 @@ function kgShowSP2DPopup(tr) {
         const tglSP2D = popup.querySelector('#kg-tglSP2D').value;
         if (!nomorSPM || !tglSP2D) { alert('Nomor SPM dan Tanggal SP2D harus diisi!'); return; }
 
-        const rows = popup.querySelectorAll('#kg-sp2dTableBody tr');
-        const ids = Array.from(rows).map(r => r.cells[0].textContent);
+        const rows = Array.from(popup.querySelectorAll('#kg-sp2dTableBody tr')).filter(r => r.dataset.sdHide !== '1');
+        const ids = rows.map(r => r.cells[0].textContent);
+        if (!ids.length) { alert('Tidak ada baris untuk disimpan pada filter ini.'); return; }
 
         const btn = this;
         btn.disabled = true;
