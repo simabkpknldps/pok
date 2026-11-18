@@ -199,7 +199,13 @@ async function pkiMuatDb() {
     PKI.dbRows = pok;
     PKI.pakai = {};
     keg.forEach(k => { const m = String(k.mak || '').trim(); if (m) PKI.pakai[m] = (PKI.pakai[m] || 0) + 1; });
-    PKI.seksiList = Array.from(new Set(pok.map(r => r.seksi).filter(Boolean).concat(['Umum']))).sort();
+    // Daftar seksi: gabungan seksi baku + seksi yang pernah dipakai di tahun MANAPUN untuk kantor ini
+    // (supaya tahun anggaran baru yang POK-nya masih kosong tetap punya pilihan lengkap).
+    let lain = [];
+    try { lain = await sbFetchAll('pok', 'kode,seksi,tahun', { kantor_id: kantor }); } catch (e) { console.warn('Gagal ambil seksi tahun lain:', e); }
+    PKI.refSeksi = lain.filter(r => r.seksi && Number(r.tahun) !== Number(tahun));
+    const baku = ['PN', 'HI', 'KI', 'Lelang', 'Penilaian', 'PKN', 'Umum'];
+    PKI.seksiList = Array.from(new Set(baku.concat(pok.map(r => r.seksi), lain.map(r => r.seksi)).filter(Boolean))).sort();
     PKI.kppn = (pok.find(r => r.kppn) || {}).kppn || null;
 }
 
@@ -283,10 +289,13 @@ function pkiSeksiSelect(cls, key, pilih) {
 }
 
 function pkiSeksiDefault(key) {
-    for (const n of [5, 3]) {
-        const p = pkiSeg(key).slice(0, n).join('.');
-        const r = PKI.dbRows.find(x => String(x.kode).startsWith(p + '.') || x.kode === p);
-        if (r && r.seksi) return r.seksi;
+    // Cari seksi dari POK tahun aktif dulu, lalu dari tahun lain (kode sama = seksi biasanya sama)
+    for (const sumber of [PKI.dbRows, PKI.refSeksi || []]) {
+        for (const n of [5, 3]) {
+            const p = pkiSeg(key).slice(0, n).join('.');
+            const r = sumber.find(x => (String(x.kode).startsWith(p + '.') || x.kode === p) && x.seksi);
+            if (r) return r.seksi;
+        }
     }
     return 'Umum';
 }
