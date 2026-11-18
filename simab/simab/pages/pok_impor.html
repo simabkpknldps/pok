@@ -1,0 +1,28 @@
+<div id="pki-root">
+  <div class="ios-panel p-5 mb-4">
+    <div class="text-[15px] font-semibold mb-1"><i class="fa-solid fa-file-import mr-2" style="color:var(--ios-blue)"></i>Impor POK dari Kertas Kerja SatuDJA</div>
+    <div class="text-sm mb-3" style="color:var(--label-secondary)">
+      Pilih file Kertas Kerja (.xls, level Detail). File dibandingkan dengan POK di database per akun.
+      Tidak ada yang tersimpan sebelum Anda mencentang perubahan dan menekan <b>Terapkan</b>.
+    </div>
+    <input type="file" id="pki-file" accept=".xls,.html,.htm" class="ios-field">
+    <div id="pki-status" class="text-sm mt-2"></div>
+  </div>
+
+  <div id="pki-hasil" class="hidden">
+    <div class="ios-panel p-5 mb-4">
+      <div id="pki-ringkas" class="text-sm"></div>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <button data-pki-filter="perlu" class="btn-ios px-3 py-1.5 text-sm">Perlu ditinjau</button>
+        <button data-pki-filter="sama" class="btn-ios px-3 py-1.5 text-sm">Sama</button>
+        <button data-pki-filter="semua" class="btn-ios px-3 py-1.5 text-sm">Semua</button>
+        <button id="pki-btnBaruSemua" class="btn-ios px-3 py-1.5 text-sm">Centang semua akun baru</button>
+      </div>
+    </div>
+    <div id="pki-daftar"></div>
+    <div class="ios-panel p-4 sticky bottom-2 flex flex-wrap items-center gap-3" style="box-shadow:0 8px 24px rgba(0,0,0,.15)">
+      <div id="pki-ops" class="text-sm flex-1"></div>
+      <button id="pki-btnTerapkan" class="btn-ios px-4 py-2 text-sm font-semibold" style="background:var(--ios-blue);color:#fff" disabled>Terapkan perubahan terpilih</button>
+    </div>
+  </div>
+</div>
