@@ -9,12 +9,9 @@
  * sama (nilai unik kolom tujuan).
  *
  * Daftar Pegawai (dipakai popup Tambah Usulan/Ubah, butuh NIP + rekening
- * bank) TETAP lewat GAS (action getAllPegawaiData) — tabel 'pegawai' di
- * Supabase sengaja dikunci RLS-nya cuma boleh baca/tulis punya sendiri (ada
- * data rekening di situ), jadi tidak bisa dibaca/ditulis client utk pegawai
- * lain. Sinkronisasi data bank pegawai baru ke ref_pegawai (Sheet) JUGA
- * tetap lewat GAS untuk alasan yang sama (client tidak bisa menulis baris
- * pegawai lain di Supabase).
+ * bank) dibaca dari tabel 'pegawai' Supabase. Pegawai baru (NIP belum ada)
+ * dicatat lewat fungsi database fn_sync_pegawai_bank (supabase-sync-pegawai.sql),
+ * karena RLS tidak mengizinkan user biasa menulis baris pegawai lain.
  *
  * Kolom yang ditampilkan: B(MAK) C(Uraian) D(Pelaksana) E(Tujuan)
  * F(Tgl ST/ND) G(Tgl Mulai) H(Tgl Selesai) I(Tgl LPT) J(Tgl Bayar)
@@ -24,6 +21,18 @@
  * Di atas tabel: search bar + tombol "Tambah Usulan".
  * -----------------------------------------------------------------------
  */
+
+// Catat pegawai baru (NIP belum ada) beserta bank/rekening langsung ke tabel 'pegawai' Supabase.
+// Lewat fungsi database fn_sync_pegawai_bank (supabase-sync-pegawai.sql) karena RLS tidak
+// mengizinkan user biasa menulis baris pegawai lain. Data pegawai yang sudah ada tidak ditimpa.
+async function syncPegawaiBankSupabase(pelaksanaData) {
+    await waitSupabaseAuthReady();
+    const { data, error } = await sb.rpc('fn_sync_pegawai_bank', {
+        p: pelaksanaData.map(x => ({ nip: x.nip, nama: x.nama, status: x.status, namaBank: x.namaBank, norek: x.norek }))
+    });
+    if (error) throw new Error(error.message);
+    return { status: 'success', refPegawaiErrors: Array.isArray(data) ? data : [] };
+}
 
 let pbAllRows = [];
 let pbPegawaiList = [];
@@ -565,7 +574,7 @@ function pbOpenTambahUsulanModal() {
             //    sendiri (client tidak berhak nulis data bank pegawai LAIN).
             let refPegawaiErrors = [];
             try {
-                const syncResult = await apiPost({ action: 'syncPegawaiBank', pelaksanaData });
+                const syncResult = await syncPegawaiBankSupabase(pelaksanaData);
                 if (syncResult.status === 'success' && Array.isArray(syncResult.refPegawaiErrors)) {
                     refPegawaiErrors = syncResult.refPegawaiErrors;
                 }
@@ -575,7 +584,7 @@ function pbOpenTambahUsulanModal() {
 
             showToast('Usulan perbantuan berhasil ditambahkan');
             if (refPegawaiErrors.length > 0) {
-                alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disinkronkan ke ref_pegawai:\n\n' + refPegawaiErrors.join('\n'));
+                alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disimpan ke data pegawai:\n\n' + refPegawaiErrors.join('\n'));
             }
             overlay.remove();
             initPerbantuanPage();
@@ -821,7 +830,7 @@ function pbOpenEditModal(row) {
             // 3. Sinkron data bank pegawai tetap lewat GAS (lihat catatan di Tambah Usulan)
             let refPegawaiErrors = [];
             try {
-                const syncResult = await apiPost({ action: 'syncPegawaiBank', pelaksanaData });
+                const syncResult = await syncPegawaiBankSupabase(pelaksanaData);
                 if (syncResult.status === 'success' && Array.isArray(syncResult.refPegawaiErrors)) {
                     refPegawaiErrors = syncResult.refPegawaiErrors;
                 }
@@ -831,7 +840,7 @@ function pbOpenEditModal(row) {
 
             showToast('Data perbantuan berhasil diubah');
             if (refPegawaiErrors.length > 0) {
-                alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disinkronkan ke ref_pegawai:\n\n' + refPegawaiErrors.join('\n'));
+                alert('Perhatian: data kegiatan berhasil disimpan, tapi data pegawai berikut GAGAL disimpan ke data pegawai:\n\n' + refPegawaiErrors.join('\n'));
             }
             overlay.remove();
             initPerbantuanPage();

@@ -620,7 +620,17 @@ function kgShowPegawaiDetilPopup(nama) {
 
     (async () => {
         try {
-            const result = await apiPost({ action: 'getPegawaiDetailByNama', nama });
+            await waitSupabaseAuthReady();
+            const namaCari = String(nama || '').replace(/\s+/g, ' ').trim();
+            const { data: rows, error: pgErr } = await sb.from('pegawai')
+                .select('id,nama,jabatan,pangkat,kepeg,nama_bank,no_rekening')
+                .ilike('nama', '%' + namaCari.replace(/[%_,()]/g, ' ').trim() + '%').limit(10);
+            if (pgErr) throw new Error(pgErr.message);
+            const norm = x => String(x || '').toUpperCase().replace(/\s+/g, ' ').trim();
+            const row = (rows || []).find(r => norm(r.nama) === norm(namaCari)) || (rows || [])[0];
+            const result = row
+                ? { status: 'success', nama: row.nama, nip: row.id, jabatan: row.jabatan, pangkat: row.pangkat, kepeg: row.kepeg, namaBank: row.nama_bank, norek: row.no_rekening }
+                : { status: 'error', message: `Pegawai "${namaCari}" tidak ditemukan di data pegawai (Referensi › Pegawai), atau akun Anda tidak berhak melihatnya.` };
             if (result.status === 'success') {
                 const statusLabel = String(result.kepeg) === '0' ? 'PPNPN' : 'PNS';
 
@@ -2066,16 +2076,13 @@ async function kgOpenNominatifPopup() {
     let bpNama = 'ACHMAD CHABIB NURSALIM', bpNip = '199101162013101002';
 
     try {
-        const sheetId = '10JQ3ysZai7yNXHMWw81UeztwbxSPwsCMiykJj2w5AHE';
-        const refUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=ref&range=T3:W3`;
-        const response = await fetch(refUrl);
-        const text = await response.text();
-        const dataJson = JSON.parse(text.substr(47).slice(0, -2));
-        const rowCells = dataJson.table.rows[0].c;
-        if (rowCells[0] && rowCells[0].v) ppkNama = rowCells[0].v;
-        if (rowCells[1] && rowCells[1].v) ppkNip = String(rowCells[1].v);
-        if (rowCells[2] && rowCells[2].v) bpNama = rowCells[2].v;
-        if (rowCells[3] && rowCells[3].v) bpNip = String(rowCells[3].v);
+        await waitSupabaseAuthReady();
+        const { data: pj, error: pjErr } = await sb.from('pejabat').select('*').eq('id', 'main').maybeSingle();
+        if (pjErr) throw new Error(pjErr.message);
+        if (pj?.ppk_nama) ppkNama = pj.ppk_nama;
+        if (pj?.ppk_nip) ppkNip = String(pj.ppk_nip);
+        if (pj?.bendahara_nama) bpNama = pj.bendahara_nama;
+        if (pj?.bendahara_nip) bpNip = String(pj.bendahara_nip);
     } catch (err) {
         console.warn('Gagal mengambil data penandatangan, pakai default.', err);
     }
