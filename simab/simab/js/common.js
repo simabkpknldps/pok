@@ -953,3 +953,31 @@ window.commonOpenOverlay = commonOpenOverlay;
 window.toggleNotifikasiDropdown = toggleNotifikasiDropdown;
 window.refreshNotifikasi = refreshNotifikasi;
 window.showNotifRekeningDetail = showNotifRekeningDetail;
+
+
+// ==========================================
+// Filter sumber dana RM / PNBP (toggle) — dipakai halaman POK & popup Pilih MAK.
+// Baris yang sd-nya cocok dipertahankan BESERTA induk-induknya (agar pohon tetap utuh).
+// ==========================================
+function commonFilterSumber(items, sd, kodeOf, sdOf) {
+    if (!sd || sd === 'ALL') return items;
+    const cocok = items.filter(i => String(sdOf(i) || '').toUpperCase() === sd);
+    const kodeCocok = cocok.map(i => String(kodeOf(i)));
+    return items.filter(i => {
+        const k = String(kodeOf(i));
+        return String(sdOf(i) || '').toUpperCase() === sd || kodeCocok.some(m => m.startsWith(k + '.'));
+    });
+}
+window.commonFilterSumber = commonFilterSumber;
+
+// Isi wadah dengan 3 tombol toggle: Semua | RM | PNBP. onChange(nilai) dipanggil saat berganti.
+function commonRenderSumberToggle(wadah, nilaiAwal, onChange) {
+    const opsi = [['ALL', 'Semua'], ['RM', 'RM'], ['PNBP', 'PNBP']];
+    const gambar = nilai => {
+        wadah.innerHTML = opsi.map(([v, t]) => `<button type="button" data-sd="${v}" class="px-3 py-1.5 text-sm font-medium rounded-lg transition"
+            style="${v === nilai ? 'background: var(--ios-blue, #0071e3); color: #fff;' : 'background: rgba(118,118,128,0.12); color: var(--label, #1d1d1f);'}">${t}</button>`).join('');
+        wadah.querySelectorAll('button').forEach(b => { b.onclick = () => { gambar(b.dataset.sd); onChange(b.dataset.sd); }; });
+    };
+    gambar(nilaiAwal || 'ALL');
+}
+window.commonRenderSumberToggle = commonRenderSumberToggle;

@@ -960,6 +960,7 @@ async function kgOpenPilihMakPopup(onPilih) {
         </div>
         <input type="text" id="kg-mak-search" placeholder="Cari kode / uraian..."
             class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+        <div id="kg-mak-sd" class="flex gap-2"></div>
         <div class="border border-slate-200 rounded-xl max-h-[65vh] overflow-y-auto">
             <table class="w-full text-sm">
                 <tbody id="kg-mak-tbody">
@@ -971,6 +972,8 @@ async function kgOpenPilihMakPopup(onPilih) {
 
     popup.querySelector('#kg-mak-closeBtn').onclick = () => overlay.remove();
     popup.querySelector('#kg-mak-search').oninput = () => kgRenderMakTable(overlay);
+    window.kgMakSdFilter = 'ALL';
+    commonRenderSumberToggle(popup.querySelector('#kg-mak-sd'), 'ALL', v => { window.kgMakSdFilter = v; kgRenderMakTable(overlay); });
 
     try {
         await waitSupabaseAuthReady();
@@ -1042,7 +1045,8 @@ function kgRenderMakTable(overlay) {
     kgMakPokData.forEach(item => uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item));
     // Baris <3 segmen (cuma Kegiatan, atau Kegiatan+KRO) TIDAK ditampilkan --
     // sama pola dgn pok.js/dokumen-scan.html.
-    const uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
+    let uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
+    uniqueData = commonFilterSumber(uniqueData, window.kgMakSdFilter, i => i.kode, i => i.sumber);
 
     const keyword = (document.getElementById('kg-mak-search')?.value || '').toLowerCase().trim();
 
