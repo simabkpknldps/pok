@@ -13,6 +13,8 @@
 
 
 let kgCurrentTableRowsData = [];
+let kgSdByMak = {};      // kode MAK -> 'RM' / 'PNBP' (dari tabel pok)
+let kgSdFilter = 'ALL';  // filter sumber dana: ALL / RM / PNBP
 let kgAllRows = [];       // SEMUA data dari Firestore (dimuat sekali per masuk halaman/Refresh)
 let kgPegawaiList = [];
 let kgLokasiList = [];
@@ -33,6 +35,7 @@ async function initKegiatanPage() {
     // reset state setiap masuk halaman
     kgCurrentTableRowsData = [];
     kgAllRows = [];
+    kgSdFilter = 'ALL';
     kgFirstLoad = true;
     kgQuery = { statusFilter: 'Dalam Proses', search: '', spm: '' };
 
@@ -95,6 +98,13 @@ function bindKegiatanEvents() {
         document.querySelector('input[name="kg-statusFilter"][value="Semua"]').checked = true;
         kgApplyFilterAndRender();
     };
+
+    document.querySelectorAll('input[name="kg-sdFilter"]').forEach(rb => {
+        rb.addEventListener('change', function () {
+            kgSdFilter = this.value;
+            kgApplyFilterAndRender();
+        });
+    });
 
     document.querySelectorAll('input[name="kg-statusFilter"]').forEach(rb => {
         rb.addEventListener('change', function () {
@@ -204,6 +214,14 @@ async function kgCopyAngka(angka) {
     showToast('Jumlah ' + text + ' disalin');
 }
 
+// Penanda sumber dana di samping MAK: RM = biru, PNBP = merah muda
+function kgSdBadge(mak) {
+    const sd = kgSdByMak[String(mak || '').trim()];
+    if (!sd) return '';
+    const warna = sd === 'PNBP' ? 'background:#fce7f3;color:#be185d' : 'background:#dbeafe;color:#1d4ed8';
+    return ` <span style="${warna};border-radius:999px;padding:0 6px;font-size:10px;font-weight:700;vertical-align:middle">${sd}</span>`;
+}
+
 function kgRenderTable(rows) {
     kgCurrentTableRowsData = rows;
     const tbody = document.getElementById('kg-dataTableBody');
@@ -223,7 +241,7 @@ function kgRenderTable(rows) {
         tr.dataset.id = r.A;
 
         tr.innerHTML = `
-            <td class="p-2.5 align-top">${r.B ?? ''}</td>
+            <td class="p-2.5 align-top">${r.B ?? ''}${kgSdBadge(r.B)}</td>
             <td class="p-2.5 align-top">${r.C ?? ''}</td>
             <td class="p-2.5 align-top">${r.D ? `<button type="button" class="kg-pelaksana-link text-sky-700 hover:text-sky-900 underline decoration-dotted underline-offset-2 text-left" data-nama="${String(r.D).replace(/"/g, '&quot;')}">${r.D}</button>` : ''}</td>
             <td class="p-2.5 align-top">${r.E ?? ''}</td>
@@ -298,7 +316,12 @@ async function kgLoadData(forceRefresh) {
         // Halaman Kegiatan SELALU dibatasi tahun aktif; kantor_id juga dibatasi
         // KECUALI superadmin (lihat semua kantor sekaligus, buat monitoring).
         const filters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
-        const rows = await sbFetchAll('kegiatan', '*', filters);
+        const [rows, pokSd] = await Promise.all([
+            sbFetchAll('kegiatan', '*', filters),
+            sbFetchAll('pok', 'kode,sd', filters).catch(() => [])
+        ]);
+        kgSdByMak = {};
+        pokSd.forEach(p => { const k = String(p.kode || '').trim(); const v = String(p.sd || '').toUpperCase(); if (k && v) kgSdByMak[k] = v; });
 
         kgAllRows = rows.map(d => ({
             A: d.id,
@@ -363,6 +386,8 @@ function kgApplyFilterAndRender() {
             rows = rows.filter(r => cols.some(k => String(r[k] || '').toLowerCase().includes(search)));
         }
     }
+
+    if (kgSdFilter !== 'ALL') rows = rows.filter(r => kgSdByMak[String(r.B || '').trim()] === kgSdFilter);
 
     kgCurrentTableRowsData = rows;
     kgRenderTable(rows);
