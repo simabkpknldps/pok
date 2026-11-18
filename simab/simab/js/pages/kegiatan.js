@@ -104,8 +104,6 @@ function bindKegiatanEvents() {
         });
     });
 
-    kgSetupPnbpToggle();
-
     document.getElementById('kg-dataTableBody').addEventListener('click', function (e) {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -147,58 +145,6 @@ function bindKegiatanEvents() {
         else if (btn.classList.contains('kg-btn-sp2d')) {
             if (isPrivileged) kgShowSP2DPopup(tr); else alert('Anda tidak memiliki kewenangan!');
         }
-    });
-}
-
-// Toggle Sumber Dana (PNBP / RM) di baris filter status. Dibuat lewat JS supaya
-// otomatis muncul di halaman Kegiatan DAN popup Pencarian Kegiatan
-// (dashboard-search.js) tanpa mengubah HTML keduanya.
-// Semua off = semua sumber dana; PNBP on = hanya PNBP; RM on = hanya RM;
-// keduanya on = PNBP + RM (yang SD-nya belum diketahui tidak ikut).
-const KG_SD_TOGGLES = [
-    { sd: 'PNBP', warna: '#D6005C', teks: '#B8004E' },
-    { sd: 'RM', warna: '#0071E3', teks: '#0059B3' }
-];
-
-function kgSetupPnbpToggle() {
-    const radio = document.querySelector('input[name="kg-statusFilter"]');
-    const bar = radio ? radio.closest('div') : null;
-    if (!bar) return;
-    if (!Array.isArray(kgQuery.sdFilter)) kgQuery.sdFilter = [];
-
-    let grup = document.getElementById('kg-sdToggleWrap');
-    if (!grup) {
-        grup = document.createElement('div');
-        grup.id = 'kg-sdToggleWrap';
-        grup.className = 'flex items-center gap-4 ml-2 pl-4 border-l border-slate-300';
-        grup.innerHTML = KG_SD_TOGGLES.map(t => `
-            <label class="flex items-center gap-2 cursor-pointer select-none" title="Aktif: hanya tampilkan kegiatan dengan sumber dana ${t.sd}">
-                <button type="button" data-sd="${t.sd}" class="kg-sdToggle" role="switch" aria-checked="false"
-                    style="position: relative; width: 40px; height: 24px; border: 0; padding: 0; border-radius: 999px; background-color: #C7C7CC; transition: background-color .2s ease; cursor: pointer;">
-                    <span style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform .2s ease;"></span>
-                </button>
-                <span class="font-medium">${t.sd}</span>
-            </label>`).join('');
-        bar.appendChild(grup);
-    }
-
-    grup.querySelectorAll('.kg-sdToggle').forEach(btn => {
-        const t = KG_SD_TOGGLES.find(x => x.sd === btn.dataset.sd);
-        const paint = () => {
-            const on = kgQuery.sdFilter.includes(t.sd);
-            btn.setAttribute('aria-checked', on ? 'true' : 'false');
-            btn.style.backgroundColor = on ? t.warna : '#C7C7CC';
-            btn.firstElementChild.style.transform = on ? 'translateX(16px)' : 'translateX(0)';
-            btn.nextElementSibling.style.color = on ? t.teks : '';
-        };
-        paint();
-        btn.onclick = (e) => {
-            e.preventDefault();
-            const f = kgQuery.sdFilter;
-            kgQuery.sdFilter = f.includes(t.sd) ? f.filter(x => x !== t.sd) : [...f, t.sd];
-            paint();
-            kgApplyFilterAndRender();
-        };
     });
 }
 
@@ -277,7 +223,7 @@ function kgRenderTable(rows) {
         tr.dataset.id = r.A;
 
         tr.innerHTML = `
-            <td class="p-2.5 align-top ${r.SD === 'PNBP' ? 'text-pink-700 font-semibold' : ''}" title="${r.SD ? 'Sumber dana: ' + r.SD : ''}">${r.B ?? ''}</td>
+            <td class="p-2.5 align-top">${r.B ?? ''}</td>
             <td class="p-2.5 align-top">${r.C ?? ''}</td>
             <td class="p-2.5 align-top">${r.D ? `<button type="button" class="kg-pelaksana-link text-sky-700 hover:text-sky-900 underline decoration-dotted underline-offset-2 text-left" data-nama="${String(r.D).replace(/"/g, '&quot;')}">${r.D}</button>` : ''}</td>
             <td class="p-2.5 align-top">${r.E ?? ''}</td>
@@ -362,8 +308,7 @@ async function kgLoadData(forceRefresh) {
             M: Number(d.jumlah) || 0, N: d.user || '', O: d.tgl_rekam || '',
             P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '',
             T: d.dokumen_link || '', U: d.spby_link || '',
-            KANTOR: d.kantor_id || '', TAHUN: d.tahun || null, PERBANTUAN: d.perbantuan === true,
-            SD: kgSumberDana(d)
+            KANTOR: d.kantor_id || '', TAHUN: d.tahun || null, PERBANTUAN: d.perbantuan === true
         }));
 
         kgShowLoading(false);
@@ -419,10 +364,6 @@ function kgApplyFilterAndRender() {
         }
     }
 
-    // Toggle Sumber Dana PNBP/RM (berlaku juga di mode Cari SPM)
-    const sdFilter = Array.isArray(kgQuery.sdFilter) ? kgQuery.sdFilter : [];
-    if (sdFilter.length) rows = rows.filter(r => sdFilter.includes(r.SD));
-
     kgCurrentTableRowsData = rows;
     kgRenderTable(rows);
 
@@ -430,7 +371,7 @@ function kgApplyFilterAndRender() {
     kgSetTotalJumlahLabel(totalJumlah);
 
     if (spmQuery && rows.length === 0) {
-        alert('Data dengan Nomor SPM ' + spmQuery + ' tidak ditemukan' + ((kgQuery.sdFilter || []).length ? ' (filter sumber dana ' + kgQuery.sdFilter.join('/') + ' sedang aktif).' : '.'));
+        alert('Data dengan Nomor SPM ' + spmQuery + ' tidak ditemukan.');
     }
 }
 
@@ -679,7 +620,17 @@ function kgShowPegawaiDetilPopup(nama) {
 
     (async () => {
         try {
-            const result = await apiPost({ action: 'getPegawaiDetailByNama', nama });
+            await waitSupabaseAuthReady();
+            const namaCari = String(nama || '').replace(/\s+/g, ' ').trim();
+            const { data: rows, error: pgErr } = await sb.from('pegawai')
+                .select('id,nama,jabatan,pangkat,kepeg,nama_bank,no_rekening')
+                .ilike('nama', '%' + namaCari.replace(/[%_,()]/g, ' ').trim() + '%').limit(10);
+            if (pgErr) throw new Error(pgErr.message);
+            const norm = x => String(x || '').toUpperCase().replace(/\s+/g, ' ').trim();
+            const row = (rows || []).find(r => norm(r.nama) === norm(namaCari)) || (rows || [])[0];
+            const result = row
+                ? { status: 'success', nama: row.nama, nip: row.id, jabatan: row.jabatan, pangkat: row.pangkat, kepeg: row.kepeg, namaBank: row.nama_bank, norek: row.no_rekening }
+                : { status: 'error', message: `Pegawai "${namaCari}" tidak ditemukan di data pegawai (Referensi › Pegawai), atau akun Anda tidak berhak melihatnya.` };
             if (result.status === 'success') {
                 const statusLabel = String(result.kepeg) === '0' ? 'PPNPN' : 'PNS';
 
@@ -882,39 +833,29 @@ function kgShowEditPopup(tr) {
     // Default false kalau baris entah kenapa tidak ketemu di kgAllRows.
     const rowData = kgAllRows.find(r => String(r.A) === String(idKegiatan));
     const isPerbantuanAwal = !!(rowData && rowData.PERBANTUAN);
-    const sdAwal = (rowData && rowData.SD) || '';
 
     const { overlay, popup } = kgOpenOverlay(`
         <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Ubah Kegiatan #${idKegiatan}</h3>
         <div class="flex gap-3 items-start">
-            <div class="flex-1 min-w-0">
+            <div class="flex-1">
                 <label class="${kgLabelClass}">MAK</label>
                 <div class="flex gap-2">
-                    <input id="kg-editMak" type="text" readonly value="${mak}" class="${kgInputClass} bg-slate-100 text-slate-500 cursor-not-allowed flex-1 min-w-0">
+                    <input id="kg-editMak" type="text" readonly value="${mak}" class="${kgInputClass} bg-slate-100 text-slate-500 cursor-not-allowed flex-1">
                     <button id="kg-editUbahMak" type="button" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium shrink-0 whitespace-nowrap">
                         <i class="fa-solid fa-list-check mr-1"></i> Ubah MAK
                     </button>
                 </div>
             </div>
-            <div class="shrink-0 flex flex-col items-center">
-                <label class="${kgLabelClass} text-center">Perbantuan</label>
-                <div class="h-10 flex items-center">
-                    <button type="button" id="kg-editPerbantuanToggle" data-on="${isPerbantuanAwal ? '1' : '0'}" aria-pressed="${isPerbantuanAwal ? 'true' : 'false'}"
-                        class="relative rounded-full shrink-0"
-                        style="width: 48px; height: 28px; background-color: ${isPerbantuanAwal ? '#34C759' : '#C7C7CC'}; transition: background-color .2s ease;">
-                        <span id="kg-editPerbantuanKnob"
-                            class="absolute rounded-full bg-white"
-                            style="top: 2px; left: 2px; width: 24px; height: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: transform .2s ease; transform: translateX(${isPerbantuanAwal ? '20px' : '0'});"></span>
-                    </button>
-                </div>
+            <div class="shrink-0">
+                <label class="${kgLabelClass}">Perbantuan</label>
+                <button type="button" id="kg-editPerbantuanToggle" data-on="${isPerbantuanAwal ? '1' : '0'}" aria-pressed="${isPerbantuanAwal ? 'true' : 'false'}"
+                    class="relative w-11 h-6 rounded-full ${isPerbantuanAwal ? 'ios-toggle-on' : 'ios-toggle-off'}" style="transition: background-color .2s ease;">
+                    <span id="kg-editPerbantuanKnob"
+                        class="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow"
+                        style="transition: transform .2s ease; transform: translateX(${isPerbantuanAwal ? '20px' : '0'});"></span>
+                </button>
             </div>
         </div>
-        <label class="${kgLabelClass}">Sumber Dana</label>
-        <select id="kg-editSd" class="${kgInputClass}" title="Otomatis dari POK saat MAK dipilih">
-            <option value="" ${sdAwal === '' ? 'selected' : ''}>Otomatis (dari POK)</option>
-            <option value="RM" ${sdAwal === 'RM' ? 'selected' : ''}>RM</option>
-            <option value="PNBP" ${sdAwal === 'PNBP' ? 'selected' : ''}>PNBP</option>
-        </select>
         <label class="${kgLabelClass}">Uraian</label>
         <input id="kg-editUraian" type="text" value="${uraian}" class="${kgInputClass}">
         <label class="${kgLabelClass}">Pelaksana</label>
@@ -941,7 +882,8 @@ function kgShowEditPopup(tr) {
         const nowOn = this.dataset.on !== '1';
         this.dataset.on = nowOn ? '1' : '0';
         this.setAttribute('aria-pressed', nowOn ? 'true' : 'false');
-        this.style.backgroundColor = nowOn ? '#34C759' : '#C7C7CC';
+        this.classList.toggle('ios-toggle-on', nowOn);
+        this.classList.toggle('ios-toggle-off', !nowOn);
         const knob = document.getElementById('kg-editPerbantuanKnob');
         if (knob) knob.style.transform = nowOn ? 'translateX(20px)' : 'translateX(0)';
     });
@@ -963,10 +905,6 @@ function kgShowEditPopup(tr) {
             };
             // MAK cuma diikutkan kalau memang ada isinya (mis. diubah lewat popup "Pilih MAK dari POK")
             if (makBaru) updateFields.mak = makBaru;
-            // Sumber Dana hanya dikirim kalau user MENGUBAHNYA di dropdown. Kalau tidak,
-            // trigger database mengisinya otomatis dari POK (termasuk saat MAK diganti).
-            const sdBaru = document.getElementById('kg-editSd').value;
-            if (sdBaru !== sdAwal) updateFields.sd = sdBaru || null;
 
             await waitSupabaseAuthReady();
             const { error } = await sb.from('kegiatan').update(updateFields).eq('id', idKegiatan);
@@ -2138,30 +2076,18 @@ async function kgOpenNominatifPopup() {
     let bpNama = 'ACHMAD CHABIB NURSALIM', bpNip = '199101162013101002';
 
     try {
-        const sheetId = '10JQ3ysZai7yNXHMWw81UeztwbxSPwsCMiykJj2w5AHE';
-        const refUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=ref&range=T3:W3`;
-        const response = await fetch(refUrl);
-        const text = await response.text();
-        const dataJson = JSON.parse(text.substr(47).slice(0, -2));
-        const rowCells = dataJson.table.rows[0].c;
-        if (rowCells[0] && rowCells[0].v) ppkNama = rowCells[0].v;
-        if (rowCells[1] && rowCells[1].v) ppkNip = String(rowCells[1].v);
-        if (rowCells[2] && rowCells[2].v) bpNama = rowCells[2].v;
-        if (rowCells[3] && rowCells[3].v) bpNip = String(rowCells[3].v);
+        await waitSupabaseAuthReady();
+        const { data: pj, error: pjErr } = await sb.from('pejabat').select('*').eq('id', 'main').maybeSingle();
+        if (pjErr) throw new Error(pjErr.message);
+        if (pj?.ppk_nama) ppkNama = pj.ppk_nama;
+        if (pj?.ppk_nip) ppkNip = String(pj.ppk_nip);
+        if (pj?.bendahara_nama) bpNama = pj.bendahara_nama;
+        if (pj?.bendahara_nip) bpNip = String(pj.bendahara_nip);
     } catch (err) {
         console.warn('Gagal mengambil data penandatangan, pakai default.', err);
     }
 
     kgShowLoading(false);
-
-    // Penanda Sumber Dana (RM/PNBP) -- HANYA tampilan di popup ini.
-    const sdOf = (r) => (r.SD === 'PNBP' || r.SD === 'RM') ? r.SD : '';
-    const sdStyle = (sd) => sd === 'PNBP' ? 'background: rgba(255,45,85,0.12);'
-        : (sd === 'RM' ? 'background: rgba(0,113,227,0.08);' : '');
-    const sdBadge = (sd) => sd
-        ? `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${sd === 'PNBP' ? 'bg-pink-700 text-white' : 'bg-sky-600 text-white'}">${sd}</span>`
-        : '<span class="text-slate-300">-</span>';
-    const sdMAK = {};
 
     let totalBiaya = 0;
     const rekapMAK = {}, rekapWilayah = {}, rekapPeserta = {};
@@ -2172,7 +2098,6 @@ async function kgOpenNominatifPopup() {
         const jml = Number(r.M || 0);
         totalBiaya += jml;
         rekapMAK[r.B] = (rekapMAK[r.B] || 0) + jml;
-        if (sdOf(r)) sdMAK[r.B] = sdOf(r);
         rekapWilayah[r.E] = (rekapWilayah[r.E] || 0) + jml;
         const keyPeserta = r.D;
         if (!rekapPeserta[keyPeserta]) {
@@ -2192,8 +2117,7 @@ async function kgOpenNominatifPopup() {
             const diff = new Date(r.H) - new Date(r.G);
             hari = Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)) + 1);
         }
-        const sd = sdOf(r);
-        rowsHtml += `<tr class="border-b border-slate-200" data-sd="${sd}" style="${sdStyle(sd)}">
+        rowsHtml += `<tr class="border-b border-slate-200">
             <td class="p-1.5 border-r border-slate-200">${r.D}</td>
             <td class="p-1.5 border-r border-slate-200">${r.B}</td>
             <td class="p-1.5 border-r border-slate-200">${r.C}</td>
@@ -2203,12 +2127,11 @@ async function kgOpenNominatifPopup() {
             <td class="p-1.5 border-r border-slate-200 text-center">${hari}</td>
             <td class="p-1.5 border-r border-slate-200">${r.E}</td>
             <td class="p-1.5 border-r border-slate-200 text-right" data-raw="${barisJml}">${barisJml.toLocaleString('id-ID')},00</td>
-            <td class="p-1.5 border-r border-slate-200 text-center">${sdBadge(sd)}</td>
             <td class="p-1.5 text-center"><button class="kg-nominatif-del text-red-600"><i class="fa-solid fa-trash"></i></button></td>
         </tr>`;
     });
 
-    const rekapBlock = (title, obj, cols, labelFn) => `
+    const rekapBlock = (title, obj, cols) => `
         <div class="flex flex-col gap-1">
             <h4 class="text-xs font-semibold text-slate-600">${title}</h4>
             <div class="bg-white border border-slate-300 rounded-md flex-1 overflow-y-auto max-h-44">
@@ -2216,7 +2139,7 @@ async function kgOpenNominatifPopup() {
                     <thead class="bg-slate-50 border-b border-slate-300 sticky top-0"><tr>${cols}</tr></thead>
                     <tbody>${Object.keys(obj).map(k => typeof obj[k] === 'object'
                         ? `<tr class="border-b border-slate-100"><td class="p-1 border-r border-slate-100">${obj[k].nama}</td><td class="p-1 border-r border-slate-100">${obj[k].uraian}</td><td class="p-1 text-right">${obj[k].jumlah.toLocaleString('id-ID')}</td></tr>`
-                        : `<tr class="border-b border-slate-100"><td class="p-1 border-r border-slate-100">${labelFn ? labelFn(k) : k}</td><td class="p-1 text-right">${obj[k].toLocaleString('id-ID')}</td></tr>`
+                        : `<tr class="border-b border-slate-100"><td class="p-1 border-r border-slate-100">${k}</td><td class="p-1 text-right">${obj[k].toLocaleString('id-ID')}</td></tr>`
                     ).join('')}</tbody>
                 </table>
             </div>
@@ -2232,8 +2155,7 @@ async function kgOpenNominatifPopup() {
                         <th class="p-2 border-r border-slate-200">Nomor ST</th><th class="p-2 border-r border-slate-200">Tanggal ST</th>
                         <th class="p-2 border-r border-slate-200">Tanggal Mulai</th><th class="p-2 border-r border-slate-200">Tanggal Selesai</th>
                         <th class="p-2 border-r border-slate-200">Hari</th><th class="p-2 border-r border-slate-200">Tujuan</th>
-                        <th class="p-2 border-r border-slate-200 text-right">Jumlah</th>
-                        <th class="p-2 border-r border-slate-200 text-center" title="Sumber Dana">SD</th><th class="p-2 text-center">Aksi</th>
+                        <th class="p-2 border-r border-slate-200 text-right">Jumlah</th><th class="p-2 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>${rowsHtml}</tbody>
@@ -2242,7 +2164,6 @@ async function kgOpenNominatifPopup() {
         <div class="flex flex-wrap items-center gap-3 text-sm">
             <label class="font-medium">Total Daftar Nominatif</label>
             <input id="kg-nominatifTotalInput" type="text" value="${totalBiaya.toLocaleString('id-ID')}" readonly class="px-2.5 py-1.5 border border-slate-300 rounded-md bg-white font-semibold text-right w-40">
-            <span id="kg-nominatifSdInfo" class="text-xs flex items-center gap-2"></span>
             <label class="font-medium ml-3">Nomor SPM</label>
             <input id="kg-nominatifSpmInput" type="text" value="${spmNomor}" class="px-2.5 py-1.5 border border-slate-300 rounded-md bg-white font-semibold text-center w-24">
             <div class="flex gap-2 ml-auto">
@@ -2251,7 +2172,7 @@ async function kgOpenNominatifPopup() {
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            ${rekapBlock('Rekapitulasi Per MAK', rekapMAK, '<th class="p-1.5 border-r border-slate-200">MAK</th><th class="p-1.5 text-right">Jumlah</th>', (k) => `${k} ${sdMAK[k] ? sdBadge(sdMAK[k]) : ''}`)}
+            ${rekapBlock('Rekapitulasi Per MAK', rekapMAK, '<th class="p-1.5 border-r border-slate-200">MAK</th><th class="p-1.5 text-right">Jumlah</th>')}
             ${rekapBlock('Rekapitulasi Per Wilayah', rekapWilayah, '<th class="p-1.5 border-r border-slate-200">Wilayah</th><th class="p-1.5 text-right">Jumlah</th>')}
             ${rekapBlock('Rekapitulasi Per Peserta', rekapPeserta, '<th class="p-1.5 border-r border-slate-200">Nama</th><th class="p-1.5 border-r border-slate-200">Uraian</th><th class="p-1.5 text-right">Jumlah</th>')}
         </div>
@@ -2259,21 +2180,6 @@ async function kgOpenNominatifPopup() {
     popup.classList.add('bg-slate-100');
 
     const mainTableWrapper = popup.querySelector('#kg-popupMainTable').closest('div');
-
-    // Subtotal per Sumber Dana (ikut berkurang saat baris dihapus dari daftar)
-    const updateSdInfo = () => {
-        const sub = { RM: 0, PNBP: 0, '': 0 };
-        mainTableWrapper.querySelectorAll('tbody tr').forEach(rowEl => {
-            const key = rowEl.getAttribute('data-sd') || '';
-            sub[key] += Number(rowEl.cells[8]?.getAttribute('data-raw') || 0);
-        });
-        const chip = (label, val, cls) => `<span class="px-2 py-1 rounded-md font-semibold ${cls}">${label}: ${val.toLocaleString('id-ID')}</span>`;
-        popup.querySelector('#kg-nominatifSdInfo').innerHTML =
-            chip('RM', sub.RM, 'bg-sky-100 text-sky-800') +
-            chip('PNBP', sub.PNBP, 'bg-pink-200 text-pink-800') +
-            (sub[''] ? chip('Belum diketahui', sub[''], 'bg-slate-200 text-slate-600') : '');
-    };
-    updateSdInfo();
     mainTableWrapper.addEventListener('click', function (e) {
         const delBtn = e.target.closest('.kg-nominatif-del');
         if (!delBtn) return;
@@ -2284,7 +2190,6 @@ async function kgOpenNominatifPopup() {
             newTotal += Number(rowEl.cells[8]?.getAttribute('data-raw') || 0);
         });
         popup.querySelector('#kg-nominatifTotalInput').value = newTotal.toLocaleString('id-ID');
-        updateSdInfo();
     });
 
     popup.querySelector('#kg-nominatifCancel').onclick = () => overlay.remove();
