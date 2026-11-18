@@ -335,7 +335,7 @@ async function kgLoadData(forceRefresh) {
 
         kgAllRows = rows.map(d => ({
             A: d.id,
-            B: d.mak || '', C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
+            B: String(d.mak || '').replace(/\s+(RM|PNBP)\s*$/i, ''), C: d.uraian || '', D: d.pelaksana || '', E: d.tujuan || '',
             F: d.tgl_st || '', G: d.tgl_mulai || '', H: d.tgl_selesai || '',
             I: d.tgl_lpt || '', J: d.tgl_bayar || '',
             M: Number(d.jumlah) || 0, N: d.user || '', O: d.tgl_rekam || '',
