@@ -70,10 +70,12 @@ function rest(jwt: string) {
 }
 const q = (s: string) => encodeURIComponent(s.replace(/[(),*%]/g, " ").trim());
 
-type Ctx = { kantor: string; tahun: number; db: (p: string, all?: boolean) => Promise<any>; lampiran: any[]; gambar: any[] };
+type Ctx = { kantor: string; tahun: number; db: (p: string, all?: boolean) => Promise<any>; lampiran: any[]; gambar: any[]; draf: any[] };
 
 const SEL = { type: "string" };
 const TOOLS = [
+  { name: "siapkan_form_rekam", description: "Menampilkan FORM REKAM interaktif (sama seperti hasil unggah dokumen) berisi draf yang sudah terisi, lalu pengguna cek dan Simpan sendiri. WAJIB dipakai bila pengguna meminta merekam/mencatat/menginput kegiatan, kuitansi, nota, belanja, atau surat tugas lewat teks (mis. 'rekam kuitansi BBM 9 juta', 'catat belanja toner'). Jangan menulis langkah-langkah manual; panggil tool ini. jenis: 'kuitansi' (belanja/pembayaran ke penyedia) atau 'surat_tugas' (perjalanan dinas). Isi hanya yang disebut pengguna; kosongkan sisanya, jangan menebak. uraian = uraian kegiatan; jumlah_total = rupiah angka tanpa titik; penyedia = toko/penerima; tujuan = kabupaten/kota; provinsi_tujuan; tgl_mulai/tgl_selesai/tgl_bayar = YYYY-MM-DD; nomor_dokumen = nomor ST; mak_petunjuk = kode MAK atau akun 6 digit (toner/ATK = 521811); pelaksana = daftar nama.",
+    parameters: { type: "object", properties: { jenis: { type: "string", enum: ["kuitansi", "surat_tugas"] }, uraian: SEL, jumlah_total: { type: "number" }, penyedia: SEL, tujuan: SEL, provinsi_tujuan: SEL, tgl_mulai: SEL, tgl_selesai: SEL, tgl_bayar: SEL, nomor_dokumen: SEL, mak_petunjuk: SEL, pelaksana: { type: "array", items: SEL } }, required: ["jenis"] } },
   { name: "buat_gambar", description: "Membuat/menghasilkan gambar (ilustrasi, poster, foto, logo, desain) dari deskripsi. Pakai bila pengguna meminta dibuatkan/digenerate gambar. prompt = deskripsi visual rinci DALAM BAHASA INGGRIS (subjek, suasana, gaya, warna, komposisi); terjemahkan permintaan pengguna. Gambar muncul otomatis di chat.",
     parameters: { type: "object", properties: { prompt: SEL }, required: ["prompt"] } },
   { name: "cari_kegiatan", description: "Cari/daftar kegiatan dengan filter bebas (semua opsional): kata (nama pelaksana/uraian/tujuan), akun (awalan kode akun mis. 524111, 5241, 52), seksi (nama seksi pemilik POK mis. Umum), status, sd (RM/PNBP), dari & sampai (tanggal mulai YYYY-MM-DD). Mengembalikan maks 25 baris + total jumlah & banyaknya.",
@@ -157,6 +159,20 @@ async function cfImage(prompt: string) {
 }
 
 async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
+  if (name === "siapkan_form_rekam") {
+    const jenis = a.jenis === "surat_tugas" ? "surat_tugas" : "kuitansi";
+    const jml = Number(a.jumlah_total) || 0;
+    const d: any = {
+      jenis, ringkasan: "Dibuat dari permintaan Anda di chat. Periksa dan lengkapi sebelum menyimpan.",
+      uraian: String(a.uraian || ""), penyedia: String(a.penyedia || ""), tujuan: String(a.tujuan || ""), provinsi_tujuan: String(a.provinsi_tujuan || ""),
+      tgl_mulai: String(a.tgl_mulai || a.tgl_bayar || ""), tgl_selesai: String(a.tgl_selesai || a.tgl_mulai || a.tgl_bayar || ""), tgl_bayar: String(a.tgl_bayar || ""),
+      nomor_dokumen: String(a.nomor_dokumen || ""), mak_petunjuk: String(a.mak_petunjuk || ""), jumlah_total: jml,
+      pelaksana: (Array.isArray(a.pelaksana) ? a.pelaksana : []).map((n: string) => ({ nama: String(n), nip: "", jumlah: jenis === "kuitansi" ? jml : 0 })),
+      catatan: "",
+    };
+    c.draf.push(await enrich(d, c));
+    return { siap: true, catatan: "Form rekam sudah tampil untuk pengguna. Cukup satu kalimat singkat (minta cek isian lalu Simpan, sebut apa yang masih perlu dilengkapi). Jangan menulis ulang isi form atau langkah manual." };
+  }
   if (name === "buat_gambar") {
     const prompt = String(a.prompt || "").trim().slice(0, 1500);
     if (!prompt) return { error: "prompt kosong" };
@@ -293,7 +309,7 @@ const SYSTEM = (c: Ctx) =>
   `Kamu Jarwo, asisten AI aplikasi SiMAB (Sistem Monitoring Anggaran Belanja) KPKNL. Jawab Bahasa Indonesia, singkat, jelas, sopan.
 Kantor aktif: ${c.kantor}, tahun anggaran ${c.tahun}. Data kegiatan/POK ambil lewat tool; jangan mengarang angka. Format rupiah: Rp 1.234.567.
 Perjadin = akun 524111/524113 (pakai akun="perjadin"). Seksi (mis. Umum) ada di POK; gunakan filter seksi pada ringkasan_anggaran. Jika sebuah filter tidak menemukan data, coba lagi tanpa filter atau lihat seksi_tersedia sebelum menyimpulkan data tidak ada.\nPerjadin = akun 524111 (biasa) dan 524113 (paket meeting); akun 5241 mencakup keduanya. "Seksi" adalah pemilik baris POK (mis. Umum). Bila diminta file/Excel/PDF/rekap/laporan, panggil buat_laporan (tombol unduh muncul otomatis; jangan menulis ulang tabel panjang). Gunakan filter tool (akun, seksi, sd, tanggal) alih-alih meminta pengguna mengunggah dokumen untuk pertanyaan data; bila tool mengembalikan kosong, sebutkan filter yang dipakai dan tawarkan alternatif. Untuk pertanyaan SBM/tarif (uang harian, penginapan, tiket, transport, honor, konsumsi, dll.) gunakan tool cek_sbm (data PMK SBM per tahun di SiMAB), jangan cari_web; sebutkan tahun & kolom yang dipakai. MAK perjadin 524111/524113 melalui status Rekam Data → Terlaksana → LPT → Terbayar → Selesai; MAK lain tanpa LPT.
-Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nBila pengguna memberi tautan/URL atau butuh isi lengkap suatu halaman, gunakan baca_url. Bila diminta membuat/menggenerate gambar, panggil buat_gambar dengan prompt bahasa Inggris yang rinci. Jangan membuat gambar tokoh/karakter berhak cipta atau orang nyata tertentu.\nTulis rumus/perhitungan dengan teks biasa (mis. "Energi (kWh) = Daya (kW) × Waktu (jam)"), JANGAN memakai LaTeX atau tanda $ / \\( \\).\nKamu tidak menyimpan data sendiri; untuk merekam, minta pengguna mengunggah foto/PDF dokumen lewat tombol lampiran.`;
+Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nBila pengguna memberi tautan/URL atau butuh isi lengkap suatu halaman, gunakan baca_url. Bila diminta membuat/menggenerate gambar, panggil buat_gambar dengan prompt bahasa Inggris yang rinci. Jangan membuat gambar tokoh/karakter berhak cipta atau orang nyata tertentu.\nTulis rumus/perhitungan dengan teks biasa (mis. "Energi (kWh) = Daya (kW) × Waktu (jam)"), JANGAN memakai LaTeX atau tanda $ / \\( \\).\nKamu tidak menyimpan data sendiri. Bila pengguna meminta merekam/mencatat/menginput kuitansi, belanja, atau surat tugas lewat teks, panggil siapkan_form_rekam (form interaktif muncul, pengguna yang menekan Simpan); jangan menjelaskan langkah manual. Untuk dokumen berupa foto/PDF, pengguna bisa mengunggah lewat tombol lampiran.`;
 
 async function chatGemini(msgs: any[], c: Ctx) {
   const contents = msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content) }] }));
@@ -487,7 +503,7 @@ Deno.serve(async (req: Request) => {
     const u = await fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON, Authorization: `Bearer ${jwt}` } });
     if (!jwt || !u.ok) return json({ error: "Belum login" }, 401);
     const b = await req.json();
-    const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt), lampiran: [], gambar: [] };
+    const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt), lampiran: [], gambar: [], draf: [] };
     if (!c.kantor) return json({ error: "kantor kosong" }, 400);
 
     if (b.mode === "extract") {
@@ -499,7 +515,7 @@ Deno.serve(async (req: Request) => {
     const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-12);
     if (!msgs.length) return json({ error: "pesan kosong" }, 400);
     const rr = await chat(msgs, c);
-    return json({ ...rr, lampiran: c.lampiran, gambar: c.gambar });
+    return json({ ...rr, lampiran: c.lampiran, gambar: c.gambar, draf: c.draf });
   } catch (e) {
     return json({ error: String((e as Error).message || e) }, 500);
   }
