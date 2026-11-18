@@ -126,6 +126,8 @@ async function openTahunAnggaranSwitcher() {
     const listEl = popup.querySelector('#tahunSwitcherList');
     try {
         const daftarTahun = await getTahunTersediaList(kantorId);
+        // Tahun aktif yang belum punya data (mis. baru dibuat lewat "Tambah tahun") tetap ditampilkan
+        if (!daftarTahun.includes(tahunSaatIni)) { daftarTahun.push(tahunSaatIni); daftarTahun.sort((x, y) => y - x); }
         listEl.innerHTML = daftarTahun.map(t => `
             <button type="button" class="tahunSwitcher-opt w-full text-left px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between transition"
                 data-tahun="${t}"
@@ -134,6 +136,30 @@ async function openTahunAnggaranSwitcher() {
                 ${t === tahunSaatIni ? '<i class="fa-solid fa-check"></i>' : ''}
             </button>
         `).join('');
+
+        // Khusus admin: pilih/buat tahun anggaran baru (mis. 2024) yang belum punya data.
+        // Datanya diisi lewat menu Impor POK setelah tahun ini dipilih.
+        if (localStorage.getItem('admin') === '1') {
+            const box = document.createElement('div');
+            box.className = 'mt-3 pt-3';
+            box.style.borderTop = '1px solid var(--divider)';
+            box.innerHTML = `
+                <div class="text-xs mb-1.5" style="color: var(--label-secondary);">Tambah tahun anggaran baru (belum ada datanya)</div>
+                <div class="flex gap-2">
+                    <input type="number" id="tahunBaruInput" min="2000" max="2100" placeholder="mis. 2024" class="ios-field flex-1">
+                    <button type="button" id="tahunBaruBtn" class="btn-ios px-4 py-2 text-sm font-semibold" style="background: var(--ios-blue); color: #fff;">Buat &amp; pilih</button>
+                </div>
+                <div class="text-xs mt-1.5" style="color: var(--label-secondary);">Setelah dipilih, buka <b>Impor POK</b> untuk mengisi POK tahun tersebut.</div>`;
+            listEl.after(box);
+            box.querySelector('#tahunBaruBtn').onclick = () => {
+                const t = Number(box.querySelector('#tahunBaruInput').value);
+                if (!Number.isInteger(t) || t < 2000 || t > 2100) { showToast('Isi tahun 4 digit, mis. 2024'); return; }
+                setTahunAktif(t);
+                overlay.remove();
+                showToast(`Tahun anggaran diganti ke ${t}`);
+                setTimeout(() => window.location.reload(), 400);
+            };
+        }
 
         listEl.querySelectorAll('.tahunSwitcher-opt').forEach(btn => {
             btn.onclick = () => {
