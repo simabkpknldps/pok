@@ -315,8 +315,9 @@
             if (typeof waitSupabaseAuthReady === 'function') await waitSupabaseAuthReady();
             const kantor = localStorage.getItem('kantor') || '';
             const tahun = await getTahunAktif();
-            const superMode = localStorage.getItem('superadminMode') === '1';
-            const scope = superMode ? { tahun } : { kantor_id: kantor, tahun };
+            // Selalu sesuai kantor yang dipilih saat login (termasuk superadmin),
+            // bukan gabungan semua kantor.
+            const scope = { kantor_id: kantor, tahun };
 
             const [pokRows, kegAll, blkRows, rpdRows] = await Promise.all([
                 sbFetchAll('pok', '*', scope),
@@ -324,16 +325,13 @@
                 sbFetchAll('blokir', '*', scope),
                 sbFetchAll('rpd', '*', scope)
             ]);
-            const kegRows = kegAll.filter(k => Number(k.tahun) === Number(tahun) && (superMode || k.kantor_id === kantor));
+            const kegRows = kegAll.filter(k => Number(k.tahun) === Number(tahun) && k.kantor_id === kantor);
 
             let namaKantor = 'KPKNL Denpasar';
-            if (superMode) namaKantor = 'Semua Kantor';
-            else {
-                try {
-                    const { data } = await sb.from('kantor').select('nama').eq('id', kantor).maybeSingle();
-                    if (data && data.nama) namaKantor = data.nama;
-                } catch (e) { /* pakai default */ }
-            }
+            try {
+                const { data } = await sb.from('kantor').select('nama').eq('id', kantor).maybeSingle();
+                if (data && data.nama) namaKantor = data.nama;
+            } catch (e) { /* pakai default */ }
 
             const d = hitung(pokRows, kegRows, blkRows, rpdRows);
             el.innerHTML = buildHtml(d, {
