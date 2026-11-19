@@ -127,22 +127,15 @@
 <!-- ===================== TAB: USER (profil + data perjadin sendiri) ===================== -->
 <div id="ds-tabUser" class="ds-tab-content hidden">
     <div id="ds-userResults" class="px-4 pt-4 pb-8 max-w-lg mx-auto"></div>
-    <div id="ds-logBtnWrap" class="hidden px-4 pb-28 max-w-lg mx-auto">
-        <button id="ds-btnLihatLog" class="w-full py-3 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-medium flex items-center justify-center gap-2">
-            <i class="fa-solid fa-clock-rotate-left"></i> Lihat Log
-        </button>
-    </div>
 </div>
 
-<!-- ===================== Layar Lihat Log (superadmin) ===================== -->
-<div id="ds-logScreen" class="hidden fixed inset-0 z-50 bg-slate-100 flex flex-col">
-    <div class="bg-sky-700 text-white px-4 h-14 flex items-center gap-3 shrink-0">
-        <button id="ds-logBack" class="w-9 h-9 flex items-center justify-center"><i class="fa-solid fa-arrow-left"></i></button>
-        <span class="text-base font-semibold flex-1">Log Aktivitas</span>
-        <button id="ds-logRefresh" class="w-9 h-9 flex items-center justify-center" title="Muat ulang"><i class="fa-solid fa-rotate"></i></button>
+<!-- ===================== TAB: LOG (superadmin) ===================== -->
+<div id="ds-tabLog" class="ds-tab-content hidden">
+    <div class="bg-white border-b border-slate-200 flex items-center">
+        <div id="ds-logChips" class="flex gap-2 overflow-x-auto px-4 py-2.5 flex-1"></div>
+        <button id="ds-logRefresh" class="w-10 h-10 shrink-0 mr-2 flex items-center justify-center text-sky-700" title="Muat ulang"><i class="fa-solid fa-rotate"></i></button>
     </div>
-    <div id="ds-logChips" class="flex gap-2 overflow-x-auto px-4 py-2.5 shrink-0 bg-white border-b border-slate-200"></div>
-    <div id="ds-logList" class="flex-1 overflow-y-auto px-4 py-3" style="padding-bottom: calc(env(safe-area-inset-bottom) + 16px);"></div>
+    <div id="ds-logList" class="px-4 pt-3 pb-28 max-w-lg mx-auto"></div>
 </div>
 
 <!-- ===================== Bottom Sheet Detail/Aksi ===================== -->
@@ -152,7 +145,7 @@
 
 <!-- ===================== Bottom Tab Bar ===================== -->
 <div class="fixed left-0 right-0 bottom-0 bg-white border-t border-slate-200 z-30" style="padding-bottom: env(safe-area-inset-bottom);">
-    <div class="grid grid-cols-4 max-w-lg mx-auto">
+    <div id="ds-navGrid" class="grid grid-cols-4 max-w-lg mx-auto">
         <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-sky-700" data-tab="home">
             <i class="fa-solid fa-magnifying-glass text-lg"></i><span class="text-[10.5px] font-medium">Cari</span>
         </button>
@@ -164,6 +157,9 @@
         </button>
         <button class="ds-navbtn flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="user">
             <i class="fa-solid fa-user text-lg"></i><span class="text-[10.5px] font-medium">User</span>
+        </button>
+        <button id="ds-navLog" class="ds-navbtn hidden flex flex-col items-center gap-1 py-2.5 text-slate-400" data-tab="log">
+            <i class="fa-solid fa-clock-rotate-left text-lg"></i><span class="text-[10.5px] font-medium">Log</span>
         </button>
     </div>
 </div>
@@ -1499,9 +1495,8 @@ async function dsLogMuat(awal) {
 }
 function dsLogInit() {
     if (localStorage.getItem('superadmin') !== '1') return;
-    $('ds-logBtnWrap').classList.remove('hidden');
-    $('ds-btnLihatLog').onclick = () => { $('ds-logScreen').classList.remove('hidden'); dsLogChips(); dsLogMuat(true); };
-    $('ds-logBack').onclick = () => $('ds-logScreen').classList.add('hidden');
+    $('ds-navLog').classList.remove('hidden');
+    $('ds-navGrid').classList.replace('grid-cols-4', 'grid-cols-5');
     $('ds-logRefresh').onclick = () => dsLogMuat(true);
 }
 
@@ -1518,14 +1513,14 @@ function dsSwitchTab(tab) {
         btn.className = `ds-navbtn flex flex-col items-center gap-1 py-2.5 ${active ? 'text-sky-700' : 'text-slate-400'}`;
     });
 
-    const map = { home: 'ds-tabHome', pok: 'ds-tabPok', referensi: 'ds-tabReferensi', user: 'ds-tabUser' };
+    const map = { home: 'ds-tabHome', pok: 'ds-tabPok', referensi: 'ds-tabReferensi', user: 'ds-tabUser', log: 'ds-tabLog' };
     $(map[tab]).classList.remove('hidden');
 
     // Muat data referensi (SBM) / POK / User begitu tab-nya pertama kali dibuka.
     if (tab === 'referensi' && !dsRefLoaded) dsRunRefSearch();
     if (tab === 'pok' && !dsPokRowsCache) dsRunPokSearch();
     if (tab === 'user' && !dsUserTabLoaded) dsRenderUserTab();
-    if (tab === 'user') dsLogInit();
+    if (tab === 'log' && !dsLogRows.length) { dsLogChips(); dsLogMuat(true); }
 }
 
 // ============================================================
@@ -2062,6 +2057,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.ds-navbtn').forEach(btn => {
         btn.onclick = () => dsSwitchTab(btn.dataset.tab);
     });
+    dsLogInit();
 
     $('ds-sheetOverlay').addEventListener('click', (e) => {
         if (e.target === $('ds-sheetOverlay')) dsCloseDetail();
