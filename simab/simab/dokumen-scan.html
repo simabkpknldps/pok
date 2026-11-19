@@ -29,6 +29,29 @@
     /* Cegah <input type="date"> "keluar" dari card di iOS Safari (lebar
        minimum bawaannya bisa lebih besar dari kolom grid sempit). */
     input[type="date"] { min-width: 0; max-width: 100%; box-sizing: border-box; }
+
+    /* ---- Desain baru (tampilan saja; semua ID/kelas fungsi dipertahankan) ---- */
+    body { background: #eef0f4; }
+    .ds-appbar { background: #0A2E6E !important; }
+    .ds-appbar button { height: 40px; min-width: 40px; border-radius: 12px; }
+    .ds-appbar button.bg-sky-600 { background: rgba(255,255,255,.14); }
+    .ds-appbar button.bg-sky-600:hover { background: rgba(255,255,255,.22); }
+    .ds-appbar .ds-logo { width: 32px; height: 32px; border-radius: 9px; vertical-align: middle; margin-right: 8px; background: #fff; }
+    #ds-tabPok input, #ds-tabHome input#ds-searchInput, #ds-tabReferensi input { border: 0; border-radius: 14px; height: 48px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+    #ds-tabPok input:focus, #ds-tabHome input#ds-searchInput:focus, #ds-tabReferensi input:focus { outline: 2px solid #0071e3; outline-offset: 0; box-shadow: none; }
+    .ds-navbtn i { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 28px; border-radius: 9999px; font-size: 18px; transition: background-color .15s; }
+    .ds-navbtn.text-sky-700 { color: #0A2E6E; }
+    .ds-navbtn.text-sky-700 i { background: #dbeafe; }
+    .ds-navbtn.text-sky-700 span { font-weight: 700; }
+    .ds-pok-title { font-size: 22px; font-weight: 700; color: #1d1d1f; margin: 0; }
+    .ds-pok-sub { font-size: 12.5px; color: #6e6e73; margin: 2px 0 12px; }
+    .ds-pok-seksiHeader { display: flex; align-items: center; gap: 12px; background: #fff !important; color: #1d1d1f !important; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.05); cursor: pointer; }
+    .ds-pok-seksiHeader .ds-seksi-ava { width: 38px; height: 38px; border-radius: 11px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+    .ds-pok-wrap { background: #fff; border-radius: 18px; padding: 10px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+    .ds-pok-parent { cursor: pointer; border-radius: 12px; }
+    .ds-pok-parent[data-open="1"] { background: #E3EEFF !important; box-shadow: inset 4px 0 0 #0071e3; }
+    .ds-pok-parent[data-open="0"] { background: #f6f7f9 !important; }
+    .ds-pok-kids { background: #F3F8FF; border-radius: 12px; box-shadow: inset 4px 0 0 #BFD7FF; padding: 6px 6px 2px 12px; margin: 4px 0 6px; }
 </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -39,7 +62,7 @@
 <!-- ===================== App Bar ===================== -->
 <div class="ds-appbar bg-sky-700 text-white sticky top-0 z-30 shadow-sm">
     <div class="flex items-center justify-between px-4 py-3.5">
-        <h1 class="text-base font-semibold leading-tight"><i class="fa-solid fa-mobile-screen-button mr-1.5"></i>SOH <span class="text-sky-200 font-normal text-xs">(SiMAB On Hand)</span></h1>
+        <h1 class="text-base font-semibold leading-tight"><img src="icons/logo-simab.svg" alt="" class="ds-logo inline-block">SOH <span class="text-sky-200 font-normal text-xs">(SiMAB On Hand)</span></h1>
         <div class="flex items-center gap-2">
             <button id="ds-btnTahun" class="h-9 px-2.5 flex items-center gap-1 rounded-lg bg-sky-600 hover:bg-sky-800 transition text-xs font-medium" title="Ganti Tahun Anggaran">
                 <i class="fa-solid fa-calendar-days"></i> <span id="ds-tahunLabel">…</span>
@@ -79,6 +102,8 @@
 <!-- ===================== TAB: POK (lihat saja, terstruktur per Seksi kayak web) ===================== -->
 <div id="ds-tabPok" class="ds-tab-content hidden">
     <div class="px-4 pt-4 pb-2 max-w-lg mx-auto">
+        <h2 class="ds-pok-title">POK</h2>
+        <p class="ds-pok-sub">Pagu, blokir, dan realisasi per seksi</p>
         <input id="ds-pokSearchInput" type="text" inputmode="search" placeholder="Cari kode / uraian POK..."
             class="w-full px-3.5 py-3 border border-slate-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
     </div>
@@ -1487,27 +1512,26 @@ function dsPokSeksiBadgeClass(seksi) {
 function dsRenderPokLeafCard(item) {
     const penyebut = item.pagu - item.blokir;
     const persen = penyebut ? Math.min(Math.max((item.realisasi / penyebut) * 100, 0), 100) : 0;
-    const warna = persen >= 100 ? 'bg-red-500' : (persen >= 80 ? 'bg-amber-500' : 'bg-sky-500');
-    const sisaClass = item.sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
-    // Sama persis dgn web: leaf PNBP = pink, leaf RM = biru.
+    const warna = persen >= 90 ? '#34C759' : (persen >= 50 ? '#0071E3' : '#FF9F0A');
+    const warnaTeks = persen >= 90 ? '#16a34a' : (persen >= 50 ? '#0071E3' : '#b45309');
+    const sisaClass = item.sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-800';
     const isPnbp = item.sumber === 'PNBP';
-    const cardBg = isPnbp ? 'bg-pink-100 border-pink-200' : 'bg-blue-100 border-blue-200';
-    const badgeBg = isPnbp ? 'bg-pink-600 text-white' : 'bg-blue-600 text-white';
+    const badgeStyle = isPnbp ? 'background:#fce7f3;color:#9d174d' : 'background:#dbeafe;color:#1e40af';
+    const fmt = (v) => Number(v).toLocaleString('id-ID');
     return `
-    <div class="${cardBg} rounded-xl border p-3 mb-2">
-        <div class="flex items-start justify-between gap-2">
-            <p class="text-[11px] font-mono text-slate-500">${escHtml(item.kode)}</p>
-            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${badgeBg}">${escHtml(item.sumber || '-')}</span>
+    <div class="bg-white rounded-2xl p-3 mb-2" style="border:1px solid #dbe6f5;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+        <div class="flex items-center justify-between gap-2">
+            <p class="text-[10.5px] font-mono text-slate-500">${escHtml(item.kode)}</p>
+            <span class="text-[10.5px] px-2 py-0.5 rounded-full font-bold shrink-0" style="${badgeStyle}">${escHtml(item.sumber || '-')}</span>
         </div>
-        <p class="text-sm font-medium text-slate-800 mt-0.5 mb-2 leading-snug">${escHtml(item.uraian)}</p>
-        <div class="w-full h-1.5 bg-white/60 rounded-full overflow-hidden mb-2">
-            <div class="h-full ${warna} rounded-full" style="width:${persen}%"></div>
-        </div>
-        <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-            <div><span class="text-slate-500">Pagu</span> <span class="font-medium text-slate-800 float-right">${Number(item.pagu).toLocaleString('id-ID')}</span></div>
-            <div><span class="text-slate-500">Blokir</span> <span class="font-medium text-slate-800 float-right">${Number(item.blokir).toLocaleString('id-ID')}</span></div>
-            <div><span class="text-slate-500">Realisasi</span> <span class="font-medium text-slate-800 float-right">${Number(item.realisasi).toLocaleString('id-ID')}</span></div>
-            <div><span class="text-slate-500">Sisa</span> <span class="font-medium ${sisaClass} float-right">${Number(item.sisa).toLocaleString('id-ID')}</span></div>
+        <p class="text-[13.5px] font-semibold text-slate-800 mt-1.5 mb-2.5 leading-snug">${escHtml(item.uraian)}</p>
+        <div class="flex justify-between text-[11px] text-slate-500 mb-1"><span>Realisasi</span><b style="color:${warnaTeks}">${persen.toFixed(1).replace('.', ',')}%</b></div>
+        <div class="w-full h-[7px] rounded-full overflow-hidden" style="background:#eef0f3"><div class="h-full rounded-full" style="width:${persen}%;background:${warna}"></div></div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2.5 mt-3">
+            <div><div class="text-[10.5px] text-slate-500">Pagu</div><div class="text-[13px] font-bold text-slate-800">${fmt(item.pagu)}</div></div>
+            <div><div class="text-[10.5px] text-slate-500">Blokir</div><div class="text-[13px] font-bold text-slate-800">${fmt(item.blokir)}</div></div>
+            <div><div class="text-[10.5px] text-slate-500">Realisasi</div><div class="text-[13px] font-bold text-slate-800">${fmt(item.realisasi)}</div></div>
+            <div><div class="text-[10.5px] text-slate-500">Sisa</div><div class="text-[13px] font-bold ${sisaClass}">${fmt(item.sisa)}</div></div>
         </div>
     </div>`;
 }
@@ -1515,14 +1539,16 @@ function dsRenderPokLeafCard(item) {
 function dsRenderPokParentRow(item, seksi, hasChildren, depth) {
     const expandKey = seksi + '::' + item.kode;
     const isOpen = dsPokExpandedCodes.has(expandKey);
-    const indentPx = Math.min(depth - 1, 5) * 14;
-    // Sama pola dgn web: depth<=2 abu-abu (level tinggi), lainnya biru muda
-    // (penanda visual "bisa di-tap buat expand").
-    const rowBg = depth <= 2 ? 'bg-slate-50' : 'bg-sky-50 active:bg-sky-100';
+    const indentPx = Math.min(Math.max(depth - 2, 0), 5) * 10;
+    const seg = String(item.kode).split('.');
+    const kodeTampil = depth <= 3 ? item.kode : seg[seg.length - 1];
     return `
-    <div class="ds-pok-parent flex items-center justify-between py-2.5 px-2 mb-1 rounded-lg ${rowBg}" style="padding-left:${12 + indentPx}px" data-kode="${escHtml(item.kode)}" data-seksi="${escHtml(seksi)}">
-        <span class="text-sm ${depth <= 2 ? 'font-bold' : 'font-semibold'} text-slate-700 flex-1 pr-2">${escHtml(item.uraian)}</span>
-        ${hasChildren ? `<i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs text-slate-400 shrink-0"></i>` : ''}
+    <div class="ds-pok-parent flex items-center justify-between py-2.5 px-3 mb-1" data-open="${isOpen ? 1 : 0}" style="padding-left:${12 + indentPx}px" data-kode="${escHtml(item.kode)}" data-seksi="${escHtml(seksi)}">
+        <div class="flex-1 pr-2 min-w-0">
+            <div class="text-[10.5px] font-mono" style="color:${isOpen ? '#4b6fa8' : '#6e6e73'}">${escHtml(kodeTampil)}</div>
+            <div class="text-[13.5px] ${isOpen ? 'font-bold' : 'font-semibold'}" style="color:${isOpen ? '#0b3a85' : '#1d1d1f'}">${escHtml(item.uraian)}</div>
+        </div>
+        ${hasChildren ? `<i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs shrink-0" style="color:${isOpen ? '#0071e3' : '#8e8e93'}"></i>` : ''}
     </div>`;
 }
 
@@ -1572,11 +1598,13 @@ function dsRenderPokBrowse() {
     groups.forEach((items, seksi) => {
         const isOpen = dsPokExpandedSeksi.has(seksi);
         html += `
-        <div class="ds-pok-seksiHeader ${dsPokSeksiBadgeClass(seksi)} rounded-xl px-3.5 py-3 mb-2" data-seksi="${escHtml(seksi)}">
-            <span class="text-sm font-bold"><i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>${escHtml(seksi)} <span class="font-normal text-xs opacity-70">(${items.length} item)</span></span>
+        <div class="ds-pok-seksiHeader px-3.5 py-3 mb-2" data-seksi="${escHtml(seksi)}">
+            <span class="ds-seksi-ava ${dsPokSeksiBadgeClass(seksi)}">${escHtml(String(seksi).slice(0, 2))}</span>
+            <span class="flex-1"><span class="block text-[15px] font-bold">${escHtml(seksi)}</span><span class="block text-xs" style="color:#6e6e73">${items.length} item</span></span>
+            <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs" style="color:${isOpen ? '#0071e3' : '#8e8e93'}"></i>
         </div>`;
         if (isOpen) {
-            html += `<div class="mb-3">${dsRenderPokTreeForSeksi(seksi, items)}</div>`;
+            html += `<div class="ds-pok-wrap">${dsRenderPokTreeForSeksi(seksi, items)}</div>`;
         }
     });
 
