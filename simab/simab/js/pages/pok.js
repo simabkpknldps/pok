@@ -63,7 +63,7 @@ function pokInjectHapusDataBtn() {
 
     const btn = document.createElement('button');
     btn.id = 'pok-btnHapusData';
-    btn.className = expandBtn.className; // ikut style tombol Expand All biar konsisten, warna dibedain lewat inline style
+    btn.className = expandBtn.className; btn.style.height = '40px'; // ikut style tombol Expand All biar konsisten, warna dibedain lewat inline style
     btn.style.background = 'var(--ios-red)';
     btn.style.color = '#fff';
     btn.style.marginRight = '8px';

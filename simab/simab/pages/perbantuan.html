@@ -4,7 +4,7 @@
         <h3 class="text-lg font-semibold text-slate-700">
             <i class="fa-solid fa-hands-helping mr-2 text-sky-500"></i> Daftar Perbantuan
         </h3>
-        <button id="pb-btnTambahUsulan" class="btn-ios px-4 py-2 text-sm shrink-0">
+        <button id="pb-btnTambahUsulan" class="btn-ios px-4 text-sm font-semibold shrink-0" style="height:40px;">
             <i class="fa-solid fa-plus mr-1"></i> Tambah Usulan
         </button>
     </div>
@@ -12,12 +12,12 @@
     <div class="relative mb-4">
         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
         <input id="pb-search" type="text" placeholder="Cari MAK, uraian, pelaksana, atau tujuan..."
-            class="w-full ios-field" style="padding-left: 2.4rem;">
+            class="w-full ios-field" style="padding-left: 2.4rem; height:40px;">
     </div>
 
-    <div class="flex items-center gap-4 flex-wrap text-sm text-slate-600 mb-4">
-        <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="pb-statusFilter" value="Dalam Proses" checked> Dalam Proses</label>
-        <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="pb-statusFilter" value="Selesai"> Selesai</label>
+    <div class="flex items-center gap-2 flex-wrap mb-4">
+        <label class="ios-chip"><input type="radio" name="pb-statusFilter" value="Dalam Proses" checked><span>Dalam Proses</span></label>
+        <label class="ios-chip"><input type="radio" name="pb-statusFilter" value="Selesai"><span>Selesai</span></label>
     </div>
 
     <div class="overflow-auto max-h-[600px]">

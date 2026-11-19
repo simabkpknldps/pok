@@ -974,7 +974,7 @@ window.commonFilterSumber = commonFilterSumber;
 function commonRenderSumberToggle(wadah, nilaiAwal, onChange) {
     const opsi = [['ALL', 'Semua'], ['RM', 'RM'], ['PNBP', 'PNBP']];
     const gambar = nilai => {
-        wadah.innerHTML = opsi.map(([v, t]) => `<button type="button" data-sd="${v}" class="px-3 py-1.5 text-sm font-medium rounded-lg transition"
+        wadah.innerHTML = opsi.map(([v, t]) => `<button type="button" data-sd="${v}" class="px-4 text-sm font-medium rounded-full transition" data-pil="1"
             style="${v === nilai ? 'background: var(--ios-blue, #0071e3); color: #fff;' : 'background: rgba(118,118,128,0.12); color: var(--label, #1d1d1f);'}">${t}</button>`).join('');
         wadah.querySelectorAll('button').forEach(b => { b.onclick = () => { gambar(b.dataset.sd); onChange(b.dataset.sd); }; });
     };
