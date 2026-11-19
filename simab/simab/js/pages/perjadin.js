@@ -64,13 +64,15 @@ async function pjLoadData() {
         }
 
         const nama = (localStorage.getItem('nama') || '').trim().toLowerCase();
+        // Hanya kegiatan pada Tahun Anggaran yang sedang aktif (cache berisi semua tahun).
+        const tahunAktif = Number(await getTahunAktif());
 
         // Dipetakan ke bentuk huruf-kolom (B,C,E,G,H,M,P) yang sudah dipakai di
         // seluruh file ini, supaya fungsi render/filter di bawah tidak perlu diubah.
         pjAllRows = rows
             .filter(r => {
                 const pelaksana = String(r.pelaksana || '').trim().toLowerCase();
-                return pelaksana === nama && pjIsPerjalananDinas(r.mak);
+                return pelaksana === nama && pjIsPerjalananDinas(r.mak) && Number(r.tahun) === tahunAktif;
             })
             .map(r => ({
                 B: r.mak || '', C: r.uraian || '', E: r.tujuan || '',
