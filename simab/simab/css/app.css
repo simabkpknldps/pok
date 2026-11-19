@@ -218,3 +218,6 @@ body { font-family: var(--sf); }
 #kg-mainDataTable tbody td:last-child, #kg-mainDataTable thead th:last-child { box-shadow: -8px 0 8px -8px rgba(0,0,0,.2); }
 #kg-mainDataTable .kg-act { justify-content: flex-start; flex-wrap: nowrap; }
 #kg-mainDataTable tfoot td { background: #f7f7f9; }
+
+/* Popup Pencarian Kegiatan: kolom User tidak terpotong */
+#kg-mainDataTable tbody td:nth-child(8) { min-width: 150px; }
