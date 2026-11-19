@@ -12,6 +12,9 @@
     .pj-kpi .pj-val { font-size: 22px; font-weight: 700; line-height: 1.25; }
     .pj-card { background: #fff; border-radius: 18px; padding: 22px; min-width: 0; }
     .pj-card h3 { margin: 0 0 14px; font-size: 16px; font-weight: 600; color: #1d1d1f; }
+    .pj-uraian { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+    #pj-detailBody td { vertical-align: middle; }
+    .pj-tbl { table-layout: fixed; width: 100%; min-width: 760px; }
     .pj-pill { display: inline-block; padding: 3px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 </style>
 
@@ -44,7 +47,7 @@
     </div>
 
     <!-- Ringkasan status + daftar -->
-    <div class="flex flex-col lg:flex-row gap-5 items-start">
+    <div class="flex flex-col lg:flex-row gap-5 items-stretch">
 
         <div class="pj-card w-full lg:w-[320px] flex-shrink-0">
             <h3>Ringkasan status</h3>
@@ -79,14 +82,21 @@
                 <label class="pj-chip"><input type="radio" name="pj-statusFilter" value="Selesai"><span>Selesai <b id="pj-cnt-Selesai">0</b></span></label>
             </div>
 
-            <div class="rounded-xl overflow-auto max-h-[380px]" style="border: 1px solid #eef0f3;">
-                <table class="w-full text-[13px] border-collapse" style="min-width: 680px;">
+            <div class="rounded-xl overflow-auto max-h-[560px]" style="border: 1px solid #eef0f3;">
+                <table class="pj-tbl text-[13px] border-collapse">
+                    <colgroup>
+                        <col>
+                        <col style="width:150px">
+                        <col style="width:130px">
+                        <col style="width:100px">
+                        <col style="width:110px">
+                    </colgroup>
                     <thead>
                         <tr class="sticky top-0" style="background: #f7f7f9; color: #6e6e73;">
                             <th class="py-2.5 px-3.5 text-left font-medium">Uraian &amp; MAK</th>
-                            <th class="py-2.5 px-2 text-left font-medium">Tujuan</th>
-                            <th class="py-2.5 px-2 text-left font-medium">Tanggal</th>
-                            <th class="py-2.5 px-2 text-right font-medium">Jumlah</th>
+                            <th class="py-2.5 px-3 text-left font-medium">Tujuan</th>
+                            <th class="py-2.5 px-3 text-left font-medium">Tanggal</th>
+                            <th class="py-2.5 px-3 text-right font-medium">Jumlah</th>
                             <th class="py-2.5 px-3.5 text-center font-medium">Status</th>
                         </tr>
                     </thead>
