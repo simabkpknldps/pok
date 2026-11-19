@@ -25,7 +25,17 @@ async function apiPost(payload, timeout = 30000) {
             signal: controller.signal
         });
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        return await res.json();
+        const hasil = await res.json();
+        // Log aktivitas: upload/hapus dokumen (Kuitansi/SPBy/SPM dll) di Google Drive.
+        try {
+            const act = payload && payload.action;
+            if (window.logAktivitas && (act === 'uploadDokumenKegiatan' || act === 'hapusDokumenKegiatan') && !(hasil && hasil.success === false)) {
+                window.logAktivitas('dokumen', 'dokumen',
+                    (act === 'uploadDokumenKegiatan' ? 'Upload dokumen: ' : 'Hapus dokumen: ') + String(payload.uraian || payload.id || '').slice(0, 100),
+                    { aksi: act, id: payload.id, jenis: payload.jenis || payload.tipe });
+            }
+        } catch (e) { /* abaikan */ }
+        return hasil;
     } finally {
         clearTimeout(timeoutId);
     }

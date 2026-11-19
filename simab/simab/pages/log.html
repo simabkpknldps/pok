@@ -1,0 +1,99 @@
+<style>
+    .lg-chip { position: relative; display: inline-flex; cursor: pointer; }
+    .lg-chip input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .lg-chip span { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 9999px; background: #F2F2F5; color: #1d1d1f; font-size: 13px; font-weight: 500; transition: background-color .12s; }
+    .lg-chip:hover span { background: #E8E8ED; }
+    .lg-chip input:checked + span { background: #0071e3; color: #fff; font-weight: 600; }
+    .lg-chip input:focus-visible + span { outline: 2px solid #0071e3; outline-offset: 2px; }
+    .lg-kpi { background: #fff; border-radius: 18px; padding: 18px 20px; display: flex; gap: 14px; align-items: center; }
+    .lg-kpi .lg-ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: none; font-size: 18px; }
+    .lg-kpi .lg-lbl { font-size: 12px; color: #6e6e73; }
+    .lg-kpi .lg-val { font-size: 22px; font-weight: 700; line-height: 1.25; }
+    .lg-card { background: #fff; border-radius: 18px; padding: 22px; min-width: 0; }
+    .lg-tbl { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 13px; }
+    .lg-tbl thead th { text-align: left; padding: 10px 12px; position: sticky; top: 0; background: var(--sidebar-bg); z-index: 1; }
+    .lg-tbl td { padding: 11px 12px; vertical-align: top; border-bottom: 1px solid #eef0f3; }
+    .lg-pill { display: inline-block; padding: 3px 11px; border-radius: 9999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+    .lg-pill.a-login { background: #dbeafe; color: #1e40af; }
+    .lg-pill.a-logout { background: #e5e7eb; color: #374151; }
+    .lg-pill.a-rekam { background: #dcfce7; color: #166534; }
+    .lg-pill.a-ubah { background: #fef3c7; color: #92400e; }
+    .lg-pill.a-simpan { background: #ede9fe; color: #5b21b6; }
+    .lg-pill.a-hapus { background: #fee2e2; color: #991b1b; }
+    .lg-pill.a-dokumen { background: #e0f2fe; color: #075985; }
+    .lg-nip { background: none; border: 0; padding: 0; color: #0071e3; font-size: 12px; font-family: ui-monospace, Menlo, monospace; cursor: pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
+    .lg-nip:hover { color: #0058b8; }
+    .lg-ket { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+    #lg-modal { position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; padding: 16px; }
+    #lg-modal.is-open { display: flex; }
+    #lg-modalBox { background: #fff; border-radius: 20px; width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    .lg-kv { display: grid; grid-template-columns: 130px 1fr; gap: 8px 14px; font-size: 13px; }
+    .lg-kv dt { color: #6e6e73; }
+    .lg-kv dd { margin: 0; font-weight: 500; word-break: break-word; }
+    .lg-json { background: #f6f7f9; border-radius: 12px; padding: 12px; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow: auto; }
+</style>
+
+<div id="lg-root" class="space-y-5">
+
+    <div>
+        <h2 class="text-[26px] font-bold tracking-tight" style="color: var(--label);">Log Aktivitas</h2>
+        <div class="text-sm mt-1" style="color: var(--label-secondary);">Riwayat login dan seluruh rekam, ubah, hapus di SiMAB · hanya terlihat oleh superadmin</div>
+    </div>
+
+    <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <div class="lg-kpi"><div class="lg-ico" style="background:#dbeafe;color:#1e40af;"><i class="fa-solid fa-right-to-bracket"></i></div><div><div class="lg-lbl">Login hari ini</div><div id="lg-kpiLogin" class="lg-val">–</div></div></div>
+        <div class="lg-kpi"><div class="lg-ico" style="background:#dcfce7;color:#166534;"><i class="fa-solid fa-pen-to-square"></i></div><div><div class="lg-lbl">Perubahan data hari ini</div><div id="lg-kpiUbah" class="lg-val">–</div></div></div>
+        <div class="lg-kpi"><div class="lg-ico" style="background:#ede9fe;color:#5b21b6;"><i class="fa-solid fa-users"></i></div><div><div class="lg-lbl">Pengguna aktif hari ini</div><div id="lg-kpiUser" class="lg-val">–</div></div></div>
+        <div class="lg-kpi"><div class="lg-ico" style="background:#fef3c7;color:#92400e;"><i class="fa-solid fa-list"></i></div><div><div class="lg-lbl">Tercatat pada rentang ini</div><div id="lg-kpiTotal" class="lg-val">–</div></div></div>
+    </div>
+
+    <div class="lg-card">
+        <div class="flex flex-wrap items-center gap-2.5 mb-4">
+            <div class="flex-1 min-w-[220px] flex items-center gap-2">
+                <input id="lg-search" type="text" placeholder="Cari nama, NIP, atau keterangan..." class="ios-field flex-1" style="height:40px;">
+            </div>
+            <label class="flex items-center gap-2 text-xs" style="color: var(--label-secondary);">Dari
+                <input id="lg-dari" type="date" class="ios-field" style="height:40px;">
+            </label>
+            <label class="flex items-center gap-2 text-xs" style="color: var(--label-secondary);">Sampai
+                <input id="lg-sampai" type="date" class="ios-field" style="height:40px;">
+            </label>
+            <button id="lg-btnTerapkan" class="btn-ios px-4 text-sm font-semibold" style="height:40px;">Terapkan</button>
+            <button id="lg-btnRefresh" class="btn-ios-secondary px-3 text-sm" style="height:40px;" title="Muat ulang"><i class="fa-solid fa-arrow-rotate-right text-xs"></i></button>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap mb-4">
+            <label class="lg-chip"><input type="radio" name="lg-aksi" value="ALL" checked><span>Semua</span></label>
+            <label class="lg-chip"><input type="radio" name="lg-aksi" value="login"><span>Login</span></label>
+            <label class="lg-chip"><input type="radio" name="lg-aksi" value="logout"><span>Logout</span></label>
+            <label class="lg-chip"><input type="radio" name="lg-aksi" value="rekam"><span>Rekam</span></label>
+            <label class="lg-chip"><input type="radio" name="lg-aksi" value="ubah"><span>Ubah</span></label>
+            <label class="lg-chip"><input type="radio" name="lg-aksi" value="hapus"><span>Hapus</span></label>
+            <label class="lg-chip"><input type="radio" name="lg-aksi" value="dokumen"><span>Dokumen</span></label>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl" style="border: 1px solid var(--divider); max-height: 640px; overflow-y: auto;">
+            <table class="lg-tbl">
+                <thead>
+                    <tr class="text-[11px] uppercase tracking-wide" style="color: var(--label-secondary);">
+                        <th style="width:150px;">Waktu</th>
+                        <th style="width:210px;">Pengguna</th>
+                        <th style="width:90px;">Aksi</th>
+                        <th>Keterangan</th>
+                        <th style="width:190px;">Perangkat</th>
+                        <th style="width:190px;">IP &amp; Lokasi</th>
+                        <th style="width:70px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="lg-body"></tbody>
+            </table>
+        </div>
+        <div class="flex items-center justify-between mt-3 text-xs" style="color: var(--label-secondary);">
+            <span id="lg-count">Memuat…</span>
+            <button id="lg-btnMore" class="btn-ios-secondary px-3 text-xs hidden" style="height:34px;">Muat lebih banyak</button>
+        </div>
+    </div>
+</div>
+
+<div id="lg-modal" role="dialog" aria-modal="true" aria-label="Detail">
+    <div id="lg-modalBox"></div>
+</div>

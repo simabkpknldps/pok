@@ -224,3 +224,155 @@ function kgGenerateRandomId(len) {
     return id;
 }
 window.kgGenerateRandomId = kgGenerateRandomId;
+
+// =====================================================================
+// LOG AKTIVITAS (hanya bisa dilihat superadmin; tabel: log_aktivitas)
+// ---------------------------------------------------------------------
+// Mencatat login/logout dan SEMUA rekam/ubah/hapus ke tabel database
+// (lewat sb.from(tabel).insert/update/delete/upsert). Pencatatan dipasang
+// SEKALI di sini dengan "membungkus" sb.from, jadi semua halaman otomatis
+// tercatat tanpa mengubah kode masing-masing. Gagal mencatat TIDAK PERNAH
+// mengganggu proses utama (semua dibungkus try/catch dan tidak ditunggu).
+// =====================================================================
+(function () {
+    const LOG_TABEL = 'log_aktivitas';
+    const SKIP_TABEL = new Set([LOG_TABEL, 'jarwo_log', 'notifikasi']);
+    const SENSITIF = /(rekening|password|passwd|token|secret|api_?key)/i;
+
+    const NAMA_TABEL = {
+        kegiatan: 'Kegiatan', pok: 'POK', blokir: 'Blokir', rpd: 'RPD', rpd_berjalan: 'RPD Berjalan',
+        pegawai: 'Pegawai', kantor: 'Kantor', sbm: 'SBM', config: 'Pengaturan', pejabat: 'Pejabat',
+        mp_pnbp: 'MP PNBP', perbantuan: 'Perbantuan'
+    };
+
+    function ua() {
+        const u = navigator.userAgent || '';
+        let os = 'Tidak dikenal';
+        if (/Windows/i.test(u)) os = 'Windows';
+        else if (/Android/i.test(u)) os = 'Android';
+        else if (/iPhone|iPad|iPod/i.test(u)) os = 'iOS';
+        else if (/Mac OS X|Macintosh/i.test(u)) os = 'macOS';
+        else if (/CrOS/i.test(u)) os = 'ChromeOS';
+        else if (/Linux/i.test(u)) os = 'Linux';
+        let br = 'Browser';
+        if (/Edg\//i.test(u)) br = 'Edge';
+        else if (/OPR\/|Opera/i.test(u)) br = 'Opera';
+        else if (/SamsungBrowser/i.test(u)) br = 'Samsung Internet';
+        else if (/Firefox|FxiOS/i.test(u)) br = 'Firefox';
+        else if (/Chrome|CriOS/i.test(u)) br = 'Chrome';
+        else if (/Safari/i.test(u)) br = 'Safari';
+        const tablet = /iPad|Tablet/i.test(u) || (/Android/i.test(u) && !/Mobile/i.test(u));
+        const ponsel = /iPhone|iPod|Mobile/i.test(u);
+        const jenis = tablet ? 'Tablet' : (ponsel ? 'Ponsel' : 'Komputer');
+        let pwa = false;
+        try { pwa = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { }
+        return `${jenis} · ${os} · ${br}${pwa ? ' (PWA)' : ''}`;
+    }
+
+    // IP + perkiraan lokasi, diambil sekali per sesi tab dan di-cache.
+    let ipPromise = null;
+    function ambilIp() {
+        if (ipPromise) return ipPromise;
+        try {
+            const c = sessionStorage.getItem('simabIpInfo');
+            if (c) { ipPromise = Promise.resolve(JSON.parse(c)); return ipPromise; }
+        } catch (e) { }
+        const dengan = (url, peta) => {
+            const ctl = new AbortController();
+            const t = setTimeout(() => ctl.abort(), 3000);
+            return fetch(url, { signal: ctl.signal, cache: 'no-store' })
+                .then(r => r.json()).then(peta).finally(() => clearTimeout(t));
+        };
+        ipPromise = dengan('https://ipwho.is/', j => {
+            if (!j || j.success === false || !j.ip) throw new Error('x');
+            return { ip: j.ip, lokasi: [j.city, j.region, j.country].filter(Boolean).join(', ') };
+        }).catch(() => dengan('https://ipapi.co/json/', j => {
+            if (!j || !j.ip) throw new Error('x');
+            return { ip: j.ip, lokasi: [j.city, j.region, j.country_name].filter(Boolean).join(', ') };
+        })).catch(() => ({ ip: null, lokasi: null })).then(v => {
+            try { if (v.ip) sessionStorage.setItem('simabIpInfo', JSON.stringify(v)); } catch (e) { }
+            return v;
+        });
+        return ipPromise;
+    }
+
+    function samarkan(v, depth) {
+        depth = depth || 0;
+        if (v === null || v === undefined) return v;
+        if (Array.isArray(v)) return v.slice(0, 3).map(x => samarkan(x, depth + 1));
+        if (typeof v === 'object' && depth < 3) {
+            const o = {};
+            Object.keys(v).forEach(k => { o[k] = SENSITIF.test(k) ? '***' : samarkan(v[k], depth + 1); });
+            return o;
+        }
+        if (typeof v === 'string' && v.length > 300) return v.slice(0, 300) + '…';
+        return v;
+    }
+
+    function ringkasBaris(tabel, rows) {
+        const r = rows[0] || {};
+        const ket = r.uraian || r.nama || r.nomor_spm || r.kode || r.mak || r.id || '';
+        const lbl = NAMA_TABEL[tabel] || tabel;
+        const n = rows.length;
+        return n > 1 ? `${lbl}: ${n} baris` + (ket ? ` (mis. ${String(ket).slice(0, 80)})` : '') : `${lbl}${ket ? ': ' + String(ket).slice(0, 100) : ''}`;
+    }
+
+    async function tulis(aksi, tabel, ringkas, detail) {
+        try {
+            if (!window.sb) return;
+            const ls = (k) => { try { return localStorage.getItem(k) || null; } catch (e) { return null; } };
+            const nip = ls('nip');
+            if (!nip) return;                       // belum login -> tidak dicatat
+            const info = await ambilIp();
+            await window.sb.from(LOG_TABEL).insert({
+                nip, nama: ls('nama'), jabatan: ls('jabatan'), kantor_id: ls('kantor'),
+                aksi, tabel: tabel || null, ringkas: ringkas || null,
+                detail: detail ? samarkan(detail) : null,
+                perangkat: ua(), ip: info.ip, lokasi: info.lokasi,
+                halaman: (location.pathname.split('/').pop() || 'index.html') + (window.location.hash || '')
+            });
+        } catch (e) { /* pencatatan tidak boleh mengganggu */ }
+    }
+    // Dipakai manual: logAktivitas('login', 'sesi', 'Login berhasil', {...}) -> Promise
+    window.logAktivitas = tulis;
+
+    // ---- Bungkus sb.from supaya rekam/ubah/hapus tercatat otomatis ----
+    const asalFrom = window.sb.from.bind(window.sb);
+    const PETA = { insert: 'rekam', upsert: 'simpan', update: 'ubah', delete: 'hapus' };
+    window.sb.from = function (tabel) {
+        const qb = asalFrom(tabel);
+        if (SKIP_TABEL.has(tabel)) return qb;
+        Object.keys(PETA).forEach(m => {
+            const asli = qb[m];
+            if (typeof asli !== 'function') return;
+            qb[m] = function () {
+                const args = arguments;
+                const fb = asli.apply(qb, args);
+                try {
+                    const asliThen = fb.then;
+                    let sudah = false;
+                    fb.then = function (onOk, onErr) {
+                        return asliThen.call(fb, function (res) {
+                            try {
+                                if (!sudah && res && !res.error) {
+                                    sudah = true;
+                                    const payload = args[0];
+                                    const rows = Array.isArray(payload) ? payload : (payload ? [payload] : []);
+                                    let filter = '';
+                                    try { filter = decodeURIComponent(fb.url.search || '').replace(/^\?/, ''); } catch (e) { }
+                                    const rk = m === 'delete'
+                                        ? `${NAMA_TABEL[tabel] || tabel}${filter ? ' (' + filter.slice(0, 100) + ')' : ''}`
+                                        : (m === 'update' ? `${NAMA_TABEL[tabel] || tabel}${filter ? ' (' + filter.slice(0, 80) + ')' : ''} · ubah: ${Object.keys(rows[0] || {}).slice(0, 8).join(', ')}` : ringkasBaris(tabel, rows));
+                                    tulis(PETA[m], tabel, rk, { jumlah_baris: rows.length || undefined, filter: filter || undefined, data: rows.length ? rows : undefined });
+                                }
+                            } catch (e) { }
+                            return onOk ? onOk(res) : res;
+                        }, onErr);
+                    };
+                } catch (e) { }
+                return fb;
+            };
+        });
+        return qb;
+    };
+})();

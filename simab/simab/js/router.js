@@ -21,6 +21,7 @@ const PAGE_INIT = {
     referensi: () => window.initReferensiPage && window.initReferensiPage(),
     perbantuan: () => window.initPerbantuanPage && window.initPerbantuanPage(),
     pok_impor: () => window.initPokImporPage && window.initPokImporPage(),
+    log: () => window.initLogPage && window.initLogPage(),
 };
 
 // Tingkat akses (diisi ke localStorage saat login, kolom 'admin' & 'aksesMenu'

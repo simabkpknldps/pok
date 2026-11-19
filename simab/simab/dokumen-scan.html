@@ -2033,8 +2033,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    $('ds-btnLogout').onclick = () => {
+    $('ds-btnLogout').onclick = async () => {
         if (!confirm('Yakin ingin keluar?')) return;
+        try { if (window.logAktivitas) await Promise.race([window.logAktivitas('logout', 'sesi', 'Logout (SOH)'), new Promise(r => setTimeout(r, 1200))]); } catch (e) { /* abaikan */ }
         // Titipkan halaman ini supaya setelah login lagi, balik ke SOH
         // (bukan ke dashboard.html SiMAB versi web) — dibaca index.html,
         // kadaluarsa otomatis 10 menit kalau nggak jadi login lagi.
