@@ -180,3 +180,26 @@ body { font-family: var(--sf); }
 .cs-switch input:disabled{cursor:wait}
 .cs-vtab i{width:20px;flex:none;text-align:center}
 .cs-vtab span{flex:1;min-width:0;text-align:left}
+
+/* Tabel kegiatan (dipakai halaman Kegiatan dan popup Pencarian di Dashboard) */
+#kg-mainDataTable tbody tr { border-bottom: 1px solid #eef0f3; }
+#kg-mainDataTable tbody td { padding: 12px 10px; }
+#kg-mainDataTable tbody tr:hover { background: #f8fafc; }
+.kg-pil { display: inline-block; padding: 3px 11px; border-radius: 9999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.kg-pil.p-rekam { background: #fce7f3; color: #9d174d; }
+.kg-pil.p-terlaksana { background: #e5e7eb; color: #374151; }
+.kg-pil.p-lpt { background: #fef3c7; color: #92400e; }
+.kg-pil.p-terbayar { background: #dcfce7; color: #166534; }
+.kg-pil.p-selesai { background: #dbeafe; color: #1e40af; }
+.kg-pelaksana-link { display: inline-flex; align-items: center; gap: 8px; text-decoration: none !important; font-weight: 500; }
+.kg-pelaksana-link::before { content: attr(data-ini); flex: none; width: 26px; height: 26px; border-radius: 50%; background: #dbeafe; color: #1e40af; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.kg-jumlah-link { font-weight: 700; color: #1d1d1f !important; }
+.kg-act { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.kg-act button { width: 34px; height: 34px; border-radius: 10px; background: #F2F2F5; font-size: 13px; transition: background-color .12s; }
+.kg-act button:hover { background: #E3E3E8; }
+.kg-act .kg-act-sep { width: 1px; height: 22px; background: var(--divider); margin: 0 3px; }
+#kg-mainDataTable td:last-child { background: #fff; }
+.kg-act{gap:8px !important}
+.kg-act button{width:36px !important;height:36px !important}
+.kg-act .kg-act-sep{margin:0 4px !important}
+.kg-pil{padding:4px 12px !important}
