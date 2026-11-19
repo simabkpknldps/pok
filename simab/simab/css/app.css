@@ -178,3 +178,5 @@ body { font-family: var(--sf); }
 .cs-switch input:checked + .cs-switch-track{background:#34C759}
 .cs-switch input:checked + .cs-switch-track::after{transform:translateX(18px)}
 .cs-switch input:disabled{cursor:wait}
+.cs-vtab i{width:20px;flex:none;text-align:center}
+.cs-vtab span{flex:1;min-width:0;text-align:left}
