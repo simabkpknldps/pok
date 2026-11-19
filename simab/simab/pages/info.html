@@ -1,0 +1,55 @@
+<style>
+    .inf-card { background: #fff; border-radius: 18px; overflow: hidden; min-width: 0; }
+    .inf-head { background: #14213d; color: #fff; padding: 14px 18px; font-weight: 700; font-size: 15px; letter-spacing: .01em; }
+    .inf-row { display: flex; gap: 0; align-items: stretch; border-top: 1px solid #fff; }
+    .inf-tgl { flex: none; width: 112px; padding: 12px 10px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 800; font-size: 15px; line-height: 1.15; }
+    .inf-isi { flex: 1; min-width: 0; padding: 12px 16px; font-size: 13.5px; display: flex; align-items: center; background: #eef3fb; }
+    .inf-c0 { background: #0ea5e9; color: #fff; } .inf-c1 { background: #4f46e5; color: #fff; } .inf-c2 { background: #e11d48; color: #fff; }
+    .inf-c3 { background: #f59e0b; color: #14213d; } .inf-c4 { background: #2563eb; color: #fff; } .inf-c5 { background: #4caf2a; color: #14213d; }
+    .inf-ck { list-style: none; margin: 0; padding: 6px 18px 14px; }
+    .inf-ck li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 13.5px; border-bottom: 1px solid #eef0f3; }
+    .inf-ck li:last-child { border-bottom: 0; }
+    .inf-ck li::before { content: ''; flex: none; width: 9px; height: 9px; margin-top: 6px; background: #0ea5e9; border-radius: 2px; }
+    .inf-baru { display: inline-block; padding: 1px 8px; border-radius: 9999px; background: #e11d48; color: #fff; font-size: 10.5px; font-weight: 700; margin-right: 6px; vertical-align: 1px; }
+    .inf-kabar { padding: 14px 18px; border-top: 1px solid #eef0f3; }
+    .inf-kabar:first-of-type { border-top: 0; }
+    .inf-kabar a { color: #0071e3; text-decoration: underline; text-underline-offset: 3px; }
+    .inf-chip { height: 34px; padding: 0 14px; border-radius: 9999px; background: #F2F2F5; color: #1d1d1f; font-size: 13px; font-weight: 500; }
+    .inf-chip.on { background: #0071e3; color: #fff; font-weight: 600; }
+    #inf-form input, #inf-form textarea { width: 100%; }
+</style>
+
+<div id="inf-root" class="space-y-5">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+            <h2 class="text-[26px] font-bold tracking-tight" style="color: var(--label);">Info Perbendaharaan</h2>
+            <div class="text-sm mt-1" style="color: var(--label-secondary);">Jadwal dan ketentuan akhir tahun anggaran, ditambah kabar terbaru dari Jarwo</div>
+        </div>
+        <div id="inf-aksiAdmin" class="hidden flex items-center gap-2">
+            <span id="inf-cekInfo" class="text-xs" style="color: var(--label-secondary);"></span>
+            <button id="inf-btnTambah" class="btn-ios-secondary px-3 text-sm" style="height:40px;"><i class="fa-solid fa-plus text-xs"></i> Tambah info</button>
+            <button id="inf-btnCari" class="btn-ios px-4 text-sm font-semibold" style="height:40px;"><i class="fa-solid fa-robot text-xs"></i> Cari info terbaru</button>
+        </div>
+    </div>
+
+    <div id="inf-form" class="hidden inf-card p-5 space-y-3">
+        <input id="inf-fJudul" class="ios-field" placeholder="Judul (mis. PER-12/PB/2026 tentang ...)" style="height:40px;">
+        <textarea id="inf-fIsi" class="ios-field" rows="3" placeholder="Ringkasan"></textarea>
+        <div class="flex flex-wrap gap-2">
+            <input id="inf-fTgl" class="ios-field flex-1 min-w-[160px]" placeholder="Tanggal terbit (mis. 12 Nov 2026)" style="height:40px;">
+            <input id="inf-fUrl" class="ios-field flex-[2] min-w-[200px]" placeholder="Tautan sumber (opsional)" style="height:40px;">
+        </div>
+        <div class="flex gap-2 justify-end">
+            <button id="inf-fBatal" class="btn-ios-secondary px-4 text-sm" style="height:38px;">Batal</button>
+            <button id="inf-fSimpan" class="btn-ios px-4 text-sm font-semibold" style="height:38px;">Simpan</button>
+        </div>
+    </div>
+
+    <div id="inf-kabarBox" class="hidden inf-card">
+        <div class="inf-head">Kabar Terbaru</div>
+        <div id="inf-kabar"></div>
+    </div>
+
+    <div id="inf-chips" class="flex flex-wrap gap-2"></div>
+    <div id="inf-grup" class="grid gap-5" style="grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));"></div>
+</div>

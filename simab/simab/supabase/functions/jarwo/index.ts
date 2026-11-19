@@ -504,6 +504,54 @@ async function enrich(d: any, c: Ctx) {
   return d;
 }
 
+// ---------- Info Perbendaharaan: cari ketentuan/pengumuman terbaru ----------
+const INFO_QUERIES = [
+  "Peraturan Direktur Jenderal Perbendaharaan terbaru tahun anggaran",
+  "Surat Edaran Direktur Jenderal Perbendaharaan terbaru pelaksanaan anggaran akhir tahun",
+  "PMK terbaru perbendaharaan negara pembayaran belanja",
+  "DJPb pengumuman batas akhir penyampaian SPM akhir tahun anggaran",
+];
+async function llmJson(text: string): Promise<any> {
+  const errs: string[] = [];
+  if (keys("GEMINI_KEYS").length) {
+    try {
+      const r = await withModels(GEMINI_MODELS, (mdl) => withKeys("GEMINI_KEYS", (key) =>
+        post(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,
+          { contents: [{ parts: [{ text }] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } }, { "x-goog-api-key": key })));
+      return parseJson(r.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+    } catch (e) { errs.push("gemini: " + String(e).slice(0, 120)); }
+  }
+  if (keys("GROQ_KEYS").length) {
+    try {
+      const r = await withModels(GROQ_MODELS, (model) => withKeys("GROQ_KEYS", (key) =>
+        post("https://api.groq.com/openai/v1/chat/completions", { model, temperature: 0, response_format: { type: "json_object" }, messages: [{ role: "user", content: text }] }, { Authorization: `Bearer ${key}` })));
+      return parseJson(r.choices?.[0]?.message?.content || "{}");
+    } catch (e) { errs.push("groq: " + String(e).slice(0, 120)); }
+  }
+  throw new Error("Gagal merangkum info. " + errs.join(" | "));
+}
+async function infoPerbendaharaan(b: any, c: Ctx) {
+  const hasil: any[] = [];
+  for (const q of INFO_QUERIES) {
+    const r: any = await runTool("cari_web", { query: q + " " + new Date().getFullYear() }, c);
+    if (Array.isArray(r)) hasil.push(...r);
+  }
+  if (!hasil.length) throw new Error("Pencarian web tidak menghasilkan apa pun (cek TAVILY_KEYS/SERPER_KEYS).");
+  const sudah = (Array.isArray(b.sudah_ada) ? b.sudah_ada : []).slice(0, 60).map((x: any) => `- ${String(x.judul || "").slice(0, 120)} ${String(x.url || "")}`).join("\n");
+  const prompt = `Hari ini ${new Date().toISOString().slice(0, 10)}. Dari hasil pencarian web di bawah, pilih HANYA ketentuan atau pengumuman perbendaharaan negara Indonesia yang baru dan relevan bagi bendahara/satker (peraturan Dirjen Perbendaharaan, PMK, surat edaran, jadwal/batas waktu akhir tahun, perubahan mekanisme pembayaran, UP/TUP, SPM/SP2D). Abaikan berita umum, opini, dan yang tidak jelas sumbernya. Jangan mengulang yang sudah ada:
+${sudah || "(belum ada)"}
+
+Balas HANYA JSON: {"items":[{"judul":"nama ketentuan/pengumuman, singkat","ringkasan":"1-2 kalimat berisi hal penting bagi bendahara, bahasa Indonesia","tanggal_terbit":"tanggal terbit bila tertulis, mis. 12 Nov 2026, kosongkan bila tidak jelas","sumber":"nama situs","sumber_url":"URL dari hasil pencarian"}]}
+Maksimal 6 item. Jangan mengarang; bila tidak ada yang layak, balas {"items":[]}.
+
+Hasil pencarian:
+${JSON.stringify(hasil.slice(0, 24))}`;
+  const j = await llmJson(prompt);
+  const urls = new Set(hasil.map((x: any) => x.url));
+  const items = (Array.isArray(j.items) ? j.items : []).filter((x: any) => x?.judul && x?.sumber_url && urls.has(x.sumber_url)).slice(0, 6);
+  return { items };
+}
+
 Deno.serve(async (req: Request) => {
   deadline = Date.now() + 100_000;
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -515,6 +563,7 @@ Deno.serve(async (req: Request) => {
     const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt), lampiran: [], gambar: [], draf: [] };
     if (!c.kantor) return json({ error: "kantor kosong" }, 400);
 
+    if (b.mode === "info_perbendaharaan") return json(await infoPerbendaharaan(b, c));
     if (b.mode === "extract") {
       if (!b.file?.data || !b.file?.mime) return json({ error: "file kosong" }, 400);
       if (b.file.data.length > 14_000_000) return json({ error: "File terlalu besar (maks ±10 MB)" }, 413);
