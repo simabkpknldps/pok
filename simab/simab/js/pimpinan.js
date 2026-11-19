@@ -356,11 +356,11 @@
     };
 })();
 
-// Tombol sidebar "Dashboard Pimpinan" hanya muncul untuk superadmin
+// Tombol sidebar "Dashboard Pimpinan" hanya muncul untuk superadmin dan Kepala Kantor
 (function () {
     const tampil = () => {
         const b = document.getElementById('nav-pimpinan');
-        if (b && localStorage.getItem('superadmin') === '1') b.classList.remove('hidden');
+        if (b && (localStorage.getItem('superadmin') === '1' || window.isKepalaKantor(localStorage.getItem('jabatan')))) b.classList.remove('hidden');
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampil); else tampil();
 })();
