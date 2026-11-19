@@ -162,3 +162,19 @@ body { font-family: var(--sf); }
 @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
 }
+
+/* Pengaturan: tab vertikal */
+.cs-vtab{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;font-size:13px;font-weight:500;color:var(--label-secondary);white-space:nowrap;text-align:left;width:100%;background:transparent;border:0;cursor:pointer}
+.cs-vtab:hover{background:#f2f2f5}
+.cs-vtab.is-active{background:#dbeafe;color:#0A2E6E;font-weight:600}
+.cs-vtab.hidden{display:none}
+#cs-tabNav{display:flex;flex-direction:row;gap:4px;overflow-x:auto}
+@media (min-width:640px){#cs-tabNav{flex-direction:column;width:200px;flex:none;overflow:visible;border-right:1px solid var(--divider);padding-right:12px}}
+@media (max-width:639px){.cs-vtab{width:auto}}
+.cs-switch{position:relative;display:inline-block;width:44px;height:26px;flex:none}
+.cs-switch input{position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:pointer;z-index:1}
+.cs-switch-track{position:absolute;inset:0;border-radius:9999px;background:#d1d5db;transition:background .15s}
+.cs-switch-track::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
+.cs-switch input:checked + .cs-switch-track{background:#34C759}
+.cs-switch input:checked + .cs-switch-track::after{transform:translateX(18px)}
+.cs-switch input:disabled{cursor:wait}

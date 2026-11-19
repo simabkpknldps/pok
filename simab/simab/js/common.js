@@ -217,13 +217,16 @@ function openSettings() {
             <h3 class="text-lg font-semibold text-sky-700"><i class="fa-solid fa-gear mr-2"></i>Pengaturan</h3>
             <button id="cs-closeBtn" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="flex border-b border-slate-200 mb-2 overflow-x-auto">
-            <button id="cs-tabBtnProfil" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Profil</button>
-            <button id="cs-tabBtnRekening" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Rekening</button>
-            <button id="cs-tabBtnPejabat" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Pejabat</button>
-            <button id="cs-tabBtnPassword" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Ganti Password</button>
-            <button id="cs-tabBtnTambahPegawai" class="px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap">Tambah Pegawai</button>
-        </div>
+        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-2">
+        <nav id="cs-tabNav" class="flex sm:flex-col gap-1 overflow-x-auto sm:overflow-visible sm:w-48 shrink-0 pb-2 sm:pb-0" style="scrollbar-width:thin;">
+            <button id="cs-tabBtnProfil" class="cs-vtab"><i class="fa-regular fa-user"></i><span>Profil</span></button>
+            <button id="cs-tabBtnRekening" class="cs-vtab"><i class="fa-solid fa-credit-card"></i><span>Rekening</span></button>
+            <button id="cs-tabBtnPejabat" class="cs-vtab"><i class="fa-solid fa-user-tie"></i><span>Pejabat</span></button>
+            <button id="cs-tabBtnPassword" class="cs-vtab"><i class="fa-solid fa-key"></i><span>Ganti Password</span></button>
+            <button id="cs-tabBtnTambahPegawai" class="cs-vtab"><i class="fa-solid fa-user-plus"></i><span>Tambah Pegawai</span></button>
+            <button id="cs-tabBtnFitur" class="cs-vtab hidden"><i class="fa-solid fa-toggle-on"></i><span>Pengaturan Fitur</span></button>
+        </nav>
+        <div class="flex-1 min-w-0" style="min-height: 420px;">
 
         <div id="cs-tabProfil" class="flex-col gap-3">
             <label class="${csLabelClass}">Nama</label>
@@ -370,7 +373,13 @@ function openSettings() {
                 </button>
             </div>
         </div>
-    `, 'max-w-lg');
+
+        <div id="cs-tabFitur" class="hidden flex-col gap-3">
+            <div class="text-center text-slate-400 py-6"><i class="fa-solid fa-spinner fa-spin"></i></div>
+        </div>
+        </div>
+        </div>
+    `, 'max-w-3xl');
 
     popup.querySelector('#cs-closeBtn').onclick = () => overlay.remove();
 
@@ -385,6 +394,8 @@ function openSettings() {
     const tabPejabat = popup.querySelector('#cs-tabPejabat');
     const tabPassword = popup.querySelector('#cs-tabPassword');
     const tabTambahPegawai = popup.querySelector('#cs-tabTambahPegawai');
+    const tabBtnFitur = popup.querySelector('#cs-tabBtnFitur');
+    const tabFitur = popup.querySelector('#cs-tabFitur');
 
     function csActivateTab(tab) {
         const tabs = {
@@ -392,7 +403,8 @@ function openSettings() {
             rekening: [tabRekening, tabBtnRekening],
             pejabat: [tabPejabat, tabBtnPejabat],
             password: [tabPassword, tabBtnPassword],
-            tambahPegawai: [tabTambahPegawai, tabBtnTambahPegawai]
+            tambahPegawai: [tabTambahPegawai, tabBtnTambahPegawai],
+            fitur: [tabFitur, tabBtnFitur]
         };
 
         Object.keys(tabs).forEach(key => {
@@ -400,11 +412,13 @@ function openSettings() {
             const active = key === tab;
             content.classList.toggle('hidden', !active);
             content.classList.toggle('flex', active);
-            btn.className = `px-3 py-2 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap ${active ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500'}`;
+            const hid = btn.classList.contains('hidden');
+            btn.className = `cs-vtab${active ? ' is-active' : ''}${hid ? ' hidden' : ''}`;
         });
 
         if (tab === 'pejabat') csLoadPejabatData(popup);
         if (tab === 'rekening') csLoadRekeningData(popup);
+        if (tab === 'fitur' && typeof window.csLoadFiturTab === 'function') window.csLoadFiturTab(popup);
     }
 
     tabBtnProfil.onclick = () => csActivateTab('profil');
@@ -412,6 +426,15 @@ function openSettings() {
     tabBtnPejabat.onclick = () => csActivateTab('pejabat');
     tabBtnPassword.onclick = () => csActivateTab('password');
     tabBtnTambahPegawai.onclick = () => csActivateTab('tambahPegawai');
+    tabBtnFitur.onclick = () => csActivateTab('fitur');
+
+    // Pengaturan Fitur: hanya admin & superadmin (berlaku per kantor aktif).
+    if (localStorage.getItem('admin') === '1' || localStorage.getItem('superadmin') === '1') {
+        tabBtnFitur.classList.remove('hidden');
+    } else {
+        tabBtnFitur.remove();
+        tabFitur.remove();
+    }
 
     // User tingkat 'biasa' (lihat router.js getAksesLevel()) tidak boleh
     // melihat atau mengakses tab Pejabat sama sekali.
