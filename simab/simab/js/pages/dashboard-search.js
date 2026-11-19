@@ -101,7 +101,7 @@ function dashGsBuildPopupHtml() {
 
             <!-- Tabel -->
             <div class="w-full overflow-x-auto border border-slate-200 rounded-xl">
-                <div class="min-w-[1320px] max-h-[55vh] overflow-y-auto">
+                <div class="min-w-[1240px] max-h-[55vh] overflow-y-auto">
                     <table id="kg-mainDataTable" class="w-full border-collapse text-[13px]">
                         <thead class="bg-slate-100 sticky top-0 z-10">
                             <tr>
@@ -166,7 +166,7 @@ function bukaPencarianKegiatanGlobal(term, viaSpm) {
             <button id="dash-gsClose" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
         ${dashGsBuildPopupHtml()}
-    `, 'max-w-6xl');
+    `, 'max-w-[1480px]');
     popup.classList.add('bg-slate-100');
 
     popup.querySelector('#dash-gsClose').onclick = () => overlay.remove();
