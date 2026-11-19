@@ -48,20 +48,35 @@
             </div>
             <h1 class="text-[15px] font-semibold" style="color: var(--label);">SiMAB</h1>
         </div>
-        <nav class="px-3 space-y-0.5 flex-grow overflow-y-auto">
-            <button onclick="navigate('dashboard')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-gauge"></i> Dashboard</button>
-            <button onclick="navigate('pok')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-folder-open"></i> POK</button>
-            <button onclick="navigate('kegiatan')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-list-check"></i> Daftar Kegiatan</button>
-            <button onclick="navigate('perjadin')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-wallet"></i> Perjadinku</button>
-            <button onclick="navigate('kalender')" class="nav-btn sidebar-nav-btn"><i class="fa-regular fa-calendar"></i> Kalender</button>
-            <button onclick="navigate('statistik')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-chart-column"></i> Statistik</button>
-            <button onclick="navigate('rpd')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-table"></i> RPD</button>
-            <button onclick="navigate('referensi')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-book"></i> Referensi</button>
-            <button onclick="navigate('perbantuan')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-hands-helping"></i> Perbantuan</button>
-            <button id="nav-pimpinan" onclick="window.bukaDashboardPimpinan && window.bukaDashboardPimpinan()" class="nav-btn sidebar-nav-btn hidden"><i class="fa-solid fa-user-tie"></i> Dashboard Pimpinan</button>
-            <button id="nav-pok-impor" onclick="navigate('pok_impor')" class="nav-btn sidebar-nav-btn hidden"><i class="fa-solid fa-file-import"></i> Impor POK</button>
-            <button onclick="window.toggleJarwo && window.toggleJarwo()" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-robot"></i> Jarwo AI</button>
+        <nav class="px-3 flex-grow overflow-y-auto">
+            <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide" style="color: var(--label-secondary); opacity: .7; padding-top: 4px;">Ringkasan</div>
+            <div class="space-y-0.5">
+                <button onclick="navigate('dashboard')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-gauge"></i> Dashboard</button>
+                <button id="nav-pimpinan" onclick="window.bukaDashboardPimpinan && window.bukaDashboardPimpinan()" class="nav-btn sidebar-nav-btn hidden"><i class="fa-solid fa-user-tie"></i> Dashboard Pimpinan</button>
+                <button onclick="navigate('statistik')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-chart-column"></i> Statistik</button>
+            </div>
+            <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide" style="color: var(--label-secondary); opacity: .7; padding-top: 16px;">Anggaran</div>
+            <div class="space-y-0.5">
+                <button onclick="navigate('pok')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-folder-open"></i> POK</button>
+                <button onclick="navigate('rpd')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-table"></i> RPD</button>
+                <button id="nav-pok-impor" onclick="navigate('pok_impor')" class="nav-btn sidebar-nav-btn hidden"><i class="fa-solid fa-file-import"></i> Impor POK</button>
+            </div>
+            <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide" style="color: var(--label-secondary); opacity: .7; padding-top: 16px;">Pelaksanaan</div>
+            <div class="space-y-0.5">
+                <button onclick="navigate('kegiatan')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-list-check"></i> Daftar Kegiatan</button>
+                <button onclick="navigate('perjadin')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-wallet"></i> Perjadinku</button>
+                <button onclick="navigate('perbantuan')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-hands-helping"></i> Perbantuan</button>
+                <button onclick="navigate('kalender')" class="nav-btn sidebar-nav-btn"><i class="fa-regular fa-calendar"></i> Kalender</button>
+            </div>
+            <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide" style="color: var(--label-secondary); opacity: .7; padding-top: 16px;">Data & Bantuan</div>
+            <div class="space-y-0.5">
+                <button onclick="navigate('referensi')" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-book"></i> Referensi</button>
+                <button onclick="window.toggleJarwo && window.toggleJarwo()" class="nav-btn sidebar-nav-btn"><i class="fa-solid fa-robot"></i> Jarwo AI</button>
+            </div>
         </nav>
+        <div class="px-3 py-3" style="border-top: 1px solid var(--divider);">
+            <button onclick="openSettings()" class="sidebar-nav-btn"><i class="fa-solid fa-gear"></i> Pengaturan</button>
+        </div>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
