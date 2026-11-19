@@ -12,7 +12,7 @@
  * biar service worker lama otomatis dibuang dan cache diisi ulang.
  */
 
-const CACHE_NAME = 'simab-shell-v1';
+const CACHE_NAME = 'simab-shell-v2';
 
 const APP_SHELL = [
   './',
@@ -37,7 +37,8 @@ const APP_SHELL = [
   './pages/statistik.html',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './icons/logo-simab.svg'
 ];
 
 self.addEventListener('install', (event) => {

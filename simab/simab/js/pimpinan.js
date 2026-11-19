@@ -222,7 +222,7 @@
         <header style="background:#fff;border-bottom:1px solid #e5e5ea">
           <div style="max-width:1320px;margin:0 auto;padding:16px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:16px;box-sizing:border-box">
             <div style="display:flex;align-items:center;gap:12px;flex:1 1 300px;min-width:0">
-              <div style="width:40px;height:40px;border-radius:12px;background:#0071e3;display:flex;align-items:center;justify-content:center;flex:none;color:#fff"><i class="fa-solid fa-shield-halved"></i></div>
+              <img src="icons/logo-simab.svg" alt="SiMAB" width="40" height="40" style="border-radius:12px;flex:none">
               <div style="min-width:0">
                 <div style="font-size:12px;font-weight:600;color:#6e6e73;letter-spacing:.04em;text-transform:uppercase">SiMAB · Dashboard Pimpinan</div>
                 <div style="font-size:20px;font-weight:700;line-height:1.25">${esc(ctx.namaKantor)} · Tahun Anggaran ${ctx.tahun}</div>
