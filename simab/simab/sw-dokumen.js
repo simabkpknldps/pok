@@ -13,7 +13,7 @@
  * -----------------------------------------------------------------------
  */
 
-const CACHE_NAME = 'simab-dokumen-shell-v1';
+const CACHE_NAME = 'simab-dokumen-shell-v2';
 const APP_SHELL = [
     './dokumen-scan.html',
     './manifest-dokumen.json',
