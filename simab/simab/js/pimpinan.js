@@ -219,7 +219,7 @@
         const btnDash = `<button type="button" id="pmp-dash" style="height:44px;padding:0 18px;border:0;border-radius:12px;background:#0071e3;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit"><i class="fa-solid fa-table-columns"></i> Dashboard SiMAB</button>`;
 
         return `
-        <header style="background:#fff;border-bottom:1px solid #e5e5ea">
+        <header style="position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #e5e5ea">
           <div style="max-width:1320px;margin:0 auto;padding:16px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:16px;box-sizing:border-box">
             <div style="display:flex;align-items:center;gap:12px;flex:1 1 300px;min-width:0">
               <img src="icons/logo-simab.svg" alt="SiMAB" width="40" height="40" style="border-radius:12px;flex:none">

@@ -113,20 +113,13 @@
         await muatFitur();
 
         box.innerHTML = `
-            <div class="rounded-xl px-4 py-3 text-[13px]" style="background:#E3EEFF;color:#0b3a85;">
-                <b>Berlaku untuk kantor: ${esc(kantorNama)}</b> (${esc(kantor)}).<br>
-                Perubahan di sini hanya memengaruhi kantor ini; kantor lain tidak terpengaruh.
-            </div>
-            <div id="cs-fiturList" class="flex flex-col"></div>
-            <div class="text-[11px]" style="color:#6e6e73;">Perubahan tersimpan otomatis. Pengguna melihatnya setelah memuat ulang halaman.</div>`;
+            <div class="text-sm font-semibold" style="color:#1d1d1f;">${esc(kantorNama)}</div>
+            <div id="cs-fiturList" class="flex flex-col"></div>`;
 
         const list = box.querySelector('#cs-fiturList');
         list.innerHTML = FITUR_DAFTAR.map(f => `
-            <label class="flex items-center gap-3 py-3 cursor-pointer" style="border-bottom:1px solid #eef0f3;">
-                <span class="flex-1 min-w-0">
-                    <span class="block text-sm font-semibold" style="color:#1d1d1f;">${esc(f.nama)}</span>
-                    <span class="block text-xs" style="color:#6e6e73;">${esc(f.desc)}</span>
-                </span>
+            <label class="flex items-center gap-3 py-2.5 cursor-pointer" style="border-bottom:1px solid #eef0f3;">
+                <span class="flex-1 min-w-0 text-sm font-medium" style="color:#1d1d1f;">${esc(f.nama)}</span>
                 <span class="cs-switch">
                     <input type="checkbox" data-fitur="${esc(f.kunci)}" ${fiturAktif(f.kunci) ? 'checked' : ''}>
                     <span class="cs-switch-track"></span>
