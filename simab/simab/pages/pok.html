@@ -4,6 +4,9 @@
   #pok-tbody td { border: 1px solid var(--pok-grid); }
   #pok-tbody tr.select-none td { border-color: transparent; }
   #pok-tbody tr { border-bottom: 0 !important; }
+  /* Penanda grup yang terbuka: garis kiri biru (induk terbuka) / biru muda (isinya) */
+  #pok-tbody tr[data-edge="open"] td:first-child { box-shadow: inset 4px 0 0 var(--ios-blue); }
+  #pok-tbody tr[data-edge="child"] td:first-child { box-shadow: inset 4px 0 0 #BFD7FF; }
 </style>
 <div class="ios-panel p-5">
     <div class="flex flex-col md:flex-row gap-3 mb-4 items-center">

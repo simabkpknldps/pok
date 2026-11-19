@@ -566,7 +566,12 @@ function renderPok() {
         const depth = c.split('.').length;
         const isDetail = depth >= 7;
         const sdColor = i.sumber === 'PNBP' ? '#dc2626' : '#16a34a';
-        const rowStyle = isMatch ? 'background: rgba(255,214,10,0.22);' : 'background:#fff;';
+        // Baris yang sedang dibuka diberi latar biru muda + garis kiri; anak-anaknya
+        // yang ikut tampil diberi latar lebih tipis supaya satu grup mudah dibaca.
+        const isExpandedRow = window.expandedCodes.has(seksi + '::' + c);
+        const rowBg = isExpandedRow ? '#E3EEFF' : (isChildVisible ? '#F3F8FF' : '#fff');
+        const rowEdge = isExpandedRow ? 'open' : (isChildVisible ? 'child' : '');
+        const rowStyle = isMatch ? 'background: rgba(255,214,10,0.22);' : 'background:' + rowBg + ';';
         let textStyle = 'font-weight:400; color: var(--label);';
         if (depth === 5) textStyle += ' font-style:italic;';
         if (depth === 6) textStyle += ' font-size:12px;';
@@ -587,7 +592,7 @@ function renderPok() {
         const barColor = persenRealisasi >= 90 ? '#34C759' : (persenRealisasi >= 50 ? '#0071E3' : '#FF9F0A');
         const sisaStyle = sisa < 0 ? 'color: #FF3B30; font-weight:600;' : 'color: var(--label);';
 
-        return `<tr data-kode="${c}" data-seksi="${seksi}" class="cursor-pointer transition" style="${rowStyle} border-bottom: 1px solid var(--divider);" onmouseover="this.style.filter='brightness(0.97)'" onmouseout="this.style.filter=''" onclick="toggleExpand('${c}', '${seksi}')">
+        return `<tr data-kode="${c}" data-seksi="${seksi}" data-edge="${rowEdge}" class="cursor-pointer transition" style="${rowStyle} border-bottom: 1px solid var(--divider);" onmouseover="this.style.filter='brightness(0.97)'" onmouseout="this.style.filter=''" onclick="toggleExpand('${c}', '${seksi}')">
             <td class="p-2 text-[11.5px] whitespace-nowrap text-right align-top" style="color: var(--label);" title="${c}">${kodeTampil}</td>
             <td class="p-2 align-top" style="${textStyle} padding-left:${paddingLeft}px">
                 <span class="whitespace-normal break-words">${uraianHtml}</span>
