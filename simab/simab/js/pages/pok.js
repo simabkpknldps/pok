@@ -1086,10 +1086,12 @@ async function openDetilModal(mak) {
                 userLogin: d.user || '',
                 status: d.status || '',
                 nomorSPM: d.nomor_spm || '',
+                tglSp2d: d.tgl_sp2d || '',
                 perbantuan: d.perbantuan || false
             }));
 
         window.detilKegiatanData = result;
+        renderDetilSp2d(result);
         renderDetilTable(result);
     } catch (e) {
         console.error("Fetch Error:", e);
@@ -1098,6 +1100,22 @@ async function openDetilModal(mak) {
             : e.message || 'Gagal koneksi ke server';
         tbody.innerHTML = `<div class="p-4 text-center text-red-500">❌ ${errorMsg}</div>`;
     }
+}
+
+// Ringkasan nilai yang sudah / belum SP2D (untuk dicocokkan dengan SAKTI)
+function renderDetilSp2d(data) {
+    const box = document.getElementById('detil-sp2d');
+    if (!box) return;
+    const sudah = data.filter(i => i.tglSp2d);
+    const belum = data.filter(i => !i.tglSp2d);
+    const jml = a => a.reduce((t, i) => t + (Number(i.estimasi) || 0), 0);
+    const kartu = (judul, arr, warna, bg) => `<div class="rounded-xl p-3" style="background:${bg};">
+        <div class="text-[11px]" style="color:var(--label-secondary);">${judul}</div>
+        <div class="text-lg font-bold" style="color:${warna};">${jml(arr).toLocaleString('id-ID')}</div>
+        <div class="text-[11px]" style="color:var(--label-secondary);">${arr.length} kegiatan</div></div>`;
+    box.innerHTML = kartu('Sudah SP2D', sudah, '#248A3D', 'var(--ios-green-tint)')
+        + kartu('Belum SP2D', belum, '#C77400', 'var(--ios-amber-tint)')
+        + kartu('Total kegiatan', data, 'var(--label)', 'var(--sidebar-bg)');
 }
 
 function renderDetilTable(data) {
