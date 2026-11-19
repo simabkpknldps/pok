@@ -22,6 +22,7 @@ const PAGE_INIT = {
     perbantuan: () => window.initPerbantuanPage && window.initPerbantuanPage(),
     pok_impor: () => window.initPokImporPage && window.initPokImporPage(),
     log: () => window.initLogPage && window.initLogPage(),
+    info: () => window.initInfoPage && window.initInfoPage(),
 };
 
 // Tingkat akses (diisi ke localStorage saat login, kolom 'admin' & 'aksesMenu'
@@ -52,7 +53,7 @@ window.getKantorAktif = getKantorAktif;
 
 // Menu yang boleh diakses user tingkat 'biasa'. Selain ini akan ditolak &
 // diarahkan ke halaman Perbantuan.
-const RESTRICTED_ALLOWED_PAGES = ['perjadin', 'referensi', 'perbantuan'];
+const RESTRICTED_ALLOWED_PAGES = ['perjadin', 'referensi', 'perbantuan', 'info'];
 const RESTRICTED_DEFAULT_PAGE = 'perbantuan';
 
 async function navigate(page) {

@@ -21,6 +21,7 @@
         { kunci: 'perjadin', nama: 'Perjadinku', desc: 'Ringkasan perjalanan dinas pribadi pegawai.', def: true, page: 'perjadin', sel: ['[onclick="navigate(\'perjadin\')"]'] },
         { kunci: 'perbantuan', nama: 'Perbantuan', desc: 'Pencatatan usulan dan pelaksanaan perbantuan.', def: true, page: 'perbantuan', sel: ['[onclick="navigate(\'perbantuan\')"]'] },
         { kunci: 'kalender', nama: 'Kalender', desc: 'Kalender kegiatan dan perjalanan dinas.', def: true, page: 'kalender', sel: ['[onclick="navigate(\'kalender\')"]'] },
+        { kunci: 'info_perbendaharaan', nama: 'Info Perbendaharaan', desc: '', def: true, page: 'info', sel: ['#nav-info'] },
         { kunci: 'jarwo', nama: 'Jarwo AI', desc: 'Asisten AI untuk bertanya dan merekam dokumen (tombol melayang dan menu).', def: true, sel: ['#jw-fab', '#jw-panel', '[onclick*="toggleJarwo"]'] }
     ];
     window.FITUR_DAFTAR = FITUR_DAFTAR;
