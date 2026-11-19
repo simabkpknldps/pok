@@ -313,6 +313,15 @@
             localStorage.setItem('kantor', kantorId || '');
             localStorage.setItem('lastActivity', Date.now().toString());
 
+            // Catat login (maks. 3,5 dtk supaya login tidak tertahan kalau lambat/gagal).
+            const logLogin = window.logAktivitas
+                ? Promise.race([
+                    window.logAktivitas('login', 'sesi', 'Login berhasil', { mode: forceAdmin ? 'SuperAdmin' : 'User biasa', kantor: kantorId || '' }),
+                    new Promise(r => setTimeout(r, 3500))
+                ]).catch(() => { })
+                : Promise.resolve();
+            logLogin.then(() => lanjutSetelahLogin());
+            function lanjutSetelahLogin() {
             let redirectTarget = 'dashboard.html';
             let adaTitipan = false;
             try {
@@ -336,6 +345,7 @@
             }
 
             window.location.href = redirectTarget;
+            }
         }
 
         // Kantor aktif + status pegawai aktif ('1') -> OTOMATIS dapat akses

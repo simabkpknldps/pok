@@ -354,6 +354,15 @@
     };
 })();
 
+// Tombol sidebar "Log Aktivitas" hanya muncul untuk superadmin
+(function () {
+    const tampil = () => {
+        const b = document.getElementById('nav-log');
+        if (b && localStorage.getItem('superadmin') === '1') b.classList.remove('hidden');
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampil); else tampil();
+})();
+
 // Tombol sidebar "Dashboard Pimpinan" hanya muncul untuk superadmin dan Kepala Kantor
 (function () {
     const tampil = () => {
