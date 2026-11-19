@@ -97,7 +97,7 @@
     document.body.append(fab, panel);
     list = panel.querySelector('#jw-list'); input = panel.querySelector('#jw-in');
     const sapa = MOBILE ? 'Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau ketuk ikon klip untuk memotret/memilih foto kuitansi, nota, atau bukti bayar. Nanti saya isikan drafnya untuk Anda cek dan simpan.' : null;
-    const toggle = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) setTimeout(() => input.focus(), 50); if (panel.classList.contains('open') && !list.children.length) bubble(sapa || 'Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau unggah foto/PDF (surat tugas, kuitansi, SPBy/SPM/SP2D) lewat ikon klip untuk direkam.', 'a'); };
+    const toggle = () => { if (window.fiturAktif && !window.fiturAktif('jarwo')) return; panel.classList.toggle('open'); if (panel.classList.contains('open')) setTimeout(() => input.focus(), 50); if (panel.classList.contains('open') && !list.children.length) bubble(sapa || 'Halo, saya Jarwo 👋 Tanya apa saja soal anggaran/kegiatan, atau unggah foto/PDF (surat tugas, kuitansi, SPBy/SPM/SP2D) lewat ikon klip untuk direkam.', 'a'); };
     window.toggleJarwo = toggle;
     fab.onclick = toggle;
     panel.querySelector('#jw-x').onclick = () => panel.classList.remove('open');

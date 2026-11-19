@@ -65,6 +65,17 @@ async function navigate(page) {
         return;
     }
 
+    // Guard fitur yang dinonaktifkan untuk kantor ini
+    if (typeof window.fiturUntukHalaman === 'function') {
+        const kf = window.fiturUntukHalaman(page);
+        if (kf && !window.fiturAktif(kf)) {
+            if (typeof showToast === 'function') showToast('Fitur ini dinonaktifkan untuk kantor Anda.');
+            else alert('Fitur ini dinonaktifkan untuk kantor Anda.');
+            if (page !== 'dashboard') navigate('dashboard');
+            return;
+        }
+    }
+
     const container = document.getElementById('app');
     const title = document.getElementById('page-title');
     title.innerText = page.charAt(0).toUpperCase() + page.slice(1);

@@ -293,8 +293,24 @@
     /**
      * opsi.dariLogin : true di index.html (tombol "Dashboard SiMAB" ke dashboard.html)
      */
+    // Fitur "Dashboard Pimpinan" bisa dimatikan per kantor (Pengaturan Fitur).
+    async function pimpinanDiizinkan() {
+        try {
+            if (typeof waitSupabaseAuthReady === 'function') await waitSupabaseAuthReady();
+            const { data, error } = await window.sb.from('fitur_kantor').select('aktif')
+                .eq('kantor_id', localStorage.getItem('kantor') || '').eq('fitur', 'dashboard_pimpinan').maybeSingle();
+            if (error) return true;
+            return !(data && data.aktif === false);
+        } catch (e) { return true; }
+    }
+
     async function bukaDashboardPimpinan(opsi) {
         opsi = opsi || {};
+        if (!(await pimpinanDiizinkan())) {
+            if (opsi.dariLogin) { window.location.href = 'dashboard.html'; }
+            else if (typeof showToast === 'function') showToast('Dashboard Pimpinan dinonaktifkan untuk kantor ini.');
+            return;
+        }
         tutupOverlay();
         const el = document.createElement('div');
         el.id = ID;
@@ -350,7 +366,7 @@
 
     window.bukaDashboardPimpinan = bukaDashboardPimpinan;
     window.isKepalaKantor = function (jabatan) {
-        return /kepala\s+kantor(?!\s+wilayah)/i.test(String(jabatan || ''));
+        return /\bkepala\b/i.test(String(jabatan || ''));
     };
 })();
 
@@ -363,11 +379,11 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampil); else tampil();
 })();
 
-// Tombol sidebar "Dashboard Pimpinan" hanya muncul untuk superadmin dan Kepala Kantor
+// Tombol sidebar "Dashboard Pimpinan": superadmin, admin kantor, dan pejabat berjabatan Kepala
 (function () {
     const tampil = () => {
         const b = document.getElementById('nav-pimpinan');
-        if (b && (localStorage.getItem('superadmin') === '1' || window.isKepalaKantor(localStorage.getItem('jabatan')))) b.classList.remove('hidden');
+        if (b && (localStorage.getItem('superadmin') === '1' || localStorage.getItem('admin') === '1' || window.isKepalaKantor(localStorage.getItem('jabatan')))) b.classList.remove('hidden');
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampil); else tampil();
 })();
