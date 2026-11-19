@@ -613,6 +613,10 @@ function renderPok() {
                         class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--ios-amber); color: #fff;" title="Salin kode akun lengkap">
                         <i class="fa-solid fa-copy text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
+                    <button onclick="event.stopPropagation();pokUnduhKegiatan(${window.rawPokData.indexOf(i)})"
+                        class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--ios-green); color: #fff;" title="Unduh daftar kegiatan (PDF / Excel)">
+                        <i class="fa-solid fa-download text-[11px] leading-none w-[11px] text-center"></i>
+                    </button>
                     <button onclick="event.stopPropagation();openEditPokModal(${window.rawPokData.indexOf(i)})"
                         class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--label-secondary); color: #fff;" title="Ubah Uraian/Pagu">
                         <i class="fa-solid fa-pen text-[11px] leading-none w-[11px] text-center"></i>
@@ -1705,3 +1709,125 @@ window.downloadSeksiExcel = downloadSeksiExcel;
 window.downloadSeksiPDF = downloadSeksiPDF;
 window.fetchRefCoaData = fetchRefCoaData;
 window.copyKodeAkun = copyKodeAkun;
+
+// ========================================
+// UNDUH DAFTAR KEGIATAN PER KODE POK (PDF atau Excel)
+// ========================================
+async function pokAmbilKegiatanMak(mak) {
+    await waitSupabaseAuthReady();
+    let rawRows = window.kegiatanRowsCache;
+    if (!rawRows) {
+        rawRows = await sbFetchAll('kegiatan');
+        window.kegiatanRowsCache = rawRows;
+    }
+    const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
+    const tahunAktif = await getTahunAktif();
+    const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+    return rawRows
+        .filter(d => Number(d.tahun) === tahunAktif && (isSuperadminView || d.kantor_id === kantorAktif)
+            && String(d.mak || '').trim() === String(mak || '').trim())
+        .sort((a, b) => String(a.tgl_mulai || a.tgl_st || '').localeCompare(String(b.tgl_mulai || b.tgl_st || '')));
+}
+
+function pokTglId(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function pokUnduhKegiatan(idx) {
+    const item = window.rawPokData[idx];
+    if (!item) return;
+    const { overlay, popup } = pokOpenOverlay(`
+        <h3 class="text-center text-[16px] font-semibold" style="color: var(--label);">Unduh Daftar Kegiatan</h3>
+        <div class="text-center text-[12px] break-all" style="color: var(--label-secondary);">${item.kode}<br>${item.uraian || ''}</div>
+        <div class="flex gap-3 mt-2">
+            <button id="pokUnduhPdf" class="flex-1 py-3 rounded-xl text-sm font-semibold text-white" style="background: var(--ios-red);"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+            <button id="pokUnduhXls" class="flex-1 py-3 rounded-xl text-sm font-semibold text-white" style="background: var(--ios-green);"><i class="fa-solid fa-file-excel mr-1"></i> Excel</button>
+        </div>
+        <button id="pokUnduhBatal" class="mt-1 py-2 rounded-xl text-sm" style="background: var(--field-bg); color: var(--label);">Batal</button>
+    `, 'max-w-sm');
+    const tutup = () => overlay.remove();
+    popup.querySelector('#pokUnduhBatal').onclick = tutup;
+    overlay.addEventListener('click', e => { if (e.target === overlay) tutup(); });
+
+    const jalankan = async (jenis, tombol) => {
+        const asal = tombol.innerHTML;
+        tombol.disabled = true;
+        tombol.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyiapkan...';
+        try {
+            const rows = await pokAmbilKegiatanMak(item.kode);
+            if (rows.length === 0) { alert('Belum ada kegiatan pada kode ini.'); tombol.disabled = false; tombol.innerHTML = asal; return; }
+            if (jenis === 'pdf') await pokUnduhKegiatanPDF(item, rows); else await pokUnduhKegiatanExcel(item, rows);
+            tutup();
+        } catch (e) {
+            console.error(e);
+            alert('Gagal mengunduh: ' + (e.message || e));
+            tombol.disabled = false; tombol.innerHTML = asal;
+        }
+    };
+    popup.querySelector('#pokUnduhPdf').onclick = ev => jalankan('pdf', ev.currentTarget);
+    popup.querySelector('#pokUnduhXls').onclick = ev => jalankan('xls', ev.currentTarget);
+}
+
+function pokNamaBerkasKegiatan(item, ekstensi) {
+    return `Kegiatan_${String(item.kode).replace(/[^0-9A-Za-z.]+/g, '_')}.${ekstensi}`;
+}
+
+async function pokUnduhKegiatanExcel(item, rows) {
+    await ensureExcelLib();
+    const total = rows.reduce((a, r) => a + (Number(r.jumlah) || 0), 0);
+    const aoa = [
+        ['Daftar Kegiatan'],
+        ['Kode (MAK)', item.kode],
+        ['Uraian', item.uraian || ''],
+        ['Sumber Dana', item.sumber || ''],
+        ['Pagu', Number(item.pagu) || 0],
+        ['Blokir', Number(item.blokir) || 0],
+        ['Realisasi', Number(item.realisasi) || 0],
+        ['Sisa', Number(item.sisa) || 0],
+        [],
+        ['No', 'Uraian / No ST', 'Pelaksana', 'Tujuan', 'Tgl ST', 'Tgl Mulai', 'Tgl Selesai', 'Jumlah', 'Status', 'Nomor SPM', 'Tgl SP2D']
+    ];
+    rows.forEach((r, n) => aoa.push([n + 1, r.uraian || '', r.pelaksana || '', r.tujuan || '', pokTglId(r.tgl_st), pokTglId(r.tgl_mulai), pokTglId(r.tgl_selesai), Number(r.jumlah) || 0, r.status || '', r.nomor_spm || '', pokTglId(r.tgl_sp2d)]));
+    aoa.push(['', '', '', '', '', '', 'Total', total]);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{ wch: 5 }, { wch: 46 }, { wch: 26 }, { wch: 24 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 22 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Kegiatan');
+    XLSX.writeFile(wb, pokNamaBerkasKegiatan(item, 'xlsx'));
+}
+
+async function pokUnduhKegiatanPDF(item, rows) {
+    await ensurePdfLibs();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const fmt = n => Number(n || 0).toLocaleString('id-ID');
+    doc.setFontSize(13);
+    doc.text('Daftar Kegiatan', 40, 32);
+    doc.setFontSize(9);
+    doc.text(`Kode  : ${item.kode}`, 40, 48);
+    const uraian = doc.splitTextToSize(`Uraian: ${item.uraian || '-'}`, 760);
+    doc.text(uraian, 40, 60);
+    const y = 60 + uraian.length * 11;
+    doc.text(`Sumber dana: ${item.sumber || '-'}   |   Pagu: ${fmt(item.pagu)}   |   Blokir: ${fmt(item.blokir)}   |   Realisasi: ${fmt(item.realisasi)}   |   Sisa: ${fmt(item.sisa)}`, 40, y + 4);
+    doc.setTextColor(120);
+    doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 40, y + 18);
+    doc.setTextColor(0);
+
+    const total = rows.reduce((a, r) => a + (Number(r.jumlah) || 0), 0);
+    const body = rows.map((r, n) => [n + 1, r.uraian || '', r.pelaksana || '', r.tujuan || '', pokTglId(r.tgl_st), fmt(r.jumlah), r.status || '', r.nomor_spm || '']);
+    doc.autoTable({
+        startY: y + 28,
+        head: [['No', 'Uraian / No ST', 'Pelaksana', 'Tujuan', 'Tgl ST', 'Jumlah', 'Status', 'Nomor SPM']],
+        body,
+        foot: [['', '', '', '', 'Total', fmt(total), '', '']],
+        styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+        headStyles: { fillColor: [10, 46, 110] },
+        footStyles: { fillColor: [235, 235, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: { 0: { cellWidth: 26, halign: 'center' }, 1: { cellWidth: 200 }, 5: { halign: 'right', cellWidth: 70 }, 6: { cellWidth: 60 } }
+    });
+    doc.save(pokNamaBerkasKegiatan(item, 'pdf'));
+}
+window.pokUnduhKegiatan = pokUnduhKegiatan;
+
