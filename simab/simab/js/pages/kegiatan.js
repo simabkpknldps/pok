@@ -990,15 +990,17 @@ let kgMakExpandedCodes = new Set();
 let kgMakExpandedSeksi = new Set();
 let kgMakOnPilih = null;
 
-function kgMakSeksiBadgeClass(seksi) {
-    let hash = 0;
-    for (let i = 0; i < seksi.length; i++) hash = seksi.charCodeAt(i) + ((hash << 5) - hash);
-    const palette = [
-        'bg-sky-100 text-sky-800', 'bg-emerald-100 text-emerald-800', 'bg-amber-100 text-amber-800',
-        'bg-purple-100 text-purple-800', 'bg-rose-100 text-rose-800', 'bg-indigo-100 text-indigo-800',
-        'bg-teal-100 text-teal-800', 'bg-orange-100 text-orange-800'
-    ];
-    return palette[Math.abs(hash) % palette.length];
+const KG_MAK_SEKSI_COLORS = {
+    'PN': 'background: rgba(0,113,227,0.1); color: #0071E3;',
+    'HI': 'background: rgba(175,82,222,0.12); color: #AF52DE;',
+    'KI': 'background: rgba(255,159,10,0.14); color: #C77400;',
+    'Lelang': 'background: rgba(255,59,48,0.1); color: #FF3B30;',
+    'Penilaian': 'background: rgba(52,199,89,0.12); color: #248A3D;',
+    'PKN': 'background: rgba(88,86,214,0.12); color: #5856D6;',
+    'Umum': 'background: rgba(118,118,128,0.14); color: #3C3C43;'
+};
+function kgMakSeksiBadgeStyle(seksi) {
+    return KG_MAK_SEKSI_COLORS[seksi] || 'background: rgba(118,118,128,0.1); color: #3C3C43;';
 }
 
 async function kgOpenPilihMakPopup(onPilih) {
@@ -1014,8 +1016,8 @@ async function kgOpenPilihMakPopup(onPilih) {
         <input type="text" id="kg-mak-search" placeholder="Cari kode / uraian..."
             class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
         <div id="kg-mak-sd" class="flex gap-2"></div>
-        <div class="border border-slate-200 rounded-xl max-h-[65vh] overflow-y-auto">
-            <table class="w-full text-sm">
+        <div class="rounded-xl max-h-[65vh] overflow-y-auto" style="border: 1px solid var(--divider);">
+            <table class="w-full text-sm" style="border-collapse: collapse;">
                 <tbody id="kg-mak-tbody">
                     <tr><td class="text-center p-6 text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Memuat data...</td></tr>
                 </tbody>
@@ -1082,6 +1084,7 @@ async function kgOpenPilihMakPopup(onPilih) {
                 prog: d.prog || ''
             };
         });
+        data.sort((x, y) => String(x.kode).localeCompare(String(y.kode)));
         kgMakPokData = data;
         kgRenderMakTable(overlay);
     } catch (e) {
@@ -1139,46 +1142,42 @@ function kgRenderMakTable(overlay) {
         const depth = c.split('.').length;
         const indentPx = Math.min(depth - 1, 5) * 18;
 
-        let rowBg = 'bg-white hover:bg-slate-100';
-        if (isMatch) rowBg = 'bg-yellow-200 hover:bg-yellow-300';
-        else if (isLeaf) rowBg = i.sumber === 'PNBP' ? 'bg-pink-200 hover:bg-pink-300' : 'bg-blue-200 hover:bg-blue-300';
-        else if (isParent) rowBg = 'bg-sky-50 hover:bg-sky-100';
-        else if (depth <= 2) rowBg = 'bg-slate-50 hover:bg-slate-100';
-
-        const textWeight = depth <= 2 ? 'font-bold text-slate-700' : (isLeaf ? 'font-normal text-slate-600' : 'font-semibold text-slate-700');
+        const isDetail = depth >= 7;
+        const sdColor = i.sumber === 'PNBP' ? '#dc2626' : '#16a34a';
         const expandKey = seksi + '::' + c;
+        const isExpandedRow = kgMakExpandedCodes.has(expandKey);
+        const rowBg = isExpandedRow ? '#E3EEFF' : (isChildVisible ? '#F3F8FF' : '#fff');
+        const rowEdge = isExpandedRow ? 'open' : (isChildVisible ? 'child' : '');
+        const rowStyle = isMatch ? 'background: rgba(255,214,10,0.22);' : 'background:' + rowBg + ';';
+        let textStyle = 'font-weight:400; color: var(--label);';
+        if (depth === 5) textStyle += ' font-style:italic;';
+        if (depth === 6) textStyle += ' font-size:12px;';
+        if (isDetail) textStyle = `font-weight:400; font-size:11.5px; color:${sdColor};`;
+        const paddingLeft = isDetail ? 30 : 10;
+        const segs = c.split('.');
+        const kodeTampil = depth <= 3 ? c : segs[segs.length - 1];
+        const uraianHtml = (depth === 6 ? '<span style="text-decoration:underline;">' + i.uraian + '</span>' : (isDetail ? '- ' + i.uraian : i.uraian));
 
         const pagu = Number(i.pagu || 0);
         const blokir = Number(i.blokir || 0);
         const realisasi = Number(i.realisasi || 0);
         const sisa = Number(i.sisa || 0);
-        const paguEfektif = pagu - blokir;
-        const persenRealisasi = paguEfektif > 0 ? Math.min((realisasi / paguEfektif) * 100, 100) : 0;
-        const barColor = persenRealisasi >= 90 ? 'bg-green-500' : (persenRealisasi >= 50 ? 'bg-sky-500' : 'bg-amber-400');
-        const sisaClass = sisa < 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
+        const sisaStyle = sisa < 0 ? 'color: #FF3B30; font-weight:600;' : 'color: var(--label);';
 
-        return `<tr data-kode="${c}" data-seksi="${seksi}" class="border-b transition ${rowBg} cursor-pointer">
-            <td class="p-3 font-mono text-xs ${isLeaf ? 'font-bold text-slate-700' : 'text-slate-500'} whitespace-nowrap">${c}</td>
-            <td class="p-3 ${textWeight}" style="padding-left:${12 + indentPx}px">
-                <span class="whitespace-normal break-words">${i.uraian}</span>
-                ${hasChildren ? (kgMakExpandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>') : ''}
+        return `<tr data-kode="${c}" data-seksi="${seksi}" data-edge="${rowEdge}" class="cursor-pointer transition" style="${rowStyle}">
+            <td class="p-2 text-[11.5px] whitespace-nowrap text-right align-top" style="color: var(--label);" title="${c}">${kodeTampil}</td>
+            <td class="p-2 align-top" style="${textStyle} padding-left:${paddingLeft}px">
+                <span class="whitespace-normal break-words">${uraianHtml}</span>
+                ${hasChildren ? (isExpandedRow ? ' <i class="fa-solid fa-chevron-down text-[10px]" style="color: var(--label-secondary);"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]" style="color: var(--label-secondary);"></i>') : ''}
             </td>
-            <td class="p-3 text-right whitespace-nowrap">${pagu.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-right whitespace-nowrap">${blokir.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-right whitespace-nowrap">
-                <div>${realisasi.toLocaleString('id-ID')}</div>
-                ${paguEfektif > 0 ? `
-                    <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
-                        <div class="h-full ${barColor} rounded-full" style="width:${persenRealisasi}%"></div>
-                    </div>
-                    <div class="text-[10px] text-slate-400 mt-0.5">${persenRealisasi.toFixed(1)}%</div>
-                ` : ''}
-            </td>
-            <td class="p-3 text-right whitespace-nowrap ${sisaClass}">${sisa.toLocaleString('id-ID')}</td>
-            <td class="p-3 text-center whitespace-nowrap text-slate-500">${i.sumber || '-'}</td>
-            <td class="p-3 text-center whitespace-nowrap">
+            <td class="p-2 text-right whitespace-nowrap align-top" style="color: ${isDetail ? sdColor : 'var(--label)'};">${pagu.toLocaleString('id-ID')}</td>
+            <td class="p-2 text-right whitespace-nowrap align-top">${blokir.toLocaleString('id-ID')}</td>
+            <td class="p-2 text-right whitespace-nowrap align-top">${realisasi.toLocaleString('id-ID')}</td>
+            <td class="p-2 text-right whitespace-nowrap align-top" style="${sisaStyle}">${sisa.toLocaleString('id-ID')}</td>
+            <td class="p-2 text-center whitespace-nowrap align-top" style="color: var(--label-secondary);">${i.sumber || '-'}</td>
+            <td class="p-2 text-center whitespace-nowrap align-top">
                 ${isLeaf ? `
-                    <button class="kg-mak-btnPilih bg-emerald-600 text-white w-6 h-6 inline-flex items-center justify-center rounded hover:bg-emerald-700" title="Pilih MAK ini">
+                    <button class="kg-mak-btnPilih w-6 h-6 inline-flex items-center justify-center rounded-md transition" style="background: var(--ios-green); color: #fff;" title="Pilih MAK ini">
                         <i class="fa-solid fa-check text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
                 ` : ''}
@@ -1188,7 +1187,7 @@ function kgRenderMakTable(overlay) {
 
     const groupHeaderRow = (seksi, count, isOpen) => `
         <tr class="select-none">
-            <td colspan="8" class="p-3 font-bold text-sm ${kgMakSeksiBadgeClass(seksi)} kg-mak-toggleSeksi cursor-pointer" data-seksi="${seksi}">
+            <td colspan="8" class="p-3 font-bold text-sm kg-mak-toggleSeksi cursor-pointer" style="${kgMakSeksiBadgeStyle(seksi)}" data-seksi="${seksi}">
                 <i class="fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} text-xs mr-2"></i>
                 ${seksi}
                 <span class="ml-2 font-normal text-xs opacity-70">(${count} item)</span>
@@ -1196,15 +1195,15 @@ function kgRenderMakTable(overlay) {
         </tr>`;
 
     const columnSubHeaderRow = () => `
-        <tr class="text-slate-500 text-[11px] uppercase">
-            <td class="p-2 text-left bg-slate-50 font-semibold">Kode</td>
-            <td class="p-2 text-left bg-slate-50 font-semibold">Uraian</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Pagu</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Blokir</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Realisasi</td>
-            <td class="p-2 text-right bg-slate-50 font-semibold">Sisa</td>
-            <td class="p-2 text-center bg-slate-50 font-semibold">SD</td>
-            <td class="p-2 text-center bg-slate-50 font-semibold">Aksi</td>
+        <tr class="text-[12px]" style="color: var(--label);">
+            <td class="p-2 text-center font-bold" style="background:#fff;">Kode</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Program/ Kegiatan/ Output/ Sub Output/ Komponen</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Pagu</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Blokir</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Realisasi</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Sisa</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">SD/CP</td>
+            <td class="p-2 text-center font-bold" style="background:#fff;">Aksi</td>
         </tr>`;
 
     let html = '';

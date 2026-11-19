@@ -203,3 +203,10 @@ body { font-family: var(--sf); }
 .kg-act button{width:36px !important;height:36px !important}
 .kg-act .kg-act-sep{margin:0 4px !important}
 .kg-pil{padding:4px 12px !important}
+
+/* Popup Pilih MAK: tampilan seperti halaman POK (grid ala Kertas Kerja DIPA) */
+#kg-mak-tbody { --pok-grid: #9ca3af; }
+#kg-mak-tbody td { border: 1px solid var(--pok-grid); }
+#kg-mak-tbody tr.select-none td { border-color: transparent; }
+#kg-mak-tbody tr[data-edge="open"] td:first-child { box-shadow: inset 4px 0 0 var(--ios-blue); }
+#kg-mak-tbody tr[data-edge="child"] td:first-child { box-shadow: inset 4px 0 0 #BFD7FF; }
