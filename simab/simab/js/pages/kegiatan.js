@@ -67,7 +67,8 @@ function bindKegiatanEvents() {
             btnTg = document.createElement('button');
             btnTg.id = 'kg-btnDownloadTelegram';
             btnTg.title = 'Excel 3 kolom (COA Sakti, Uraian, Jumlah) untuk bot Telegram';
-            btnTg.className = 'flex items-center gap-2 px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-lg transition';
+            btnTg.className = 'flex items-center gap-2 px-3 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded-xl transition';
+            btnTg.style.height = '40px';
             btnTg.innerHTML = '<i class="fa-brands fa-telegram"></i> Excel Bot Telegram';
             btnXls.insertAdjacentElement('afterend', btnTg);
         }
@@ -162,6 +163,23 @@ function kgSetTotalJumlahLabel(total) {
     document.getElementById('kg-totalJumlahLabel').textContent = Number(total || 0).toLocaleString('id-ID');
 }
 
+function kgPilClass(status) {
+    switch (status) {
+        case 'Rekam Data': return 'p-rekam';
+        case 'Terlaksana': return 'p-terlaksana';
+        case 'LPT': return 'p-lpt';
+        case 'Terbayar': return 'p-terbayar';
+        case 'Selesai': return 'p-selesai';
+        default: return '';
+    }
+}
+
+function kgInisial(nama) {
+    const w = String(nama || '').replace(/[^A-Za-z\s]/g, ' ').trim().split(/\s+/).filter(Boolean);
+    if (!w.length) return '?';
+    return (w[0][0] + (w[1] ? w[1][0] : '')).toUpperCase();
+}
+
 function kgStatusClasses(status) {
     switch (status) {
         case 'Rekam Data': return 'bg-red-300';
@@ -253,24 +271,24 @@ function kgRenderTable(rows) {
         tr.innerHTML = `
             <td class="p-2.5 align-top">${r.B ?? ''}${kgSdBadge(r.B)}</td>
             <td class="p-2.5 align-top">${r.C ?? ''}</td>
-            <td class="p-2.5 align-top">${r.D ? `<button type="button" class="kg-pelaksana-link text-sky-700 hover:text-sky-900 underline decoration-dotted underline-offset-2 text-left" data-nama="${String(r.D).replace(/"/g, '&quot;')}">${r.D}</button>` : ''}</td>
+            <td class="p-2.5 align-top">${r.D ? `<button type="button" class="kg-pelaksana-link text-left" data-nama="${String(r.D).replace(/"/g, '&quot;')}" data-ini="${kgInisial(r.D)}">${r.D}</button>` : ''}</td>
             <td class="p-2.5 align-top">${r.E ?? ''}</td>
             <td class="p-2.5 align-top whitespace-nowrap">${formatDate(r.F)}</td>
             <td class="p-2.5 align-top whitespace-nowrap">${formatDate(r.G)}</td>
-            <td class="p-2.5 align-top text-right whitespace-nowrap"><button type="button" class="kg-jumlah-link text-sky-700 hover:text-sky-900 underline decoration-dotted underline-offset-2" data-jumlah="${Math.round(Number(r.M || 0))}" title="Klik untuk salin angka tanpa titik">${jumlahFormatted}</button></td>
+            <td class="p-2.5 align-top text-right whitespace-nowrap"><button type="button" class="kg-jumlah-link underline decoration-dotted underline-offset-4" data-jumlah="${Math.round(Number(r.M || 0))}" title="Klik untuk salin angka tanpa titik">${jumlahFormatted}</button></td>
             <td class="p-2.5 align-top">${r.N ?? ''}</td>
-            <td class="p-2.5 align-top text-center font-semibold rounded ${kgStatusClasses(r.P)}">${r.P ?? ''}</td>
+            <td class="p-2.5 align-top text-center">${r.P ? `<span class="kg-pil ${kgPilClass(r.P)}">${r.P}</span>` : ''}</td>
             <td class="p-2 align-top sticky right-0 bg-white">
-                <div class="flex items-center justify-center gap-1">
-                    <button class="kg-btn-copy w-7 h-7 rounded hover:bg-slate-100" title="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
-                    <button class="kg-btn-ubah w-7 h-7 rounded hover:bg-slate-100" title="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button class="kg-btn-pelaksana w-7 h-7 rounded hover:bg-slate-100" title="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
-                    ${kgButuhLPT(r.B) ? `<button class="kg-btn-lpt w-7 h-7 rounded hover:bg-slate-100" title="LPT"><i class="fa-solid fa-file-lines"></i></button>` : ''}
-                    <button class="kg-btn-bayar w-7 h-7 rounded hover:bg-slate-100" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
-                    <button class="kg-btn-sp2d w-7 h-7 rounded hover:bg-slate-100" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
-                    <button class="kg-btn-detil w-7 h-7 rounded hover:bg-slate-100 text-sky-600" title="Detil"><i class="fa-solid fa-circle-info"></i></button>
-                    <button class="kg-btn-dokumen w-7 h-7 rounded hover:bg-slate-100 ${kgDokBtnStyle(r).cls}" title="${kgDokBtnStyle(r).title}"><i class="fa-solid fa-file-pdf"></i></button>
-                    <button class="kg-btn-hapus w-7 h-7 rounded hover:bg-slate-100 text-red-500" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                <div class="kg-act">
+                    <button class="kg-btn-copy" title="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
+                    <button class="kg-btn-ubah" title="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button class="kg-btn-pelaksana" title="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
+                    ${kgButuhLPT(r.B) ? `<button class="kg-btn-lpt" title="LPT"><i class="fa-solid fa-file-lines"></i></button>` : ''}
+                    <button class="kg-btn-bayar" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
+                    <button class="kg-btn-sp2d" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
+                    <button class="kg-btn-detil text-sky-600" title="Detil"><i class="fa-solid fa-circle-info"></i></button>
+                    <button class="kg-btn-dokumen ${kgDokBtnStyle(r).cls}" title="${kgDokBtnStyle(r).title}"><i class="fa-solid fa-file-pdf"></i></button>
+                    <span class="kg-act-sep"></span><button class="kg-btn-hapus text-red-500" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </td>
         `;
