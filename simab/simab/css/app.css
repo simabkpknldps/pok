@@ -210,3 +210,11 @@ body { font-family: var(--sf); }
 #kg-mak-tbody tr.select-none td { border-color: transparent; }
 #kg-mak-tbody tr[data-edge="open"] td:first-child { box-shadow: inset 4px 0 0 var(--ios-blue); }
 #kg-mak-tbody tr[data-edge="child"] td:first-child { box-shadow: inset 4px 0 0 #BFD7FF; }
+
+/* Tabel kegiatan: sel berlatar putih agar kolom Aksi (menempel di kanan) menyatu, tinggi baris rapi */
+#kg-mainDataTable tbody td { background: #fff; vertical-align: middle; padding: 10px 10px; }
+#kg-mainDataTable tbody tr:hover td { background: #f8fafc; }
+#kg-mainDataTable tbody td:last-child { padding-left: 14px; padding-right: 14px; }
+#kg-mainDataTable tbody td:last-child, #kg-mainDataTable thead th:last-child { box-shadow: -8px 0 8px -8px rgba(0,0,0,.2); }
+#kg-mainDataTable .kg-act { justify-content: flex-start; flex-wrap: nowrap; }
+#kg-mainDataTable tfoot td { background: #f7f7f9; }
