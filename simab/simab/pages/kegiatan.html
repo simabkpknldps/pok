@@ -1,50 +1,78 @@
+<style>
+    .kg-chip { position: relative; display: inline-flex; cursor: pointer; }
+    .kg-chip input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .kg-chip span { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 9999px; background: #F2F2F5; color: #1d1d1f; font-size: 13px; font-weight: 500; transition: background-color .12s; }
+    .kg-chip:hover span { background: #E8E8ED; }
+    .kg-chip input:checked + span { background: var(--ios-blue); color: #fff; font-weight: 600; }
+    .kg-chip input:focus-visible + span { outline: 2px solid var(--ios-blue); outline-offset: 2px; }
+    .kg-sep { width: 1px; height: 22px; background: var(--divider); margin: 0 4px; }
+    #kg-mainDataTable tbody tr { border-bottom: 1px solid #eef0f3; }
+    #kg-mainDataTable tbody td { padding: 12px 10px; }
+    #kg-mainDataTable tbody tr:hover { background: #f8fafc; }
+    .kg-pil { display: inline-block; padding: 3px 11px; border-radius: 9999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+    .kg-pil.p-rekam { background: #fce7f3; color: #9d174d; }
+    .kg-pil.p-terlaksana { background: #e5e7eb; color: #374151; }
+    .kg-pil.p-lpt { background: #fef3c7; color: #92400e; }
+    .kg-pil.p-terbayar { background: #dcfce7; color: #166534; }
+    .kg-pil.p-selesai { background: #dbeafe; color: #1e40af; }
+    .kg-pelaksana-link { display: inline-flex; align-items: center; gap: 8px; text-decoration: none !important; font-weight: 500; }
+    .kg-pelaksana-link::before { content: attr(data-ini); flex: none; width: 26px; height: 26px; border-radius: 50%; background: #dbeafe; color: #1e40af; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .kg-jumlah-link { font-weight: 700; color: #1d1d1f !important; }
+    .kg-act { display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .kg-act button { width: 34px; height: 34px; border-radius: 10px; background: #F2F2F5; font-size: 13px; transition: background-color .12s; }
+    .kg-act button:hover { background: #E3E3E8; }
+    .kg-act .kg-act-sep { width: 1px; height: 22px; background: var(--divider); margin: 0 3px; }
+    #kg-mainDataTable td:last-child { background: #fff; }
+</style>
 <div class="ios-panel p-5 flex flex-col gap-4">
 
     <!-- Filter bar -->
     <div class="flex flex-col gap-3">
         <div class="flex flex-wrap items-center gap-2.5">
-            <div class="flex-1 min-w-[200px] flex items-center gap-2">
-                <input id="kg-searchBox" type="text" placeholder="Cari data... (tekan Enter atau klik Cari)" class="ios-field flex-1">
-                <button id="kg-btnSearch" class="btn-ios flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+            <div class="flex-1 min-w-[220px] flex items-center gap-2">
+                <input id="kg-searchBox" type="text" placeholder="Cari data... (tekan Enter atau klik Cari)" class="ios-field flex-1" style="height:40px;">
+                <button id="kg-btnSearch" class="btn-ios flex items-center gap-1.5 px-4 text-sm whitespace-nowrap" style="height:40px;">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i> Cari
                 </button>
             </div>
-            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg" style="background: var(--sidebar-bg); border: 1px solid var(--divider);">
-                <span class="text-xs font-semibold whitespace-nowrap" style="color: var(--label-secondary);">Cari SPM</span>
-                <input id="kg-spmSearchBox" type="text" maxlength="10" class="w-20 text-center ios-field" style="padding: 0.35rem;">
-                <button id="kg-btnSearchSPM" class="btn-ios flex items-center gap-1 px-3 py-1.5 text-xs">
+            <div class="flex items-center gap-2 px-3 rounded-xl" style="background: var(--sidebar-bg); border: 1px solid var(--divider); height:40px;">
+                <button id="kg-btnSearchSPM" class="btn-ios flex items-center gap-1 px-3 py-1 text-xs">
                     <i class="fa-solid fa-magnifying-glass text-[10px]"></i> Cari
                 </button>
+                <span class="text-xs font-semibold whitespace-nowrap" style="color: var(--label-secondary);">SPM</span>
+                <input id="kg-spmSearchBox" type="text" maxlength="10" class="w-20 text-center ios-field" style="padding: 0.3rem;">
             </div>
-
-            <div class="text-sm font-semibold px-3 py-2 rounded-lg whitespace-nowrap" style="color: var(--ios-green); background: var(--ios-green-tint);">
-                Jumlah (Data Terfilter): <span id="kg-totalJumlahLabel">0</span>
+            <div class="flex-none flex items-center gap-2 flex-wrap">
+                <button id="kg-btnRefreshData" class="btn-ios-secondary flex items-center gap-2 px-3 text-sm" style="height:40px;">
+                    <i class="fa-solid fa-arrow-rotate-right text-xs"></i> Refresh
+                </button>
+                <button id="kg-btnDownloadExcel" class="flex items-center gap-2 px-3 text-sm font-medium rounded-xl transition" style="background: var(--ios-green); color: #fff; height:40px;">
+                    <i class="fa-solid fa-file-excel text-xs"></i> Download Excel
+                </button>
+                <button id="kg-btnOpenNominatif" class="btn-ios-secondary flex items-center gap-2 px-3 text-sm" style="height:40px;">
+                    <i class="fa-solid fa-print text-xs"></i> Cetak Daftar Nominatif
+                </button>
+                <button id="kg-btnTambahKegiatan" class="btn-ios flex items-center gap-2 px-4 text-sm font-semibold" style="height:40px;">
+                    <i class="fa-solid fa-plus text-xs"></i> Tambah Kegiatan
+                </button>
             </div>
-
-            <button id="kg-btnRefreshData" class="btn-ios-secondary flex items-center gap-2 px-3 py-2 text-sm">
-                <i class="fa-solid fa-arrow-rotate-right text-xs"></i> Refresh
-            </button>
-            <button id="kg-btnDownloadExcel" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition" style="background: var(--ios-green); color: #fff;">
-                <i class="fa-solid fa-file-excel text-xs"></i> Download Excel
-            </button>
-            <button id="kg-btnOpenNominatif" class="btn-ios flex items-center gap-2 px-3 py-2 text-sm">
-                <i class="fa-solid fa-print text-xs"></i> Cetak Daftar Nominatif
-            </button>
-            <button id="kg-btnTambahKegiatan" class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition" style="background: #34C759; color: #fff;">
-                <i class="fa-solid fa-plus text-xs"></i> Tambah Kegiatan
-            </button>
         </div>
 
-        <div class="flex items-center gap-4 flex-wrap text-sm" style="color: var(--label-secondary);">
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="Dalam Proses" checked> Dalam Proses</label>
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="LPT"> LPT</label>
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="Terbayar"> Terbayar</label>
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="Selesai"> Selesai</label>
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-statusFilter" value="Semua"> Semua</label>
-            <span class="mx-1" style="opacity:.4">|</span>
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-sdFilter" value="ALL" checked> Semua SD</label>
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-sdFilter" value="RM"> RM</label>
-            <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="kg-sdFilter" value="PNBP"> PNBP</label>
+        <div class="flex items-center gap-2 flex-wrap justify-between">
+            <div class="flex items-center gap-2 flex-wrap">
+                <label class="kg-chip"><input type="radio" name="kg-statusFilter" value="Dalam Proses" checked><span>Dalam Proses</span></label>
+                <label class="kg-chip"><input type="radio" name="kg-statusFilter" value="LPT"><span>LPT</span></label>
+                <label class="kg-chip"><input type="radio" name="kg-statusFilter" value="Terbayar"><span>Terbayar</span></label>
+                <label class="kg-chip"><input type="radio" name="kg-statusFilter" value="Selesai"><span>Selesai</span></label>
+                <label class="kg-chip"><input type="radio" name="kg-statusFilter" value="Semua"><span>Semua</span></label>
+                <span class="kg-sep"></span>
+                <label class="kg-chip"><input type="radio" name="kg-sdFilter" value="ALL" checked><span>Semua SD</span></label>
+                <label class="kg-chip"><input type="radio" name="kg-sdFilter" value="RM"><span>RM</span></label>
+                <label class="kg-chip"><input type="radio" name="kg-sdFilter" value="PNBP"><span>PNBP</span></label>
+            </div>
+            <div class="text-sm font-semibold px-4 rounded-xl whitespace-nowrap flex items-center" style="height:40px; color: var(--ios-green); background: var(--ios-green-tint);">
+                Jumlah (data terfilter):&nbsp;<span id="kg-totalJumlahLabel">0</span>
+            </div>
         </div>
     </div>
 
