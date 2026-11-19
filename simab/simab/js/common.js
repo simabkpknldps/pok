@@ -7,7 +7,7 @@ async function logout() {
     try {
         if (window.logAktivitas) await Promise.race([window.logAktivitas('logout', 'sesi', 'Logout'), new Promise(r => setTimeout(r, 1200))]);
     } catch (e) { /* abaikan */ }
-    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'superadmin', 'superadminMode', 'tahunAktif', 'lastActivity']
+    ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'superadmin', 'superadminMode', 'tahunAktif', 'lastActivity', 'wajibGanti']
         .forEach(k => localStorage.removeItem(k));
     window.location.href = 'index.html?reason=logout';
 }
@@ -224,6 +224,7 @@ function openSettings() {
             <button id="cs-tabBtnPejabat" class="cs-vtab"><i class="fa-solid fa-user-tie"></i><span>Pejabat</span></button>
             <button id="cs-tabBtnPassword" class="cs-vtab"><i class="fa-solid fa-key"></i><span>Ganti Password</span></button>
             <button id="cs-tabBtnTambahPegawai" class="cs-vtab"><i class="fa-solid fa-user-plus"></i><span>Tambah Pegawai</span></button>
+            <button id="cs-tabBtnWA" class="cs-vtab"><i class="fa-brands fa-whatsapp"></i><span>Nomor WA</span></button>
             <button id="cs-tabBtnFitur" class="cs-vtab hidden"><i class="fa-solid fa-toggle-on"></i><span>Pengaturan Fitur</span></button>
         </nav>
         <div class="flex-1 min-w-0" style="min-height: 420px;">
@@ -374,6 +375,8 @@ function openSettings() {
             </div>
         </div>
 
+        <div id="cs-tabWA" class="hidden flex-col gap-3"></div>
+
         <div id="cs-tabFitur" class="hidden flex-col gap-3">
             <div class="text-center text-slate-400 py-6"><i class="fa-solid fa-spinner fa-spin"></i></div>
         </div>
@@ -396,6 +399,8 @@ function openSettings() {
     const tabTambahPegawai = popup.querySelector('#cs-tabTambahPegawai');
     const tabBtnFitur = popup.querySelector('#cs-tabBtnFitur');
     const tabFitur = popup.querySelector('#cs-tabFitur');
+    const tabBtnWA = popup.querySelector('#cs-tabBtnWA');
+    const tabWA = popup.querySelector('#cs-tabWA');
 
     function csActivateTab(tab) {
         const tabs = {
@@ -404,6 +409,7 @@ function openSettings() {
             pejabat: [tabPejabat, tabBtnPejabat],
             password: [tabPassword, tabBtnPassword],
             tambahPegawai: [tabTambahPegawai, tabBtnTambahPegawai],
+            wa: [tabWA, tabBtnWA],
             fitur: [tabFitur, tabBtnFitur]
         };
 
@@ -418,6 +424,7 @@ function openSettings() {
 
         if (tab === 'pejabat') csLoadPejabatData(popup);
         if (tab === 'rekening') csLoadRekeningData(popup);
+        if (tab === 'wa' && typeof window.csLoadWaTab === 'function') window.csLoadWaTab(popup);
         if (tab === 'fitur' && typeof window.csLoadFiturTab === 'function') window.csLoadFiturTab(popup);
     }
 
@@ -426,6 +433,7 @@ function openSettings() {
     tabBtnPejabat.onclick = () => csActivateTab('pejabat');
     tabBtnPassword.onclick = () => csActivateTab('password');
     tabBtnTambahPegawai.onclick = () => csActivateTab('tambahPegawai');
+    tabBtnWA.onclick = () => csActivateTab('wa');
     tabBtnFitur.onclick = () => csActivateTab('fitur');
 
     // Pengaturan Fitur: hanya admin & superadmin (berlaku per kantor aktif).
@@ -528,9 +536,9 @@ function openSettings() {
             alert('Konfirmasi password baru tidak cocok!');
             return;
         }
-        if (pwBaru.length < 6) {
-            alert('Password baru minimal 6 karakter!');
-            return;
+        {
+            const errPw = (typeof window.akunValidasiPassword === 'function') ? window.akunValidasiPassword(pwBaru, nipVal) : (pwBaru.length < 6 ? 'Password baru minimal 6 karakter!' : '');
+            if (errPw) { alert(errPw); return; }
         }
 
         btn.disabled = true;
@@ -551,6 +559,7 @@ function openSettings() {
             const { error: updateSbError } = await sb.auth.updateUser({ password: pwBaru });
             if (updateSbError) throw new Error(updateSbError.message);
 
+            try { localStorage.removeItem('wajibGanti'); } catch (e) { }
             showToast('Password berhasil diubah');
             overlay.remove();
         } catch (e) {

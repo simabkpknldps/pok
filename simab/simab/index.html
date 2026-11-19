@@ -139,6 +139,7 @@
 
             <p class="text-center text-[13px] mt-5" style="color: var(--label-secondary);">
                 Belum punya akun? <a href="#" id="daftarLink" class="link-ios font-medium">Daftar</a>
+                &nbsp;·&nbsp; <a href="#" id="lupaLink" class="link-ios font-medium">Lupa password?</a>
             </p>
         </div>
 
@@ -249,6 +250,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="js/supabase-config.js"></script>
     <script src="js/pimpinan.js"></script>
+    <script src="js/keamanan.js"></script>
 
     <script>
         document.getElementById('tahunFooter').textContent = new Date().getFullYear();
@@ -465,6 +467,8 @@
                 // 1. Verifikasi NIP + Password lewat Supabase Auth.
                 const { error: sbLoginError } = await sb.auth.signInWithPassword({ email: emailLogin, password: passwordInput });
                 if (sbLoginError) throw sbLoginError;
+                // Password awal (= NIP) wajib diganti setelah masuk (lihat js/keamanan.js)
+                try { if (passwordInput === nipInput) localStorage.setItem('wajibGanti', '1'); else localStorage.removeItem('wajibGanti'); } catch (e) { }
 
                 // 2. Ambil profil pegawai (nama, jabatan, admin, dst) dari Supabase.
                 const { data: profil, error: profilError } = await sb
@@ -620,6 +624,10 @@
             }
         }
 
+        document.getElementById('lupaLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.akunLupaPassword) window.akunLupaPassword(document.getElementById('nip').value.trim());
+        });
         document.getElementById('daftarLink').addEventListener('click', (e) => {
             e.preventDefault();
             resetDaftarModal();
