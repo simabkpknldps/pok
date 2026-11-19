@@ -1,105 +1,121 @@
-<div id="pj-root" class="space-y-6">
+<style>
+    .pj-chip { position: relative; display: inline-flex; cursor: pointer; }
+    .pj-chip input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .pj-chip span { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 9999px; background: #F2F2F5; color: #1d1d1f; font-size: 13px; font-weight: 500; transition: background-color .12s; }
+    .pj-chip span b { font-weight: 500; color: #6e6e73; }
+    .pj-chip input:checked + span { background: #0071e3; color: #fff; font-weight: 600; }
+    .pj-chip input:checked + span b { color: rgba(255,255,255,.85); }
+    .pj-chip input:focus-visible + span { outline: 2px solid #0071e3; outline-offset: 2px; }
+    .pj-kpi { background: #fff; border-radius: 18px; padding: 18px 20px; display: flex; gap: 14px; align-items: center; }
+    .pj-kpi .pj-ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: none; font-size: 18px; }
+    .pj-kpi .pj-lbl { font-size: 12px; color: #6e6e73; }
+    .pj-kpi .pj-val { font-size: 22px; font-weight: 700; line-height: 1.25; }
+    .pj-card { background: #fff; border-radius: 18px; padding: 22px; min-width: 0; }
+    .pj-card h3 { margin: 0 0 14px; font-size: 16px; font-weight: 600; color: #1d1d1f; }
+    .pj-pill { display: inline-block; padding: 3px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+</style>
 
-    <!-- CARD: Ringkasan Status + Detail -->
-    <div class="ios-panel p-5">
+<div id="pj-root" class="space-y-5">
 
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <h3 class="font-semibold text-sky-700 text-base">Ringkasan Status Perjadin</h3>
+    <!-- Judul -->
+    <div>
+        <h2 class="text-[26px] font-bold tracking-tight" style="color: var(--label);">Perjadinku</h2>
+        <div id="pj-subjudul" class="text-sm mt-1" style="color: var(--label-secondary);">Perjalanan dinas atas nama Anda</div>
+    </div>
 
-            <div class="flex flex-wrap items-center gap-4">
-                <input id="pj-searchBox" type="text" placeholder="Cari MAK / uraian / tujuan..."
-                    class="ios-field w-64">
-
-                <div class="flex flex-wrap items-center gap-3 text-sm">
-                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pj-statusFilter" value="Rekam Data" class="accent-sky-600"> Rekam Data</label>
-                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pj-statusFilter" value="Terlaksana" class="accent-sky-600"> Terlaksana</label>
-                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pj-statusFilter" value="LPT" class="accent-sky-600"> LPT</label>
-                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pj-statusFilter" value="Terbayar" class="accent-sky-600"> Terbayar</label>
-                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pj-statusFilter" value="Selesai" class="accent-sky-600"> Selesai</label>
-                    <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pj-statusFilter" value="Semua" checked class="accent-sky-600"> Semua</label>
-                </div>
-            </div>
+    <!-- Kartu ringkasan -->
+    <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <div class="pj-kpi">
+            <div class="pj-ico" style="background: rgba(0,113,227,.1); color: #0071e3;"><i class="fa-solid fa-plane"></i></div>
+            <div><div class="pj-lbl">Jumlah perjalanan</div><div class="pj-val" id="pj-kpiFrek">0</div></div>
         </div>
-
-        <div class="flex flex-col lg:flex-row gap-5">
-
-            <!-- Tabel Status -->
-            <div class="w-full lg:w-72 flex-shrink-0">
-                <table class="w-full text-sm border-collapse">
-                    <thead>
-                        <tr class="bg-slate-100">
-                            <th class="p-2 text-left font-semibold border-b border-slate-200">Status</th>
-                            <th class="p-2 text-center font-semibold border-b border-slate-200">Frek</th>
-                            <th class="p-2 text-right font-semibold border-b border-slate-200">Jumlah</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pj-statusSummary">
-                        <tr><td colspan="3" class="p-4 text-center text-slate-400">Memuat...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Tabel Detail -->
-            <div class="flex-1 border border-slate-200 rounded-xl overflow-auto max-h-[350px]">
-                <table class="w-full text-sm border-collapse">
-                    <thead>
-                        <tr class="bg-slate-100 sticky top-0">
-                            <th class="p-2 text-left font-semibold border-b border-slate-200">MAK</th>
-                            <th class="p-2 text-left font-semibold border-b border-slate-200">Uraian</th>
-                            <th class="p-2 text-left font-semibold border-b border-slate-200">Tujuan</th>
-                            <th class="p-2 text-left font-semibold border-b border-slate-200">Tgl Mulai</th>
-                            <th class="p-2 text-left font-semibold border-b border-slate-200">Tgl Selesai</th>
-                            <th class="p-2 text-right font-semibold border-b border-slate-200">Jumlah</th>
-                            <th class="p-2 text-center font-semibold border-b border-slate-200">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pj-detailBody">
-                        <tr><td colspan="7" class="p-6 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>
-                    </tbody>
-                </table>
-            </div>
-
+        <div class="pj-kpi">
+            <div class="pj-ico" style="background: rgba(22,163,74,.1); color: #15803d;"><i class="fa-solid fa-wallet"></i></div>
+            <div><div class="pj-lbl">Total jumlah</div><div class="pj-val" id="pj-kpiTotal">Rp0</div></div>
+        </div>
+        <div class="pj-kpi">
+            <div class="pj-ico" style="background: rgba(217,119,6,.12); color: #b45309;"><i class="fa-solid fa-location-dot"></i></div>
+            <div><div class="pj-lbl">Luar kota · dalam kota</div><div class="pj-val" id="pj-kpiJenis">0 · 0</div></div>
+        </div>
+        <div class="pj-kpi">
+            <div class="pj-ico" style="background: rgba(124,58,237,.1); color: #6d28d9;"><i class="fa-solid fa-star"></i></div>
+            <div><div class="pj-lbl">Lokasi terbanyak</div><div class="pj-val text-[17px]" id="pj-kpiLokasi">-</div></div>
         </div>
     </div>
 
-    <!-- BOTTOM CARDS -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <!-- Ringkasan status + daftar -->
+    <div class="flex flex-col lg:flex-row gap-5 items-start">
 
-        <div class="ios-panel p-5">
-            <h3 class="font-semibold text-sky-700 mb-3">Lokasi Favorit</h3>
-            <div class="overflow-auto max-h-[280px]">
-                <table class="w-full text-sm border-collapse">
-                    <thead>
-                        <tr class="bg-slate-100">
-                            <th class="p-2 text-left font-semibold border-b border-slate-200">No</th>
-                            <th class="p-2 text-left font-semibold border-b border-slate-200">Lokasi</th>
-                            <th class="p-2 text-right font-semibold border-b border-slate-200">Frek</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pj-lokasiBody"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="ios-panel p-5">
-            <h3 class="font-semibold text-sky-700 mb-3">Jenis Perjadin</h3>
-            <table class="w-full text-sm border-collapse">
+        <div class="pj-card w-full lg:w-[320px] flex-shrink-0">
+            <h3>Ringkasan status</h3>
+            <div id="pj-statusBar" class="flex h-3 rounded-full overflow-hidden gap-0.5" style="background: #eef0f3;" aria-hidden="true"></div>
+            <table class="w-full text-[13px] border-collapse mt-3">
                 <thead>
-                    <tr class="bg-slate-100">
-                        <th class="p-2 text-left font-semibold border-b border-slate-200">Jenis</th>
-                        <th class="p-2 text-right font-semibold border-b border-slate-200">Frek</th>
+                    <tr style="color: #6e6e73;">
+                        <th class="py-1.5 text-left font-medium">Status</th>
+                        <th class="py-1.5 text-center font-medium">Frek</th>
+                        <th class="py-1.5 text-right font-medium">Jumlah</th>
                     </tr>
                 </thead>
-                <tbody id="pj-jenisBody">
-                    <tr><td class="p-2 border-b border-slate-100">Luar Kota</td><td class="p-2 border-b border-slate-100 text-right">0</td></tr>
-                    <tr><td class="p-2">Dalam Kota</td><td class="p-2 text-right">0</td></tr>
+                <tbody id="pj-statusSummary">
+                    <tr><td colspan="3" class="p-4 text-center text-slate-400">Memuat...</td></tr>
                 </tbody>
             </table>
         </div>
 
-        <div class="ios-panel p-5">
-            <h3 class="font-semibold text-sky-700 mb-3">Grafik Perjadin</h3>
+        <div class="pj-card flex-1 w-full">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h3 style="margin: 0;">Daftar perjalanan dinas</h3>
+                <input id="pj-searchBox" type="text" placeholder="Cari MAK / uraian / tujuan..." aria-label="Cari MAK, uraian, atau tujuan"
+                    class="ios-field w-full sm:w-72">
+            </div>
+
+            <div class="flex flex-wrap gap-2 mb-3">
+                <label class="pj-chip"><input type="radio" name="pj-statusFilter" value="Semua" checked><span>Semua <b id="pj-cnt-Semua">0</b></span></label>
+                <label class="pj-chip"><input type="radio" name="pj-statusFilter" value="Rekam Data"><span>Rekam Data <b id="pj-cnt-Rekam Data">0</b></span></label>
+                <label class="pj-chip"><input type="radio" name="pj-statusFilter" value="Terlaksana"><span>Terlaksana <b id="pj-cnt-Terlaksana">0</b></span></label>
+                <label class="pj-chip"><input type="radio" name="pj-statusFilter" value="LPT"><span>LPT <b id="pj-cnt-LPT">0</b></span></label>
+                <label class="pj-chip"><input type="radio" name="pj-statusFilter" value="Terbayar"><span>Terbayar <b id="pj-cnt-Terbayar">0</b></span></label>
+                <label class="pj-chip"><input type="radio" name="pj-statusFilter" value="Selesai"><span>Selesai <b id="pj-cnt-Selesai">0</b></span></label>
+            </div>
+
+            <div class="rounded-xl overflow-auto max-h-[380px]" style="border: 1px solid #eef0f3;">
+                <table class="w-full text-[13px] border-collapse" style="min-width: 680px;">
+                    <thead>
+                        <tr class="sticky top-0" style="background: #f7f7f9; color: #6e6e73;">
+                            <th class="py-2.5 px-3.5 text-left font-medium">Uraian &amp; MAK</th>
+                            <th class="py-2.5 px-2 text-left font-medium">Tujuan</th>
+                            <th class="py-2.5 px-2 text-left font-medium">Tanggal</th>
+                            <th class="py-2.5 px-2 text-right font-medium">Jumlah</th>
+                            <th class="py-2.5 px-3.5 text-center font-medium">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pj-detailBody">
+                        <tr><td colspan="5" class="p-6 text-center text-sky-600"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="pj-count" class="text-xs mt-2.5" style="color: #6e6e73;"></div>
+        </div>
+    </div>
+
+    <!-- Kartu bawah -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        <div class="pj-card">
+            <h3>Lokasi favorit</h3>
+            <div id="pj-lokasiBody" class="flex flex-col gap-3.5 text-[13px] overflow-auto max-h-[300px]"></div>
+        </div>
+
+        <div class="pj-card">
+            <h3>Jenis perjadin</h3>
+            <div id="pj-jenisBody" class="flex flex-wrap items-center justify-center gap-6"></div>
+        </div>
+
+        <div class="pj-card">
+            <h3 style="margin-bottom: 6px;">Perjalanan per bulan</h3>
             <canvas id="pj-chartPerjadin" height="220"></canvas>
+            <div id="pj-chartKet" class="text-xs mt-1" style="color: #6e6e73;"></div>
         </div>
 
     </div>
