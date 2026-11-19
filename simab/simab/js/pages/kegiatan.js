@@ -282,7 +282,7 @@ function kgRenderTable(rows) {
                 <div class="kg-act">
                     <button class="kg-btn-copy" title="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
                     <button class="kg-btn-ubah" title="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button class="kg-btn-pelaksana" title="Pelaksana"><i class="fa-solid fa-user-check"></i></button>
+                    ${(!r.P || r.P === 'Rekam Data') ? `<button class="kg-btn-pelaksana" title="Pelaksana"><i class="fa-solid fa-user-check"></i></button>` : ''}
                     ${kgButuhLPT(r.B) ? `<button class="kg-btn-lpt" title="LPT"><i class="fa-solid fa-file-lines"></i></button>` : ''}
                     <button class="kg-btn-bayar" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
                     <button class="kg-btn-sp2d" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
