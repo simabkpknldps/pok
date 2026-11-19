@@ -189,12 +189,12 @@ function pjRenderDetailTable(rows) {
         tr.className = 'hover:bg-slate-50';
         tr.innerHTML = `
             <td class="py-3 px-3.5 align-top">
-                <div class="font-semibold">${pjSdLabel(r.C)}${pjEsc(String(r.C || '').replace(/^\s*\((RM|PNBP)\)\s*/i, ''))}</div>
+                <div class="font-semibold pj-uraian" title="${pjEsc(String(r.C || ''))}">${pjSdLabel(r.C)}${pjEsc(String(r.C || '').replace(/^\s*\((RM|PNBP)\)\s*/i, ''))}</div>
                 <div class="mt-0.5" style="font-size:11.5px;color:#6e6e73;font-family:ui-monospace,Menlo,monospace;word-break:break-all;">${pjEsc(r.B)}</div>
             </td>
-            <td class="py-3 px-2 align-top">${pjEsc(r.E)}</td>
-            <td class="py-3 px-2 align-top whitespace-nowrap">${pjRentang(r.G, r.H)}</td>
-            <td class="py-3 px-2 align-top text-right whitespace-nowrap font-semibold">${jumlah.toLocaleString('id-ID')}</td>
+            <td class="py-3 px-3 align-top">${pjEsc(r.E)}</td>
+            <td class="py-3 px-3 align-top whitespace-nowrap">${pjRentang(r.G, r.H)}</td>
+            <td class="py-3 px-3 align-top text-right whitespace-nowrap font-semibold">${jumlah.toLocaleString('id-ID')}</td>
             <td class="py-3 px-3.5 align-top text-center">${pjPill(r.P)}</td>
         `;
         tbody.appendChild(tr);
