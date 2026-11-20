@@ -290,7 +290,7 @@ function pkiRender() {
 function pkiIkutiFile(key, ikut) {
     document.querySelectorAll('.pki-pagu').forEach(inp => {
         if (inp.dataset.key !== key) return;
-        if (ikut && inp.dataset.file !== '') inp.value = inp.dataset.file;
+        if (ikut) inp.value = inp.dataset.file;   // detail yang tidak ada di file => 0
         else if (!ikut) inp.value = inp.dataset.asal;
         inp.style.background = (Number(inp.value) !== Number(inp.dataset.asal)) ? '#dcfce7' : '';
     });
@@ -364,7 +364,7 @@ function pkiTabelPok(tampil, subUraian) {
             aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]"><input type="checkbox" class="pki-baru-cek" data-key="${pkiEsc(x.key)}"> Tambahkan ke seksi</label>${pkiSeksiSelect('pki-baru-seksi', x.key, pkiSeksiDefault(x.key))}`;
         }
         if (x.status === 'beda') {
-            aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]" title="Mengisi kotak pagu di bawah dengan nilai dari file; tersimpan saat Terapkan"><input type="checkbox" class="pki-ikuti-file" data-key="${pkiEsc(x.key)}"> Pagu ikut file</label>`;
+            aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]" title="Mengisi kotak pagu di bawah dengan nilai dari file (detail yang tidak ada di file menjadi 0); tersimpan saat Terapkan"><input type="checkbox" class="pki-ikuti-file" data-key="${pkiEsc(x.key)}"> Pagu ikut file</label>`;
         }
         if (x.status === 'hilang') {
             aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]"><input type="checkbox" class="pki-hapus-akun" data-key="${pkiEsc(x.key)}"> Hapus dari POK (${x.db.rows.length} baris)</label>`;
@@ -412,9 +412,9 @@ function pkiTabelPok(tampil, subUraian) {
                 const cat = (r.seksi ? ` <span class="text-[10.5px]" style="color:var(--label-secondary)">(${pkiEsc(r.seksi)})</span>` : '') + (PKI.pakai[r.kode] ? ` <span class="text-[10.5px]" style="color:#b45309">· dipakai ${PKI.pakai[r.kode]} kegiatan</span>` : '');
                 const beda = f && Math.abs((f.pagu || 0) - (Number(r.pagu) || 0)) > 0.5;
                 const nDb = x.status === 'beda'
-                    ? `<input type="number" class="pki-pagu ios-field" data-id="${pkiEsc(r.id)}" data-key="${pkiEsc(x.key)}" data-file="${f ? (Number(f.pagu) || 0) : ''}" data-asal="${Number(r.pagu) || 0}" value="${Number(r.pagu) || 0}" style="width:120px;padding:2px 8px;text-align:right" title="Ubah pagu POK lalu tekan Terapkan">`
+                    ? `<input type="number" class="pki-pagu ios-field" data-id="${pkiEsc(r.id)}" data-key="${pkiEsc(x.key)}" data-file="${f ? (Number(f.pagu) || 0) : 0}" data-asal="${Number(r.pagu) || 0}" value="${Number(r.pagu) || 0}" style="width:120px;padding:2px 8px;text-align:right" title="Ubah pagu POK lalu tekan Terapkan">`
                     : pkiRp(r.pagu);
-                rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, f ? pkiRp(f.pagu) : '<span style="color:#b91c1c">tidak ada</span>', nDb, '', beda ? '#fff7ed' : '#fff', cat);
+                rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, f ? pkiRp(f.pagu) : '<span style="color:#b91c1c" title="Detail ini tidak ada di file. Bila \'Pagu ikut file\' dicentang, pagunya menjadi 0.">tidak ada</span>', nDb, '', beda ? '#fff7ed' : '#fff', cat);
             });
             if (x.status === 'beda') {
                 fileDetail.filter(r => !adaDb.has(pkiNorm(r.uraian))).forEach(r => {
