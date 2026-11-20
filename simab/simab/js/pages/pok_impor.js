@@ -386,9 +386,11 @@ function pkiTabelPok(tampil, subUraian) {
 
         // ---- baris detail ----
         const fileDetail = x.file ? x.file.details : [];
-        const fileByUraian = new Map(fileDetail.map(r => [pkiNorm(r.uraian), r]));
+        // Antrean detail file per uraian: uraian kembar dicocokkan SATU-SATU
+        // (1 detail file hanya untuk 1 detail POK), sisanya dianggap tidak ada di file.
+        const antrean = new Map();
+        fileDetail.forEach(r => { const k = pkiNorm(r.uraian); if (!antrean.has(k)) antrean.set(k, []); antrean.get(k).push(r); });
         const dbDetail = x.db ? x.db.details : [];
-        const adaDb = new Set(dbDetail.map(r => pkiNorm(r.uraian)));
         const baris = (kodeTampil, uraian, sd, nFile, nDb, kanan, bgRow, catatan) => `<tr style="background:${bgRow || '#fff'}">
             <td style="${td}padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px;color:${sdWarna(sd)};">${pkiEsc(kodeTampil)}</td>
             <td style="${td}padding:5px 8px 5px 30px;font-size:11.5px;color:${sdWarna(sd)};">- ${pkiEsc(uraian)}${catatan || ''}</td>
@@ -408,7 +410,8 @@ function pkiTabelPok(tampil, subUraian) {
         } else {
             // sama / beda: tampilkan detail POK berdampingan dengan nilai di file
             dbDetail.forEach(r => {
-                const f = fileByUraian.get(pkiNorm(r.uraian));
+                const q = antrean.get(pkiNorm(r.uraian));
+                const f = q && q.length ? q.shift() : undefined;
                 const cat = (r.seksi ? ` <span class="text-[10.5px]" style="color:var(--label-secondary)">(${pkiEsc(r.seksi)})</span>` : '') + (PKI.pakai[r.kode] ? ` <span class="text-[10.5px]" style="color:#b45309">· dipakai ${PKI.pakai[r.kode]} kegiatan</span>` : '');
                 const beda = f && Math.abs((f.pagu || 0) - (Number(r.pagu) || 0)) > 0.5;
                 const nDb = x.status === 'beda'
@@ -417,7 +420,7 @@ function pkiTabelPok(tampil, subUraian) {
                 rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, f ? pkiRp(f.pagu) : '<span style="color:#b91c1c" title="Detail ini tidak ada di file. Bila \'Pagu ikut file\' dicentang, pagunya menjadi 0.">tidak ada</span>', nDb, '', beda ? '#fff7ed' : '#fff', cat);
             });
             if (x.status === 'beda') {
-                fileDetail.filter(r => !adaDb.has(pkiNorm(r.uraian))).forEach(r => {
+                Array.from(antrean.values()).flat().forEach(r => {
                     rows += baris('baru', r.uraian, r.sd, pkiRp(r.pagu), '-',
                         `<label class="flex items-center gap-1.5 text-[12px]"><input type="checkbox" class="pki-tambah-detail" data-key="${pkiEsc(x.key)}" data-kode="${pkiEsc(r.kode)}"> Tambahkan ke POK</label>`,
                         '#f0fdf4', ' <span class="text-[10.5px]" style="color:#166534">(ada di file, belum di POK)</span>');
