@@ -213,14 +213,12 @@ function computeRekapSpmData(kegiatanRows) {
 
 function renderRekapSpmTable(rows) {
     return `
-        <div class="flex items-center justify-between mb-3">
-            <h3 class="text-[13px] font-semibold" style="color: var(--label);">Rekapitulasi SPM</h3>
-            <span id="dash-spm-count" class="text-[11px]" style="color: var(--label-secondary);">${rows.length} SPM</span>
-        </div>
-        <div class="flex items-center gap-2 mb-3">
-            <input id="dash-spm-search" type="text" placeholder="Cari Nomor SPM..." class="ios-field flex-1" style="font-size: 13px; padding: 0.5rem 0.75rem;">
-            <button id="dash-spm-btnSync" class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition" style="background: #7C3AED; color: #fff;" title="Sinkronkan Tgl SP2D dari file Excel MyIntress">
-                <i class="fa-solid fa-rotate text-[10px]"></i> Sync SiMAB - MyIntress
+        <div class="flex items-center gap-2 mb-3.5" style="min-height:34px;">
+            <h3 class="text-[13px] font-semibold whitespace-nowrap" style="color: var(--label);">Rekapitulasi SPM</h3>
+            <span id="dash-spm-count" class="text-[11px] whitespace-nowrap" style="color: var(--label-secondary);">${rows.length} SPM</span>
+            <input id="dash-spm-search" type="text" placeholder="Cari Nomor SPM..." class="ios-field flex-1 min-w-0" style="font-size: 12.5px; padding: 0.35rem 0.7rem; height:34px;">
+            <button id="dash-spm-btnSync" class="btn-ios flex items-center gap-1.5 px-3 text-xs whitespace-nowrap" style="height:34px;" title="Sinkronkan Tgl SP2D dari file Excel MyIntress">
+                <i class="fa-solid fa-rotate text-[10px]"></i> Sync MyIntress
             </button>
             <input id="dash-spm-fileInput" type="file" accept=".xlsx,.xls" class="hidden">
         </div>
@@ -233,7 +231,7 @@ function renderRekapSpmTable(rows) {
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide">Jenis</th>
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-right">Jumlah</th>
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center whitespace-nowrap">Tgl SP2D</th>
-                            <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center whitespace-nowrap">Dokumen</th>
+                            <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center whitespace-nowrap" title="Kiri: dokumen SPM &middot; Kanan: dokumen SPBy. Hijau = sudah ada, merah = belum ada.">Dokumen <i class="fa-regular fa-circle-question text-[10px]"></i></th>
                             <th class="p-2.5 font-medium text-[11px] uppercase tracking-wide text-center w-14">Aksi</th>
                         </tr>
                     </thead>
@@ -260,7 +258,7 @@ function renderRekapSpmRows(rows) {
             <td class="p-2.5 text-right whitespace-nowrap" style="color: var(--label);">${formatAngka(r.jumlah)}</td>
             <td class="p-2.5 text-center whitespace-nowrap" style="color: var(--label-secondary);">${r.tglSp2d || '-'}</td>
             <td class="p-2.5 text-center whitespace-nowrap font-mono font-semibold text-[12.5px]">
-                <span style="color: ${warnaDok};">${angkaDok}</span><span style="color: var(--label-secondary);"> | </span><span style="color: ${warnaSpby};">${angkaSpby}</span>
+                <span style="color: ${warnaDok}; cursor:help;" title="Dokumen SPM: ${angkaDok ? 'sudah ada' : 'belum ada'}">${angkaDok}</span><span style="color: var(--label-secondary);"> | </span><span style="color: ${warnaSpby}; cursor:help;" title="Dokumen SPBy: ${angkaSpby ? 'sudah ada' : 'belum ada'}">${angkaSpby}</span>
             </td>
             <td class="p-2.5 text-center">
                 <button class="dash-spm-btnDetil transition" data-spm="${escapeHtml(r.nomorSpm)}" style="color: var(--ios-blue);" title="Lihat Detil">
@@ -523,7 +521,7 @@ function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
                     <div class="space-y-3 overflow-y-auto max-h-48 pr-1">
                         ${data.kegiatanHariIni.length
                             ? data.kegiatanHariIni.map(item => `<div class="pb-2.5" style="border-bottom: 1px solid var(--divider);"><div class="text-[13px] font-medium" style="color: var(--label);">${escapeHtml(item.uraian)}</div><div class="text-[10.5px] mt-0.5" style="color: var(--label-secondary);">${escapeHtml(item.pelaksana)} &middot; ${escapeHtml(item.tujuan)}</div></div>`).join('')
-                            : `<div class="text-[12.5px] text-center py-4" style="color: var(--label-secondary);">Tidak ada kegiatan hari ini.</div>`}
+                            : `<div class="flex flex-col items-center gap-1.5 py-2" style="color: var(--label-secondary); opacity:.75;"><i class="fa-regular fa-calendar-check text-xl"></i><div class="text-[11.5px]">Tidak ada kegiatan</div></div>`}
                     </div>
                 </div>
                 <div class="ios-panel p-5">${renderTopPerjadin(data.topPerjadin)}</div>
@@ -568,9 +566,9 @@ function renderRpdBerjalanTable(d) {
     `).join('');
 
     return `
-        <div class="flex items-center justify-between mb-3.5">
+        <div class="flex items-center justify-between mb-3.5" style="min-height:34px;">
             <h3 class="text-[13px] font-semibold" style="color: var(--label);">RPD Berjalan</h3>
-            <button id="dash-rpdb-btnTambah" class="btn-ios flex items-center gap-1.5 px-3 py-1.5 text-xs">
+            <button id="dash-rpdb-btnTambah" class="btn-ios flex items-center gap-1.5 px-3 text-xs" style="height:34px;">
                 <i class="fa-solid fa-plus text-[10px]"></i> Tambah Baris
             </button>
         </div>
@@ -586,8 +584,8 @@ function renderRpdBerjalanTable(d) {
                 <tbody id="dash-rpdb-tbody">
                     ${fixedRowsHtml}
                     ${customRowsHtml}
-                    <tr style="border-top: 1.5px solid var(--divider); background: var(--sidebar-bg);">
-                        <td class="p-2.5 font-semibold" style="color: var(--label);">Total Akhir</td>
+                    <tr style="border-top: 1.5px solid var(--divider); background: var(--sidebar-bg);" title="Selisih terhadap RPD. Hijau bila dalam batas 5%, merah bila lebih.">
+                        <td class="p-2.5 font-semibold" style="color: var(--label);">Total Akhir <span class="text-[10.5px] font-medium px-1.5 py-0.5 rounded-full ml-1" style="background:${warnaTotal === 'var(--ios-green)' ? 'var(--ios-green-tint)' : 'rgba(255,59,48,0.12)'}; color:${warnaTotal};">${warnaTotal === 'var(--ios-green)' ? 'Sesuai RPD' : 'Selisih dari RPD'}</span></td>
                         <td class="p-2.5 text-right font-semibold" style="color: ${warnaTotal};">${formatAngka(d.totalAkhir)} <span class="text-[11px] font-normal">(${persen.toFixed(2)}%)</span></td>
                         <td class="p-2.5"></td>
                     </tr>
@@ -701,14 +699,16 @@ function initCharts(data) {
 function renderBelanjaCard(t, d) {
     const p = (d.persen * 100).toFixed(2);
     const pBar = Math.min(Number(p), 100);
-    const warna = pBar >= 90 ? 'var(--ios-amber)' : 'var(--ios-blue)';
+    // Warna menandai kondisi pagu: hijau aman, kuning mendekati habis (>=90%), merah habis (>=100%).
+    const warna = Number(p) >= 100 ? 'var(--ios-red)' : (Number(p) >= 90 ? 'var(--ios-amber)' : 'var(--ios-green)');
     return `<div>
-        <h3 class="text-[13px] font-semibold mb-2.5" style="color: var(--label);">${t}</h3>
+        <h3 class="text-[13px] font-semibold mb-2.5" style="color: var(--label);" title="Hijau: aman &middot; Kuning: sudah &ge; 90% &middot; Merah: &ge; 100%">${t}</h3>
         <div class="text-[26px] font-semibold leading-none mb-3" style="color: ${warna};">${p}%</div>
         <div class="w-full rounded-full h-1.5 mb-3.5" style="background: var(--field-bg);">
             <div class="h-1.5 rounded-full" style="width: ${pBar}%; background: ${warna};"></div>
         </div>
-        <div class="text-[11px] leading-relaxed" style="color: var(--label-secondary);">Realisasi: ${formatAngka(d.realisasi)}<br><span class="font-semibold" style="color: var(--label);">Sisa: ${formatAngka(d.sisa)}</span></div>
+        <div class="text-[11px]" style="color: var(--label-secondary);">Realisasi: ${formatAngka(d.realisasi)}</div>
+        <div class="mt-1.5 flex items-baseline justify-between gap-2"><span class="text-[11px]" style="color: var(--label-secondary);">Sisa</span><span class="text-[15px] font-bold" style="color: ${Number(d.sisa) < 0 ? 'var(--ios-red)' : 'var(--label)'};">${formatAngka(d.sisa)}</span></div>
     </div>`;
 }
 
