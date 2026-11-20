@@ -721,6 +721,24 @@ function renderPok() {
     let html = '';
     groups.forEach((items, seksi) => {
         if (window.pokUtuh) {
+            html += `
+        <tr class="select-none">
+            <td colspan="8" class="p-3">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span class="font-bold text-sm" style="color: var(--label);">POK Utuh <span class="ml-1 font-normal text-xs opacity-70">(${items.length} item)</span></span>
+                    <div class="flex items-center gap-2 shrink-0 ml-auto">
+                        <button onclick="event.stopPropagation();downloadSeksiPDF('${POK_UTUH_KEY}')"
+                            class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition" style="background: #FF3B30; color: #fff;">
+                            <i class="fa-solid fa-file-pdf"></i> PDF
+                        </button>
+                        <button onclick="event.stopPropagation();downloadSeksiExcel('${POK_UTUH_KEY}')"
+                            class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition" style="background: #34C759; color: #fff;">
+                            <i class="fa-solid fa-file-excel"></i> Excel
+                        </button>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
             html += columnSubHeaderRow();
             html += items.map(i => pokRenderRow(i, seksi, items)).join('');
             return;
@@ -1592,6 +1610,15 @@ async function ensurePdfLibs() {
 
 // Ambil data unik (sudah dedup kode+bidang) untuk 1 seksi tertentu
 function getSeksiExportData(seksi) {
+    if (seksi === POK_UTUH_KEY) {
+        // POK Utuh: seluruh baris, 1 per kode, urut kode.
+        const perKode = new Map();
+        (window.rawPokData || []).forEach(item => {
+            if (String(item.kode).split('.').length < 3) return;
+            if (!perKode.has(String(item.kode))) perKode.set(String(item.kode), item);
+        });
+        return Array.from(perKode.values()).sort(pokKodeUrut);
+    }
     const uniqueMap = new Map();
     (window.rawPokData || []).forEach(item => {
         uniqueMap.set(String(item.kode) + '|' + (item.bidang || ''), item);
@@ -1623,7 +1650,7 @@ async function downloadSeksiExcel(seksi) {
 
         const items = getSeksiExportData(seksi);
         if (items.length === 0) {
-            alert('Tidak ada data untuk seksi ' + seksi);
+            alert('Tidak ada data untuk ' + (seksi === POK_UTUH_KEY ? 'POK' : 'seksi ' + seksi));
             return;
         }
 
@@ -1643,11 +1670,11 @@ async function downloadSeksiExcel(seksi) {
         ];
 
         const wb = XLSX.utils.book_new();
-        const sheetName = String(seksi).replace(/[\\/?*[\]:]/g, '').substring(0, 31) || 'POK';
+        const sheetName = String(seksi === POK_UTUH_KEY ? 'POK Utuh' : seksi).replace(/[\\/?*[\]:]/g, '').substring(0, 31) || 'POK';
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
         const tanggal = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(wb, `POK_${seksi}_${tanggal}.xlsx`);
+        XLSX.writeFile(wb, `POK_${seksi === POK_UTUH_KEY ? 'Utuh' : seksi}_${tanggal}.xlsx`);
     } catch (e) {
         console.error('Gagal export Excel:', e);
         alert('Gagal membuat file Excel: ' + (e.message || 'Terjadi kesalahan'));
@@ -1673,7 +1700,7 @@ async function downloadSeksiPDF(seksi) {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
 
         doc.setFontSize(13);
-        doc.text(`POK - Seksi ${seksi}`, 40, 32);
+        doc.text(seksi === POK_UTUH_KEY ? 'POK - Seluruh Seksi' : `POK - Seksi ${seksi}`, 40, 32);
         doc.setFontSize(9);
         doc.setTextColor(120);
         doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 40, 46);
@@ -1764,7 +1791,7 @@ async function downloadSeksiPDF(seksi) {
         });
 
         const tanggal = new Date().toISOString().split('T')[0];
-        doc.save(`POK_${seksi}_${tanggal}.pdf`);
+        doc.save(`POK_${seksi === POK_UTUH_KEY ? 'Utuh' : seksi}_${tanggal}.pdf`);
     } catch (e) {
         console.error('Gagal export PDF:', e);
         alert('Gagal membuat file PDF: ' + (e.message || 'Terjadi kesalahan'));
