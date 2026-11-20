@@ -214,6 +214,9 @@ async function initPokImporPage() {
     if (!pkiIsAdmin()) { pkiEl('pki-root').innerHTML = '<div class="text-center text-red-500 mt-10">Halaman ini khusus admin.</div>'; return; }
     pkiEl('pki-file').onchange = pkiBaca;
     pkiEl('pki-btnTerapkan').onclick = pkiTerapkan;
+    pkiEl('pki-btnBedaSemua').onclick = () => {
+        document.querySelectorAll('.pki-ikuti-file').forEach(c => { c.checked = true; pkiIkutiFile(c.dataset.key, true); });
+    };
     pkiEl('pki-btnBaruSemua').onclick = () => { document.querySelectorAll('.pki-baru-cek').forEach(c => { c.checked = true; }); pkiHitungOps(); };
     document.querySelectorAll('[data-pki-filter]').forEach(b => { b.onclick = () => { PKI.filter = b.dataset.pkiFilter; pkiRender(); }; });
 }
@@ -275,7 +278,22 @@ function pkiRender() {
     const html = pkiTabelPok(tampil, subUraian);
     pkiEl('pki-daftar').innerHTML = html || '<div class="ios-panel text-center p-6" style="color:var(--label-secondary)">Tidak ada akun pada filter ini.</div>';
 
+    pkiEl('pki-daftar').querySelectorAll('.pki-ikuti-file').forEach(cb => {
+        cb.addEventListener('change', () => pkiIkutiFile(cb.dataset.key, cb.checked));
+    });
     pkiEl('pki-daftar').querySelectorAll('input,select').forEach(el => { el.addEventListener('change', pkiHitungOps); el.addEventListener('input', pkiHitungOps); });
+    pkiHitungOps();
+}
+
+// Isi kotak pagu detail pada 1 akun dengan nilai dari file (yang uraiannya cocok);
+// kalau dicentang ulang jadi tidak, kembalikan ke nilai POK semula.
+function pkiIkutiFile(key, ikut) {
+    document.querySelectorAll('.pki-pagu').forEach(inp => {
+        if (inp.dataset.key !== key) return;
+        if (ikut && inp.dataset.file !== '') inp.value = inp.dataset.file;
+        else if (!ikut) inp.value = inp.dataset.asal;
+        inp.style.background = (Number(inp.value) !== Number(inp.dataset.asal)) ? '#dcfce7' : '';
+    });
     pkiHitungOps();
 }
 
@@ -345,6 +363,9 @@ function pkiTabelPok(tampil, subUraian) {
         if (x.status === 'baru') {
             aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]"><input type="checkbox" class="pki-baru-cek" data-key="${pkiEsc(x.key)}"> Tambahkan ke seksi</label>${pkiSeksiSelect('pki-baru-seksi', x.key, pkiSeksiDefault(x.key))}`;
         }
+        if (x.status === 'beda') {
+            aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]" title="Mengisi kotak pagu di bawah dengan nilai dari file; tersimpan saat Terapkan"><input type="checkbox" class="pki-ikuti-file" data-key="${pkiEsc(x.key)}"> Pagu ikut file</label>`;
+        }
         if (x.status === 'hilang') {
             aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]"><input type="checkbox" class="pki-hapus-akun" data-key="${pkiEsc(x.key)}"> Hapus dari POK (${x.db.rows.length} baris)</label>`;
         }
@@ -391,7 +412,7 @@ function pkiTabelPok(tampil, subUraian) {
                 const cat = (r.seksi ? ` <span class="text-[10.5px]" style="color:var(--label-secondary)">(${pkiEsc(r.seksi)})</span>` : '') + (PKI.pakai[r.kode] ? ` <span class="text-[10.5px]" style="color:#b45309">· dipakai ${PKI.pakai[r.kode]} kegiatan</span>` : '');
                 const beda = f && Math.abs((f.pagu || 0) - (Number(r.pagu) || 0)) > 0.5;
                 const nDb = x.status === 'beda'
-                    ? `<input type="number" class="pki-pagu ios-field" data-id="${pkiEsc(r.id)}" data-asal="${Number(r.pagu) || 0}" value="${Number(r.pagu) || 0}" style="width:120px;padding:2px 8px;text-align:right" title="Ubah pagu POK lalu tekan Terapkan">`
+                    ? `<input type="number" class="pki-pagu ios-field" data-id="${pkiEsc(r.id)}" data-key="${pkiEsc(x.key)}" data-file="${f ? (Number(f.pagu) || 0) : ''}" data-asal="${Number(r.pagu) || 0}" value="${Number(r.pagu) || 0}" style="width:120px;padding:2px 8px;text-align:right" title="Ubah pagu POK lalu tekan Terapkan">`
                     : pkiRp(r.pagu);
                 rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, f ? pkiRp(f.pagu) : '<span style="color:#b91c1c">tidak ada</span>', nDb, '', beda ? '#fff7ed' : '#fff', cat);
             });
