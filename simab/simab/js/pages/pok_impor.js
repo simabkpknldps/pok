@@ -391,21 +391,21 @@ function pkiTabelPok(tampil, subUraian) {
         const antrean = new Map();
         fileDetail.forEach(r => { const k = pkiNorm(r.uraian); if (!antrean.has(k)) antrean.set(k, []); antrean.get(k).push(r); });
         const dbDetail = x.db ? x.db.details : [];
-        const baris = (kodeTampil, uraian, sd, nFile, nDb, kanan, bgRow, catatan) => `<tr style="background:${bgRow || '#fff'}">
+        const baris = (kodeTampil, uraian, sd, nFile, nDb, kanan, bgRow, catatan, sel) => `<tr style="background:${bgRow || '#fff'}">
             <td style="${td}padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px;color:${sdWarna(sd)};">${pkiEsc(kodeTampil)}</td>
             <td style="${td}padding:5px 8px 5px 30px;font-size:11.5px;color:${sdWarna(sd)};">- ${pkiEsc(uraian)}${catatan || ''}</td>
             <td style="${td}padding:5px 8px;text-align:right;white-space:nowrap;font-size:11.5px;color:${sdWarna(sd)};">${nFile}</td>
             <td style="${td}padding:5px 8px;text-align:right;white-space:nowrap;font-size:11.5px;color:${sdWarna(sd)};">${nDb}</td>
-            <td style="${td}"></td>
+            <td style="${td}padding:5px 8px;text-align:right;white-space:nowrap;font-size:11.5px;font-weight:600;color:${Math.abs(sel || 0) > 0.5 ? '#b91c1c' : '#9ca3af'};">${Math.abs(sel || 0) > 0.5 ? pkiRp(sel) : '0'}</td>
             <td style="${td}padding:5px 8px;text-align:center;font-size:11.5px;color:${sdWarna(sd)};">${pkiEsc(sd || '-')}</td>
             <td style="${td}padding:5px 8px;">${kanan || ''}</td></tr>`;
 
         if (x.status === 'baru') {
-            fileDetail.forEach(r => { rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, pkiRp(r.pagu), '-', '', '#f0fdf4'); });
+            fileDetail.forEach(r => { rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, pkiRp(r.pagu), '-', '', '#f0fdf4', '', r.pagu || 0); });
         } else if (x.status === 'hilang') {
             dbDetail.forEach(r => {
                 const cat = (r.seksi ? ` <span class="text-[10.5px]" style="color:var(--label-secondary)">(${pkiEsc(r.seksi)})</span>` : '') + (PKI.pakai[r.kode] ? ` <span class="text-[10.5px]" style="color:#b45309">· dipakai ${PKI.pakai[r.kode]} kegiatan</span>` : '');
-                rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, '-', pkiRp(r.pagu), '', '#fef2f2', cat);
+                rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, '-', pkiRp(r.pagu), '', '#fef2f2', cat, -(Number(r.pagu) || 0));
             });
         } else {
             // sama / beda: tampilkan detail POK berdampingan dengan nilai di file
@@ -417,13 +417,13 @@ function pkiTabelPok(tampil, subUraian) {
                 const nDb = x.status === 'beda'
                     ? `<input type="number" class="pki-pagu ios-field" data-id="${pkiEsc(r.id)}" data-key="${pkiEsc(x.key)}" data-file="${f ? (Number(f.pagu) || 0) : 0}" data-asal="${Number(r.pagu) || 0}" value="${Number(r.pagu) || 0}" style="width:120px;padding:2px 8px;text-align:right" title="Ubah pagu POK lalu tekan Terapkan">`
                     : pkiRp(r.pagu);
-                rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, f ? pkiRp(f.pagu) : '<span style="color:#b91c1c" title="Detail ini tidak ada di file. Bila \'Pagu ikut file\' dicentang, pagunya menjadi 0.">tidak ada</span>', nDb, '', beda ? '#fff7ed' : '#fff', cat);
+                rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, f ? pkiRp(f.pagu) : '<span style="color:#b91c1c" title="Detail ini tidak ada di file. Bila \'Pagu ikut file\' dicentang, pagunya menjadi 0.">tidak ada</span>', nDb, '', beda ? '#fff7ed' : '#fff', cat, (f ? (Number(f.pagu) || 0) : 0) - (Number(r.pagu) || 0));
             });
             if (x.status === 'beda') {
                 Array.from(antrean.values()).flat().forEach(r => {
                     rows += baris('baru', r.uraian, r.sd, pkiRp(r.pagu), '-',
                         `<label class="flex items-center gap-1.5 text-[12px]"><input type="checkbox" class="pki-tambah-detail" data-key="${pkiEsc(x.key)}" data-kode="${pkiEsc(r.kode)}"> Tambahkan ke POK</label>`,
-                        '#f0fdf4', ' <span class="text-[10.5px]" style="color:#166534">(ada di file, belum di POK)</span>');
+                        '#f0fdf4', ' <span class="text-[10.5px]" style="color:#166534">(ada di file, belum di POK)</span>', r.pagu || 0);
                 });
             }
         }
