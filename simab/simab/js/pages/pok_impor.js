@@ -316,7 +316,7 @@ function pkiTabelPok(tampil, subUraian) {
     let progSkrg = null;
     let rows = '';
 
-    const kosong = n => '<td style="' + td + '"></td>'.repeat(n);
+    const kosong = n => ('<td style="' + td + '"></td>').repeat(n);
     const barisInduk = (kode, depth) => {
         const segs = kode.split('.');
         const kodeTampil = depth <= 3 ? kode : segs[segs.length - 1];
