@@ -268,17 +268,12 @@ function pkiRender() {
     });
 
     const tampil = h.filter(x => PKI.filter === 'semua' ? true : PKI.filter === 'sama' ? x.status === 'sama' : x.status !== 'sama');
-    const grup = {};
-    tampil.forEach(x => (grup[pkiSubKey(x.key)] = grup[pkiSubKey(x.key)] || []).push(x));
     const subUraian = {};
     PKI.fileRows.forEach(r => { subUraian[r.kode] = r.uraian; });
     PKI.dbRows.forEach(r => { if (!subUraian[r.kode]) subUraian[r.kode] = r.uraian; });
 
-    const html = Object.keys(grup).sort().map(sub => {
-        const kartu = grup[sub].map(pkiKartuAkun).join('');
-        return `<div class="mb-4"><div class="text-xs font-mono mb-1" style="color:var(--label-secondary)">${pkiEsc(sub)} — ${pkiEsc(subUraian[sub] || '')}</div>${kartu}</div>`;
-    }).join('');
-    pkiEl('pki-daftar').innerHTML = html || '<div class="text-center p-6" style="color:var(--label-secondary)">Tidak ada akun pada filter ini.</div>';
+    const html = pkiTabelPok(tampil, subUraian);
+    pkiEl('pki-daftar').innerHTML = html || '<div class="ios-panel text-center p-6" style="color:var(--label-secondary)">Tidak ada akun pada filter ini.</div>';
 
     pkiEl('pki-daftar').querySelectorAll('input,select').forEach(el => { el.addEventListener('change', pkiHitungOps); el.addEventListener('input', pkiHitungOps); });
     pkiHitungOps();
@@ -300,47 +295,130 @@ function pkiSeksiDefault(key) {
     return 'Umum';
 }
 
-function pkiKartuAkun(x) {
-    const merah = x.status === 'hilang' || x.status === 'beda';
-    const border = merah ? '#fca5a5' : x.status === 'baru' ? '#86efac' : '#e5e7eb';
-    const bg = merah ? '#fef2f2' : '#fff';
-    const akun = x.key.split('.').pop();
-    const nama = (x.file && x.file.uraian) || (x.db && x.db.uraian) || '';
-    let judul = `<div class="flex flex-wrap items-center gap-2"><span class="font-mono font-semibold">${pkiEsc(akun)}</span><span>${pkiEsc(nama)}</span>${pkiBadge(x.status)}`;
-    if (x.file) judul += `<span class="text-xs" style="color:var(--label-secondary)">file ${pkiRp(x.file.sum)}</span>`;
-    if (x.db) judul += `<span class="text-xs" style="color:var(--label-secondary)">POK ${pkiRp(x.db.sum)}</span>`;
-    if (x.status === 'beda') judul += `<span class="text-xs font-semibold" style="color:#b91c1c">selisih ${pkiRp(x.selisih)}</span>`;
-    judul += '</div>';
-    let ket = '';
-    if (x.status === 'hilang') {
-        ket += `<div class="text-xs mt-1" style="color:#b91c1c">Akun ini ada di POK tetapi tidak ada di file${x.kandidat.length ? ` — di sub komponen yang sama file memuat akun baru: <b>${x.kandidat.join(', ')}</b> (kemungkinan kode akun berubah)` : ''}.</div>`;
-        if (x.dipakai) ket += `<div class="text-xs mt-1 font-semibold" style="color:#b45309">⚠ Dipakai ${x.dipakai} kegiatan (kegiatan.mak). Menghapusnya membuat kegiatan itu kehilangan induk POK.</div>`;
-    }
-    let aksi = '';
-    if (x.status === 'baru') {
-        aksi = `<label class="text-sm flex items-center gap-2 mt-2"><input type="checkbox" class="pki-baru-cek" data-key="${pkiEsc(x.key)}"> Tambahkan akun ini beserta ${x.file.details.length} detail ke seksi ${pkiSeksiSelect('pki-baru-seksi', x.key, pkiSeksiDefault(x.key))}</label>`;
-    }
-    if (x.status === 'hilang') {
-        aksi = `<label class="text-sm flex items-center gap-2 mt-2"><input type="checkbox" class="pki-hapus-akun" data-key="${pkiEsc(x.key)}"> Hapus akun ini dari POK (${x.db.rows.length} baris)</label>`;
-    }
-    let detail = '';
-    if (x.status === 'beda' || x.status === 'hilang') {
-        const dbList = x.db.details.map(r => `<tr><td class="font-mono text-xs pr-2">${pkiEsc(String(r.kode).split('.').pop())}</td><td class="pr-2">${pkiEsc(r.uraian)} <span class="text-xs" style="color:var(--label-secondary)">(${pkiEsc(r.seksi || '-')})</span>${PKI.pakai[r.kode] ? ` <span class="text-xs" style="color:#b45309">· dipakai ${PKI.pakai[r.kode]} kegiatan</span>` : ''}</td>
-            <td class="text-right">${x.status === 'beda' ? `<input type="number" class="pki-pagu ios-field" data-id="${pkiEsc(r.id)}" data-asal="${Number(r.pagu) || 0}" value="${Number(r.pagu) || 0}" style="width:130px;padding:2px 8px;text-align:right">` : pkiRp(r.pagu)}</td></tr>`).join('');
-        detail = `<div class="mt-2"><div class="text-xs font-semibold mb-1">Detail di POK${x.status === 'beda' ? ' (ubah pagu langsung di kotak, lalu Terapkan)' : ''}</div><table class="w-full text-sm">${dbList || '<tr><td class="text-xs">Tidak ada baris detail.</td></tr>'}</table></div>`;
-    }
-    if (x.status === 'beda' && x.file) {
-        const adaUraian = new Set(x.db.details.map(r => pkiNorm(r.uraian)));
-        const filRows = x.file.details.map(r => {
-            const baru = !adaUraian.has(pkiNorm(r.uraian));
-            return `<tr><td class="pr-2">${baru ? `<input type="checkbox" class="pki-tambah-detail" data-key="${pkiEsc(x.key)}" data-kode="${pkiEsc(r.kode)}" title="Tambahkan sebagai detail baru">` : ''}</td><td class="pr-2">${pkiEsc(r.uraian)}${baru ? ' <span class="text-xs" style="color:#166534">(uraian tidak ada di POK)</span>' : ''}</td><td class="text-right">${pkiRp(r.pagu)}</td></tr>`;
-        }).join('');
-        detail += `<div class="mt-2"><div class="text-xs font-semibold mb-1">Detail di file (centang untuk menambahkan sebagai detail baru)</div><table class="w-full text-sm">${filRows}</table></div>`;
-    }
-    if (x.status === 'baru') {
-        detail = `<details class="mt-1"><summary class="text-xs cursor-pointer" style="color:var(--label-secondary)">Lihat ${x.file.details.length} detail di file</summary><table class="w-full text-sm mt-1">${x.file.details.map(r => `<tr><td class="pr-2">${pkiEsc(r.uraian)}</td><td class="text-right">${pkiRp(r.pagu)}</td></tr>`).join('')}</table></details>`;
-    }
-    return `<div class="rounded-xl p-3 mb-2" style="border:1px solid ${border};background:${bg}">${judul}${ket}${aksi}${detail}</div>`;
+// ---- Tampilan ala POK utuh: satu tabel berkisi, urut program (CD, WA, lainnya) lalu kode ----
+function pkiProgRank(p) {
+    p = String(p || '').trim().toUpperCase();
+    return p === 'CD' ? 0 : (p === 'WA' ? 1 : 2);
+}
+function pkiProgDari(x) {
+    return String((x.file && x.file.details[0] && x.file.details[0].prog) || (x.db && x.db.rows[0] && x.db.rows[0].prog) || '').trim().toUpperCase();
+}
+function pkiTabelPok(tampil, subUraian) {
+    if (!tampil.length) return '';
+    const urut = tampil.slice().sort((a, b) => {
+        const pa = pkiProgDari(a), pb = pkiProgDari(b);
+        return (pkiProgRank(pa) - pkiProgRank(pb)) || pa.localeCompare(pb) || a.key.localeCompare(b.key, 'id', { numeric: true });
+    });
+    const td = 'border:1px solid #9ca3af;';
+    const sdWarna = sd => String(sd || '').toUpperCase() === 'PNBP' ? '#dc2626' : '#16a34a';
+    const warnaStatus = { baru: '#f0fdf4', hilang: '#fef2f2', beda: '#fff7ed', sama: '#fff' };
+    const sudah = new Set();
+    let progSkrg = null;
+    let rows = '';
+
+    const kosong = n => '<td style="' + td + '"></td>'.repeat(n);
+    const barisInduk = (kode, depth) => {
+        const segs = kode.split('.');
+        const kodeTampil = depth <= 3 ? kode : segs[segs.length - 1];
+        const gaya = depth === 5 ? 'font-style:italic;' : '';
+        return `<tr data-kode="${pkiEsc(kode)}"><td style="${td}padding:6px 8px;text-align:right;white-space:nowrap;font-size:11.5px;" title="${pkiEsc(kode)}">${pkiEsc(kodeTampil)}</td>
+            <td style="${td}padding:6px 8px;${gaya}">${pkiEsc(subUraian[kode] || '')}</td>${kosong(5)}</tr>`;
+    };
+
+    urut.forEach(x => {
+        const prog = pkiProgDari(x);
+        if (prog !== progSkrg) {
+            progSkrg = prog;
+            rows += `<tr><td colspan="7" style="padding:8px 10px;font-weight:700;font-size:13px;background:#eef2ff;color:#3730a3;border:1px solid #9ca3af;">Program ${pkiEsc(prog || '-')}</td></tr>`;
+        }
+        const segs = x.key.split('.');
+        for (let n = 3; n <= 5; n++) {
+            const kode = segs.slice(0, n).join('.');
+            if (!sudah.has(kode)) { sudah.add(kode); rows += barisInduk(kode, n); }
+        }
+
+        const bg = warnaStatus[x.status];
+        const akun = segs[segs.length - 1];
+        const nama = (x.file && x.file.uraian) || (x.db && x.db.uraian) || '';
+        const fileSum = x.file ? x.file.sum : 0, dbSum = x.db ? x.db.sum : 0;
+        let aksi = pkiBadge(x.status);
+        if (x.status === 'baru') {
+            aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]"><input type="checkbox" class="pki-baru-cek" data-key="${pkiEsc(x.key)}"> Tambahkan ke seksi</label>${pkiSeksiSelect('pki-baru-seksi', x.key, pkiSeksiDefault(x.key))}`;
+        }
+        if (x.status === 'hilang') {
+            aksi += `<label class="flex items-center gap-1.5 mt-1.5 text-[12px]"><input type="checkbox" class="pki-hapus-akun" data-key="${pkiEsc(x.key)}"> Hapus dari POK (${x.db.rows.length} baris)</label>`;
+        }
+        let ket = '';
+        if (x.status === 'hilang') {
+            ket += `<div class="text-[11.5px] mt-1" style="color:#b91c1c">Ada di POK, tidak ada di file${x.kandidat.length ? ` — sub komponen ini memuat akun baru di file: <b>${x.kandidat.join(', ')}</b> (kemungkinan kode akun berubah)` : ''}.</div>`;
+            if (x.dipakai) ket += `<div class="text-[11.5px] mt-1 font-semibold" style="color:#b45309">⚠ Dipakai ${x.dipakai} kegiatan; menghapusnya membuat kegiatan itu kehilangan induk POK.</div>`;
+        }
+        const selisih = fileSum - dbSum;
+        rows += `<tr data-kode="${pkiEsc(x.key)}" style="background:${bg}">
+            <td style="${td}padding:6px 8px;text-align:right;white-space:nowrap;font-size:11.5px;" title="${pkiEsc(x.key)}">${pkiEsc(akun)}</td>
+            <td style="${td}padding:6px 8px;"><span style="text-decoration:underline;">${pkiEsc(nama)}</span>${ket}</td>
+            <td style="${td}padding:6px 8px;text-align:right;white-space:nowrap;">${x.file ? pkiRp(fileSum) : '-'}</td>
+            <td style="${td}padding:6px 8px;text-align:right;white-space:nowrap;">${x.db ? pkiRp(dbSum) : '-'}</td>
+            <td style="${td}padding:6px 8px;text-align:right;white-space:nowrap;font-weight:600;color:${Math.abs(selisih) > 0.5 ? '#b91c1c' : '#166534'};">${Math.abs(selisih) > 0.5 ? pkiRp(selisih) : '0'}</td>
+            <td style="${td}padding:6px 8px;text-align:center;white-space:nowrap;">${x.file ? pkiEsc((x.file.details[0] && x.file.details[0].sd) || x.file.sd || '-') : '-'}</td>
+            <td style="${td}padding:6px 8px;">${aksi}</td></tr>`;
+
+        // ---- baris detail ----
+        const fileDetail = x.file ? x.file.details : [];
+        const fileByUraian = new Map(fileDetail.map(r => [pkiNorm(r.uraian), r]));
+        const dbDetail = x.db ? x.db.details : [];
+        const adaDb = new Set(dbDetail.map(r => pkiNorm(r.uraian)));
+        const baris = (kodeTampil, uraian, sd, nFile, nDb, kanan, bgRow, catatan) => `<tr style="background:${bgRow || '#fff'}">
+            <td style="${td}padding:5px 8px;text-align:right;white-space:nowrap;font-size:11px;color:${sdWarna(sd)};">${pkiEsc(kodeTampil)}</td>
+            <td style="${td}padding:5px 8px 5px 30px;font-size:11.5px;color:${sdWarna(sd)};">- ${pkiEsc(uraian)}${catatan || ''}</td>
+            <td style="${td}padding:5px 8px;text-align:right;white-space:nowrap;font-size:11.5px;color:${sdWarna(sd)};">${nFile}</td>
+            <td style="${td}padding:5px 8px;text-align:right;white-space:nowrap;font-size:11.5px;color:${sdWarna(sd)};">${nDb}</td>
+            <td style="${td}"></td>
+            <td style="${td}padding:5px 8px;text-align:center;font-size:11.5px;color:${sdWarna(sd)};">${pkiEsc(sd || '-')}</td>
+            <td style="${td}padding:5px 8px;">${kanan || ''}</td></tr>`;
+
+        if (x.status === 'baru') {
+            fileDetail.forEach(r => { rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, pkiRp(r.pagu), '-', '', '#f0fdf4'); });
+        } else if (x.status === 'hilang') {
+            dbDetail.forEach(r => {
+                const cat = (r.seksi ? ` <span class="text-[10.5px]" style="color:var(--label-secondary)">(${pkiEsc(r.seksi)})</span>` : '') + (PKI.pakai[r.kode] ? ` <span class="text-[10.5px]" style="color:#b45309">· dipakai ${PKI.pakai[r.kode]} kegiatan</span>` : '');
+                rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, '-', pkiRp(r.pagu), '', '#fef2f2', cat);
+            });
+        } else {
+            // sama / beda: tampilkan detail POK berdampingan dengan nilai di file
+            dbDetail.forEach(r => {
+                const f = fileByUraian.get(pkiNorm(r.uraian));
+                const cat = (r.seksi ? ` <span class="text-[10.5px]" style="color:var(--label-secondary)">(${pkiEsc(r.seksi)})</span>` : '') + (PKI.pakai[r.kode] ? ` <span class="text-[10.5px]" style="color:#b45309">· dipakai ${PKI.pakai[r.kode]} kegiatan</span>` : '');
+                const beda = f && Math.abs((f.pagu || 0) - (Number(r.pagu) || 0)) > 0.5;
+                const nDb = x.status === 'beda'
+                    ? `<input type="number" class="pki-pagu ios-field" data-id="${pkiEsc(r.id)}" data-asal="${Number(r.pagu) || 0}" value="${Number(r.pagu) || 0}" style="width:120px;padding:2px 8px;text-align:right" title="Ubah pagu POK lalu tekan Terapkan">`
+                    : pkiRp(r.pagu);
+                rows += baris(String(r.kode).split('.').pop(), r.uraian, r.sd, f ? pkiRp(f.pagu) : '<span style="color:#b91c1c">tidak ada</span>', nDb, '', beda ? '#fff7ed' : '#fff', cat);
+            });
+            if (x.status === 'beda') {
+                fileDetail.filter(r => !adaDb.has(pkiNorm(r.uraian))).forEach(r => {
+                    rows += baris('baru', r.uraian, r.sd, pkiRp(r.pagu), '-',
+                        `<label class="flex items-center gap-1.5 text-[12px]"><input type="checkbox" class="pki-tambah-detail" data-key="${pkiEsc(x.key)}" data-kode="${pkiEsc(r.kode)}"> Tambahkan ke POK</label>`,
+                        '#f0fdf4', ' <span class="text-[10.5px]" style="color:#166534">(ada di file, belum di POK)</span>');
+                });
+            }
+        }
+    });
+
+    return `<div class="ios-panel p-3 mb-4">
+        <div class="rounded-xl overflow-auto" style="border:1px solid var(--divider);max-height:72vh;">
+        <table class="w-full text-sm" style="border-collapse:collapse;">
+            <thead style="position:sticky;top:0;z-index:2;"><tr class="text-[12px]" style="background:#fff;">
+                <th style="${td}padding:8px;background:#fff;">Kode</th>
+                <th style="${td}padding:8px;background:#fff;">Program/ Kegiatan/ Output/ Sub Output/ Komponen/ Akun/ Detail</th>
+                <th style="${td}padding:8px;background:#fff;">Pagu File</th>
+                <th style="${td}padding:8px;background:#fff;">Pagu POK</th>
+                <th style="${td}padding:8px;background:#fff;">Selisih</th>
+                <th style="${td}padding:8px;background:#fff;">SD/CP</th>
+                <th style="${td}padding:8px;background:#fff;">Status / Aksi</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table></div></div>`;
 }
 
 // ---- kumpulkan operasi yang disetujui ----
