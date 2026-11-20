@@ -27,6 +27,46 @@ function pokSeksiBadgeClass(seksi) {
     return POK_SEKSI_COLORS[seksi] || 'background: rgba(118,118,128,0.1); color: #3C3C43;';
 }
 
+// Mode "Tampilan Utuh": seluruh POK jadi satu pohon, tanpa dikelompokkan per Seksi.
+// Dalam mode ini semua baris memakai kunci Seksi semu 'Semua'.
+const POK_UTUH_KEY = 'Semua';
+function pokSeksiKey(item) {
+    return window.pokUtuh ? POK_UTUH_KEY : ((item && item.bidang) || 'Lainnya');
+}
+function pokKodeUrut(a, b) {
+    return String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true });
+}
+function pokAnchorKodeUtuh() {
+    const items = pokGroupItemsForSeksi(POK_UTUH_KEY);
+    return items.filter(it => {
+        const c = String(it.kode);
+        return !items.some(o => String(o.kode) !== c && c.startsWith(String(o.kode) + '.'));
+    }).map(it => String(it.kode));
+}
+function togglePokUtuh() {
+    window.pokUtuh = !window.pokUtuh;
+    window.expandedCodes.clear();
+    window.expandedSeksi.clear();
+    window.searchResults = [];
+    const cari = document.getElementById('searchPok');
+    if (cari) cari.value = '';
+    const btn = document.getElementById('toggleUtuhBtn');
+    if (window.pokUtuh) {
+        pokAnchorKodeUtuh().forEach(c => window.expandedCodes.add(POK_UTUH_KEY + '::' + c));
+        window.expandedSeksi.add(POK_UTUH_KEY);
+    }
+    if (btn) {
+        btn.innerHTML = window.pokUtuh
+            ? '<i class="fa-solid fa-layer-group text-xs"></i> Per Seksi'
+            : '<i class="fa-solid fa-table-list text-xs"></i> POK Utuh';
+        btn.style.background = window.pokUtuh ? 'var(--ios-blue)' : '';
+        btn.style.color = window.pokUtuh ? '#fff' : '';
+    }
+    const eb = document.getElementById('toggleExpandBtn');
+    if (eb) eb.innerHTML = window.pokUtuh ? '<i class="fa-solid fa-compress"></i> Collapse All' : '<i class="fa-solid fa-expand"></i> Expand All';
+    renderPok();
+}
+
 function toggleSeksiGroup(seksi) {
     if (window.expandedSeksi.has(seksi)) {
         window.expandedSeksi.delete(seksi);
@@ -42,6 +82,7 @@ async function initPokPage() {
     window.searchResults = [];
     window.selectedKode = "";
     window.pokSdFilter = 'ALL';
+    window.pokUtuh = false;
     const wd = document.getElementById('pok-sd-toggle');
     if (wd) commonRenderSumberToggle(wd, 'ALL', v => { window.pokSdFilter = v; renderPok(); });
     pokInjectHapusDataBtn();
@@ -530,11 +571,17 @@ function renderPok() {
 
     // Kelompokkan berdasarkan Seksi (kolom I), urutan sesuai kemunculan pertama di data
     const groups = new Map(); // seksi -> array item
-    uniqueData.forEach(item => {
-        const seksi = item.bidang || 'Lainnya';
-        if (!groups.has(seksi)) groups.set(seksi, []);
-        groups.get(seksi).push(item);
-    });
+    if (window.pokUtuh) {
+        const perKode = new Map();
+        uniqueData.forEach(item => { if (!perKode.has(String(item.kode))) perKode.set(String(item.kode), item); });
+        groups.set(POK_UTUH_KEY, Array.from(perKode.values()).sort(pokKodeUrut));
+    } else {
+        uniqueData.forEach(item => {
+            const seksi = item.bidang || 'Lainnya';
+            if (!groups.has(seksi)) groups.set(seksi, []);
+            groups.get(seksi).push(item);
+        });
+    }
 
     const pokRenderRow = (i, seksi, groupItems) => {
         const c = String(i.kode);
@@ -673,6 +720,11 @@ function renderPok() {
 
     let html = '';
     groups.forEach((items, seksi) => {
+        if (window.pokUtuh) {
+            html += columnSubHeaderRow();
+            html += items.map(i => pokRenderRow(i, seksi, items)).join('');
+            return;
+        }
         const isOpen = window.expandedSeksi.has(seksi);
         html += groupHeaderRow(seksi, items.length, isOpen);
 
@@ -702,7 +754,7 @@ function searchPok() {
 
     if (window.searchResults.length > 0) {
         window.selectedKode = window.searchResults[0].kode;
-        const seksi = window.searchResults[0].bidang || 'Lainnya';
+        const seksi = pokSeksiKey(window.searchResults[0]);
 
         const parentCode = pokFindAnchorForCode(String(window.selectedKode), seksi);
         window.expandedCodes.add(seksi + '::' + parentCode);
@@ -722,7 +774,7 @@ function gotoSearchResult() {
     if (!item) return;
 
     const kode = String(item.kode);
-    const seksi = item.bidang || 'Lainnya';
+    const seksi = pokSeksiKey(item);
     window.selectedKode = kode;
 
     const parentCode = pokFindAnchorForCode(kode, seksi);
@@ -746,7 +798,7 @@ function pokGroupItemsForSeksi(seksi) {
     const uniqueMap = new Map();
     (window.rawPokData || []).forEach(item => {
         const s = item.bidang || 'Lainnya';
-        if (s !== seksi) return;
+        if (!(window.pokUtuh && seksi === POK_UTUH_KEY) && s !== seksi) return;
         if (String(item.kode).split('.').length < 3) return; // <3 segmen tidak ditampilkan
         uniqueMap.set(String(item.kode), item);
     });
@@ -779,6 +831,12 @@ function toggleExpand(code, seksi) {
 
     // Accordion per Seksi: tutup dulu semua kode yang sedang terbuka di Seksi yang sama,
     // supaya expand di satu Seksi tidak ikut membuka kode yang sama di Seksi lain.
+    if (window.pokUtuh) {
+        // Mode utuh: tiap akar dibuka/ditutup sendiri-sendiri (tanpa accordion).
+        if (wasOpen) window.expandedCodes.delete(key); else window.expandedCodes.add(key);
+        renderPok();
+        return;
+    }
     Array.from(window.expandedCodes).forEach(k => {
         if (k.startsWith(seksi + '::')) window.expandedCodes.delete(k);
     });
@@ -793,6 +851,15 @@ function toggleExpand(code, seksi) {
 function toggleExpandAll() {
     const btn = document.getElementById("toggleExpandBtn");
     
+    if (window.pokUtuh) {
+        const anchors = pokAnchorKodeUtuh();
+        const semuaTerbuka = anchors.every(c => window.expandedCodes.has(POK_UTUH_KEY + '::' + c));
+        window.expandedCodes.clear();
+        if (!semuaTerbuka) anchors.forEach(c => window.expandedCodes.add(POK_UTUH_KEY + '::' + c));
+        btn.innerHTML = semuaTerbuka ? '<i class="fa-solid fa-expand"></i> Expand All' : '<i class="fa-solid fa-compress"></i> Collapse All';
+        renderPok();
+        return;
+    }
     if (window.expandedCodes.size === 0) {
         // Expand all - tambah semua kode AKAR (relatif per-Seksi, lihat
         // pokIsAnchorCode) & buka semua grup Seksi.

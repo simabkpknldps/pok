@@ -12,6 +12,9 @@
     <div class="flex flex-col md:flex-row gap-3 mb-4 items-center">
         <input type="text" id="searchPok" oninput="searchPok()" placeholder="Cari kode / uraian..." class="ios-field flex-1" style="height:40px;">
         <div id="pok-sd-toggle" class="flex gap-2"></div>
+        <button id="toggleUtuhBtn" onclick="togglePokUtuh()" class="btn-ios px-4 text-sm font-semibold whitespace-nowrap flex items-center gap-2" style="height:40px;" title="Tampilkan seluruh POK tanpa dikelompokkan per Seksi">
+            <i class="fa-solid fa-table-list text-xs"></i> POK Utuh
+        </button>
                 <button id="toggleExpandBtn" onclick="toggleExpandAll()" class="btn-ios px-4 text-sm font-semibold whitespace-nowrap flex items-center gap-2" style="height:40px;">
             <i class="fa-solid fa-expand text-xs"></i> Expand All
         </button>
