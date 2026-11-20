@@ -33,8 +33,22 @@ const POK_UTUH_KEY = 'Semua';
 function pokSeksiKey(item) {
     return window.pokUtuh ? POK_UTUH_KEY : ((item && item.bidang) || 'Lainnya');
 }
+// Urutan program: CD selalu paling atas, WA sesudahnya, lainnya (A-Z) di bawahnya.
+function pokProgRank(item) {
+    const p = String((item && item.prog) || '').trim().toUpperCase();
+    return p === 'CD' ? 0 : (p === 'WA' ? 1 : 2);
+}
+function pokUrutProgram(a, b) {
+    const ra = pokProgRank(a), rb = pokProgRank(b);
+    if (ra !== rb) return ra - rb;
+    if (ra === 2) {
+        const c = String(a.prog || '').localeCompare(String(b.prog || ''));
+        if (c) return c;
+    }
+    return 0;
+}
 function pokKodeUrut(a, b) {
-    return String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true });
+    return pokUrutProgram(a, b) || String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true });
 }
 function pokAnchorKodeUtuh() {
     const items = pokGroupItemsForSeksi(POK_UTUH_KEY);
@@ -274,7 +288,7 @@ async function loadPokData() {
         // Sheet yang selalu urut dari atas ke bawah) — jadi diurutkan eksplisit di
         // sini berdasarkan Kode, supaya tampilan tabel selalu konsisten & rapi
         // walau ada baris yang baru saja diedit.
-        data.sort((a, b) => String(a.kode).localeCompare(String(b.kode)));
+        data.sort((a, b) => pokUrutProgram(a, b) || String(a.kode).localeCompare(String(b.kode)));
 
         window.rawPokData = data;
         renderPok();
@@ -1626,7 +1640,7 @@ function getSeksiExportData(seksi) {
     const uniqueData = Array.from(uniqueMap.values()).filter(item => String(item.kode).split('.').length >= 3);
     return uniqueData
         .filter(item => (item.bidang || 'Lainnya') === seksi)
-        .sort((a, b) => String(a.kode).localeCompare(String(b.kode)));
+        .sort((a, b) => pokUrutProgram(a, b) || String(a.kode).localeCompare(String(b.kode)));
 }
 
 function toggleDownloadBtnLoading(btnEl, loading, originalHtml) {
