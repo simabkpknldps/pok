@@ -70,7 +70,7 @@ function rest(jwt: string) {
 }
 const q = (s: string) => encodeURIComponent(s.replace(/[(),*%]/g, " ").trim());
 
-type Ctx = { kantor: string; tahun: number; db: (p: string, all?: boolean) => Promise<any>; lampiran: any[]; gambar: any[]; draf: any[] };
+type Ctx = { kantor: string; tahun: number; db: (p: string, all?: boolean) => Promise<any>; lampiran: any[]; gambar: any[]; draf: any[]; jwt?: string };
 
 const SEL = { type: "string" };
 const TOOLS = [
@@ -92,6 +92,8 @@ const TOOLS = [
     parameters: { type: "object", properties: { kata: SEL, seksi: SEL } } },
   { name: "baca_url", description: "Membaca isi halaman web/PDF dari sebuah URL (mis. peraturan, berita, hasil cari_web) dan mengembalikan teksnya. Pakai bila pengguna memberi tautan atau perlu isi lengkap sebuah halaman.",
     parameters: { type: "object", properties: { url: SEL }, required: ["url"] } },
+  { name: "data_gowes", description: "Data bersepeda PRIBADI pemilik akun dari aplikasi Gowes (Garmin Edge): total jarak/jam/elevasi minggu-bulan-tahun ini, rekor, 10 ride terbaru (km, waktu bergerak & total, kecepatan, elevasi, HR, power, jumlah & lama berhenti, kecepatan per segmen, event/COT), dan status perawatan komponen sepeda (km terpakai vs batas ganti). Pakai untuk pertanyaan tentang gowes/sepeda/ride/Garmin/rantai/ban/brevet/ultra. aksi: 'ringkasan' (default; isi dari & sampai YYYY-MM-DD untuk daftar ride pada rentang itu) atau 'detail_ride' (isi id ride dari hasil ringkasan: berhenti, segmen, lap, best effort). Hanya tersedia untuk akun pemiliknya; bila ditolak sampaikan bahwa data gowes bersifat pribadi.",
+    parameters: { type: "object", properties: { aksi: { type: "string", enum: ["ringkasan", "detail_ride"] }, dari: SEL, sampai: SEL, id: { type: "number" } } } },
   { name: "cari_web", description: "Cari informasi terkini di web (aturan, tarif, berita).",
     parameters: { type: "object", properties: { query: SEL }, required: ["query"] } },
 ];
@@ -167,6 +169,19 @@ async function cfImage(prompt: string) {
 }
 
 async function runTool(name: string, a: any, c: Ctx): Promise<unknown> {
+  if (name === "data_gowes") {
+    // Fungsi "gowes" (Supabase Ayyubi) memverifikasi token login SiMAB dan hanya melayani akun pemiliknya.
+    const url = env("GOWES_FN_URL", "https://alkpmwowhlyffdwfvyeu.supabase.co/functions/v1/gowes");
+    const body = a.aksi === "detail_ride" && a.id ? { action: "ride", id: Number(a.id) } : { action: "jarwo_context", from: a.dari, to: a.sampai };
+    try {
+      const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "x-simab-token": c.jwt || "" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
+      if (r.status === 401 || r.status === 403) return { error: "Data gowes bersifat pribadi dan hanya bisa dibuka oleh pemiliknya." };
+      if (!r.ok) return { error: `Aplikasi Gowes tidak merespons (${r.status})` };
+      const j = await r.json();
+      if (j.ride) { const x = j.ride; delete x.raw; return { ride: x, catatan: "jarak m, kecepatan m/s (x3,6 = km/j), waktu detik; analysis.stops = daftar berhenti (dur detik, km), analysis.segments = per segmen (speed km/j)" }; }
+      return j;
+    } catch (e) { return { error: "Gagal mengambil data gowes: " + String(e).slice(0, 120) }; }
+  }
   if (name === "siapkan_form_rekam") {
     const jenis = a.jenis === "surat_tugas" ? "surat_tugas" : "kuitansi";
     const jml = Number(a.jumlah_total) || 0;
@@ -318,7 +333,7 @@ const SYSTEM = (c: Ctx) =>
   `Kamu Jarwo, asisten AI aplikasi SiMAB (Sistem Monitoring Anggaran Belanja) KPKNL. Jawab Bahasa Indonesia, singkat, jelas, sopan.
 Kantor aktif: ${c.kantor}, tahun anggaran ${c.tahun}. Data kegiatan/POK ambil lewat tool; jangan mengarang angka. Format rupiah: Rp 1.234.567.
 Perjadin = akun 524111/524113 (pakai akun="perjadin"). Seksi (mis. Umum) ada di POK; gunakan filter seksi pada ringkasan_anggaran. Jika sebuah filter tidak menemukan data, coba lagi tanpa filter atau lihat seksi_tersedia sebelum menyimpulkan data tidak ada.\nPerjadin = akun 524111 (biasa) dan 524113 (paket meeting); akun 5241 mencakup keduanya. "Seksi" adalah pemilik baris POK (mis. Umum). Bila diminta file/Excel/PDF/rekap/laporan, panggil buat_laporan (tombol unduh muncul otomatis; jangan menulis ulang tabel panjang). Gunakan filter tool (akun, seksi, sd, tanggal) alih-alih meminta pengguna mengunggah dokumen untuk pertanyaan data; bila tool mengembalikan kosong, sebutkan filter yang dipakai dan tawarkan alternatif. Untuk pertanyaan SBM/tarif (uang harian, penginapan, tiket, transport, honor, konsumsi, dll.) gunakan tool cek_sbm (data PMK SBM per tahun di SiMAB), jangan cari_web; sebutkan tahun & kolom yang dipakai. MAK perjadin 524111/524113 melalui status Rekam Data → Terlaksana → LPT → Terbayar → Selesai; MAK lain tanpa LPT.
-Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nBila pengguna memberi tautan/URL atau butuh isi lengkap suatu halaman, gunakan baca_url. Bila diminta membuat/menggenerate gambar, panggil buat_gambar dengan prompt bahasa Inggris yang rinci. Jangan membuat gambar tokoh/karakter berhak cipta atau orang nyata tertentu.\nTulis rumus/perhitungan dengan teks biasa (mis. "Energi (kWh) = Daya (kW) × Waktu (jam)"), JANGAN memakai LaTeX atau tanda $ / \\( \\).\nKamu tidak menyimpan data sendiri. Bila pengguna meminta merekam/mencatat/menginput kuitansi, belanja, atau surat tugas lewat teks, panggil siapkan_form_rekam (form interaktif muncul, pengguna yang menekan Simpan); jangan menjelaskan langkah manual. Untuk dokumen berupa foto/PDF, pengguna bisa mengunggah lewat tombol lampiran.`;
+Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nBila pengguna memberi tautan/URL atau butuh isi lengkap suatu halaman, gunakan baca_url. Bila diminta membuat/menggenerate gambar, panggil buat_gambar dengan prompt bahasa Inggris yang rinci. Jangan membuat gambar tokoh/karakter berhak cipta atau orang nyata tertentu.\nTulis rumus/perhitungan dengan teks biasa (mis. "Energi (kWh) = Daya (kW) × Waktu (jam)"), JANGAN memakai LaTeX atau tanda $ / \\( \\).\nKamu tidak menyimpan data sendiri. Bila pengguna meminta merekam/mencatat/menginput kuitansi, belanja, atau surat tugas lewat teks, panggil siapkan_form_rekam (form interaktif muncul, pengguna yang menekan Simpan); jangan menjelaskan langkah manual. Untuk dokumen berupa foto/PDF, pengguna bisa mengunggah lewat tombol lampiran.\nPertanyaan tentang gowes/bersepeda/ride/Garmin/perawatan sepeda pengguna: panggil data_gowes (data pribadi dari Garmin Edge; satuan km, km/j, meter, WITA). Beri saran latihan/pacing/perawatan yang konkret berdasarkan angka itu, jangan mengarang data yang tidak ada.`;
 
 async function chatGemini(msgs: any[], c: Ctx) {
   const contents = msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content) }] }));
@@ -560,7 +575,7 @@ Deno.serve(async (req: Request) => {
     const u = await fetch(`${SB_URL}/auth/v1/user`, { headers: { apikey: SB_ANON, Authorization: `Bearer ${jwt}` } });
     if (!jwt || !u.ok) return json({ error: "Belum login" }, 401);
     const b = await req.json();
-    const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt), lampiran: [], gambar: [], draf: [] };
+    const c: Ctx = { kantor: String(b.kantor || ""), tahun: Number(b.tahun) || new Date().getFullYear(), db: rest(jwt), lampiran: [], gambar: [], draf: [], jwt };
     if (!c.kantor) return json({ error: "kantor kosong" }, 400);
 
     if (b.mode === "info_perbendaharaan") return json(await infoPerbendaharaan(b, c));
