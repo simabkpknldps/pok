@@ -478,6 +478,7 @@ function openEditPokModal(idx) {
             overlay.remove();
             showToast('POK berhasil diubah');
             await loadPokData();
+            pokKembaliKeBaris(item.kode);
         } catch (e) {
             alert('Gagal menyimpan: ' + (e.message || e));
             btn.disabled = false;
@@ -566,6 +567,19 @@ const POK_TINGKAT = {
     6: { nama: 'Akun', contoh: '521211', cek: /^\d{6}$/, bantuan: '6 angka, mis. 521211' },
     7: { nama: 'Detail', contoh: '01', cek: /^\d{2,3}$/, bantuan: '2 angka urut, mis. 05' }
 };
+// Setelah data dimuat ulang, gulir kembali ke baris yang barusan diubah dan beri sorotan singkat.
+function pokKembaliKeBaris(kode) {
+    setTimeout(() => {
+        const tr = document.querySelector('#pok-tbody tr[data-kode="' + String(kode).replace(/"/g, '') + '"]');
+        if (!tr) return;
+        tr.scrollIntoView({ block: 'center' });
+        const lama = tr.style.transition, bg = tr.style.background;
+        tr.style.transition = 'background .4s';
+        tr.style.background = 'rgba(255,214,10,0.45)';
+        setTimeout(() => { tr.style.background = bg; tr.style.transition = lama; }, 1600);
+    }, 60);
+}
+
 function pokBolehTambahBaris() {
     return localStorage.getItem('admin') === '1' || localStorage.getItem('superadmin') === '1';
 }
@@ -676,6 +690,7 @@ function openTambahBarisModal(idx, tingkatRO) {
             if (window.pokUtuh) window.expandedCodes.add(POK_UTUH_KEY + '::' + segs.slice(0, 3).join('.'));
             else window.expandedCodes.add(seksi + '::' + segs.slice(0, 3).join('.'));
             await loadPokData();
+            pokKembaliKeBaris(kode);
         } catch (e) {
             alert('Gagal menyimpan: ' + (e.message || e));
             btn.disabled = false;
@@ -750,6 +765,7 @@ function openBlokirModal(idx) {
             overlay.remove();
             showToast('Blokir berhasil disimpan');
             await loadPokData();
+            pokKembaliKeBaris(item.kode);
         } catch (e) {
             alert('Gagal menyimpan: ' + (e.message || e));
             btn.disabled = false;
