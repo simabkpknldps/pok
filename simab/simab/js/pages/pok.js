@@ -488,6 +488,73 @@ function openEditPokModal(idx) {
 window.openEditPokModal = openEditPokModal;
 
 // ========================================
+// Popup total (akumulasi) sebuah baris induk: jumlah seluruh detail di bawahnya
+// ========================================
+function pokAkumulasi(items) {
+    return items.reduce((t, r) => {
+        t.pagu += Number(r.pagu) || 0; t.blokir += Number(r.blokir) || 0;
+        t.realisasi += Number(r.realisasi) || 0; t.sisa += Number(r.sisa) || 0;
+        t.detail += 1;
+        return t;
+    }, { pagu: 0, blokir: 0, realisasi: 0, sisa: 0, detail: 0 });
+}
+function openAkumulasiModal(kode, seksi) {
+    const semua = pokGroupItemsForSeksi(seksi);
+    const induk = semua.find(r => String(r.kode) === String(kode));
+    const turunan = semua.filter(r => String(r.kode).startsWith(kode + '.'));
+    const detail = turunan.filter(r => String(r.kode).split('.').length >= 7);
+    const T = pokAkumulasi(detail);
+    const n = x => Number(x || 0).toLocaleString('id-ID');
+    const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const efektif = T.pagu - T.blokir;
+    const persen = efektif > 0 ? Math.min((T.realisasi / efektif) * 100, 100) : 0;
+    const warnaBar = persen >= 90 ? '#34C759' : (persen >= 50 ? '#0071E3' : '#FF9F0A');
+    const kartu = (label, nilai, warna) => `<div class="rounded-xl p-3" style="background: var(--sidebar-bg, #f5f5f7);"><div class="text-[11px]" style="color: var(--label-secondary);">${label}</div><div class="text-[16px] font-semibold mt-0.5" style="color:${warna || 'var(--label)'};">${n(nilai)}</div></div>`;
+
+    // rincian per anak langsung
+    const tingkat = String(kode).split('.').length + 1;
+    const anak = semua.filter(r => String(r.kode).startsWith(kode + '.') && String(r.kode).split('.').length === tingkat)
+        .sort((a, b) => String(a.kode).localeCompare(String(b.kode), 'id', { numeric: true }));
+    const barisAnak = anak.map(a => {
+        const d = turunan.filter(r => (String(r.kode) === String(a.kode) || String(r.kode).startsWith(a.kode + '.')) && String(r.kode).split('.').length >= 7);
+        const t = pokAkumulasi(d);
+        const kd = String(a.kode).split('.').pop();
+        return `<tr style="border-top: 1px solid var(--divider);">
+            <td class="p-2 text-right text-[11.5px] whitespace-nowrap font-mono" style="color: var(--label-secondary);">${esc(kd)}</td>
+            <td class="p-2 text-[12.5px]">${esc(a.uraian)}</td>
+            <td class="p-2 text-right whitespace-nowrap">${n(t.pagu)}</td>
+            <td class="p-2 text-right whitespace-nowrap">${n(t.blokir)}</td>
+            <td class="p-2 text-right whitespace-nowrap">${n(t.realisasi)}</td>
+            <td class="p-2 text-right whitespace-nowrap" style="${t.sisa < 0 ? 'color:#FF3B30;font-weight:600;' : ''}">${n(t.sisa)}</td></tr>`;
+    }).join('');
+
+    const { overlay, popup } = commonOpenOverlay(`
+        <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="min-w-0">
+                <h3 class="text-[16px] font-semibold" style="color: var(--label);">${esc(induk ? induk.uraian : kode)}</h3>
+                <p class="text-xs font-mono mt-0.5" style="color: var(--label-secondary);">${esc(kode)} &middot; ${T.detail} detail</p>
+            </div>
+            <button id="pok-akumClose" class="text-xl leading-none px-2" style="color: var(--label-secondary);">&times;</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            ${kartu('Pagu', T.pagu)}${kartu('Blokir', T.blokir)}${kartu('Realisasi', T.realisasi)}${kartu('Sisa', T.sisa, T.sisa < 0 ? '#FF3B30' : '#16a34a')}
+        </div>
+        <div class="mb-1 flex justify-between text-[11px]" style="color: var(--label-secondary);"><span>Realisasi terhadap pagu efektif (pagu &minus; blokir)</span><span>${persen.toFixed(1)}%</span></div>
+        <div class="w-full rounded-full h-2 mb-4" style="background: var(--field-bg, #e5e7eb);"><div class="h-2 rounded-full" style="width:${persen}%; background:${warnaBar};"></div></div>
+        ${anak.length ? `
+        <div class="rounded-xl overflow-auto" style="border:1px solid var(--divider); max-height:45vh;">
+            <table class="w-full text-[12.5px]" style="border-collapse:collapse;">
+                <thead style="position:sticky;top:0;background:var(--sidebar-bg,#f5f5f7);"><tr class="text-[11px]" style="color: var(--label-secondary);">
+                    <th class="p-2 text-right">Kode</th><th class="p-2 text-left">Uraian</th><th class="p-2 text-right">Pagu</th><th class="p-2 text-right">Blokir</th><th class="p-2 text-right">Realisasi</th><th class="p-2 text-right">Sisa</th>
+                </tr></thead><tbody>${barisAnak}</tbody>
+            </table>
+        </div>` : ''}
+    `, 'max-w-3xl');
+    popup.querySelector('#pok-akumClose').onclick = () => overlay.remove();
+}
+window.openAkumulasiModal = openAkumulasiModal;
+
+// ========================================
 // Tambah Baris POK (RO, Komponen, Sub Komponen, Akun, Detail)
 // Hanya admin/superadmin. Baris baru dibuat di Seksi terpilih; induk yang belum
 // ada di Seksi itu dibuatkan otomatis (disalin dari Seksi lain).
@@ -788,7 +855,7 @@ function renderPok() {
         return `<tr data-kode="${c}" data-seksi="${seksi}" data-edge="${rowEdge}" class="cursor-pointer transition" style="${rowStyle} border-bottom: 1px solid var(--divider);" onmouseover="this.style.filter='brightness(0.97)'" onmouseout="this.style.filter=''" onclick="toggleExpand('${c}', '${seksi}')">
             <td class="p-2 text-[11.5px] whitespace-nowrap text-right align-top" style="color: var(--label);" title="${c}">${kodeTampil}</td>
             <td class="p-2 align-top" style="${textStyle} padding-left:${paddingLeft}px">
-                <span class="whitespace-normal break-words">${uraianHtml}</span>
+                <span class="whitespace-normal break-words${hasChildren ? ' pok-akum' : ''}"${hasChildren ? ` onclick="event.stopPropagation();openAkumulasiModal('${c}','${seksi}')" title="Klik untuk melihat total pagu, blokir, realisasi, dan sisa"` : ''}>${uraianHtml}</span>
                 ${hasChildren ? (window.expandedCodes.has(expandKey) ? ' <i class="fa-solid fa-chevron-down text-[10px]" style="color: var(--label-secondary);"></i>' : ' <i class="fa-solid fa-chevron-right text-[10px]" style="color: var(--label-secondary);"></i>') : ''}
             </td>
             <td class="p-2 text-right whitespace-nowrap align-top" style="color: ${isDetail ? sdColor : 'var(--label)'};">${pagu.toLocaleString('id-ID')}</td>
