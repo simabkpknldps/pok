@@ -97,6 +97,7 @@ async function initPokPage() {
     window.selectedKode = "";
     window.pokSdFilter = 'ALL';
     window.pokUtuh = false;
+    { const b = document.getElementById('tambahRoBtn'); if (b) b.style.display = pokBolehTambahBaris() ? '' : 'none'; }
     const wd = document.getElementById('pok-sd-toggle');
     if (wd) commonRenderSumberToggle(wd, 'ALL', v => { window.pokSdFilter = v; renderPok(); });
     pokInjectHapusDataBtn();
@@ -487,6 +488,137 @@ function openEditPokModal(idx) {
 window.openEditPokModal = openEditPokModal;
 
 // ========================================
+// Tambah Baris POK (RO, Komponen, Sub Komponen, Akun, Detail)
+// Hanya admin/superadmin. Baris baru dibuat di Seksi terpilih; induk yang belum
+// ada di Seksi itu dibuatkan otomatis (disalin dari Seksi lain).
+// ========================================
+const POK_TINGKAT = {
+    3: { nama: 'Output (RO)', contoh: '4796.AEF.002', cek: /^[A-Za-z0-9]{4}\.[A-Za-z0-9]{3}\.\d{3}$/, bantuan: 'Kode lengkap: 4 karakter.3 karakter.3 angka, mis. 4796.AEF.002' },
+    4: { nama: 'Komponen', contoh: '100', cek: /^\d{3}$/, bantuan: '3 angka, mis. 100' },
+    5: { nama: 'Sub Komponen', contoh: 'A', cek: /^[A-Za-z0-9]{1,2}$/, bantuan: 'Huruf/kode, mis. A' },
+    6: { nama: 'Akun', contoh: '521211', cek: /^\d{6}$/, bantuan: '6 angka, mis. 521211' },
+    7: { nama: 'Detail', contoh: '01', cek: /^\d{2,3}$/, bantuan: '2 angka urut, mis. 05' }
+};
+function pokBolehTambahBaris() {
+    return localStorage.getItem('admin') === '1' || localStorage.getItem('superadmin') === '1';
+}
+function pokKodeSaran(induk, tingkat) {
+    const anak = (window.rawPokData || []).filter(r => String(r.kode).startsWith(induk + '.') && String(r.kode).split('.').length === tingkat);
+    if (tingkat === 7) {
+        const mx = anak.reduce((m, r) => Math.max(m, parseInt(String(r.kode).split('.')[6], 10) || 0), 0);
+        return String(mx + 1).padStart(2, '0');
+    }
+    if (tingkat === 5) {
+        const huruf = anak.map(r => String(r.kode).split('.')[4]).filter(x => /^[A-Z]$/.test(x)).sort();
+        return huruf.length ? String.fromCharCode(huruf[huruf.length - 1].charCodeAt(0) + 1) : 'A';
+    }
+    return '';
+}
+function openTambahBarisModal(idx, tingkatRO) {
+    if (!pokBolehTambahBaris()) { alert('Hanya admin yang dapat menambah baris POK.'); return; }
+    const induk = tingkatRO ? null : window.rawPokData[idx];
+    if (!tingkatRO && !induk) { alert('Data tidak ditemukan.'); return; }
+    const kodeInduk = induk ? String(induk.kode) : '';
+    const tingkat = induk ? kodeInduk.split('.').length + 1 : 3;
+    const t = POK_TINGKAT[tingkat];
+    if (!t) { alert('Detail tidak bisa diberi turunan.'); return; }
+    const seksiList = Array.from(new Set((window.rawPokData || []).map(r => r.bidang).filter(Boolean))).sort();
+    const seksiAwal = (induk && induk.bidang) || seksiList[0] || 'Umum';
+    const saran = induk ? pokKodeSaran(kodeInduk, tingkat) : '';
+    const esc = v => String(v ?? '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const detail = tingkat === 7;
+
+    const { overlay, popup } = commonOpenOverlay(`
+        <h3 class="text-[16px] font-semibold mb-1" style="color: var(--label);"><i class="fa-solid fa-circle-plus mr-2" style="color:#34C759;"></i>Tambah ${t.nama}</h3>
+        <p class="text-xs mb-3" style="color: var(--label-secondary);">${induk ? `Di dalam: <span class="font-mono">${esc(kodeInduk)}</span> &mdash; ${esc(induk.uraian)}` : 'Output (RO) baru di tingkat teratas'}</p>
+        <div class="space-y-3">
+            <div>
+                <label class="ios-label block mb-1">Kode ${t.nama}</label>
+                <div class="flex items-center gap-2">
+                    ${induk ? `<span class="font-mono text-xs whitespace-nowrap" style="color: var(--label-secondary);">${esc(kodeInduk)}.</span>` : ''}
+                    <input id="pok-addKode" type="text" value="${esc(saran)}" placeholder="${esc(t.contoh)}" class="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono">
+                </div>
+                <p class="text-[11px] mt-1" style="color: var(--label-secondary);">${t.bantuan}</p>
+            </div>
+            <div>
+                <label class="ios-label block mb-1">Uraian</label>
+                <input id="pok-addUraian" type="text" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+            </div>
+            ${detail ? `
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="ios-label block mb-1">Pagu</label>
+                    <input id="pok-addPagu" type="text" value="0" oninput="this.value = formatRibuan(this.value)" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 text-right">
+                </div>
+                <div>
+                    <label class="ios-label block mb-1">SD/CP</label>
+                    <select id="pok-addSd" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white"><option>RM</option><option>PNBP</option></select>
+                </div>
+            </div>` : ''}
+            <div>
+                <label class="ios-label block mb-1">Seksi</label>
+                <select id="pok-addSeksi" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 bg-white">
+                    ${seksiList.map(x => `<option ${x === seksiAwal ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-4">
+            <button id="pok-addCancel" class="btn-ios-secondary px-4 py-2 text-sm">Batal</button>
+            <button id="pok-addSave" class="btn-ios px-4 py-2 text-sm"><i class="fa-solid fa-floppy-disk mr-1"></i> Simpan</button>
+        </div>
+    `, 'max-w-md');
+
+    popup.querySelector('#pok-addCancel').onclick = () => overlay.remove();
+    popup.querySelector('#pok-addSave').onclick = async function () {
+        const btn = this;
+        const bagian = popup.querySelector('#pok-addKode').value.trim().toUpperCase();
+        const uraian = popup.querySelector('#pok-addUraian').value.trim();
+        const seksi = popup.querySelector('#pok-addSeksi').value;
+        if (!t.cek.test(bagian)) { alert('Kode tidak sesuai format. ' + t.bantuan); return; }
+        if (!uraian) { alert('Uraian tidak boleh kosong.'); return; }
+        const kode = induk ? kodeInduk + '.' + bagian : bagian;
+        const id = kode + '__' + seksi;
+        if ((window.rawPokData || []).some(r => r.docId === id)) { alert('Baris dengan kode ' + kode + ' sudah ada di seksi ' + seksi + '.'); return; }
+        const pagu = detail ? (Number(popup.querySelector('#pok-addPagu').value.replace(/\./g, '')) || 0) : 0;
+        const sd = detail ? popup.querySelector('#pok-addSd').value : null;
+
+        // contoh baris untuk menyalin ba/es_i/prog/satker/kppn
+        const contoh = induk || (window.rawPokData || [])[0] || {};
+        const kantor = getKantorAktif();
+        const tahun = await getTahunAktif();
+        const dasar = { ba: contoh.ba || null, es_i: contoh.es1 || null, prog: contoh.prog || null, satker: contoh.satker || null, kppn: contoh.kppn || null, kantor_id: kantor, tahun };
+        const baris = [];
+        // induk yang belum ada di seksi ini -> salin dari seksi lain (pagu 0)
+        const segs = kode.split('.');
+        for (let n = 3; n < segs.length; n++) {
+            const k = segs.slice(0, n).join('.');
+            if ((window.rawPokData || []).some(r => r.docId === k + '__' + seksi)) continue;
+            const asal = (window.rawPokData || []).find(r => r.kode === k);
+            baris.push({ id: k + '__' + seksi, kode: k, uraian: asal ? asal.uraian : k, pagu: 0, sd: null, seksi, ...dasar });
+        }
+        baris.push({ id, kode, uraian, pagu, sd, seksi, ...dasar });
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...';
+        try {
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('pok').insert(baris);
+            if (error) throw new Error(error.message);
+            overlay.remove();
+            showToast(`${t.nama} ${kode} ditambahkan` + (baris.length > 1 ? ` (+${baris.length - 1} induk)` : ''));
+            if (window.pokUtuh) window.expandedCodes.add(POK_UTUH_KEY + '::' + segs.slice(0, 3).join('.'));
+            else window.expandedCodes.add(seksi + '::' + segs.slice(0, 3).join('.'));
+            await loadPokData();
+        } catch (e) {
+            alert('Gagal menyimpan: ' + (e.message || e));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Simpan';
+        }
+    };
+}
+window.openTambahBarisModal = openTambahBarisModal;
+
+// ========================================
 // Atur Blokir (tabel 'blokir': id = Kode POK, nilai, kantor_id, tahun)
 // Hanya admin/superadmin. Blokir dikunci per Kode (sama seperti perhitungan
 // di loadPokData) -- jadi kalau Kode yang sama ada di beberapa Seksi, nilainya
@@ -667,6 +799,11 @@ function renderPok() {
             <td class="p-2 text-right whitespace-nowrap align-top" style="${sisaStyle}">${sisa.toLocaleString('id-ID')}</td>
             <td class="p-2 text-center whitespace-nowrap align-top" style="color: var(--label-secondary);">${i.sumber || '-'}</td>
             <td class="p-2 text-center whitespace-nowrap align-top">
+                ${(depth <= 6 && pokBolehTambahBaris()) ? `
+                    <button onclick="event.stopPropagation();openTambahBarisModal(${window.rawPokData.indexOf(i)})"
+                        class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: #34C759; color: #fff;" title="${POK_TINGKAT[depth + 1] ? 'Tambah ' + POK_TINGKAT[depth + 1].nama.toLowerCase() + ' di dalam baris ini' : 'Tambah baris'}">
+                        <i class="fa-solid fa-circle-plus text-[11px] leading-none w-[11px] text-center"></i>
+                    </button>` : ''}
                 ${isLeaf ? `
                     <button onclick="event.stopPropagation();openRekamModal(${window.rawPokData.indexOf(i)})"
                         class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--ios-blue); color: #fff;" title="Rekam">
