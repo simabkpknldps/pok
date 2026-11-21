@@ -430,6 +430,7 @@ async function copyTextToClipboard(text) {
 }
 
 function openEditPokModal(idx) {
+    if (!pokBolehTambahBaris()) { alert('Hanya admin yang dapat mengubah POK.'); return; }
     const item = window.rawPokData[idx];
     if (!item) { alert('Data tidak ditemukan.'); return; }
 
@@ -554,6 +555,63 @@ function openAkumulasiModal(kode, seksi) {
     popup.querySelector('#pok-akumClose').onclick = () => overlay.remove();
 }
 window.openAkumulasiModal = openAkumulasiModal;
+
+// ========================================
+// Hapus Baris POK (admin/superadmin). Baris induk dihapus beserta seluruh isinya.
+// ========================================
+function openHapusBarisModal(idx, seksi) {
+    if (!pokBolehTambahBaris()) { alert('Hanya admin yang dapat menghapus baris POK.'); return; }
+    const item = window.rawPokData[idx];
+    if (!item) { alert('Data tidak ditemukan.'); return; }
+    const kode = String(item.kode);
+    const semua = pokGroupItemsForSeksi(seksi || (item.bidang || 'Lainnya'));
+    const target = semua.filter(r => String(r.kode) === kode || String(r.kode).startsWith(kode + '.'));
+    const ids = target.map(r => r.docId).filter(Boolean);
+    if (!ids.length) { alert('Tidak ada baris yang dapat dihapus.'); return; }
+    const kodeSet = new Set(target.map(r => String(r.kode)));
+    const dipakai = (window.kegiatanRowsCache || []).filter(k => kodeSet.has(String(k.mak || '').trim())
+        && Number(k.tahun) === Number(item.tahun) && k.kantor_id === item.kantorId).length;
+    const totalPagu = target.reduce((t, r) => t + (Number(r.pagu) || 0), 0);
+    const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+    const { overlay, popup } = commonOpenOverlay(`
+        <h3 class="text-[16px] font-semibold mb-1" style="color: var(--ios-red);"><i class="fa-solid fa-trash mr-2"></i>Hapus Baris POK</h3>
+        <p class="text-xs mb-3 font-mono" style="color: var(--label-secondary);">${esc(kode)} <span style="opacity:0.6;">(${esc(item.bidang || '-')})</span></p>
+        <p class="text-sm mb-2" style="color: var(--label);">${esc(item.uraian)}</p>
+        <div class="rounded-xl p-3 text-sm mb-3" style="background: var(--sidebar-bg, #f5f5f7); color: var(--label);">
+            ${ids.length} baris akan dihapus${ids.length > 1 ? ' (baris ini beserta seluruh isinya)' : ''}<br>
+            Total pagu yang ikut hilang: <b>${totalPagu.toLocaleString('id-ID')}</b>
+        </div>
+        ${dipakai ? `<div class="rounded-xl p-3 text-sm mb-3 font-semibold" style="background: rgba(255,59,48,0.1); color: #b91c1c;">&#9888; Dipakai ${dipakai} kegiatan. Kegiatan itu akan kehilangan induk POK-nya.</div>` : ''}
+        <p class="text-xs mb-3" style="color: var(--label-secondary);">Tindakan ini tidak bisa dibatalkan.</p>
+        <div class="flex justify-end gap-2">
+            <button id="pok-delCancel" class="btn-ios-secondary px-4 py-2 text-sm">Batal</button>
+            <button id="pok-delOk" class="px-4 py-2 text-sm rounded-xl font-semibold" style="background: var(--ios-red); color: #fff;"><i class="fa-solid fa-trash mr-1"></i> Hapus</button>
+        </div>
+    `, 'max-w-md');
+
+    popup.querySelector('#pok-delCancel').onclick = () => overlay.remove();
+    popup.querySelector('#pok-delOk').onclick = async function () {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menghapus...';
+        try {
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('pok').delete().in('id', ids);
+            if (error) throw new Error(error.message);
+            overlay.remove();
+            showToast(`${ids.length} baris POK dihapus`);
+            await loadPokData();
+            const induk = kode.split('.').slice(0, -1).join('.');
+            if (induk.split('.').length >= 3) pokKembaliKeBaris(induk);
+        } catch (e) {
+            alert('Gagal menghapus: ' + (e.message || e));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-trash mr-1"></i> Hapus';
+        }
+    };
+}
+window.openHapusBarisModal = openHapusBarisModal;
 
 // ========================================
 // Tambah Baris POK (RO, Komponen, Sub Komponen, Akun, Detail)
@@ -903,16 +961,21 @@ function renderPok() {
                         class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--ios-green); color: #fff;" title="Unduh daftar kegiatan (PDF / Excel)">
                         <i class="fa-solid fa-download text-[11px] leading-none w-[11px] text-center"></i>
                     </button>
-                    <button onclick="event.stopPropagation();openEditPokModal(${window.rawPokData.indexOf(i)})"
+                    ${pokBolehTambahBaris() ? `<button onclick="event.stopPropagation();openEditPokModal(${window.rawPokData.indexOf(i)})"
                         class="w-6 h-6 inline-flex items-center justify-center rounded-md mr-1 transition" style="background: var(--label-secondary); color: #fff;" title="Ubah Uraian/Pagu">
                         <i class="fa-solid fa-pen text-[11px] leading-none w-[11px] text-center"></i>
-                    </button>
+                    </button>` : ''}
                     ${(localStorage.getItem('admin') === '1' || localStorage.getItem('superadmin') === '1') ? `
                     <button onclick="event.stopPropagation();openBlokirModal(${window.rawPokData.indexOf(i)})"
                         class="w-6 h-6 inline-flex items-center justify-center rounded-md transition" style="background: var(--ios-red); color: #fff;" title="Atur Blokir">
                         <i class="fa-solid fa-ban text-[11px] leading-none w-[11px] text-center"></i>
                     </button>` : ''}
                 ` : ''}
+                ${pokBolehTambahBaris() ? `
+                    <button onclick="event.stopPropagation();openHapusBarisModal(${window.rawPokData.indexOf(i)}, '${seksi}')"
+                        class="w-6 h-6 inline-flex items-center justify-center rounded-md ml-1 transition" style="background: #8E8E93; color: #fff;" title="Hapus baris ini${hasChildren ? ' beserta seluruh isinya' : ''}">
+                        <i class="fa-solid fa-trash text-[11px] leading-none w-[11px] text-center"></i>
+                    </button>` : ''}
             </td>
         </tr>`;
     };
