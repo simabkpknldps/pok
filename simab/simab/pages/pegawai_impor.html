@@ -1,0 +1,46 @@
+<div id="pgi-root">
+  <div class="ios-panel p-5 mb-4">
+    <div class="text-[15px] font-semibold mb-1"><i class="fa-solid fa-users-gear mr-2" style="color:var(--ios-blue)"></i>Impor Data Pegawai</div>
+    <div class="text-sm mb-3" style="color:var(--label-secondary)">
+      Unduh template, isi, lalu unggah. Data diperiksa dulu dan baru tersimpan setelah Anda menekan <b>Simpan</b>. Password awal setiap akun baru adalah NIP/NIK-nya.
+    </div>
+    <div class="flex flex-wrap items-center gap-2 mb-3">
+      <button id="pgi-btnTemplate" class="btn-ios px-4 py-2 text-sm"><i class="fa-solid fa-file-arrow-down mr-1"></i> Unduh Template Excel</button>
+      <input type="file" id="pgi-file" accept=".xlsx,.xls,.csv" class="ios-field" style="max-width:340px;">
+    </div>
+    <div class="flex flex-wrap items-center gap-4 text-sm">
+      <span style="color:var(--label-secondary)">Jika NIP/NIK sudah terdaftar:</span>
+      <label class="flex items-center gap-1.5"><input type="radio" name="pgi-mode" value="lewati" checked> Lewati</label>
+      <label class="flex items-center gap-1.5"><input type="radio" name="pgi-mode" value="perbarui"> Perbarui datanya</label>
+    </div>
+    <div id="pgi-status" class="text-sm mt-3"></div>
+  </div>
+
+  <div id="pgi-hasil" class="hidden">
+    <div class="ios-panel p-5 mb-4">
+      <div id="pgi-ringkas" class="text-sm mb-3"></div>
+      <div class="flex flex-wrap gap-2">
+        <button data-pgi-filter="semua" class="btn-ios px-3 py-1.5 text-sm">Semua</button>
+        <button data-pgi-filter="siap" class="btn-ios px-3 py-1.5 text-sm">Siap disimpan</button>
+        <button data-pgi-filter="masalah" class="btn-ios px-3 py-1.5 text-sm">Bermasalah</button>
+      </div>
+    </div>
+    <div class="ios-panel p-3 mb-4">
+      <div class="rounded-xl overflow-auto" style="border:1px solid var(--divider);max-height:60vh;">
+        <table class="w-full text-[12.5px]" style="border-collapse:collapse;">
+          <thead style="position:sticky;top:0;background:#fff;z-index:2;">
+            <tr class="text-left" style="color:var(--label-secondary);">
+              <th class="p-2">Baris</th><th class="p-2">NIP/NIK</th><th class="p-2">Nama</th><th class="p-2">Jenis</th>
+              <th class="p-2">Pangkat/Golongan</th><th class="p-2">Jabatan</th><th class="p-2">Kantor</th><th class="p-2">Status</th>
+            </tr>
+          </thead>
+          <tbody id="pgi-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="ios-panel p-4 sticky bottom-2 flex flex-wrap items-center gap-3" style="box-shadow:0 8px 24px rgba(0,0,0,.15)">
+      <div id="pgi-ops" class="text-sm flex-1"></div>
+      <button id="pgi-btnSimpan" class="btn-ios px-5 py-2 text-sm font-semibold"><i class="fa-solid fa-floppy-disk mr-1"></i> Simpan</button>
+    </div>
+  </div>
+</div>

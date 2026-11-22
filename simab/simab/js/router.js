@@ -21,6 +21,7 @@ const PAGE_INIT = {
     referensi: () => window.initReferensiPage && window.initReferensiPage(),
     perbantuan: () => window.initPerbantuanPage && window.initPerbantuanPage(),
     pok_impor: () => window.initPokImporPage && window.initPokImporPage(),
+    pegawai_impor: () => window.initPegawaiImporPage && window.initPegawaiImporPage(),
     log: () => window.initLogPage && window.initLogPage(),
     info: () => window.initInfoPage && window.initInfoPage(),
 };
