@@ -18,6 +18,7 @@
         { kunci: 'statistik', nama: 'Statistik', desc: 'Halaman grafik dan statistik anggaran.', def: true, page: 'statistik', sel: ['[onclick="navigate(\'statistik\')"]'] },
         { kunci: 'rpd', nama: 'RPD', desc: 'Rencana penarikan dana per bulan.', def: true, page: 'rpd', sel: ['[onclick="navigate(\'rpd\')"]'] },
         { kunci: 'impor_pok', nama: 'Impor POK', desc: 'Unggah dan impor data POK dari berkas.', def: true, page: 'pok_impor', sel: ['#nav-pok-impor'] },
+        { kunci: 'impor_pegawai', nama: 'Impor Pegawai', desc: 'Unggah data pegawai dari berkas Excel.', def: true, page: 'pegawai_impor', sel: ['#nav-pegawai-impor'] },
         { kunci: 'perjadin', nama: 'Perjadinku', desc: 'Ringkasan perjalanan dinas pribadi pegawai.', def: true, page: 'perjadin', sel: ['[onclick="navigate(\'perjadin\')"]'] },
         { kunci: 'perbantuan', nama: 'Perbantuan', desc: 'Pencatatan usulan dan pelaksanaan perbantuan.', def: true, page: 'perbantuan', sel: ['[onclick="navigate(\'perbantuan\')"]'] },
         { kunci: 'kalender', nama: 'Kalender', desc: 'Kalender kegiatan dan perjalanan dinas.', def: true, page: 'kalender', sel: ['[onclick="navigate(\'kalender\')"]'] },
