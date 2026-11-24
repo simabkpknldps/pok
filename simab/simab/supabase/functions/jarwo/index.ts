@@ -427,7 +427,8 @@ const EXTRACT_PROMPT = `Kamu membaca dokumen administrasi keuangan pemerintah In
  "catatan": "hal yang meragukan/tidak terbaca"
 }
 Panduan jenis: "kuitansi" mencakup kuitansi, nota, invoice, struk, faktur, DAN bukti pembayaran/transfer/QRIS/m-banking/e-wallet (isi penyedia = nama merchant/penerima, jumlah_total = nominal, tgl_bayar = tanggal transaksi, uraian = barang/jasa yang dibeli bila terlihat, jika tidak ada isi "Pembayaran kepada <merchant>"). Pakai "lainnya" hanya bila benar-benar bukan dokumen keuangan. Bila MAK tidak tertulis, isi mak_petunjuk dengan akun 6 digit yang paling mungkin: toner/tinta/kertas/ATK/alat tulis/bahan komputer dan printer = 521811; makanan/minuman/kudapan boleh dikosongkan (pengguna memilih).
-Jumlah dalam rupiah angka tanpa titik. Kosongkan field yang tidak ada; jangan menebak.`;
+Jumlah dalam rupiah angka tanpa titik. Kosongkan field yang tidak ada; jangan menebak.
+WAJIB untuk surat_tugas/nota dinas: tanggal_dokumen = tanggal surat dikeluarkan (biasanya tertulis di dekat tanda tangan, mis. "Denpasar, 12 November 2026", atau di kop/judul). Ini BUKAN tanggal mulai/selesai perjalanan. Ubah bulan Indonesia ke angka (Januari=01 ... Desember=12) dan tulis YYYY-MM-DD; jangan dikosongkan bila tanggal surat terbaca.`;
 
 function parseJson(t: string) {
   const s = t.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
