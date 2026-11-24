@@ -421,7 +421,7 @@
       if (/52411[13]/.test(mak)) throw new Error('MAK perjadin (524111/524113) direkam lewat Surat Tugas.');
       const tb = v('tb') || v('tk') || today, tk = v('tk') || tb;
       const { error } = await sb.from('kegiatan').insert({
-        id: kgGenerateRandomId(10), mak, uraian: v('ur'), pelaksana: v('pv'), tujuan: v('lk').trim(), tgl_st: null, tgl_mulai: normDate(tk), tgl_selesai: normDate(tk),
+        id: kgGenerateRandomId(10), mak, uraian: v('ur'), pelaksana: v('pv'), tujuan: v('lk').trim(), tgl_st: normDate(tk), tgl_mulai: normDate(tk), tgl_selesai: normDate(tk),
         tgl_lpt: null, tgl_bayar: normDate(tb), jumlah: Number(v('jm')) || 0, user, status: kgComputeStatus(tk, '', tb, ''), tgl_sp2d: null,
         nomor_spm: '', dokumen_link: '', spby_link: '', tgl_rekam: normDate(today), perbantuan: false, kantor_id: kantor, tahun
       });
