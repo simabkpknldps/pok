@@ -450,7 +450,7 @@ async function initDashboardPage() {
 
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
         const scopeFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
 
         // 1x baca tabel kegiatan + pok + rpd + rpd_berjalan + mp_pnbp, dijalankan bareng.
@@ -497,8 +497,14 @@ async function initDashboardPage() {
 }
 
 function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
-    return `
-        <div class="space-y-6">
+    const T = (id) => (typeof window.dashKartuTampil === 'function') ? window.dashKartuTampil(id) : true;
+    const kolomLg = { 1: 'lg:grid-cols-1', 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4', 5: 'lg:grid-cols-5' };
+    const baris = (items, kelas, lgMax) => {
+        const isi = items.filter(i => i[0]).map(i => i[1]);
+        if (!isi.length) return '';
+        return `<div class="grid grid-cols-1 ${lgMax === 5 ? 'md:grid-cols-2' : ''} ${kolomLg[Math.min(isi.length, lgMax)]} gap-4 ${kelas}">${isi.join('')}</div>`;
+    };
+    const cari = T('cari') ? `
             <div class="ios-panel p-3.5">
                 <div class="flex items-center gap-2">
                     <div class="relative flex-1">
@@ -511,33 +517,34 @@ function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
                         <i class="fa-solid fa-magnifying-glass text-xs"></i> Cari
                     </button>
                 </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div class="ios-panel p-5">${renderBelanjaCard('Belanja Barang', data.barang)}</div>
-                <div class="ios-panel p-5">${renderBelanjaCard('Belanja Modal', data.modal)}</div>
-                <div class="ios-panel p-5">${renderBelanjaCard('Maksimum Pencairan PNBP', data.mp)}</div>
-                <div class="ios-panel p-5 flex flex-col">
+            </div>` : '';
+    const hariIni = `<div class="ios-panel p-5 flex flex-col">
                     <h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Kegiatan Hari Ini</h3>
                     <div class="space-y-3 overflow-y-auto max-h-48 pr-1">
                         ${data.kegiatanHariIni.length
                             ? data.kegiatanHariIni.map(item => `<div class="pb-2.5" style="border-bottom: 1px solid var(--divider);"><div class="text-[13px] font-medium" style="color: var(--label);">${escapeHtml(item.uraian)}</div><div class="text-[10.5px] mt-0.5" style="color: var(--label-secondary);">${escapeHtml(item.pelaksana)} &middot; ${escapeHtml(item.tujuan)}</div></div>`).join('')
                             : `<div class="flex flex-col items-center gap-1.5 py-2" style="color: var(--label-secondary); opacity:.75;"><i class="fa-regular fa-calendar-check text-xl"></i><div class="text-[11.5px]">Tidak ada kegiatan</div></div>`}
                     </div>
-                </div>
-                <div class="ios-panel p-5">${renderTopPerjadin(data.topPerjadin)}</div>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                <div id="dash-rpd-card" class="ios-panel p-5">
-                    ${renderRpdBerjalanTable(rpdBerjalanData)}
-                </div>
-                <div id="dash-spm-card" class="ios-panel p-5 flex flex-col">
-                    ${renderRekapSpmTable(rekapSpmData)}
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>
-                <div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>
-            </div>
+                </div>`;
+    const barisAtas = baris([
+        [T('barang'), `<div class="ios-panel p-5">${renderBelanjaCard('Belanja Barang', data.barang)}</div>`],
+        [T('modal'), `<div class="ios-panel p-5">${renderBelanjaCard('Belanja Modal', data.modal)}</div>`],
+        [T('mp'), `<div class="ios-panel p-5">${renderBelanjaCard('Maksimum Pencairan PNBP', data.mp)}</div>`],
+        [T('hariini'), hariIni],
+        [T('top'), `<div class="ios-panel p-5">${renderTopPerjadin(data.topPerjadin)}</div>`]
+    ], '', 5);
+    const barisTengah = baris([
+        [T('rpd'), `<div id="dash-rpd-card" class="ios-panel p-5">${renderRpdBerjalanTable(rpdBerjalanData)}</div>`],
+        [T('spm'), `<div id="dash-spm-card" class="ios-panel p-5 flex flex-col">${renderRekapSpmTable(rekapSpmData)}</div>`]
+    ], 'items-start', 2);
+    const barisGrafik = baris([
+        [T('grafikrp'), `<div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>`],
+        [T('grafikfrek'), `<div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>`]
+    ], '', 2);
+    const semua = cari + barisAtas + barisTengah + barisGrafik;
+    return `
+        <div class="space-y-6">
+            ${semua || `<div class="ios-panel p-8 text-center text-sm" style="color: var(--label-secondary);"><i class="fa-solid fa-table-cells-large text-2xl mb-2"></i><div>Semua kartu disembunyikan.</div><div class="mt-1">Aktifkan lewat Pengaturan &rsaquo; Tampilan Dashboard.</div></div>`}
         </div>
     `;
 }
@@ -692,8 +699,8 @@ async function hapusRpdBerjalanRow(id, uraian) {
 
 function initCharts(data) {
     const labels = data.grafikPerjadin.map(d => d.bulan);
-    new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels, datasets: [{ label: 'Rupiah', data: data.grafikPerjadin.map(d => d.rupiah), borderColor: '#0071E3', backgroundColor: 'rgba(0,113,227,0.08)', fill: true, tension: 0.3 }] } });
-    new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels, datasets: [{ label: 'Frekuensi', data: data.grafikPerjadin.map(d => d.frekuensi), backgroundColor: '#0071E3', borderRadius: 4 }] } });
+    if (document.getElementById('chartRp')) new Chart(document.getElementById('chartRp'), { type: 'line', data: { labels, datasets: [{ label: 'Rupiah', data: data.grafikPerjadin.map(d => d.rupiah), borderColor: '#0071E3', backgroundColor: 'rgba(0,113,227,0.08)', fill: true, tension: 0.3 }] } });
+    if (document.getElementById('chartFrek')) new Chart(document.getElementById('chartFrek'), { type: 'bar', data: { labels, datasets: [{ label: 'Frekuensi', data: data.grafikPerjadin.map(d => d.frekuensi), backgroundColor: '#0071E3', borderRadius: 4 }] } });
 }
 
 function renderBelanjaCard(t, d) {

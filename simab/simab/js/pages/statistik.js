@@ -55,7 +55,7 @@ async function initStatistikPage() {
         await waitSupabaseAuthReady();
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
         const scopeFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
 
         // 'kegiatan' tetap RAW (pakai cache global kalau sudah ada) supaya
@@ -206,18 +206,85 @@ function stLoadPegawaiData() {
         .map((r, i) => ({ ...r, _idx: i }));
 
     stApplyPegawaiFilter();
+    stRenderRekapBulan();
+    const cb = document.getElementById('st-hanyaBelum');
+    if (cb) cb.onchange = () => stApplyPegawaiFilter();
 
     loadingEl.classList.add('hidden');
     wrapperEl.classList.remove('hidden');
+}
+
+// ============================================
+// REKAPITULASI BULANAN (Jan-Des): selesai vs belum, semua pegawai
+// ============================================
+
+function stRenderRekapBulan() {
+    const el = document.getElementById('st-rekapBulan');
+    if (!el) return;
+    const tot = Array.from({ length: 12 }, () => ({ selesai: 0, total: 0 }));
+    stPegawaiRows.forEach(p => p.bulan.forEach((b, i) => { tot[i].selesai += b.selesai; tot[i].total += b.total; }));
+    el.innerHTML = tot.map((t, i) => {
+        const belum = t.total - t.selesai;
+        const kosong = !t.total;
+        const warna = kosong ? 'bg-slate-300' : (belum === 0 ? 'bg-green-500' : 'bg-amber-400');
+        const bingkai = kosong ? 'border-slate-200 bg-slate-50' : (belum === 0 ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50');
+        const persen = kosong ? 0 : Math.round(t.selesai / t.total * 100);
+        const ket = kosong ? '<span class="text-slate-400">tidak ada</span>'
+            : (belum === 0 ? '<span class="text-green-700 font-medium">Semua selesai</span>' : `<span class="text-amber-700 font-medium">${belum} belum selesai</span>`);
+        return `<button type="button" data-rekap-bulan="${i}" ${kosong ? 'disabled' : ''} class="text-left rounded-xl border ${bingkai} p-2.5 ${kosong ? 'cursor-default' : 'hover:shadow-sm'}">
+            <div class="flex items-center justify-between"><span class="text-[13px] font-semibold text-slate-700">${ST_BULAN_LABEL[i]}</span><span class="text-[11px] text-slate-500">${t.selesai}/${t.total}</span></div>
+            <div class="w-full h-1.5 bg-slate-300 rounded-full overflow-hidden my-1.5"><div class="h-full ${warna}" style="width:${persen}%"></div></div>
+            <div class="text-[11px]">${ket}</div>
+        </button>`;
+    }).join('');
+    el.querySelectorAll('[data-rekap-bulan]').forEach(btn => {
+        btn.onclick = () => stShowBelumSelesaiBulan(Number(btn.dataset.rekapBulan));
+    });
+}
+
+function stShowBelumSelesaiBulan(bulanIdx) {
+    const baris = [];
+    stPegawaiRows.forEach(p => p.bulan[bulanIdx].rows.forEach(r => {
+        if (r.status !== 'Selesai') baris.push({ nama: p.nama, ...r });
+    }));
+    const selesai = stPegawaiRows.reduce((n, p) => n + p.bulan[bulanIdx].selesai, 0);
+    const isi = baris.length
+        ? baris.sort((a, b) => a.nama.localeCompare(b.nama)).map(r => `
+            <tr class="border-t border-slate-100">
+                <td class="p-2 text-slate-700">${r.nama}</td>
+                <td class="p-2 text-slate-700">${r.uraian || '-'}</td>
+                <td class="p-2 text-slate-700 whitespace-nowrap">${stFormatDate(r.tglMulai)}</td>
+                <td class="p-2 text-center">${stStatusBadge(r.status)}</td>
+            </tr>`).join('')
+        : '<tr><td colspan="4" class="text-center text-green-700 py-6">Semua kegiatan bulan ini sudah selesai.</td></tr>';
+    const { overlay, popup } = window.commonOpenOverlay(`
+        <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Belum Selesai — ${ST_BULAN_LABEL[bulanIdx]}</h3>
+        <p class="text-center text-sm text-slate-500 mb-2">${baris.length} belum selesai, ${selesai} sudah selesai</p>
+        <div class="overflow-x-auto max-h-[55vh] overflow-y-auto border border-slate-200 rounded-xl">
+            <table class="w-full border-collapse text-[13px]">
+                <thead class="bg-slate-100 sticky top-0"><tr>
+                    <th class="p-2 text-left font-semibold">Pegawai</th>
+                    <th class="p-2 text-left font-semibold">Nomor ST</th>
+                    <th class="p-2 text-left font-semibold">Tgl Mulai</th>
+                    <th class="p-2 text-center font-semibold">Status</th>
+                </tr></thead>
+                <tbody>${isi}</tbody>
+            </table>
+        </div>
+        <div class="flex justify-end mt-3"><button id="st-rekapClose" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tutup</button></div>
+    `, 'max-w-2xl');
+    popup.querySelector('#st-rekapClose').onclick = () => overlay.remove();
 }
 
 function stApplyPegawaiFilter() {
     const searchInput = document.getElementById('st-searchNama');
     const keyword = (searchInput?.value || '').trim().toLowerCase();
 
-    const filtered = keyword
+    const hanyaBelum = !!document.getElementById('st-hanyaBelum')?.checked;
+    let filtered = keyword
         ? stPegawaiRows.filter(r => String(r.nama || '').toLowerCase().includes(keyword))
         : stPegawaiRows;
+    if (hanyaBelum) filtered = filtered.filter(r => r.bulan.some(b => b.total > b.selesai));
 
     stRenderPegawaiTable(filtered);
 }

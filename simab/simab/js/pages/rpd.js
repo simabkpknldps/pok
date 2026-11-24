@@ -61,7 +61,7 @@ async function rpdLoadData() {
         // Superadmin: lihat SEMUA kantor sekaligus (dijumlah per bulan),
         // TIDAK difilter kantor_id. User biasa/admin: kunci ke kantor+tahun
         // aktif sesi ini.
-        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
 
         const rpdFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
 
@@ -174,7 +174,7 @@ function rpdFormatPersen(v) {
 }
 
 function rpdRenderRow(row) {
-    const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+    const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
     return `
         <tr data-bulan-ke="${row.bulanKe}">
             <td class="px-3 py-1.5 text-center">${row.bulan}</td>

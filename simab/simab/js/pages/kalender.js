@@ -112,7 +112,7 @@ async function klLoadCalendarData(forceRefresh) {
 
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const isSuperadminView = false; // data SELALU mengikuti satker terpilih
 
         // Kalender difilter kantor+tahun aktif (superadmin: lihat semua kantor,
         // tahun tetap dibatasi tahun aktif) -- sama pola dgn Kegiatan/Dashboard.

@@ -340,7 +340,7 @@ async function kgLoadData(forceRefresh) {
         await waitSupabaseAuthReady();
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
         // Halaman Kegiatan SELALU dibatasi tahun aktif; kantor_id juga dibatasi
         // KECUALI superadmin (lihat semua kantor sekaligus, buat monitoring).
         const filters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
@@ -449,7 +449,7 @@ async function kgDownloadExcelTelegram() {
         await waitSupabaseAuthReady();
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
         const pokFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
         const pokRows = await sbFetchAll('pok', '*', pokFilters);
 

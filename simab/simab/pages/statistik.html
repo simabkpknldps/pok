@@ -152,6 +152,18 @@
                 class="ios-field w-64">
         </div>
 
+        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <h4 class="text-sm font-semibold text-slate-600">Rekapitulasi Bulanan (Jan–Des)</h4>
+            <span class="text-xs text-slate-500"><span class="inline-block w-2.5 h-2.5 rounded-full bg-green-500 align-middle"></span> semua selesai
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 align-middle ml-2"></span> ada yang belum
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-300 align-middle ml-2"></span> tidak ada kegiatan</span>
+        </div>
+        <div id="st-rekapBulan" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-2"></div>
+        <p class="text-xs text-slate-400 mb-4">Klik kotak bulan untuk melihat siapa saja yang belum selesai.</p>
+        <label class="inline-flex items-center gap-2 text-sm text-slate-600 mb-3 cursor-pointer">
+            <input id="st-hanyaBelum" type="checkbox" class="w-4 h-4"> Tampilkan hanya pegawai yang masih ada kegiatan belum selesai
+        </label>
+
         <div id="st-pegawaiLoading" class="flex justify-center items-center h-40">
             <i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500"></i>
         </div>
