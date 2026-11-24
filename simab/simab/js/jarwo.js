@@ -263,7 +263,7 @@
 
     let body = '';
     if (jenis === 'surat_tugas') {
-      body = field('Uraian (No. ST)', id + 'ur', d.nomor_dokumen || d.uraian) + `<div id="${id}dup"></div>` + field('Tujuan (kabupaten/kota)', id + 'tj', String(d.tujuan || '').split(',')[0].replace(/^\s*(kabupaten|kab\.?|kota)\s+/i, '').trim()) + field('Tgl ST', id + 'st', d.tanggal_dokumen, 'date') +
+      body = field('Uraian (No. ST)', id + 'ur', d.nomor_dokumen || d.uraian) + `<div id="${id}dup"></div>` + field('Tujuan (kabupaten/kota)', id + 'tj', String(d.tujuan || '').split(',')[0].replace(/^\s*(kabupaten|kab\.?|kota)\s+/i, '').trim()) + field('Tgl ST', id + 'st', tglDokumen(d), 'date') +
         `<div class="row"><div>${field('Mulai', id + 'm', d.tgl_mulai, 'date')}</div><div>${field('Selesai', id + 's', d.tgl_selesai, 'date')}</div></div>` +
         makField() +
         '<label>Pelaksana</label>' + (d.pelaksana || []).map((p, i) =>
@@ -387,6 +387,15 @@
       rows = baris('Kegiatan', (sel?.parentElement?.textContent || '').trim()) + baris('No. SPM', v('spm')) + baris('Tgl SP2D', tg(v('sp'))) + baris('Tgl bayar', tg(v('tb')));
     }
     return `<table style="font-size:12px;margin-top:6px;border-collapse:collapse">${rows}</table>${extra}`;
+  }
+
+  // Tanggal surat: pakai hasil bacaan; bila kosong, coba cari tanggal Indonesia ("12 November 2026") di nomor/uraian/ringkasan.
+  function tglDokumen(d) {
+    if (d.tanggal_dokumen && /^\d{4}-\d{2}-\d{2}$/.test(d.tanggal_dokumen)) return d.tanggal_dokumen;
+    const BLN = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
+    const m = String([d.ringkasan, d.uraian, d.nomor_dokumen].join(' ')).toLowerCase().match(/(\d{1,2})\s+(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)\s+(\d{4})/);
+    if (!m) return '';
+    return m[3] + '-' + String(BLN.indexOf(m[2]) + 1).padStart(2, '0') + '-' + m[1].padStart(2, '0');
   }
 
   async function simpan(jenis, c, id, v, d) {
