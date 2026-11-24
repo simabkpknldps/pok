@@ -6,6 +6,8 @@
   const MOBILE = !!window.JARWO_KUITANSI_ONLY; // mode SOH (HP): hanya rekam foto kuitansi
   const hist = [];
   let panel, list, input, busy = false;
+  const lampir = [];   // gambar yang ditempel & belum dikirim: { file, url, mime, data }
+  const MAKS_GAMBAR = 3;
 
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const rp = n => 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
@@ -91,8 +93,9 @@
     panel = document.createElement('div'); panel.id = 'jw-panel';
     panel.innerHTML = `<div id="jw-head"><span>Jarwo · Asisten SiMAB</span><span id="jw-x" style="cursor:pointer">✕</span></div>
       <div id="jw-list"></div>
+      <div id="jw-prev" style="display:none;gap:6px;padding:6px 8px 0;flex-wrap:wrap;border-top:1px solid #e5e5ea"></div>
       <div id="jw-foot"><button id="jw-att" title="Unggah foto/PDF"><i class="fa-solid fa-paperclip"></i></button>
-      <textarea id="jw-in" rows="1" placeholder="Tanya Jarwo atau unggah dokumen..."></textarea><button id="jw-send"><i class="fa-solid fa-paper-plane"></i></button>
+      <textarea id="jw-in" rows="1" placeholder="Tanya Jarwo, unggah dokumen, atau tempel gambar (Ctrl+V)..."></textarea><button id="jw-send"><i class="fa-solid fa-paper-plane"></i></button>
       <input type="file" id="jw-file" accept="image/*,application/pdf" style="display:none"></div>`;
     document.body.append(fab, panel);
     list = panel.querySelector('#jw-list'); input = panel.querySelector('#jw-in');
@@ -104,24 +107,64 @@
     panel.querySelector('#jw-send').onclick = send;
     const grow = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 110) + 'px'; };
     input.oninput = grow;
+    input.addEventListener('paste', e => {
+      const files = Array.from((e.clipboardData && e.clipboardData.items) || []).filter(i => i.kind === 'file' && i.type.startsWith('image/')).map(i => i.getAsFile()).filter(Boolean);
+      if (!files.length) return;          // teks biasa: biarkan perilaku bawaan
+      e.preventDefault();
+      files.forEach(tambahLampiran);
+    });
+    panel.addEventListener('dragover', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); });
+    panel.addEventListener('drop', e => {
+      const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []).filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+      e.preventDefault(); files.forEach(tambahLampiran);
+    });
     input.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } };
     const f = panel.querySelector('#jw-file');
     panel.querySelector('#jw-att').onclick = () => f.click();
     f.onchange = () => { if (f.files[0]) upload(f.files[0]); f.value = ''; };
   }
 
+  // ---------- gambar yang ditempel ke chat ----------
+  function renderLampiran() {
+    const bar = panel.querySelector('#jw-prev');
+    bar.style.display = lampir.length ? 'flex' : 'none';
+    bar.innerHTML = lampir.map((g, i) => `<span style="position:relative;display:inline-block"><img src="${g.url}" style="height:54px;max-width:90px;object-fit:cover;border-radius:8px;border:1px solid #d1d1d6"><span data-x="${i}" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:9px;background:#8e8e93;color:#fff;font-size:11px;line-height:18px;text-align:center;cursor:pointer">✕</span></span>`).join('') +
+      `<span style="font-size:11px;color:#8e8e93;align-self:center">${lampir.length ? 'Tulis pertanyaan lalu kirim. Tanpa teks, gambar dibaca sebagai dokumen untuk direkam.' : ''}</span>`;
+    bar.querySelectorAll('[data-x]').forEach(x => x.onclick = () => { const g = lampir.splice(Number(x.dataset.x), 1)[0]; if (g) URL.revokeObjectURL(g.url); renderLampiran(); });
+  }
+  async function tambahLampiran(file) {
+    if (lampir.length >= MAKS_GAMBAR) { bubble('Maksimal ' + MAKS_GAMBAR + ' gambar per pesan.', 'a'); return; }
+    if (file.size > 10 * 1024 * 1024) { bubble('Gambar terlalu besar (maks 10 MB).', 'a'); return; }
+    try {
+      const f = await shrink(file);
+      lampir.push({ file: f, url: URL.createObjectURL(f), mime: f.type || 'image/jpeg', data: await toB64(f) });
+      renderLampiran(); input.focus();
+    } catch (e) { bubble('Gambar tidak dapat dibaca: ' + esc(e.message || e), 'a'); }
+  }
+  function kosongkanLampiran() { lampir.forEach(g => URL.revokeObjectURL(g.url)); lampir.length = 0; renderLampiran(); }
+
   async function send() {
-    const t = input.value.trim(); if (!t || busy) return;
-    input.value = ''; input.style.height = 'auto'; bubble(esc(t), 'u'); hist.push({ role: 'user', content: t });
+    const t = input.value.trim(); if (busy) return;
+    if (!t && lampir.length) {            // gambar tanpa teks -> baca sebagai dokumen (alur rekam lama)
+      const f = lampir[0].file; kosongkanLampiran(); upload(f); return;
+    }
+    if (!t) return;
+    const imgs = lampir.map(g => ({ mime: g.mime, data: g.data }));
+    const thumbs = lampir.map(g => `<img src="${g.url}" style="max-height:90px;max-width:100%;border-radius:8px;display:block;margin-bottom:4px">`).join('');
+    input.value = ''; input.style.height = 'auto'; bubble(thumbs + esc(t), 'u');
+    const entri = { role: 'user', content: t }; if (imgs.length) entri.images = imgs; hist.push(entri);
+    lampir.length = 0; panel.querySelector('#jw-prev').style.display = 'none';   // URL thumbnail masih dipakai gelembung
     busy = true; const w = bubble('…', 'a');
     try {
       const r = await call({ mode: 'chat', messages: hist });
+      if (imgs.length) { delete entri.images; entri.content = t + ' [pengguna melampirkan ' + imgs.length + ' gambar]'; }
       w.innerHTML = md(r.reply || '(kosong)'); hist.push({ role: 'assistant', content: r.reply });
       (r.lampiran || []).forEach(addFileCard);
       (r.gambar || []).forEach(addImageCard);
       (r.draf || []).forEach(drafCard);
     }
-    catch (e) { w.textContent = 'Maaf: ' + e.message; }
+    catch (e) { w.textContent = 'Maaf: ' + e.message; if (imgs.length) delete entri.images; }
     busy = false;
   }
 
