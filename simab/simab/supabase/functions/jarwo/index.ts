@@ -335,8 +335,22 @@ Kantor aktif: ${c.kantor}, tahun anggaran ${c.tahun}. Data kegiatan/POK ambil le
 Perjadin = akun 524111/524113 (pakai akun="perjadin"). Seksi (mis. Umum) ada di POK; gunakan filter seksi pada ringkasan_anggaran. Jika sebuah filter tidak menemukan data, coba lagi tanpa filter atau lihat seksi_tersedia sebelum menyimpulkan data tidak ada.\nPerjadin = akun 524111 (biasa) dan 524113 (paket meeting); akun 5241 mencakup keduanya. "Seksi" adalah pemilik baris POK (mis. Umum). Bila diminta file/Excel/PDF/rekap/laporan, panggil buat_laporan (tombol unduh muncul otomatis; jangan menulis ulang tabel panjang). Gunakan filter tool (akun, seksi, sd, tanggal) alih-alih meminta pengguna mengunggah dokumen untuk pertanyaan data; bila tool mengembalikan kosong, sebutkan filter yang dipakai dan tawarkan alternatif. Untuk pertanyaan SBM/tarif (uang harian, penginapan, tiket, transport, honor, konsumsi, dll.) gunakan tool cek_sbm (data PMK SBM per tahun di SiMAB), jangan cari_web; sebutkan tahun & kolom yang dipakai. MAK perjadin 524111/524113 melalui status Rekam Data → Terlaksana → LPT → Terbayar → Selesai; MAK lain tanpa LPT.
 Jangan menyebut nama model/penyedia AI yang kamu pakai (kamu tidak tahu pasti); jika ditanya, jawab bahwa kamu Jarwo, asisten AI SiMAB, dan modelnya dapat berganti-ganti. Untuk pertanyaan angka anggaran, sebutkan definisi (pagu, realisasi total vs terbayar/selesai) dan bila ada bagian "tidak_diketahui" sampaikan apa adanya.\nBila pengguna memberi tautan/URL atau butuh isi lengkap suatu halaman, gunakan baca_url. Bila diminta membuat/menggenerate gambar, panggil buat_gambar dengan prompt bahasa Inggris yang rinci. Jangan membuat gambar tokoh/karakter berhak cipta atau orang nyata tertentu.\nTulis rumus/perhitungan dengan teks biasa (mis. "Energi (kWh) = Daya (kW) × Waktu (jam)"), JANGAN memakai LaTeX atau tanda $ / \\( \\).\nKamu tidak menyimpan data sendiri. Bila pengguna meminta merekam/mencatat/menginput kuitansi, belanja, atau surat tugas lewat teks, panggil siapkan_form_rekam (form interaktif muncul, pengguna yang menekan Simpan); jangan menjelaskan langkah manual. Untuk dokumen berupa foto/PDF, pengguna bisa mengunggah lewat tombol lampiran.\nPertanyaan tentang gowes/bersepeda/ride/Garmin/perawatan sepeda pengguna: panggil data_gowes (data pribadi dari Garmin Edge; satuan km, km/j, meter, WITA). Beri saran latihan/pacing/perawatan yang konkret berdasarkan angka itu, jangan mengarang data yang tidak ada.`;
 
-async function chatGemini(msgs: any[], c: Ctx) {
-  const contents = msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: String(m.content) }] }));
+type Img = { mime: string; data: string };
+// Gambar hanya dibawa pada pesan pengguna TERAKHIR (maks 3, <= ~6 MB per gambar).
+function ambilGambar(msgs: any[]): Img[] {
+  const last = msgs[msgs.length - 1];
+  if (!last || last.role !== "user" || !Array.isArray(last.images)) return [];
+  return last.images
+    .filter((g: any) => g && typeof g.mime === "string" && g.mime.startsWith("image/") && typeof g.data === "string" && g.data.length < 8_000_000)
+    .slice(0, 3).map((g: any) => ({ mime: g.mime, data: g.data }));
+}
+
+async function chatGemini(msgs: any[], c: Ctx, imgs: Img[] = []) {
+  const contents = msgs.map((m, i) => {
+    const parts: any[] = [{ text: String(m.content) }];
+    if (imgs.length && i === msgs.length - 1) imgs.forEach((g) => parts.push({ inlineData: { mimeType: g.mime, data: g.data } }));
+    return { role: m.role === "assistant" ? "model" : "user", parts };
+  });
   const decl = [{ functionDeclarations: TOOLS }];
   for (let step = 0; step < 8; step++) {
     const r = await withModels(GEMINI_MODELS, (mdl) => withKeys("GEMINI_KEYS", (key) =>
@@ -356,8 +370,13 @@ async function chatGemini(msgs: any[], c: Ctx) {
   return "Maaf, saya belum bisa menyelesaikan pencarian itu.";
 }
 
-async function chatOpenAI(url: string, keyName: string, modelList: string[], msgs: any[], c: Ctx) {
-  const m: any[] = [{ role: "system", content: SYSTEM(c) }, ...msgs.map((x) => ({ role: x.role, content: String(x.content) }))];
+async function chatOpenAI(url: string, keyName: string, modelList: string[], msgs: any[], c: Ctx, imgs: Img[] = []) {
+  const m: any[] = [{ role: "system", content: SYSTEM(c) }, ...msgs.map((x, i) => ({
+    role: x.role,
+    content: (imgs.length && i === msgs.length - 1)
+      ? [{ type: "text", text: String(x.content) }, ...imgs.map((g) => ({ type: "image_url", image_url: { url: `data:${g.mime};base64,${g.data}` } }))]
+      : String(x.content),
+  }))];
   const tools = TOOLS.map((t) => ({ type: "function", function: t }));
   for (let step = 0; step < 8; step++) {
     const r = await withModels(modelList, (model) => withKeys(keyName, (key) => post(url, { model, messages: m, tools }, { Authorization: `Bearer ${key}` })));
@@ -375,12 +394,14 @@ async function chatOpenAI(url: string, keyName: string, modelList: string[], msg
 
 async function chat(msgs: any[], c: Ctx) {
   const errs: string[] = [];
+  const imgs = ambilGambar(msgs);
   const tries: [string, () => Promise<string>][] = [
-    ["gemini", () => chatGemini(msgs, c)],
+    ["gemini", () => chatGemini(msgs, c, imgs)],
     ["groq", () => chatOpenAI("https://api.groq.com/openai/v1/chat/completions", "GROQ_KEYS", GROQ_MODELS, msgs, c)],
-    ["openrouter", () => chatOpenAI("https://openrouter.ai/api/v1/chat/completions", "OPENROUTER_KEYS", OR_MODELS, msgs, c)],
+    ["openrouter", () => chatOpenAI("https://openrouter.ai/api/v1/chat/completions", "OPENROUTER_KEYS", imgs.length ? OR_VISION_MODELS : OR_MODELS, msgs, c, imgs)],
   ];
   for (const [n, f] of tries) {
+    if (imgs.length && n === "groq") continue; // model Groq yang dipakai tidak bisa membaca gambar
     if (!keys(n.toUpperCase() + "_KEYS").length) continue;
     try { return { reply: await f(), provider: n }; } catch (e) { errs.push(`${n}: ${String(e).slice(0, 120)}`); }
   }
