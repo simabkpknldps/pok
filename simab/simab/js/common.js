@@ -196,6 +196,52 @@ async function initTahunAnggaranLabel() {
 }
 window.initTahunAnggaranLabel = initTahunAnggaranLabel;
 
+// ============================================================
+// KARTU DASHBOARD YANG BISA DIATUR (tersimpan per akun di browser ini)
+// ============================================================
+const DASH_KARTU = [
+    { id: 'cari', label: 'Kolom pencarian kegiatan' },
+    { id: 'barang', label: 'Belanja Barang' },
+    { id: 'modal', label: 'Belanja Modal' },
+    { id: 'mp', label: 'Maksimum Pencairan PNBP' },
+    { id: 'hariini', label: 'Kegiatan Hari Ini' },
+    { id: 'top', label: 'Top 3 Perjadin' },
+    { id: 'rpd', label: 'RPD Berjalan' },
+    { id: 'spm', label: 'Rekapitulasi SPM' },
+    { id: 'grafikrp', label: 'Grafik Realisasi Perjalanan Dinas (Rp)' },
+    { id: 'grafikfrek', label: 'Grafik Realisasi Perjalanan Dinas (Frek)' }
+];
+function dashKartuKey() { return 'dashKartu:' + (localStorage.getItem('nip') || ''); }
+function dashKartuMuat() {
+    try { const o = JSON.parse(localStorage.getItem(dashKartuKey()) || '{}'); return (o && typeof o === 'object') ? o : {}; }
+    catch (e) { return {}; }
+}
+function dashKartuSimpan(o) { try { localStorage.setItem(dashKartuKey(), JSON.stringify(o)); } catch (e) { /* abaikan */ } }
+function dashKartuTampil(id) { return dashKartuMuat()[id] !== false; }
+window.DASH_KARTU = DASH_KARTU; window.dashKartuTampil = dashKartuTampil;
+
+function csRenderDashKartu(popup) {
+    const box = popup.querySelector('#cs-dashList');
+    if (!box) return;
+    const pref = dashKartuMuat();
+    box.innerHTML = DASH_KARTU.map(k => `
+        <label class="flex items-center gap-3 px-3 py-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 text-sm text-slate-700">
+            <input type="checkbox" data-kartu="${k.id}" class="w-4 h-4" ${pref[k.id] === false ? '' : 'checked'}> ${k.label}
+        </label>`).join('');
+    const segarkan = () => {
+        if (document.getElementById('dashboard-content') && typeof window.initDashboardPage === 'function') window.initDashboardPage();
+    };
+    box.querySelectorAll('input[data-kartu]').forEach(cb => {
+        cb.onchange = () => {
+            const o = dashKartuMuat();
+            if (cb.checked) delete o[cb.dataset.kartu]; else o[cb.dataset.kartu] = false;
+            dashKartuSimpan(o);
+            segarkan();
+        };
+    });
+    popup.querySelector('#cs-dashReset').onclick = () => { dashKartuSimpan({}); csRenderDashKartu(popup); segarkan(); };
+}
+
 function openSettings() {
     const nip = localStorage.getItem('nip') || '';
     const nama = localStorage.getItem('nama') || '';
@@ -225,6 +271,7 @@ function openSettings() {
             <button id="cs-tabBtnPassword" class="cs-vtab"><i class="fa-solid fa-key"></i><span>Ganti Password</span></button>
             <button id="cs-tabBtnTambahPegawai" class="cs-vtab"><i class="fa-solid fa-user-plus"></i><span>Tambah Pegawai</span></button>
             <button id="cs-tabBtnWA" class="cs-vtab"><i class="fa-brands fa-whatsapp"></i><span>Nomor WA</span></button>
+            <button id="cs-tabBtnDash" class="cs-vtab"><i class="fa-solid fa-table-cells-large"></i><span>Tampilan Dashboard</span></button>
             <button id="cs-tabBtnFitur" class="cs-vtab hidden"><i class="fa-solid fa-toggle-on"></i><span>Pengaturan Fitur</span></button>
         </nav>
         <div class="flex-1 min-w-0" style="min-height: 420px;">
@@ -377,6 +424,14 @@ function openSettings() {
 
         <div id="cs-tabWA" class="hidden flex-col gap-3"></div>
 
+        <div id="cs-tabDash" class="hidden flex-col gap-3">
+            <p class="text-sm text-slate-500">Pilih kartu yang ingin ditampilkan di halaman Dashboard. Pengaturan ini hanya berlaku untuk akun Anda di perangkat/browser ini.</p>
+            <div id="cs-dashList" class="flex flex-col gap-1.5"></div>
+            <div class="flex justify-end gap-2 mt-2">
+                <button id="cs-dashReset" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Tampilkan semua</button>
+            </div>
+        </div>
+
         <div id="cs-tabFitur" class="hidden flex-col gap-3">
             <div class="text-center text-slate-400 py-6"><i class="fa-solid fa-spinner fa-spin"></i></div>
         </div>
@@ -401,6 +456,8 @@ function openSettings() {
     const tabFitur = popup.querySelector('#cs-tabFitur');
     const tabBtnWA = popup.querySelector('#cs-tabBtnWA');
     const tabWA = popup.querySelector('#cs-tabWA');
+    const tabBtnDash = popup.querySelector('#cs-tabBtnDash');
+    const tabDash = popup.querySelector('#cs-tabDash');
 
     function csActivateTab(tab) {
         const tabs = {
@@ -410,6 +467,7 @@ function openSettings() {
             password: [tabPassword, tabBtnPassword],
             tambahPegawai: [tabTambahPegawai, tabBtnTambahPegawai],
             wa: [tabWA, tabBtnWA],
+            dash: [tabDash, tabBtnDash],
             fitur: [tabFitur, tabBtnFitur]
         };
 
@@ -422,6 +480,7 @@ function openSettings() {
             btn.className = `cs-vtab${active ? ' is-active' : ''}${hid ? ' hidden' : ''}`;
         });
 
+        if (tab === 'dash') csRenderDashKartu(popup);
         if (tab === 'pejabat') csLoadPejabatData(popup);
         if (tab === 'rekening') csLoadRekeningData(popup);
         if (tab === 'wa' && typeof window.csLoadWaTab === 'function') window.csLoadWaTab(popup);
@@ -434,6 +493,7 @@ function openSettings() {
     tabBtnPassword.onclick = () => csActivateTab('password');
     tabBtnTambahPegawai.onclick = () => csActivateTab('tambahPegawai');
     tabBtnWA.onclick = () => csActivateTab('wa');
+    tabBtnDash.onclick = () => csActivateTab('dash');
     tabBtnFitur.onclick = () => csActivateTab('fitur');
 
     // Pengaturan Fitur: hanya admin & superadmin (berlaku per kantor aktif).

@@ -213,7 +213,7 @@ async function loadPokData() {
 
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
         // Superadmin (mode SuperAdmin): lihat POK/Blokir gabungan semua kantor.
         // User biasa/admin: dikunci kantor+tahun aktif sesi ini.
         const scopeFilters = isSuperadminView ? { tahun: tahunAktif } : { kantor_id: kantorAktif, tahun: tahunAktif };
@@ -1450,7 +1450,7 @@ async function openDetilModal(mak) {
 
         const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
         const tahunAktif = await getTahunAktif();
-        const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+        const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
         const rows = rawRows.filter(d =>
             Number(d.tahun) === tahunAktif && (isSuperadminView || d.kantor_id === kantorAktif)
         );
@@ -2136,7 +2136,7 @@ async function pokAmbilKegiatanMak(mak) {
     }
     const kantorAktif = (typeof getKantorAktif === 'function') ? getKantorAktif() : '';
     const tahunAktif = await getTahunAktif();
-    const isSuperadminView = localStorage.getItem('superadminMode') === '1';
+    const isSuperadminView = false; // data SELALU mengikuti satker terpilih (superadmin di Kanwil tidak melihat data KPKNL)
     return rawRows
         .filter(d => Number(d.tahun) === tahunAktif && (isSuperadminView || d.kantor_id === kantorAktif)
             && String(d.mak || '').trim() === String(mak || '').trim())
