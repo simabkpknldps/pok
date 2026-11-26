@@ -650,7 +650,7 @@
     function autoTinggi(el) {
         if (!el) return;
         el.style.height = 'auto';
-        el.style.height = Math.max(el.scrollHeight + 2, 56) + 'px';
+        el.style.height = Math.max(el.scrollHeight + 4, 56) + 'px';
     }
 
     function pesanGalatJarwo(e) {
@@ -862,7 +862,14 @@
                     <button id="lpt-docx" class="px-4 py-2 bg-sky-700 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-word mr-1"></i>Unduh .docx</button>
                     <button id="lpt-pdf" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-pdf mr-1"></i>Unduh PDF</button>
                 </div>`;
-            popup.querySelectorAll('.lpt-ta').forEach(el => { autoTinggi(el); el.addEventListener('input', () => autoTinggi(el)); });
+            // Tinggi kotak teks menyesuaikan isi. Diukur ulang setelah tata letak stabil (scrollbar popup muncul
+            // setelah kotak membesar dan mempersempit lebar), juga saat jendela diubah ukurannya.
+            const semuaTinggi = () => popup.querySelectorAll('.lpt-ta').forEach(autoTinggi);
+            popup.querySelectorAll('.lpt-ta').forEach(el => el.addEventListener('input', () => { autoTinggi(el); semuaTinggi(); }));
+            semuaTinggi();
+            requestAnimationFrame(semuaTinggi);
+            [60, 200, 500].forEach(ms => setTimeout(() => { if (mode === 'edit') semuaTinggi(); }, ms));
+            if (!popup._lptResize) { popup._lptResize = true; window.addEventListener('resize', () => { if (mode === 'edit') semuaTinggi(); }); }
             tampilStInfo();
             $('kembali').onclick = () => { bacaForm(); renderPratinjau(); };
             $('fotofile').onchange = function () { tambahFoto(this.files); };
