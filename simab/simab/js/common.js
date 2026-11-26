@@ -206,6 +206,7 @@ const DASH_KARTU = [
     { id: 'mp', label: 'Maksimum Pencairan PNBP' },
     { id: 'hariini', label: 'Kegiatan Hari Ini' },
     { id: 'top', label: 'Top 3 Perjadin' },
+    { id: 'perjadinku', label: 'Perjalanan Dinas Saya (yang sedang berjalan)' },
     { id: 'rpd', label: 'RPD Berjalan' },
     { id: 'spm', label: 'Rekapitulasi SPM' },
     { id: 'grafikrp', label: 'Grafik Realisasi Perjalanan Dinas (Rp)' },
