@@ -44,7 +44,7 @@
 
     // Alamat Apps Script KHUSUS unggah/baca PDF ST (GAS_UPLOAD_ST_MANDIRI.gs).
     // Isi dengan alamat deployment "/exec" skrip itu. Bila kosong, dipakai Apps Script utama SiMAB.
-    const ST_GAS_URL = '';
+    const ST_GAS_URL = 'https://script.google.com/macros/s/AKfycbzKLTQtH5SXUomuuhPWk3-JCEMufUMVWAVTBLv9bsjgqO2_xkYFPN8yAO-wd1MdliBPOg/exec';
 
     async function stPost(payload, timeout) {
         let url = ST_GAS_URL;
