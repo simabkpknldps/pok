@@ -944,6 +944,45 @@ async function refLoadKantorData() {
     }
 }
 
+// Kop surat tiap kantor (dipakai Laporan Pelaksanaan Tugas): baris kop + alamat.
+async function refBukaKopKantor(id, nama) {
+    let kopTeks = '', kopAlamat = '';
+    try {
+        await waitSupabaseAuthReady();
+        const { data, error } = await sb.from('kantor').select('id, kop_teks, kop_alamat').eq('id', id).maybeSingle();
+        if (error) throw new Error(/kop_/i.test(error.message || '') ? 'Kolom kop belum ada. Jalankan supabase-kop-kantor.sql di Supabase.' : error.message);
+        kopTeks = (data && data.kop_teks) || ''; kopAlamat = (data && data.kop_alamat) || '';
+    } catch (e) { alert(e.message || e); return; }
+
+    const { overlay, popup } = commonOpenOverlay(`
+        <h3 class="text-sky-700 font-semibold text-base">Kop surat &middot; ${nama}</h3>
+        <div class="text-xs text-slate-500">Dipakai pada Laporan Pelaksanaan Tugas kantor ini. Satu baris kop per baris; ditulis dari atas ke bawah.</div>
+        <label class="text-xs font-semibold text-slate-600">Baris kop</label>
+        <textarea id="ref-kop-teks" rows="6" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="KEMENTERIAN KEUANGAN REPUBLIK INDONESIA&#10;DIREKTORAT JENDERAL KEKAYAAN NEGARA&#10;KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA&#10;... (nama kanwil)&#10;KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG ...">${kopTeks}</textarea>
+        <label class="text-xs font-semibold text-slate-600">Alamat, telepon, laman (di bawah kop)</label>
+        <textarea id="ref-kop-alamat" rows="3" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" placeholder="GEDUNG ..., JALAN ..., KOTA ...; TELEPON ...; LAMAN ...">${kopAlamat}</textarea>
+        <div id="ref-kop-msg" class="text-xs min-h-[16px]"></div>
+        <div class="flex justify-end gap-2">
+            <button id="ref-kop-batal" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm">Batal</button>
+            <button id="ref-kop-simpan" class="px-4 py-2 bg-sky-700 text-white rounded-lg text-sm font-medium">Simpan</button>
+        </div>
+    `, 'max-w-lg');
+    popup.querySelector('#ref-kop-batal').onclick = () => overlay.remove();
+    popup.querySelector('#ref-kop-simpan').onclick = async function () {
+        const msg = popup.querySelector('#ref-kop-msg');
+        const teks = popup.querySelector('#ref-kop-teks').value.trim();
+        const alamat = popup.querySelector('#ref-kop-alamat').value.trim();
+        this.disabled = true; msg.className = 'text-xs text-slate-500'; msg.textContent = 'Menyimpan…';
+        try {
+            await waitSupabaseAuthReady();
+            const { error } = await sb.from('kantor').update({ kop_teks: teks || null, kop_alamat: alamat || null }).eq('id', id);
+            if (error) throw new Error(error.message);
+            showToast('Kop surat disimpan');
+            overlay.remove();
+        } catch (e) { msg.className = 'text-xs text-red-600'; msg.textContent = '❌ ' + (e.message || e); this.disabled = false; }
+    };
+}
+
 function refRenderKantorTable(keyword) {
     const tbody = document.getElementById('ref-kantor-tbody');
     const emptyMsg = document.getElementById('ref-kantor-empty');
@@ -981,6 +1020,9 @@ function refRenderKantorTable(keyword) {
                 <button class="ref-kantor-btnCancel hidden text-slate-400 hover:text-slate-600 mr-2" title="Batal">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
+                <button class="ref-kantor-btnKop text-slate-600 hover:text-slate-800 mr-2" title="Kop surat (untuk LPT)">
+                    <i class="fa-solid fa-file-lines"></i>
+                </button>
                 <button class="ref-kantor-btnToggleStatus text-amber-600 hover:text-amber-800" title="${row.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}">
                     <i class="fa-solid ${row.status === 'aktif' ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
                 </button>
@@ -995,6 +1037,8 @@ function refRenderKantorTable(keyword) {
         const btnSave = tr.querySelector('.ref-kantor-btnSave');
         const btnCancel = tr.querySelector('.ref-kantor-btnCancel');
         const btnToggle = tr.querySelector('.ref-kantor-btnToggleStatus');
+        const btnKop = tr.querySelector('.ref-kantor-btnKop');
+        if (btnKop) btnKop.onclick = () => refBukaKopKantor(id, namaInput.value);
         let namaSebelumEdit = namaInput.value;
 
         btnEdit.onclick = () => {
