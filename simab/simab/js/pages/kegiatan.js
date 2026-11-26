@@ -2105,22 +2105,36 @@ function kgShowDokumenPopup(tr) {
 
 
 // ---- Hapus ----
+// Dua pilihan: hapus seluruh data kegiatan, atau hanya menghapus nomor SPM (dan tgl SP2D)
+// dari kegiatan itu -- datanya tetap ada, statusnya dihitung ulang.
 function kgShowDeletePopup(tr) {
     const idKegiatan = tr.dataset.id;
     const uraian = tr.cells[1].textContent;
+    const rowData = kgAllRows.find(r => String(r.A) === String(idKegiatan));
+    const nomorSpm = String(rowData?.R || '').trim();
 
     const { overlay, popup } = kgOpenOverlay(`
-        <h3 class="text-center text-red-600 font-semibold text-base">Konfirmasi Hapus</h3>
-        <p class="text-center text-sm text-slate-600">Yakin ingin menghapus kegiatan:</p>
-        <strong class="text-center block">${uraian}</strong>
-        <div class="flex justify-center gap-2 mt-3">
+        <h3 class="text-center text-red-600 font-semibold text-base">Hapus</h3>
+        <strong class="text-center block text-sm">${uraian}</strong>
+        <div class="flex flex-col gap-2 mt-3">
+            <button id="kg-delData" class="text-left px-4 py-3 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100">
+                <div class="text-sm font-semibold text-red-700"><i class="fa-solid fa-trash mr-2"></i>Hapus data</div>
+                <div class="text-xs text-slate-500 mt-0.5">Seluruh data kegiatan ini dihapus permanen.</div>
+            </button>
+            <button id="kg-delSpm" ${nomorSpm ? '' : 'disabled'} class="text-left px-4 py-3 border border-slate-200 rounded-xl ${nomorSpm ? 'hover:bg-slate-50' : 'opacity-50 cursor-not-allowed'}">
+                <div class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-eraser mr-2"></i>Hapus nomor SPM</div>
+                <div class="text-xs text-slate-500 mt-0.5">${nomorSpm ? 'Hanya nomor SPM <b>' + nomorSpm + '</b> dan tanggal SP2D yang dikosongkan; data kegiatan tetap ada.' : 'Kegiatan ini belum memiliki nomor SPM.'}</div>
+            </button>
+        </div>
+        <div class="flex justify-center mt-3">
             <button id="kg-deleteCancel" class="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">Batal</button>
-            <button id="kg-deleteConfirm" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium">Hapus</button>
         </div>
     `);
 
     popup.querySelector('#kg-deleteCancel').onclick = () => overlay.remove();
-    popup.querySelector('#kg-deleteConfirm').onclick = async function () {
+
+    popup.querySelector('#kg-delData').onclick = async function () {
+        if (!confirm('Yakin menghapus seluruh data kegiatan ini?')) return;
         this.disabled = true;
         kgShowLoading(true);
         try {
@@ -2133,6 +2147,26 @@ function kgShowDeletePopup(tr) {
             kgLoadData(true);
         } catch (e) {
             alert('Gagal hapus: ' + (e.message || e));
+        } finally {
+            kgShowLoading(false);
+        }
+    };
+
+    popup.querySelector('#kg-delSpm').onclick = async function () {
+        if (!nomorSpm) return;
+        this.disabled = true;
+        kgShowLoading(true);
+        try {
+            await waitSupabaseAuthReady();
+            const status = kgComputeStatus(rowData?.G, rowData?.I, rowData?.J, '');
+            const { error } = await sb.from('kegiatan').update({ nomor_spm: '', tgl_sp2d: null, status }).eq('id', idKegiatan);
+            if (error) throw new Error(error.message);
+
+            overlay.remove();
+            showToast('Nomor SPM berhasil dihapus');
+            kgLoadData(true);
+        } catch (e) {
+            alert('Gagal hapus nomor SPM: ' + (e.message || e));
         } finally {
             kgShowLoading(false);
         }
