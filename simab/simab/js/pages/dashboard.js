@@ -500,7 +500,7 @@ async function initDashboardPage() {
 }
 
 // ============================================
-// PERJADIN SAYA (berjalan) -- milik user yang login, status != Selesai
+// PERJADIN SAYA (berjalan) -- milik user yang login; Selesai hilang 2 hari setelah tgl SP2D
 // ============================================
 const PJD_STATUS_URUT = ['Rekam Data', 'Terlaksana', 'LPT', 'Terbayar', 'Selesai'];
 const PJD_STATUS_WARNA = {
@@ -512,6 +512,14 @@ const PJD_BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 
 function computePerjadinkuData(kegiatanRowsRaw, tahunAktif) {
     const nama = (localStorage.getItem('nama') || '').trim().toLowerCase();
     if (!nama) return [];
+    const hariIni = new Date(); hariIni.setHours(0, 0, 0, 0);
+    // Status Selesai tetap tampil sampai 2 hari setelah tanggal SP2D, lalu hilang dari Dashboard.
+    const selesaiMasihTampil = (k) => {
+        const sp2d = new Date(k.tgl_sp2d);
+        if (!k.tgl_sp2d || isNaN(sp2d.getTime())) return false;
+        sp2d.setHours(0, 0, 0, 0);
+        return Math.round((hariIni - sp2d) / 86400000) <= 2;
+    };
     return (kegiatanRowsRaw || [])
         .filter(k => {
             const mak = String(k.mak || '');
@@ -519,7 +527,7 @@ function computePerjadinkuData(kegiatanRowsRaw, tahunAktif) {
                 && (mak.includes('524111') || mak.includes('524113'))
                 && Number(k.tahun) === Number(tahunAktif)
                 && PJD_STATUS_URUT.includes(k.status)
-                && k.status !== 'Selesai';
+                && (k.status !== 'Selesai' || selesaiMasihTampil(k));
         })
         .sort((a, b) => String(a.tgl_mulai || '').localeCompare(String(b.tgl_mulai || '')));
 }
