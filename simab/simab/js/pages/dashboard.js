@@ -487,6 +487,8 @@ async function initDashboardPage() {
         container.innerHTML = buildDashboardHtml(data, rpdBerjalanData, rekapSpmData, perjadinkuRows);
         const btnPjd = document.getElementById('dash-pjd-more');
         if (btnPjd) btnPjd.onclick = () => navigate('perjadin');
+        container.querySelectorAll('.dash-pjd-lpt').forEach(b => { b.onclick = () => window.lptBukaEditor && window.lptBukaEditor(b.dataset.id); });
+        container.querySelectorAll('.dash-pjd-st').forEach(b => { b.onclick = () => window.stBuka && window.stBuka(b.dataset.link, 'Surat Tugas — ' + b.dataset.uraian); });
         initCharts(data);
         bindGlobalSearchBar();
         bindRpdBerjalanEvents();
@@ -556,12 +558,15 @@ function renderPerjadinkuCard(rows) {
         return `<div class="pb-3.5" style="border-bottom: 1px solid var(--divider);">
             <div class="flex items-start justify-between gap-3 mb-2">
                 <div class="min-w-0">
-                    <div class="text-[13px] font-medium" style="color: var(--label);">${escapeHtml(k.uraian || '-')}</div>
+                    <div class="text-[13px] font-medium" style="color: var(--label);">${k.st_link
+                        ? `<button type="button" class="dash-pjd-st text-left hover:underline" style="color: var(--ios-blue);" data-link="${escapeHtml(k.st_link)}" data-uraian="${escapeHtml(k.uraian || '')}" title="Lihat PDF Surat Tugas">${escapeHtml(k.uraian || '-')}</button>`
+                        : escapeHtml(k.uraian || '-')}</div>
                     <div class="text-[11px] mt-0.5" style="color: var(--label-secondary);">${escapeHtml(k.tujuan || '-')} &middot; ${escapeHtml(pjdRentang(k.tgl_mulai, k.tgl_selesai))}${jml ? ' &middot; ' + jml.toLocaleString('id-ID') : ''}</div>
                 </div>
                 <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap" style="background:${warna}22;color:${warna};">${escapeHtml(k.status)}</span>
             </div>
             <div style="display:flex;gap:4px">${seg}</div>
+            <div class="mt-2 flex justify-end"><button type="button" class="dash-pjd-lpt text-[11px] font-semibold px-2.5 py-1 rounded-lg" style="background:var(--ios-blue);color:#fff;" data-id="${escapeHtml(k.id)}" title="Susun konsep Laporan Pelaksanaan Tugas (bisa diunduh .docx)"><i class="fa-solid fa-file-pen mr-1"></i>Generate LPT</button></div>
         </div>`;
     };
     const sisa = rows.length - MAKS;

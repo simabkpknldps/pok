@@ -589,6 +589,44 @@ ${JSON.stringify(hasil.slice(0, 24))}`;
   return { items };
 }
 
+// ---------- konsep LPT (Laporan Pelaksanaan Tugas) dari teks Surat Tugas ----------
+const LPT_PROMPT = `Kamu membantu menyusun KONSEP Laporan Pelaksanaan Tugas (LPT) perjalanan dinas di lingkungan KPKNL (DJKN, Kemenkeu), bahasa Indonesia baku, formal, kalimat pasif/netral, tanpa mengarang fakta.
+Masukan: teks Surat Tugas (ST), data kegiatan, dan catatan hasil dari pelaksana (boleh kosong).
+Keluarkan HANYA JSON: {
+ "nomor_nd": nomor Nota Dinas dasar penugasan (mis. "ND-581/KNL.140103/2026") atau "",
+ "tgl_nd": tanggal Nota Dinas apa adanya (mis. "9 November 2026") atau "",
+ "seksi_nd": jabatan pembuat Nota Dinas (mis. "Kepala Seksi Piutang Negara") atau "",
+ "hal": perihal/inti penugasan dari ST, diawali huruf kapital (mis. "Penyampaian Surat Paksa dan Penagihan Langsung terhadap Penanggung Utang"),
+ "maksud": 1 paragraf Maksud dan Tujuan (dalam rangka apa, objek/debitur/pihak yang dituju bila ada di ST, lokasi),
+ "kegiatan": 1 paragraf Kegiatan yang Dilaksanakan (apa yang dikerjakan tim; bila catatan kosong, tulis berdasarkan isi ST secara umum dan wajar tanpa detail temuan),
+ "hasil": array 1-5 string, tiap butir hasil yang dicapai (butir 1 = tugas pada tanggal ... telah dilaksanakan dengan baik; butir berikutnya dari catatan pelaksana bila ada. JANGAN mengarang temuan/nominal/nama orang yang tidak ada di ST atau catatan; beri penanda "[lengkapi ...]" bila perlu detail),
+ "simpulan": 1 paragraf Simpulan dan Saran
+}.
+Gunakan data yang tersedia di ST secara apa adanya (nama, nomor, tanggal). Jangan menambah nama orang baru.`;
+
+async function susunLpt(b: any) {
+  const text = LPT_PROMPT + "\n\n=== TEKS SURAT TUGAS ===\n" + String(b.st_text || "(tidak tersedia)").slice(0, 12000) +
+    "\n\n=== DATA KEGIATAN ===\n" + JSON.stringify(b.info || {}) +
+    "\n\n=== CATATAN HASIL DARI PELAKSANA ===\n" + String(b.catatan || "(kosong)").slice(0, 4000);
+  const errs: string[] = [];
+  if (keys("GEMINI_KEYS").length) {
+    try {
+      const r = await withModels(GEMINI_EXTRACT_MODELS, (mdl) => withKeys("GEMINI_KEYS", (key) =>
+        post(`https://generativelanguage.googleapis.com/v1beta/models/${mdl}:generateContent`,
+          { contents: [{ parts: [{ text }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.3 } }, { "x-goog-api-key": key })));
+      return parseJson(r.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+    } catch (e) { errs.push("gemini: " + String(e).slice(0, 120)); }
+  }
+  if (keys("OPENROUTER_KEYS").length) {
+    try {
+      const r = await withModels(OR_MODELS, (model) => withKeys("OPENROUTER_KEYS", (key) =>
+        post("https://openrouter.ai/api/v1/chat/completions", { model, temperature: 0.3, messages: [{ role: "user", content: text }] }, { Authorization: `Bearer ${key}` })));
+      return parseJson(r.choices?.[0]?.message?.content || "{}");
+    } catch (e) { errs.push("openrouter: " + String(e).slice(0, 120)); }
+  }
+  throw new Error("Gagal menyusun konsep LPT. " + errs.join(" | "));
+}
+
 Deno.serve(async (req: Request) => {
   deadline = Date.now() + 100_000;
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -601,6 +639,7 @@ Deno.serve(async (req: Request) => {
     if (!c.kantor) return json({ error: "kantor kosong" }, 400);
 
     if (b.mode === "info_perbendaharaan") return json(await infoPerbendaharaan(b, c));
+    if (b.mode === "lpt") return json({ draft: await susunLpt(b) });
     if (b.mode === "extract") {
       if (!b.file?.data || !b.file?.mime) return json({ error: "file kosong" }, 400);
       if (b.file.data.length > 14_000_000) return json({ error: "File terlalu besar (maks ±10 MB)" }, 413);
