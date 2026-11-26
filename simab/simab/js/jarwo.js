@@ -27,6 +27,7 @@
     if (!r.ok) throw new Error(j.error || ('Error ' + r.status));
     return j;
   }
+  window.jarwoCall = call; // dipakai editor Konsep LPT (lpt.js)
 
   // markdown ringan -> HTML aman (tebal, miring, daftar, tabel sederhana jadi teks)
   // LaTeX sederhana -> teks biasa (cadangan bila AI tetap menulis rumus dengan $...$)
@@ -244,7 +245,7 @@
     try {
       const f = await shrink(file);
       const r = await call({ mode: 'extract', file: { mime: f.type, data: await toB64(f) }, hint: MOBILE ? 'kuitansi' : input.value.trim() });
-      w.remove(); drafCard(r.draft);
+      w.remove(); r.draft._file = file; drafCard(r.draft);
     } catch (e) { w.textContent = 'Gagal membaca dokumen: ' + e.message; }
     busy = false;
   }
@@ -334,7 +335,7 @@
     };
     c.querySelector('#' + id + 'ok').onclick = async function () {
       this.disabled = true;
-      try { if (jenis === 'surat_tugas') { const dup = await cekSTGanda(v('ur')); if (dup.length && !confirm('Nomor ST "' + v('ur') + '" sudah tercatat di ' + dup.length + ' kegiatan (' + dup.slice(0, 3).map(x => x.pelaksana).join(', ') + '). Tetap simpan?')) { this.disabled = false; return; } } const ring = ringkasan(jenis, c, id, v); await simpan(jenis, c, id, v, d); c.innerHTML = '<b>✅ Tersimpan.</b>' + ring; c.querySelectorAll('a[data-q]').forEach(a => { a.onclick = e => { e.preventDefault(); bukaCari(a.dataset.q); }; }); if (window.kgLoadData) try { kgLoadData(true); } catch (_) {} }
+      try { if (jenis === 'surat_tugas') { const dup = await cekSTGanda(v('ur')); if (dup.length && !confirm('Nomor ST "' + v('ur') + '" sudah tercatat di ' + dup.length + ' kegiatan (' + dup.slice(0, 3).map(x => x.pelaksana).join(', ') + '). Tetap simpan?')) { this.disabled = false; return; } } const ring = ringkasan(jenis, c, id, v); await simpan(jenis, c, id, v, d); c.innerHTML = '<b>✅ Tersimpan.</b>' + ring + (d._stOk ? '<div style="font-size:12px;color:#166534;margin-top:4px">📎 PDF ST tersimpan di Google Drive (bisa dibuka dari uraian di halaman Kegiatan).</div>' : '') + (d._stGagal ? '<div style="font-size:12px;color:#b45309;margin-top:4px">⚠ Kegiatan tersimpan, tetapi PDF ST belum terunggah ke Drive: ' + esc(d._stGagal) + '</div>' : ''); c.querySelectorAll('a[data-q]').forEach(a => { a.onclick = e => { e.preventDefault(); bukaCari(a.dataset.q); }; }); if (window.kgLoadData) try { kgLoadData(true); } catch (_) {} }
       catch (e) { alert('Gagal menyimpan: ' + e.message); this.disabled = false; }
     };
   }
@@ -416,6 +417,14 @@
       }));
       const { error } = await sb.from('kegiatan').insert(ins); if (error) throw new Error(error.message);
       void lpt;
+      // MAK perjadin + PDF ST yang diunggah -> simpan juga ke Google Drive; tautannya masuk kolom st_link.
+      if (lpt && d._file && window.stUploadFile && (d._file.type === 'application/pdf' || /\.pdf$/i.test(d._file.name || ''))) {
+        try {
+          const link = await window.stUploadFile(d._file, { id: ins[0].id, uraian: v('ur') });
+          await window.stSimpanLink(ins.map(x => x.id), link);
+          d._stOk = true;
+        } catch (e) { d._stGagal = e.message || String(e); }
+      }
     } else if (jenis === 'kuitansi') {
       const mak = v('mk').trim(); if (!mak) throw new Error('MAK wajib diisi');
       if (/52411[13]/.test(mak)) throw new Error('MAK perjadin (524111/524113) direkam lewat Surat Tugas.');

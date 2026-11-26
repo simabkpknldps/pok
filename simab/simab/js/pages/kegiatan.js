@@ -128,6 +128,8 @@ function bindKegiatanEvents() {
         const bolehAksiTerbatas = isPrivileged || statusKegiatan === 'Rekam Data';
         const pesanTolak = 'Kegiatan ini sudah diproses lebih lanjut (status bukan Rekam Data) — hubungi admin kalau perlu perubahan.';
 
+        if (btn.classList.contains('kg-st-link')) { if (window.stBuka) window.stBuka(btn.dataset.link, 'Surat Tugas — ' + tr.cells[1].textContent.trim()); return; }
+        if (btn.classList.contains('kg-btn-konsep')) { if (window.lptBukaEditor) window.lptBukaEditor(tr.dataset.id); return; }
         if (btn.classList.contains('kg-pelaksana-link')) { kgShowPegawaiDetilPopup(btn.dataset.nama); return; }
         else if (btn.classList.contains('kg-jumlah-link')) { kgCopyAngka(btn.dataset.jumlah); return; }
         else if (btn.classList.contains('kg-btn-copy')) kgShowCopyPopup(tr); // selalu boleh, apapun status/role
@@ -270,7 +272,7 @@ function kgRenderTable(rows) {
 
         tr.innerHTML = `
             <td class="p-2.5 align-top">${r.B ?? ''}${kgSdBadge(r.B)}</td>
-            <td class="p-2.5 align-top">${r.C ?? ''}</td>
+            <td class="p-2.5 align-top">${r.S ? `<button type="button" class="kg-st-link text-left text-sky-700 hover:underline" data-link="${String(r.S).replace(/"/g, '&quot;')}" title="Lihat PDF Surat Tugas">${r.C ?? ''}</button>` : (r.C ?? '')}</td>
             <td class="p-2.5 align-top">${r.D ? `<button type="button" class="kg-pelaksana-link text-left" data-nama="${String(r.D).replace(/"/g, '&quot;')}" data-ini="${kgInisial(r.D)}">${r.D}</button>` : ''}</td>
             <td class="p-2.5 align-top">${r.E ?? ''}</td>
             <td class="p-2.5 align-top whitespace-nowrap">${formatDate(r.F)}</td>
@@ -284,6 +286,7 @@ function kgRenderTable(rows) {
                     <button class="kg-btn-ubah" title="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
                     ${(!r.P || r.P === 'Rekam Data') ? `<button class="kg-btn-pelaksana" title="Pelaksana"><i class="fa-solid fa-user-check"></i></button>` : ''}
                     ${kgButuhLPT(r.B) ? `<button class="kg-btn-lpt" title="LPT"><i class="fa-solid fa-file-lines"></i></button>` : ''}
+                    ${(window.lptIsPerjadin && window.lptIsPerjadin(r.B)) ? `<button class="kg-btn-konsep text-emerald-600" title="Generate konsep LPT (Word)"><i class="fa-solid fa-file-pen"></i></button>` : ''}
                     <button class="kg-btn-bayar" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
                     <button class="kg-btn-sp2d" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
                     <button class="kg-btn-detil text-sky-600" title="Detil"><i class="fa-solid fa-circle-info"></i></button>
@@ -358,7 +361,7 @@ async function kgLoadData(forceRefresh) {
             I: d.tgl_lpt || '', J: d.tgl_bayar || '',
             M: Number(d.jumlah) || 0, N: d.user || '', O: d.tgl_rekam || '',
             P: d.status || '', Q: d.tgl_sp2d || '', R: d.nomor_spm || '',
-            T: d.dokumen_link || '', U: d.spby_link || '',
+            T: d.dokumen_link || '', U: d.spby_link || '', S: d.st_link || '',
             KANTOR: d.kantor_id || '', TAHUN: d.tahun || null, PERBANTUAN: d.perbantuan === true
         }));
 
