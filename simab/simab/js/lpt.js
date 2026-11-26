@@ -321,6 +321,26 @@
         return teks.replace(/[ \t]+/g, ' ').trim();
     }
 
+    // Urutkan nama pelaksana sesuai urutan kemunculannya di teks Surat Tugas.
+    // Nama di ST biasanya huruf biasa dan bisa sedikit beda ejaan, jadi dicocokkan bertahap.
+    function urutkanSesuaiTeks(daftar, teks) {
+        const T = String(teks || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+        if (!T.trim()) return daftar.slice();
+        const posisi = (nama) => {
+            const w = String(nama).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+            const kandidat = [w.join(' '), w.slice(0, 2).join(' '), w.slice(-2).join(' '), w[0], w[w.length - 1]];
+            for (const c of kandidat) {
+                if (!c || c.length < 4) continue;
+                const i = T.indexOf(c);
+                if (i >= 0) return i;
+            }
+            return -1;
+        };
+        return daftar.map((n, i) => ({ n, i, p: posisi(n) }))
+            .sort((a, b) => (a.p < 0 ? 1e9 : a.p) - (b.p < 0 ? 1e9 : b.p) || a.i - b.i)
+            .map(x => x.n);
+    }
+
     // ------------------------------------------------------------------
     // 5) Pratinjau dokumen + Editor Konsep LPT
     // ------------------------------------------------------------------
@@ -459,12 +479,16 @@
                 setStatus('Membaca PDF Surat Tugas…');
                 try { stText = await teksDariPdfDrive(g.st_link); } catch (e) { setStatus('PDF ST tidak terbaca (' + (e.message || e) + '), memakai data kegiatan saja…'); }
             }
+            if (stText) {
+                const daftar = String(k.pelaksana || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+                if (daftar.length > 1) k.pelaksana = urutkanSesuaiTeks(daftar, stText).join('\n');
+            }
             setStatus('Jarwo sedang menyusun konsep laporan…');
             let r;
             try {
                 r = await window.jarwoCall({
                     mode: 'lpt', st_text: stText, catatan: k.catatan || '',
-                    info: { nomor_st: g.nomor_st, tgl_st: tglIndo(g.tgl_st), tgl_tugas: k.tgl_tugas, tujuan: g.tujuan, pelaksana: g.pelaksana }
+                    info: { nomor_st: g.nomor_st, tgl_st: tglIndo(g.tgl_st), tgl_tugas: k.tgl_tugas, tujuan: g.tujuan, pelaksana: String(k.pelaksana || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean) }
                 });
             } catch (e) { throw new Error(pesanGalatJarwo(e)); }
             const d = (r && r.draft) || {};
@@ -596,6 +620,6 @@
     window.stBuka = stBuka;
     window.lptBukaEditor = bukaEditorLpt;
     window.lptIsPerjadin = isPerjadin;
-    window.lptInternal = { bangunDocx, tglIndo, rentangTugas, nomorStBersih, htmlPratinjau, logoBytes };
+    window.lptInternal = { bangunDocx, tglIndo, rentangTugas, nomorStBersih, htmlPratinjau, logoBytes, urutkanSesuaiTeks };
     if (typeof module !== 'undefined') module.exports = window.lptInternal;
 })();
