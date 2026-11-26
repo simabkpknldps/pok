@@ -239,8 +239,8 @@
         body.push(judul('D. Simpulan dan Saran'), ...baris(k.simpulan).map(t => isi(t, 360)));
         body.push(judul('E. Penutup'), isi('Demikian laporan pelaksanaan tugas ini kami sampaikan dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.', 360));
 
-        // Tulisan abu-abu di atas tiap nama + ruang kosong untuk QR TTE (sekitar 1,8 cm).
-        const labelTte = () => p(tr('Ditandatangani secara elektronik', { color: 'BFBFBF', size: 22 }), { spacing: { before: 1000, after: 0 }, keepNext: true });
+        // Tulisan abu-abu di atas tiap nama + ruang kosong untuk QR TTE (sekitar 2,8 cm, termasuk selisih aman).
+        const labelTte = () => p(tr('Ditandatangani secara elektronik', { color: 'BFBFBF', size: 22 }), { spacing: { before: 1560, after: 0 }, keepNext: true });
         const kiri = [p(tr(''), { spacing: { after: 0 } })];
         if (k.mengetahui_jabatan) {
             kiri.length = 0;
@@ -363,7 +363,7 @@
         const c = 'text-align:center;font-weight:700;line-height:1.35';
         const tabel = `<table style="border-collapse:collapse;margin:4px 0 8px 18px;width:calc(100% - 18px)"><tr><td style="border:1px solid #333;padding:3px 8px;width:44px;font-weight:700">No</td><td style="border:1px solid #333;padding:3px 8px;font-weight:700">Nama</td></tr>`
             + pel.map((n, i) => `<tr><td style="border:1px solid #333;padding:3px 8px">${i + 1}</td><td style="border:1px solid #333;padding:3px 8px">${esc(n)}</td></tr>`).join('') + '</table>';
-        const tte = '<div style="color:#bfbfbf;margin-top:56px">Ditandatangani secara elektronik</div>';
+        const tte = '<div style="color:#bfbfbf;margin-top:92px">Ditandatangani secara elektronik</div>';
         const nomorLpt = k.nomor_lpt ? esc(k.nomor_lpt) : kosong;
         return `<div id="lpt-kertas" style="background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;line-height:1.5;padding:28px 34px;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
             <div style="display:flex;align-items:center;gap:10px"><img src="data:image/png;base64,${LOGO_B64}" alt="" style="width:92px;height:${Math.round(92 * LOGO_RASIO)}px;flex:none"><div style="flex:1"><div style="${c};font-size:12px">KEMENTERIAN KEUANGAN REPUBLIK INDONESIA<br>DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>BALI DAN NUSA TENGGARA<br>${esc(kantor)}</div><div style="text-align:center;font-size:9px;margin-top:2px">GEDUNG KEUANGAN NEGARA I, JALAN DR. KUSUMAATMAJA, DENPASAR, BALI 80235; TELEPON (0361) 229151, 234623; FAKSIMILE (0361) 229150; LAMAN www.djkn.kemenkeu.go.id</div></div></div>
