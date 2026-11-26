@@ -188,7 +188,6 @@
         const sisa = d.tot.pagu - d.tot.blokir - d.tot.real;
         const serap = pct(d.tot.real, d.tot.pagu - d.tot.blokir); // terhadap pagu netto (pagu - blokir)
         const rpdSdBulan = d.rpdKum[d.bulanIni];
-        const targetRpd = pct(rpdSdBulan, d.tot.pagu - d.tot.blokir);
         const selisihRpd = rpdSdBulan - d.realKum[d.bulanIni];
         const jam = new Date().toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -246,7 +245,6 @@
               <div style="font-size:26px;font-weight:700;margin-top:6px;letter-spacing:-.01em">${pctTxt(serap)}</div>
               <div style="height:8px;border-radius:99px;background:rgba(255,255,255,.3);margin-top:10px;overflow:hidden"><div style="width:${Math.min(100, serap)}%;height:100%;background:#fff"></div></div>
               <div style="font-size:11px;margin-top:6px;opacity:.85">Realisasi ÷ pagu netto (pagu − blokir)</div>
-              <div style="font-size:12px;margin-top:2px;opacity:.9">Target RPD s.d. ${NAMA_BULAN[d.bulanIni]}: ${pctTxt(targetRpd)}</div>
             </div>
           </section>
 
