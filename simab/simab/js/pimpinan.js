@@ -63,7 +63,7 @@
 
         const tot = { pagu: 0, blokir: 0, real: 0 };
         const sd = { RM: { pagu: 0, blokir: 0, real: 0 }, PNBP: { pagu: 0, blokir: 0, real: 0 } };
-        const jenis = { barang: { pagu: 0, real: 0 }, modal: { pagu: 0, real: 0 } };
+        const jenis = { barang: { pagu: 0, blokir: 0, real: 0 }, modal: { pagu: 0, blokir: 0, real: 0 } };
         const seksi = {};
         const akun = []; // satu entri per Kode unik
         const sudah = new Set();
@@ -81,10 +81,10 @@
 
             tot.pagu += pagu; tot.blokir += blokir; tot.real += real;
             if (sd[sumber]) { sd[sumber].pagu += pagu; sd[sumber].blokir += blokir; sd[sumber].real += real; }
-            if (segAkun.startsWith('52')) { jenis.barang.pagu += pagu; jenis.barang.real += real; }
-            else if (segAkun.startsWith('53')) { jenis.modal.pagu += pagu; jenis.modal.real += real; }
-            seksi[nSeksi] = seksi[nSeksi] || { pagu: 0, real: 0 };
-            seksi[nSeksi].pagu += pagu; seksi[nSeksi].real += real;
+            if (segAkun.startsWith('52')) { jenis.barang.pagu += pagu; jenis.barang.blokir += blokir; jenis.barang.real += real; }
+            else if (segAkun.startsWith('53')) { jenis.modal.pagu += pagu; jenis.modal.blokir += blokir; jenis.modal.real += real; }
+            seksi[nSeksi] = seksi[nSeksi] || { pagu: 0, blokir: 0, real: 0 };
+            seksi[nSeksi].pagu += pagu; seksi[nSeksi].blokir += blokir; seksi[nSeksi].real += real;
 
             if (unik) akun.push({ kode, uraian: p.uraian || '', pagu, blokir, real });
             else akun.find(a => a.kode === kode).pagu += pagu;
@@ -136,7 +136,7 @@
         const perhatian = [];
         akun.forEach(a => {
             const sisa = a.pagu - a.blokir - a.real;
-            const serap = pct(a.real, a.pagu);
+            const serap = pct(a.real, a.pagu - a.blokir); // terhadap pagu netto
             if (a.pagu <= 0) return;
             if (sisa < 0) perhatian.push({ p: 0, label: 'Melebihi pagu', warna: ['#fee2e2', '#991b1b'], a, kanan: 'Lebih ' + ringkas(-sisa), ket: 'serapan ' + pctTxt(serap) });
             else if (serap >= 90 && sisa < a.pagu * 0.1) perhatian.push({ p: 1, label: 'Sisa menipis', warna: ['#fee2e2', '#991b1b'], a, kanan: 'Sisa ' + ringkas(sisa), ket: 'serapan ' + pctTxt(serap) });
@@ -186,22 +186,22 @@
 
     function buildHtml(d, ctx) {
         const sisa = d.tot.pagu - d.tot.blokir - d.tot.real;
-        const serap = pct(d.tot.real, d.tot.pagu);
+        const serap = pct(d.tot.real, d.tot.pagu - d.tot.blokir); // terhadap pagu netto (pagu - blokir)
         const rpdSdBulan = d.rpdKum[d.bulanIni];
-        const targetRpd = pct(rpdSdBulan, d.tot.pagu);
+        const targetRpd = pct(rpdSdBulan, d.tot.pagu - d.tot.blokir);
         const selisihRpd = rpdSdBulan - d.realKum[d.bulanIni];
         const jam = new Date().toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
         const kpi = (jdl, nilai, ket, warna) => kartu(`<div style="font-size:13px;color:#6e6e73;font-weight:500">${jdl}</div><div style="font-size:26px;font-weight:700;margin-top:6px;letter-spacing:-.01em;${warna ? 'color:' + warna : ''}">${ringkas(nilai)}</div><div style="font-size:12px;color:#6e6e73;margin-top:4px">${ket}</div>`);
 
         const sdBlok = (nama, warna, v) => `<div>
-            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${warna}"></span>${nama}</span><span style="color:#6e6e73">${pctTxt(pct(v.real, v.pagu))} serapan</span></div>
-            <div style="margin-top:8px">${bar(pct(v.real, v.pagu), warna, 10)}</div>
+            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${warna}"></span>${nama}</span><span style="color:#6e6e73">${pctTxt(pct(v.real, v.pagu - v.blokir))} serapan</span></div>
+            <div style="margin-top:8px">${bar(pct(v.real, v.pagu - v.blokir), warna, 10)}</div>
             <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;font-size:12px;color:#6e6e73;margin-top:6px"><span>Pagu ${ringkas(v.pagu)}</span><span>Realisasi ${ringkas(v.real)}</span><span>Blokir ${ringkas(v.blokir)}</span></div></div>`;
 
-        const jenisBaris = (nama, v) => `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${nama}</span><span style="color:#6e6e73">${pctTxt(pct(v.real, v.pagu))}</span></div><div style="margin:6px 0 12px">${bar(pct(v.real, v.pagu), '#1d1d1f')}</div>`;
+        const jenisBaris = (nama, v) => `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${nama}</span><span style="color:#6e6e73">${pctTxt(pct(v.real, v.pagu - v.blokir))}</span></div><div style="margin:6px 0 12px">${bar(pct(v.real, v.pagu - v.blokir), '#1d1d1f')}</div>`;
 
-        const seksiRows = d.seksiList.map(s => `<tr style="border-top:1px solid #eef0f3"><td style="padding:12px 8px 12px 0;font-weight:600">${esc(s.nama)}</td><td style="padding:12px 8px;text-align:right">${ringkas(s.pagu)}</td><td style="padding:12px 8px;text-align:right">${ringkas(s.real)}</td><td style="padding:12px 8px;min-width:150px"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1">${bar(pct(s.real, s.pagu), '#0071e3')}</div><span style="width:48px;text-align:right">${pctTxt(pct(s.real, s.pagu))}</span></div></td></tr>`).join('');
+        const seksiRows = d.seksiList.map(s => `<tr style="border-top:1px solid #eef0f3"><td style="padding:12px 8px 12px 0;font-weight:600">${esc(s.nama)}</td><td style="padding:12px 8px;text-align:right">${ringkas(s.pagu)}</td><td style="padding:12px 8px;text-align:right">${ringkas(s.real)}</td><td style="padding:12px 8px;min-width:150px"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1">${bar(pct(s.real, s.pagu - s.blokir), '#0071e3')}</div><span style="width:48px;text-align:right">${pctTxt(pct(s.real, s.pagu - s.blokir))}</span></div></td></tr>`).join('');
 
         const totalStatus = Object.values(d.status).reduce((a, b) => a + b, 0) || 1;
         const statusBaris = Object.entries(d.status).map(([s, n]) => `<div style="display:flex;align-items:center;gap:10px"><span style="flex:1;color:#6e6e73">${s}</span><span style="font-weight:700;font-size:16px">${n}</span><span style="padding:2px 10px;border-radius:99px;background:${STATUS_WARNA[s][0]};color:${STATUS_WARNA[s][1]};font-size:11px;font-weight:600">${pctTxt(pct(n, totalStatus))}</span></div>`).join('');
@@ -245,7 +245,8 @@
               <div style="font-size:13px;font-weight:500;opacity:.9">Serapan</div>
               <div style="font-size:26px;font-weight:700;margin-top:6px;letter-spacing:-.01em">${pctTxt(serap)}</div>
               <div style="height:8px;border-radius:99px;background:rgba(255,255,255,.3);margin-top:10px;overflow:hidden"><div style="width:${Math.min(100, serap)}%;height:100%;background:#fff"></div></div>
-              <div style="font-size:12px;margin-top:6px;opacity:.9">Target RPD s.d. ${NAMA_BULAN[d.bulanIni]}: ${pctTxt(targetRpd)}</div>
+              <div style="font-size:11px;margin-top:6px;opacity:.85">Realisasi ÷ pagu netto (pagu − blokir)</div>
+              <div style="font-size:12px;margin-top:2px;opacity:.9">Target RPD s.d. ${NAMA_BULAN[d.bulanIni]}: ${pctTxt(targetRpd)}</div>
             </div>
           </section>
 
