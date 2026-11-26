@@ -276,8 +276,61 @@
     }
 
     // ------------------------------------------------------------------
-    // 5) Editor Konsep LPT
+    // 5) Pratinjau dokumen + Editor Konsep LPT
     // ------------------------------------------------------------------
+    const pecahBaris = (s) => String(s || '').split(/\n\s*\n|\r?\n/).map(x => x.trim()).filter(Boolean);
+
+    // Pratinjau di layar yang menyerupai berkas Word (kop, bagian A-E, tanda tangan).
+    function htmlPratinjau(k, namaKantor) {
+        const kantor = String(namaKantor || 'KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG DENPASAR').toUpperCase();
+        const kantorSingkat = namaKantor || 'KPKNL Denpasar';
+        const kosong = '<span style="background:#fef3c7;color:#92400e;padding:0 4px;border-radius:3px">[belum diisi]</span>';
+        const J = 'text-align:justify;margin:0 0 6px 18px';
+        const para = (s) => pecahBaris(s).map(x => `<p style="${J}">${esc(x)}</p>`).join('') || `<p style="${J}">${kosong}</p>`;
+        const head = (t) => `<p style="font-weight:700;margin:14px 0 6px">${t}</p>`;
+        const pel = pecahBaris(String(k.pelaksana || '').replace(/\r/g, '').split('\n').join('\n\n'));
+        const kalimatST = `Surat Tugas Nomor ${k.nomor_st}${k.tgl_st ? ' tanggal ' + tglIndo(k.tgl_st) : ''}${k.hal ? ' hal ' + k.hal : ''}${k.tgl_tugas ? ' tanggal penugasan ' + k.tgl_tugas : ''}`;
+        const dasarND = k.nomor_nd
+            ? `Berdasarkan Nota Dinas ${k.seksi_nd ? k.seksi_nd + ' ' : ''}Nomor ${k.nomor_nd}${k.tgl_nd ? ' tanggal ' + k.tgl_nd : ''}, Kepala ${kantorSingkat} menugaskan:`
+            : `Kepala ${kantorSingkat} menugaskan:`;
+        const hasil = pecahBaris(k.hasil);
+        const c = 'text-align:center;font-weight:700;line-height:1.35';
+        const tabel = `<table style="border-collapse:collapse;margin:4px 0 8px 18px;width:calc(100% - 18px)"><tr><td style="border:1px solid #333;padding:3px 8px;width:44px;font-weight:700">No</td><td style="border:1px solid #333;padding:3px 8px;font-weight:700">Nama</td></tr>`
+            + pel.map((n, i) => `<tr><td style="border:1px solid #333;padding:3px 8px">${i + 1}</td><td style="border:1px solid #333;padding:3px 8px">${esc(n)}</td></tr>`).join('') + '</table>';
+        const nomorLpt = k.nomor_lpt ? esc(k.nomor_lpt) : kosong;
+        return `<div id="lpt-kertas" style="background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;line-height:1.5;padding:28px 34px;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+            <div style="${c};font-size:12px">KEMENTERIAN KEUANGAN REPUBLIK INDONESIA<br>DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>BALI DAN NUSA TENGGARA<br>${esc(kantor)}</div>
+            <div style="text-align:center;font-size:9px;border-bottom:2px solid #000;padding:2px 0 8px;margin-bottom:14px">GEDUNG KEUANGAN NEGARA I, JALAN DR. KUSUMAATMAJA, DENPASAR, BALI 80235; TELEPON (0361) 229151, 234623; FAKSIMILE (0361) 229150; LAMAN www.djkn.kemenkeu.go.id</div>
+            <div style="${c};margin-bottom:12px">LAPORAN<br>TENTANG<br>LAPORAN PELAKSANAAN TUGAS<br>NOMOR ${nomorLpt}</div>
+            ${head('A. Pendahuluan')}
+            <p style="margin:0 0 4px">1. Latar Belakang</p>
+            <p style="${J}">${esc(dasarND)}</p>${tabel}
+            <p style="${J}">Sesuai ${esc(kalimatST)}.</p>
+            <p style="margin:0 0 4px">2. Maksud dan Tujuan</p>${para(k.maksud)}
+            <p style="margin:0 0 4px">3. Dasar</p><p style="${J}">${esc(kalimatST)}.</p>
+            ${head('B. Kegiatan yang Dilaksanakan')}${para(k.kegiatan)}
+            ${head('C. Hasil yang Dicapai')}${hasil.length ? hasil.map((t, i) => `<p style="text-align:justify;margin:0 0 6px 36px;text-indent:-18px">${i + 1}.&nbsp; ${esc(t)}</p>`).join('') : `<p style="${J}">${kosong}</p>`}
+            ${head('D. Simpulan dan Saran')}${para(k.simpulan)}
+            ${head('E. Penutup')}<p style="${J}">Demikian laporan pelaksanaan tugas ini kami sampaikan dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.</p>
+            <div style="display:flex;justify-content:space-between;gap:16px;margin-top:22px">
+                <div style="width:48%">${k.mengetahui_jabatan ? `Mengetahui,<br>${esc(k.mengetahui_jabatan)}<br><br><br><b>${esc(k.mengetahui_nama || '')}</b>` : ''}</div>
+                <div style="width:48%">Dibuat di ${esc(k.tempat || 'Denpasar')}<br>pada tanggal ${esc(tglIndo(k.tgl_laporan))}<br>Pembuat Laporan<br><br>${pel.map(n => `<div style="font-weight:700;margin-top:26px">${esc(n)}</div>`).join('')}</div>
+            </div>
+        </div>`;
+    }
+
+    function autoTinggi(el) {
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.max(el.scrollHeight + 2, 56) + 'px';
+    }
+
+    function pesanGalatJarwo(e) {
+        const m = String((e && e.message) || e || '');
+        if (/pesan kosong/i.test(m)) return 'Edge Function Jarwo di Supabase belum versi terbaru (belum mengenal mode LPT). Tempel ulang supabase/functions/jarwo/index.ts lalu Deploy.';
+        return m;
+    }
+
     async function bukaEditorLpt(idKegiatan) {
         let g;
         try { g = await kumpulkanGrup(idKegiatan); } catch (e) { alert('Gagal memuat data kegiatan: ' + (e.message || e)); return; }
@@ -292,151 +345,203 @@
             if (data && data.konten) { k = Object.assign(k, data.konten); pernahTersimpan = true; }
         } catch (e) { /* tabel belum ada -> pakai konsep awal */ }
 
-        const f = (id, label, nilai, tipe) => `<label class="text-xs font-semibold text-slate-600">${label}</label>
-            <input id="lpt-${id}" type="${tipe || 'text'}" value="${esc(nilai)}" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">`;
-        const ta = (id, label, nilai, baris) => `<label class="text-xs font-semibold text-slate-600">${label}</label>
-            <textarea id="lpt-${id}" rows="${baris || 4}" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">${esc(nilai)}</textarea>`;
-
         const { overlay, popup } = window.commonOpenOverlay(`
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <h3 class="text-sky-700 font-semibold text-base">Konsep Laporan Pelaksanaan Tugas</h3>
-                    <div class="text-xs text-slate-500">${esc(g.nomor_st)} &middot; ${esc(g.pelaksana.length)} pelaksana${pernahTersimpan ? ' &middot; konsep tersimpan dimuat' : ''}</div>
+                    <div class="text-xs text-slate-500">${esc(g.nomor_st)} &middot; ${esc(g.pelaksana.length)} pelaksana</div>
                 </div>
                 <button id="lpt-x" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
             </div>
-
-            <div class="border border-sky-100 bg-sky-50 rounded-xl p-3 flex flex-col gap-2">
-                <div class="text-xs font-semibold text-sky-800"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Susun otomatis dengan Jarwo</div>
-                <textarea id="lpt-catatan" rows="2" placeholder="Catatan hasil (opsional): tulis poin singkat apa yang terjadi di lapangan, Jarwo akan merapikannya." class="w-full px-3 py-2 border border-sky-200 rounded-lg text-sm bg-white">${esc(k.catatan)}</textarea>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button id="lpt-ai" class="px-3 py-1.5 bg-sky-700 text-white rounded-lg text-sm font-medium">Susun dengan AI</button>
-                    <span id="lpt-stinfo" class="text-xs text-slate-500"></span>
-                </div>
-                <div id="lpt-status" class="text-xs min-h-[16px]"></div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
-                <div>${f('nomor_lpt', 'Nomor LPT', k.nomor_lpt)}</div>
-                <div>${f('tgl_laporan', 'Tanggal laporan', k.tgl_laporan, 'date')}</div>
-                <div>${f('nomor_nd', 'Nomor Nota Dinas', k.nomor_nd)}</div>
-                <div>${f('tgl_nd', 'Tanggal Nota Dinas (mis. 9 November 2026)', k.tgl_nd)}</div>
-                <div>${f('seksi_nd', 'Pembuat Nota Dinas (mis. Kepala Seksi Piutang Negara)', k.seksi_nd)}</div>
-                <div>${f('tgl_tugas', 'Tanggal penugasan', k.tgl_tugas)}</div>
-            </div>
-            ${f('hal', 'Hal / perihal penugasan', k.hal)}
-            ${ta('pelaksana', 'Pelaksana (satu nama per baris)', k.pelaksana, 3)}
-            ${ta('maksud', 'A.2 Maksud dan Tujuan', k.maksud, 3)}
-            ${ta('kegiatan', 'B. Kegiatan yang Dilaksanakan', k.kegiatan, 4)}
-            ${ta('hasil', 'C. Hasil yang Dicapai (pisahkan tiap butir dengan baris kosong)', k.hasil, 6)}
-            ${ta('simpulan', 'D. Simpulan dan Saran', k.simpulan, 3)}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1">
-                <div>${f('mengetahui_jabatan', 'Mengetahui — jabatan (kosongkan bila tidak ada)', k.mengetahui_jabatan)}</div>
-                <div>${f('mengetahui_nama', 'Mengetahui — nama', k.mengetahui_nama)}</div>
-            </div>
-            <div id="lpt-msg" class="text-xs min-h-[16px]"></div>
-            <div class="flex flex-wrap justify-end gap-2 mt-1">
-                <button id="lpt-simpan" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Simpan konsep</button>
-                <button id="lpt-docx" class="px-4 py-2 bg-sky-700 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-word mr-1"></i>Unduh .docx</button>
-            </div>
+            <div id="lpt-body" class="flex flex-col gap-3"></div>
         `, 'max-w-3xl');
 
         const $ = (id) => popup.querySelector('#lpt-' + id);
-        const KOLOM = ['nomor_lpt', 'tgl_laporan', 'nomor_nd', 'tgl_nd', 'seksi_nd', 'tgl_tugas', 'hal', 'pelaksana', 'maksud', 'kegiatan', 'hasil', 'simpulan', 'mengetahui_jabatan', 'mengetahui_nama'];
-        const ambil = () => {
-            const o = Object.assign({}, k, { nomor_st: g.nomor_st, tgl_st: g.tgl_st || k.tgl_st, catatan: $('catatan').value });
-            KOLOM.forEach(c => { o[c] = $(c).value; });
-            return o;
-        };
-        const pesan = (el, teks, warna) => { el.textContent = teks; el.className = 'text-xs min-h-[16px] ' + (warna || 'text-slate-500'); };
-
+        const pesan = (el, teks, warna) => { if (el) { el.innerHTML = teks; el.className = 'text-xs min-h-[16px] ' + (warna || 'text-slate-500'); } };
         $('x').onclick = () => overlay.remove();
 
-        // Info ST + unggah bila belum ada
-        const stInfo = $('stinfo');
-        const tampilStInfo = () => {
-            if (g.st_link) {
-                stInfo.innerHTML = `PDF ST tersimpan: <button type="button" id="lpt-lihatst" class="text-sky-700 underline">lihat</button>`;
-                popup.querySelector('#lpt-lihatst').onclick = () => stBuka(g.st_link, 'Surat Tugas ' + g.nomor_st);
-            } else {
-                stInfo.innerHTML = `PDF ST belum diunggah. <label class="text-sky-700 underline cursor-pointer">Unggah PDF ST<input id="lpt-stfile" type="file" accept="application/pdf" class="hidden"></label>`;
-                popup.querySelector('#lpt-stfile').onchange = async function () {
-                    const file = this.files[0]; if (!file) return;
-                    pesan($('status'), 'Mengunggah PDF ST ke Drive…', 'text-sky-700');
-                    try {
-                        const link = await stUploadFile(file, { id: g.ids[0], uraian: g.uraian });
-                        await stSimpanLink(g.ids, link);
-                        g.st_link = link;
-                        pesan($('status'), 'PDF ST tersimpan di Drive.', 'text-green-700');
-                        if (document.getElementById('kg-dataTableBody') && typeof window.kgLoadData === 'function') { try { window.kgLoadData(true); } catch (_) { /* abaikan */ } }
-                        tampilStInfo();
-                    } catch (e) { pesan($('status'), '❌ ' + (e.message || e), 'text-red-600'); }
-                };
-            }
-        };
-        tampilStInfo();
+        let mode = 'pratinjau';
+        let sibuk = false;
+        const KOLOM = ['nomor_lpt', 'tgl_laporan', 'nomor_nd', 'tgl_nd', 'seksi_nd', 'tgl_tugas', 'hal', 'pelaksana', 'maksud', 'kegiatan', 'hasil', 'simpulan', 'mengetahui_jabatan', 'mengetahui_nama'];
 
-        // Susun dengan AI
-        $('ai').onclick = async function () {
-            if (typeof window.jarwoCall !== 'function') { pesan($('status'), 'Jarwo belum dimuat di halaman ini.', 'text-red-600'); return; }
-            this.disabled = true;
-            try {
-                let stText = '';
-                if (g.st_link && adaDrive(g.st_link)) {
-                    pesan($('status'), 'Membaca PDF Surat Tugas…', 'text-sky-700');
-                    try { stText = await teksDariPdfDrive(g.st_link); } catch (e) { pesan($('status'), 'PDF ST tidak terbaca (' + (e.message || e) + '), memakai data kegiatan saja…', 'text-amber-700'); }
-                }
-                pesan($('status'), 'Jarwo sedang menyusun konsep…', 'text-sky-700');
-                const r = await window.jarwoCall({
-                    mode: 'lpt', st_text: stText, catatan: $('catatan').value,
-                    info: { nomor_st: g.nomor_st, tgl_st: tglIndo(g.tgl_st), tgl_tugas: $('tgl_tugas').value, tujuan: g.tujuan, pelaksana: g.pelaksana }
-                });
-                const d = r.draft || {};
-                const isiBila = (id, v) => { if (v && String(v).trim()) $(id).value = Array.isArray(v) ? v.join('\n\n') : String(v); };
-                isiBila('nomor_nd', d.nomor_nd); isiBila('tgl_nd', d.tgl_nd); isiBila('seksi_nd', d.seksi_nd); isiBila('hal', d.hal);
-                isiBila('maksud', d.maksud); isiBila('kegiatan', d.kegiatan); isiBila('hasil', d.hasil); isiBila('simpulan', d.simpulan);
-                pesan($('status'), '✅ Konsep tersusun. Periksa dan sesuaikan; bagian bertanda [lengkapi …] perlu Anda isi.', 'text-green-700');
-            } catch (e) {
-                pesan($('status'), '❌ ' + (e.message || e), 'text-red-600');
-            } finally { this.disabled = false; }
+        const bacaForm = () => {
+            if (mode !== 'edit') return;
+            KOLOM.forEach(c => { const el = $(c); if (el) k[c] = el.value; });
+            const cat = $('catatan'); if (cat) k.catatan = cat.value;
         };
 
-        // Simpan
-        const simpan = async (diam) => {
-            const o = ambil();
+        const simpan = async (diam, elPesan) => {
+            k.nomor_st = g.nomor_st; k.tgl_st = g.tgl_st || k.tgl_st;
             try {
                 await waitSupabaseAuthReady();
                 const { error } = await sb.from('lpt_konsep').upsert({
-                    kantor_id: g.kantor_id, tahun: g.tahun, nomor_st: g.uraian, konten: o,
+                    kantor_id: g.kantor_id, tahun: g.tahun, nomor_st: g.uraian, konten: k,
                     diubah_oleh: localStorage.getItem('nama') || '', diubah_pada: new Date().toISOString()
                 });
                 if (error) throw new Error(/lpt_konsep/i.test(error.message || '') ? 'Tabel lpt_konsep belum ada. Jalankan supabase-st-lpt.sql di Supabase.' : error.message);
-                k = o;
-                if (!diam) pesan($('msg'), '✅ Konsep tersimpan.', 'text-green-700');
+                pernahTersimpan = true;
+                if (!diam) pesan(elPesan, '✅ Konsep tersimpan.', 'text-green-700');
                 return true;
-            } catch (e) { pesan($('msg'), '❌ ' + (e.message || e), 'text-red-600'); return false; }
+            } catch (e) { if (!diam) pesan(elPesan, '❌ ' + (e.message || e), 'text-red-600'); return false; }
         };
-        $('simpan').onclick = () => simpan(false);
 
-        // Unduh .docx
-        $('docx').onclick = async function () {
-            this.disabled = true;
+        const unduh = async (btn, elPesan) => {
+            bacaForm();
+            btn.disabled = true;
             try {
-                pesan($('msg'), 'Menyiapkan berkas Word…', 'text-sky-700');
+                pesan(elPesan, 'Menyiapkan berkas Word…', 'text-sky-700');
                 const D = await muatDocx();
-                const o = ambil();
-                const doc = bangunDocx(D, o);
+                const doc = bangunDocx(D, Object.assign({}, k, { nomor_st: g.nomor_st, tgl_st: g.tgl_st || k.tgl_st }));
                 const blob = await D.Packer.toBlob(doc);
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = 'LPT ' + String(g.nomor_st).replace(/[\\/:*?"<>|]/g, '-') + '.docx';
                 document.body.appendChild(a); a.click(); a.remove();
                 setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-                pesan($('msg'), '✅ Berkas diunduh.', 'text-green-700');
+                pesan(elPesan, '✅ Berkas diunduh.', 'text-green-700');
                 simpan(true);
-            } catch (e) { pesan($('msg'), '❌ ' + (e.message || e), 'text-red-600'); }
-            finally { this.disabled = false; }
+            } catch (e) { pesan(elPesan, '❌ ' + (e.message || e), 'text-red-600'); }
+            finally { btn.disabled = false; }
         };
+
+        // Jarwo membaca PDF ST lalu menyusun draf; hasilnya langsung dipakai.
+        const susunAI = async (setStatus) => {
+            if (typeof window.jarwoCall !== 'function') throw new Error('Jarwo belum dimuat di halaman ini.');
+            let stText = '';
+            if (g.st_link && adaDrive(g.st_link)) {
+                setStatus('Membaca PDF Surat Tugas…');
+                try { stText = await teksDariPdfDrive(g.st_link); } catch (e) { setStatus('PDF ST tidak terbaca (' + (e.message || e) + '), memakai data kegiatan saja…'); }
+            }
+            setStatus('Jarwo sedang menyusun konsep laporan…');
+            let r;
+            try {
+                r = await window.jarwoCall({
+                    mode: 'lpt', st_text: stText, catatan: k.catatan || '',
+                    info: { nomor_st: g.nomor_st, tgl_st: tglIndo(g.tgl_st), tgl_tugas: k.tgl_tugas, tujuan: g.tujuan, pelaksana: g.pelaksana }
+                });
+            } catch (e) { throw new Error(pesanGalatJarwo(e)); }
+            const d = (r && r.draft) || {};
+            const isi = (c, v) => { if (v && String(v).trim()) k[c] = Array.isArray(v) ? v.join('\n\n') : String(v); };
+            ['nomor_nd', 'tgl_nd', 'seksi_nd', 'hal', 'maksud', 'kegiatan', 'hasil', 'simpulan'].forEach(c => isi(c, d[c]));
+            await simpan(true);
+        };
+
+        // ---------------- tampilan: pratinjau ----------------
+        function renderPratinjau(info) {
+            mode = 'pratinjau';
+            $('body').innerHTML = `
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="lpt-edit" class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
+                    <button id="lpt-ai" class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Susun ulang</button>
+                    <button id="lpt-simpan" class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Simpan</button>
+                    <button id="lpt-docx" class="px-3 py-1.5 bg-sky-700 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-word mr-1"></i>Unduh .docx</button>
+                    <span id="lpt-stinfo" class="text-xs text-slate-500"></span>
+                </div>
+                <div id="lpt-status" class="text-xs min-h-[16px]"></div>
+                <div id="lpt-kertasWrap" style="max-height:62vh;overflow:auto;background:#f1f5f9;padding:10px;border-radius:8px">${htmlPratinjau(k)}</div>
+                <div id="lpt-msg" class="text-xs min-h-[16px]"></div>`;
+            if (info) pesan($('status'), info.teks, info.warna);
+            tampilStInfo();
+            $('edit').onclick = () => renderEdit();
+            $('simpan').onclick = async () => { await simpan(false, $('msg')); };
+            $('docx').onclick = function () { unduh(this, $('msg')); };
+            $('ai').onclick = () => jalankanAI();
+        }
+
+        // ---------------- tampilan: form edit ----------------
+        function renderEdit() {
+            mode = 'edit';
+            const f = (id, label, nilai, tipe) => `<label class="text-xs font-semibold text-slate-600">${label}</label>
+                <input id="lpt-${id}" type="${tipe || 'text'}" value="${esc(nilai)}" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">`;
+            const ta = (id, label, nilai) => `<label class="text-xs font-semibold text-slate-600">${label}</label>
+                <textarea id="lpt-${id}" rows="2" style="min-height:56px;resize:vertical;overflow:hidden;line-height:1.5" class="lpt-ta w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">${esc(nilai)}</textarea>`;
+            $('body').innerHTML = `
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="lpt-kembali" class="px-3 py-1.5 bg-sky-700 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-eye mr-1"></i>Lihat pratinjau</button>
+                    <span class="text-xs text-slate-500">Mengedit konsep. Perubahan tampil di pratinjau.</span>
+                </div>
+                <div class="border border-sky-100 bg-sky-50 rounded-xl p-3 flex flex-col gap-2">
+                    <div class="text-xs font-semibold text-sky-800"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Susun ulang dengan Jarwo</div>
+                    <textarea id="lpt-catatan" rows="2" style="min-height:56px;resize:vertical;overflow:hidden" placeholder="Catatan hasil (opsional): poin singkat yang terjadi di lapangan, Jarwo akan merapikannya." class="lpt-ta w-full px-3 py-2 border border-sky-200 rounded-lg text-sm bg-white">${esc(k.catatan)}</textarea>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="lpt-ai" class="px-3 py-1.5 bg-sky-700 text-white rounded-lg text-sm font-medium">Susun dengan AI</button>
+                        <span id="lpt-stinfo" class="text-xs text-slate-500"></span>
+                    </div>
+                    <div id="lpt-status" class="text-xs min-h-[16px]"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+                    <div>${f('nomor_lpt', 'Nomor LPT', k.nomor_lpt)}</div>
+                    <div>${f('tgl_laporan', 'Tanggal laporan', k.tgl_laporan, 'date')}</div>
+                    <div>${f('nomor_nd', 'Nomor Nota Dinas', k.nomor_nd)}</div>
+                    <div>${f('tgl_nd', 'Tanggal Nota Dinas (mis. 9 November 2026)', k.tgl_nd)}</div>
+                    <div>${f('seksi_nd', 'Pembuat Nota Dinas (mis. Kepala Seksi Piutang Negara)', k.seksi_nd)}</div>
+                    <div>${f('tgl_tugas', 'Tanggal penugasan', k.tgl_tugas)}</div>
+                </div>
+                <div>${f('hal', 'Hal / perihal penugasan', k.hal)}</div>
+                <div>${ta('pelaksana', 'Pelaksana (satu nama per baris)', k.pelaksana)}</div>
+                <div>${ta('maksud', 'A.2 Maksud dan Tujuan', k.maksud)}</div>
+                <div>${ta('kegiatan', 'B. Kegiatan yang Dilaksanakan', k.kegiatan)}</div>
+                <div>${ta('hasil', 'C. Hasil yang Dicapai (pisahkan tiap butir dengan baris kosong)', k.hasil)}</div>
+                <div>${ta('simpulan', 'D. Simpulan dan Saran', k.simpulan)}</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+                    <div>${f('mengetahui_jabatan', 'Mengetahui — jabatan (kosongkan bila tidak ada)', k.mengetahui_jabatan)}</div>
+                    <div>${f('mengetahui_nama', 'Mengetahui — nama', k.mengetahui_nama)}</div>
+                </div>
+                <div id="lpt-msg" class="text-xs min-h-[16px]"></div>
+                <div class="flex flex-wrap justify-end gap-2">
+                    <button id="lpt-simpan" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Simpan konsep</button>
+                    <button id="lpt-docx" class="px-4 py-2 bg-sky-700 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-word mr-1"></i>Unduh .docx</button>
+                </div>`;
+            popup.querySelectorAll('.lpt-ta').forEach(el => { autoTinggi(el); el.addEventListener('input', () => autoTinggi(el)); });
+            tampilStInfo();
+            $('kembali').onclick = () => { bacaForm(); renderPratinjau(); };
+            $('simpan').onclick = async () => { bacaForm(); await simpan(false, $('msg')); };
+            $('docx').onclick = function () { unduh(this, $('msg')); };
+            $('ai').onclick = () => jalankanAI();
+        }
+
+        // ---------------- info ST + unggah ----------------
+        function tampilStInfo() {
+            const stInfo = $('stinfo'); if (!stInfo) return;
+            if (g.st_link) {
+                stInfo.innerHTML = `PDF ST: <button type="button" id="lpt-lihatst" class="text-sky-700 underline">lihat</button>`;
+                $('lihatst').onclick = () => stBuka(g.st_link, 'Surat Tugas ' + g.nomor_st);
+            } else {
+                stInfo.innerHTML = `PDF ST belum diunggah. <label class="text-sky-700 underline cursor-pointer">Unggah PDF ST agar Jarwo bisa menyusun otomatis<input id="lpt-stfile" type="file" accept="application/pdf" class="hidden"></label>`;
+                $('stfile').onchange = async function () {
+                    const file = this.files[0]; if (!file) return;
+                    pesan($('status'), 'Mengunggah PDF ST ke Drive…', 'text-sky-700');
+                    try {
+                        const link = await stUploadFile(file, { id: g.ids[0], uraian: g.uraian });
+                        await stSimpanLink(g.ids, link);
+                        g.st_link = link;
+                        if (document.getElementById('kg-dataTableBody') && typeof window.kgLoadData === 'function') { try { window.kgLoadData(true); } catch (_) { /* abaikan */ } }
+                        bacaForm();
+                        await jalankanAI();
+                    } catch (e) { pesan($('status'), '❌ ' + (e.message || e), 'text-red-600'); }
+                };
+            }
+        }
+
+        async function jalankanAI() {
+            if (sibuk) return;
+            sibuk = true;
+            bacaForm();
+            const tombol = $('ai'); if (tombol) tombol.disabled = true;
+            const setStatus = (t) => pesan($('status'), '<i class="fa-solid fa-spinner fa-spin mr-1"></i>' + esc(t), 'text-sky-700');
+            try {
+                await susunAI(setStatus);
+                if (mode === 'edit') { renderEdit(); pesan($('status'), '✅ Konsep tersusun ulang. Periksa lalu klik Lihat pratinjau.', 'text-green-700'); }
+                else renderPratinjau({ teks: '✅ Konsep disusun Jarwo dari Surat Tugas. Periksa, klik Edit bila perlu, lalu Unduh .docx. Bagian [belum diisi] perlu Anda lengkapi.', warna: 'text-green-700' });
+            } catch (e) {
+                pesan($('status'), '❌ ' + esc(e.message || e), 'text-red-600');
+            } finally { sibuk = false; const t2 = $('ai'); if (t2) t2.disabled = false; }
+        }
+
+        // Awal: tampilkan pratinjau; bila belum pernah disusun dan ST sudah ada, Jarwo langsung menyusun.
+        const otomatis = !pernahTersimpan && !!g.st_link;
+        renderPratinjau(otomatis ? { teks: '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Jarwo membaca Surat Tugas dan menyusun konsep…', warna: 'text-sky-700' } : (pernahTersimpan ? { teks: 'Konsep tersimpan dimuat.', warna: 'text-slate-500' } : null));
+        if (otomatis) jalankanAI();
     }
 
     window.stUploadFile = stUploadFile;
@@ -444,6 +549,6 @@
     window.stBuka = stBuka;
     window.lptBukaEditor = bukaEditorLpt;
     window.lptIsPerjadin = isPerjadin;
-    window.lptInternal = { bangunDocx, tglIndo, rentangTugas, nomorStBersih };
+    window.lptInternal = { bangunDocx, tglIndo, rentangTugas, nomorStBersih, htmlPratinjau };
     if (typeof module !== 'undefined') module.exports = window.lptInternal;
 })();
