@@ -68,6 +68,32 @@
         return u;
     }
 
+    // Kop surat per kantor (tabel kantor: kop_teks = baris kop, kop_alamat = alamat). KPKNL Denpasar jadi bawaan.
+    const KOP_DENPASAR = {
+        baris: ['KEMENTERIAN KEUANGAN REPUBLIK INDONESIA', 'DIREKTORAT JENDERAL KEKAYAAN NEGARA', 'KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA', 'BALI DAN NUSA TENGGARA', 'KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG DENPASAR'],
+        alamat: 'GEDUNG KEUANGAN NEGARA I, JALAN DR. KUSUMAATMAJA, DENPASAR, BALI 80235; TELEPON (0361) 229151, 234623; FAKSIMILE (0361) 229150; LAMAN www.djkn.kemenkeu.go.id',
+        singkat: 'KPKNL Denpasar', terisi: false
+    };
+    function kopBawaan(id, nama) {
+        if (String(id) === '538065') return Object.assign({}, KOP_DENPASAR);
+        const n = String(nama || '').trim();
+        const m = n.match(/^KPKNL\s+(.+)$/i);
+        const unit = m ? 'KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG ' + m[1].toUpperCase() : n.toUpperCase();
+        return { baris: ['KEMENTERIAN KEUANGAN REPUBLIK INDONESIA', 'DIREKTORAT JENDERAL KEKAYAAN NEGARA', unit].filter(Boolean), alamat: '', singkat: n || 'kantor', terisi: false };
+    }
+    const normKop = (x) => (x && Array.isArray(x.baris) && x.baris.length ? x : KOP_DENPASAR);
+    async function muatKop(kantorId) {
+        try {
+            await waitSupabaseAuthReady();
+            let r = await sb.from('kantor').select('id, nama, kop_teks, kop_alamat').eq('id', kantorId).maybeSingle();
+            if (r.error) r = await sb.from('kantor').select('id, nama').eq('id', kantorId).maybeSingle(); // kolom kop belum ada
+            const d = r.data || {};
+            const baris = String(d.kop_teks || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+            if (baris.length) return { baris, alamat: String(d.kop_alamat || '').trim(), singkat: String(d.nama || '').trim() || 'kantor', terisi: true };
+            return kopBawaan(kantorId, d.nama);
+        } catch (e) { return kopBawaan(kantorId, ''); }
+    }
+
     const isPerjadin = (mak) => /52411[13]/.test(String(mak || ''));
     const adaDrive = (l) => /drive\.google\.com|docs\.google\.com/i.test(String(l || ''));
 
@@ -190,7 +216,7 @@
     // ------------------------------------------------------------------
     // 3) Pembuat .docx (dipisah supaya bisa diuji di Node)
     // ------------------------------------------------------------------
-    function bangunDocx(D, k, namaKantor, logoBytes) {
+    function bangunDocx(D, k, kopIn, logoBytes) {
         const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun, VerticalAlign, Tab } = D;
         const FONT = 'Arial';
         const SZ = 22; // 11pt
@@ -204,19 +230,13 @@
         const noBorders = { top: tanpaBorder, bottom: tanpaBorder, left: tanpaBorder, right: tanpaBorder };
         const garis = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
 
-        const kantor = namaKantor || 'KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG DENPASAR';
-        const kantorSingkat = namaKantor ? namaKantor : 'KPKNL Denpasar';
-        const teksKop = [
-            tengah('KEMENTERIAN KEUANGAN REPUBLIK INDONESIA', { size: 22 }),
-            tengah('DIREKTORAT JENDERAL KEKAYAAN NEGARA', { size: 22 }),
-            tengah('KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA', { size: 22 }),
-            tengah('BALI DAN NUSA TENGGARA', { size: 22 }),
-            tengah(String(kantor).toUpperCase(), { size: 22 }),
-            new Paragraph({
-                children: [tr('GEDUNG KEUANGAN NEGARA I, JALAN DR. KUSUMAATMAJA, DENPASAR, BALI 80235; TELEPON (0361) 229151, 234623; FAKSIMILE (0361) 229150; LAMAN www.djkn.kemenkeu.go.id', { size: 16 })],
-                alignment: AlignmentType.CENTER, spacing: { before: 40, after: 0 }
-            })
-        ];
+        const kopK = normKop(kopIn);
+        const kantorSingkat = kopK.singkat || 'kantor';
+        const teksKop = kopK.baris.map(t => tengah(String(t).toUpperCase(), { size: 22 }));
+        if (kopK.alamat) teksKop.push(new Paragraph({
+            children: [tr(kopK.alamat, { size: 16 })],
+            alignment: AlignmentType.CENTER, spacing: { before: 40, after: 0 }
+        }));
         const wLogo = 1500, wTeks = 7855;
         const logoPx = 94;
         const selLogo = new TableCell({
@@ -336,7 +356,7 @@
     // ------------------------------------------------------------------
     // 3b) Pembuat PDF (vektor, teks bisa dipilih; ukuran A4 untuk TTE)
     // ------------------------------------------------------------------
-    function bangunPdf(JS, k, namaKantor) {
+    function bangunPdf(JS, k, kopIn) {
         const doc = new JS.jsPDF({ unit: 'pt', format: 'a4', compress: true });
         const PW = 595.28, PH = 841.89, ML = 70.85, MR = 56.7, MT = 56.7, MB = 56.7;
         const W = PW - ML - MR, BOT = PH - MB, LH = 14.4;
@@ -379,13 +399,13 @@
         };
         const judul = (t) => { y += 10; para(t, { bold: true, after: 5, keepNext: true }); };
 
-        const kantor = String(namaKantor || 'KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG DENPASAR').toUpperCase();
-        const kantorSingkat = namaKantor || 'KPKNL Denpasar';
+        const kopK = normKop(kopIn);
+        const kantorSingkat = kopK.singkat || 'kantor';
 
         // ---- Kop ----
         const logoW = 75, teksW = W - logoW, cx = ML + logoW + teksW / 2;
-        const kopTeks = ['KEMENTERIAN KEUANGAN REPUBLIK INDONESIA', 'DIREKTORAT JENDERAL KEKAYAAN NEGARA', 'KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA', 'BALI DAN NUSA TENGGARA', kantor];
-        font(8, false); const alamat = doc.splitTextToSize('GEDUNG KEUANGAN NEGARA I, JALAN DR. KUSUMAATMAJA, DENPASAR, BALI 80235; TELEPON (0361) 229151, 234623; FAKSIMILE (0361) 229150; LAMAN www.djkn.kemenkeu.go.id', teksW);
+        const kopTeks = kopK.baris.map(t => String(t).toUpperCase());
+        font(8, false); const alamat = kopK.alamat ? doc.splitTextToSize(kopK.alamat, teksW) : [];
         const hTeks = kopTeks.length * 13 + alamat.length * 10 + 2;
         const hLogo = 70.5 * 186 / 200;
         const hKop = Math.max(hTeks, hLogo);
@@ -587,9 +607,9 @@
     const pecahBaris = (s) => String(s || '').split(/\n\s*\n|\r?\n/).map(x => x.trim()).filter(Boolean);
 
     // Pratinjau di layar yang menyerupai berkas Word (kop, bagian A-E, tanda tangan).
-    function htmlPratinjau(k, namaKantor) {
-        const kantor = String(namaKantor || 'KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG DENPASAR').toUpperCase();
-        const kantorSingkat = namaKantor || 'KPKNL Denpasar';
+    function htmlPratinjau(k, kopIn) {
+        const kopK = normKop(kopIn);
+        const kantorSingkat = kopK.singkat || 'kantor';
         const kosong = '<span style="background:#fef3c7;color:#92400e;padding:0 4px;border-radius:3px">[belum diisi]</span>';
         const J = 'text-align:justify;margin:0 0 6px 36px';
         const para = (s) => pecahBaris(s).map(x => `<p style="${J}">${esc(x)}</p>`).join('') || `<p style="${J}">${kosong}</p>`;
@@ -606,7 +626,7 @@
         const tte = '<div style="color:#bfbfbf;margin-top:92px">Ditandatangani secara elektronik</div>';
         const nomorLpt = k.nomor_lpt ? esc(k.nomor_lpt) : kosong;
         return `<div id="lpt-kertas" style="background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;line-height:1.5;padding:28px 34px;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-            <div style="display:flex;align-items:center;gap:10px"><img src="data:image/png;base64,${LOGO_B64}" alt="" style="width:92px;height:${Math.round(92 * LOGO_RASIO)}px;flex:none"><div style="flex:1"><div style="${c};font-size:12px">KEMENTERIAN KEUANGAN REPUBLIK INDONESIA<br>DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>BALI DAN NUSA TENGGARA<br>${esc(kantor)}</div><div style="text-align:center;font-size:9px;margin-top:2px">GEDUNG KEUANGAN NEGARA I, JALAN DR. KUSUMAATMAJA, DENPASAR, BALI 80235; TELEPON (0361) 229151, 234623; FAKSIMILE (0361) 229150; LAMAN www.djkn.kemenkeu.go.id</div></div></div>
+            <div style="display:flex;align-items:center;gap:10px"><img src="data:image/png;base64,${LOGO_B64}" alt="" style="width:92px;height:${Math.round(92 * LOGO_RASIO)}px;flex:none"><div style="flex:1"><div style="${c};font-size:12px">${kopK.baris.map(t => esc(String(t).toUpperCase())).join('<br>')}</div>${kopK.alamat ? `<div style="text-align:center;font-size:9px;margin-top:2px">${esc(kopK.alamat)}</div>` : ''}</div></div>
             <div style="border-bottom:2px solid #000;margin:6px 0 14px"></div>
             <div style="${c};margin-bottom:12px">LAPORAN<br>TENTANG<br>LAPORAN PELAKSANAAN TUGAS<br>NOMOR ${nomorLpt}</div>
             ${head('A. Pendahuluan')}
@@ -645,6 +665,7 @@
         if (!g) { alert('Data kegiatan tidak ditemukan. Muat ulang halaman lalu coba lagi.'); return; }
         if (!g.adaPerjadin) { alert('Konsep LPT hanya untuk kegiatan perjalanan dinas (MAK 524111/524113).'); return; }
 
+        const kop = await muatKop(g.kantor_id);
         let k = konsepAwal(g);
         let pernahTersimpan = false;
         try {
@@ -719,11 +740,11 @@
                 if (format === 'pdf') {
                     pesan(elPesan, 'Menyiapkan PDF…', 'text-sky-700');
                     const JS = await muatJsPdf();
-                    blob = bangunPdf(JS, isi).output('blob');
+                    blob = bangunPdf(JS, isi, kop).output('blob');
                 } else {
                     pesan(elPesan, 'Menyiapkan berkas Word…', 'text-sky-700');
                     const D = await muatDocx();
-                    blob = await D.Packer.toBlob(bangunDocx(D, isi, null, logoBytes()));
+                    blob = await D.Packer.toBlob(bangunDocx(D, isi, kop, logoBytes()));
                 }
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
@@ -775,8 +796,9 @@
                     <button id="lpt-pdf" class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-pdf mr-1"></i>Unduh PDF</button>
                     <span id="lpt-stinfo" class="text-xs text-slate-500"></span>
                 </div>
+                ${kop.terisi || String(g.kantor_id) === '538065' ? '' : '<div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Kop surat kantor ini belum diatur lengkap (baris kop dan alamat). Atur di Referensi &gt; Kantor &gt; ikon Kop surat.</div>'}
                 <div id="lpt-status" class="text-xs min-h-[16px]"></div>
-                <div id="lpt-kertasWrap" style="max-height:62vh;overflow:auto;background:#f1f5f9;padding:10px;border-radius:8px">${htmlPratinjau(k)}</div>
+                <div id="lpt-kertasWrap" style="max-height:62vh;overflow:auto;background:#f1f5f9;padding:10px;border-radius:8px">${htmlPratinjau(k, kop)}</div>
                 <div id="lpt-msg" class="text-xs min-h-[16px]"></div>`;
             if (info) pesan($('status'), info.teks, info.warna);
             tampilStInfo();
@@ -900,6 +922,6 @@
     window.stBuka = stBuka;
     window.lptBukaEditor = bukaEditorLpt;
     window.lptIsPerjadin = isPerjadin;
-    window.lptInternal = { bangunDocx, tglIndo, rentangTugas, nomorStBersih, htmlPratinjau, logoBytes, urutkanSesuaiTeks, bangunPdf };
+    window.lptInternal = { bangunDocx, tglIndo, rentangTugas, nomorStBersih, htmlPratinjau, logoBytes, urutkanSesuaiTeks, bangunPdf, kopBawaan };
     if (typeof module !== 'undefined') module.exports = window.lptInternal;
 })();
