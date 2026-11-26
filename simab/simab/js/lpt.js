@@ -187,8 +187,8 @@
             tengah('BALI DAN NUSA TENGGARA', { size: 22 }),
             tengah(String(kantor).toUpperCase(), { size: 22 })
         ];
-        const wLogo = 1300, wTeks = 8055;
-        const logoPx = 74;
+        const wLogo = 1500, wTeks = 7855;
+        const logoPx = 94;
         const selLogo = new TableCell({
             width: { size: wLogo, type: WidthType.DXA }, borders: noBorders, verticalAlign: VerticalAlign.CENTER,
             children: [new Paragraph({ spacing: { after: 0 }, children: logoBytes ? [new ImageRun({ type: 'png', data: logoBytes, transformation: { width: logoPx, height: Math.round(logoPx * 186 / 200) } })] : [] })]
@@ -342,7 +342,7 @@
         const tte = '<div style="color:#808080;font-size:10px;margin:6px 0 52px">Ditandatangani secara elektronik</div>';
         const nomorLpt = k.nomor_lpt ? esc(k.nomor_lpt) : kosong;
         return `<div id="lpt-kertas" style="background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;line-height:1.5;padding:28px 34px;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
-            <div style="display:flex;align-items:center;gap:10px"><img src="data:image/png;base64,${LOGO_B64}" alt="" style="width:62px;height:${Math.round(62 * LOGO_RASIO)}px;flex:none"><div style="${c};font-size:12px;flex:1">KEMENTERIAN KEUANGAN REPUBLIK INDONESIA<br>DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>BALI DAN NUSA TENGGARA<br>${esc(kantor)}</div></div>
+            <div style="display:flex;align-items:center;gap:10px"><img src="data:image/png;base64,${LOGO_B64}" alt="" style="width:92px;height:${Math.round(92 * LOGO_RASIO)}px;flex:none"><div style="${c};font-size:12px;flex:1">KEMENTERIAN KEUANGAN REPUBLIK INDONESIA<br>DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA<br>BALI DAN NUSA TENGGARA<br>${esc(kantor)}</div></div>
             <div style="text-align:center;font-size:9px;border-bottom:2px solid #000;padding:6px 0 8px;margin-bottom:14px">GEDUNG KEUANGAN NEGARA I, JALAN DR. KUSUMAATMAJA, DENPASAR, BALI 80235; TELEPON (0361) 229151, 234623; FAKSIMILE (0361) 229150; LAMAN www.djkn.kemenkeu.go.id</div>
             <div style="${c};margin-bottom:12px">LAPORAN<br>TENTANG<br>LAPORAN PELAKSANAAN TUGAS<br>NOMOR ${nomorLpt}</div>
             ${head('A. Pendahuluan')}
