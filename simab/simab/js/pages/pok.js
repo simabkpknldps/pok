@@ -1473,6 +1473,8 @@ async function openDetilModal(mak) {
             }));
 
         window.detilKegiatanData = result;
+        window.detilFilterSp2d = 'semua';
+        const cari = document.getElementById('cariDetil'); if (cari) cari.value = '';
         renderDetilSp2d(result);
         renderDetilTable(result);
     } catch (e) {
@@ -1491,13 +1493,21 @@ function renderDetilSp2d(data) {
     const sudah = data.filter(i => i.tglSp2d);
     const belum = data.filter(i => !i.tglSp2d);
     const jml = a => a.reduce((t, i) => t + (Number(i.estimasi) || 0), 0);
-    const kartu = (judul, arr, warna, bg) => `<div class="rounded-xl p-3" style="background:${bg};">
-        <div class="text-[11px]" style="color:var(--label-secondary);">${judul}</div>
+    const aktif = window.detilFilterSp2d || 'semua';
+    const kartu = (kunci, judul, arr, warna, bg) => `<button type="button" onclick="setDetilFilterSp2d('${kunci}')" class="rounded-xl p-3 text-left w-full" style="background:${bg};cursor:pointer;border:none;${aktif === kunci && kunci !== 'semua' ? `box-shadow:0 0 0 2px ${warna};` : ''}" title="${kunci === 'semua' ? 'Tampilkan semua kegiatan' : 'Klik untuk menampilkan hanya ' + judul.toLowerCase() + '; klik lagi untuk semua'}">
+        <div class="text-[11px]" style="color:var(--label-secondary);">${judul}${aktif === kunci && kunci !== 'semua' ? ' &middot; ditampilkan' : ''}</div>
         <div class="text-lg font-bold" style="color:${warna};">${jml(arr).toLocaleString('id-ID')}</div>
-        <div class="text-[11px]" style="color:var(--label-secondary);">${arr.length} kegiatan</div></div>`;
-    box.innerHTML = kartu('Sudah SP2D', sudah, '#248A3D', 'var(--ios-green-tint)')
-        + kartu('Belum SP2D', belum, '#C77400', 'var(--ios-amber-tint)')
-        + kartu('Total kegiatan', data, 'var(--label)', 'var(--sidebar-bg)');
+        <div class="text-[11px]" style="color:var(--label-secondary);">${arr.length} kegiatan</div></button>`;
+    box.innerHTML = kartu('sudah', 'Sudah SP2D', sudah, '#248A3D', 'var(--ios-green-tint)')
+        + kartu('belum', 'Belum SP2D', belum, '#C77400', 'var(--ios-amber-tint)')
+        + kartu('semua', 'Total kegiatan', data, 'var(--label)', 'var(--sidebar-bg)');
+}
+
+// Klik kartu Sudah/Belum SP2D = saring daftar; klik lagi (atau kartu Total) = tampilkan semua.
+function setDetilFilterSp2d(kunci) {
+    window.detilFilterSp2d = (kunci === 'semua' || window.detilFilterSp2d === kunci) ? 'semua' : kunci;
+    renderDetilSp2d(window.detilKegiatanData || []);
+    filterDetil();
 }
 
 function renderDetilTable(data) {
@@ -1596,7 +1606,11 @@ function showDetilKegiatanInfo(idKegiatan) {
 
 function filterDetil() {
     const keyword = document.getElementById("cariDetil").value.toLowerCase();
-    renderDetilTable(window.detilKegiatanData.filter(i => (i.uraian || '').toLowerCase().includes(keyword)));
+    const f = window.detilFilterSp2d || 'semua';
+    renderDetilTable((window.detilKegiatanData || []).filter(i =>
+        (i.uraian || '').toLowerCase().includes(keyword) &&
+        (f === 'semua' || (f === 'sudah' ? !!i.tglSp2d : !i.tglSp2d))
+    ));
 }
 
 // ========================================

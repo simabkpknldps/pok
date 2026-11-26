@@ -327,6 +327,186 @@
         });
     }
 
+    // ------------------------------------------------------------------
+    // 3b) Pembuat PDF (vektor, teks bisa dipilih; ukuran A4 untuk TTE)
+    // ------------------------------------------------------------------
+    function bangunPdf(JS, k, namaKantor) {
+        const doc = new JS.jsPDF({ unit: 'pt', format: 'a4', compress: true });
+        const PW = 595.28, PH = 841.89, ML = 70.85, MR = 56.7, MT = 56.7, MB = 56.7;
+        const W = PW - ML - MR, BOT = PH - MB, LH = 14.4;
+        let y = MT;
+        const font = (size, bold, color) => {
+            doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size);
+            const c = color || [0, 0, 0]; doc.setTextColor(c[0], c[1], c[2]);
+        };
+        const ensure = (h) => { if (y + h > BOT) { doc.addPage(); y = MT; } };
+        const baris = (str) => String(str || '').split(/\n\s*\n|\r?\n/).map(x => x.trim()).filter(Boolean);
+
+        // Satu paragraf; mengembalikan tinggi yang terpakai. o: size,bold,color,indent,align,justify,after,keepNext
+        const para = (text, o) => {
+            o = o || {};
+            const size = o.size || 11, lh = LH * size / 11, indent = o.indent || 0, w = W - indent;
+            font(size, o.bold, o.color);
+            const lines = doc.splitTextToSize(String(text), w);
+            if (o.keepNext) ensure(lh * (lines.length + 2));
+            const y0 = y;
+            lines.forEach((ln, i) => {
+                ensure(lh);
+                const base = y + size * 0.85;
+                if (o.align === 'center') doc.text(ln, ML + W / 2, base, { align: 'center' });
+                else if (o.justify && i < lines.length - 1) {
+                    // rata kiri-kanan: sisa lebar dibagi rata ke sela kata
+                    const kata = ln.split(/\s+/).filter(Boolean);
+                    if (kata.length < 2) doc.text(ln, ML + indent, base);
+                    else {
+                        const lebar = kata.reduce((a2, kt) => a2 + doc.getTextWidth(kt), 0);
+                        const celah = (w - lebar) / (kata.length - 1);
+                        let xx = ML + indent;
+                        kata.forEach(kt => { doc.text(kt, xx, base); xx += doc.getTextWidth(kt) + celah; });
+                    }
+                }
+                else doc.text(ln, ML + indent, base);
+                y += lh;
+            });
+            y += o.after || 0;
+            return y - y0;
+        };
+        const judul = (t) => { y += 10; para(t, { bold: true, after: 5, keepNext: true }); };
+
+        const kantor = String(namaKantor || 'KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG DENPASAR').toUpperCase();
+        const kantorSingkat = namaKantor || 'KPKNL Denpasar';
+
+        // ---- Kop ----
+        const logoW = 75, teksW = W - logoW, cx = ML + logoW + teksW / 2;
+        const kopTeks = ['KEMENTERIAN KEUANGAN REPUBLIK INDONESIA', 'DIREKTORAT JENDERAL KEKAYAAN NEGARA', 'KANTOR WILAYAH DIREKTORAT JENDERAL KEKAYAAN NEGARA', 'BALI DAN NUSA TENGGARA', kantor];
+        font(8, false); const alamat = doc.splitTextToSize('GEDUNG KEUANGAN NEGARA I, JALAN DR. KUSUMAATMAJA, DENPASAR, BALI 80235; TELEPON (0361) 229151, 234623; FAKSIMILE (0361) 229150; LAMAN www.djkn.kemenkeu.go.id', teksW);
+        const hTeks = kopTeks.length * 13 + alamat.length * 10 + 2;
+        const hLogo = 70.5 * 186 / 200;
+        const hKop = Math.max(hTeks, hLogo);
+        try { doc.addImage('data:image/png;base64,' + LOGO_B64, 'PNG', ML + 2, y + (hKop - hLogo) / 2, 70.5, hLogo); } catch (_) { /* tanpa logo */ }
+        let ty = y + (hKop - hTeks) / 2;
+        font(11, true); kopTeks.forEach(t => { doc.text(t, cx, ty + 9.3, { align: 'center' }); ty += 13; });
+        font(8, false); ty += 2; alamat.forEach(t => { doc.text(t, cx, ty + 7, { align: 'center' }); ty += 10; });
+        y += hKop + 4;
+        doc.setLineWidth(0.8); doc.setDrawColor(0); doc.line(ML, y, ML + W, y);
+        y += 14;
+
+        // ---- Judul ----
+        ['LAPORAN', 'TENTANG', 'LAPORAN PELAKSANAAN TUGAS'].forEach(t => para(t, { bold: true, align: 'center' }));
+        para('NOMOR ' + (k.nomor_lpt || 'LAP-.../KNL.1401.../' + (k.tgl_laporan || '').slice(0, 4)), { bold: true, align: 'center', after: 12 });
+
+        const pel = baris(String(k.pelaksana || '').replace(/\r/g, '').split('\n').join('\n\n'));
+        const kalimatST = `Surat Tugas Nomor ${k.nomor_st}${k.tgl_st ? ' tanggal ' + tglIndo(k.tgl_st) : ''}${k.hal ? ' hal ' + k.hal : ''}${k.tgl_tugas ? ' tanggal penugasan ' + k.tgl_tugas : ''}`;
+        const dasarND = k.nomor_nd
+            ? `Berdasarkan Nota Dinas ${k.seksi_nd ? k.seksi_nd + ' ' : ''}Nomor ${k.nomor_nd}${k.tgl_nd ? ' tanggal ' + k.tgl_nd : ''}, Kepala ${kantorSingkat} menugaskan:`
+            : `Kepala ${kantorSingkat} menugaskan:`;
+
+        judul('A. Pendahuluan');
+        para('1. Latar Belakang', { after: 3, keepNext: true });
+        para(dasarND, { indent: 18, justify: true, after: 5 });
+
+        // tabel pelaksana
+        const tW = 450, cNo = 35;
+        const barisTabel = (a, b, tebal) => {
+            font(11, tebal);
+            const ls = doc.splitTextToSize(String(b), tW - cNo - 10);
+            const h = ls.length * LH + 6;
+            ensure(h);
+            doc.setLineWidth(0.5); doc.setDrawColor(0);
+            doc.rect(ML, y, cNo, h); doc.rect(ML + cNo, y, tW - cNo, h);
+            font(11, tebal);
+            doc.text(String(a), ML + 5, y + 3 + 9.3);
+            ls.forEach((ln, i) => doc.text(ln, ML + cNo + 5, y + 3 + 9.3 + i * LH));
+            y += h;
+        };
+        barisTabel('No', 'Nama', true);
+        pel.forEach((n, i) => barisTabel(String(i + 1), n, false));
+        y += 8;
+
+        para('Sesuai ' + kalimatST + '.', { indent: 18, justify: true, after: 5 });
+        para('2. Maksud dan Tujuan', { after: 3, keepNext: true });
+        baris(k.maksud).forEach(t => para(t, { indent: 18, justify: true, after: 5 }));
+        para('3. Dasar', { after: 3, keepNext: true });
+        para(kalimatST + '.', { indent: 18, justify: true, after: 5 });
+        judul('B. Kegiatan yang Dilaksanakan');
+        baris(k.kegiatan).forEach(t => para(t, { indent: 18, justify: true, after: 5 }));
+        judul('C. Hasil yang Dicapai');
+        baris(k.hasil).forEach((t, i) => {
+            ensure(LH);
+            font(11, false); doc.text(`${i + 1}.`, ML + 18, y + 9.35);
+            para(t, { indent: 36, justify: true, after: 5 });
+        });
+        judul('D. Simpulan dan Saran');
+        baris(k.simpulan).forEach(t => para(t, { indent: 18, justify: true, after: 5 }));
+        judul('E. Penutup');
+        para('Demikian laporan pelaksanaan tugas ini kami sampaikan dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.', { indent: 18, justify: true, after: 5 });
+
+        // ---- Tanda tangan (ruang QR TTE di atas label abu-abu) ----
+        const QR = 78, kolB = ML + 225, abu = [191, 191, 191];
+        const kiri = [], kanan = [];
+        let tambahKanan = 0;
+        if (k.mengetahui_jabatan) {
+            font(11, false);
+            const jab = doc.splitTextToSize(String(k.mengetahui_jabatan), 215);
+            kiri.push({ t: '' }, { t: '' }, { t: '' }, { t: 'Mengetahui,' });
+            jab.forEach(j => kiri.push({ t: j }));
+            kiri.push({ t: 'Ditandatangani secara elektronik', c: abu, g: QR }, { t: k.mengetahui_nama || '' });
+            tambahKanan = Math.max(0, jab.length - 1); // jabatan panjang: kolom kanan ikut turun agar label sebaris
+        }
+        kanan.push({ t: 'Dibuat di ' + (k.tempat || 'Denpasar') }, { t: 'pada tanggal ' + tglIndo(k.tgl_laporan) }, { t: '' }, { t: 'Pembuat Laporan' }, { t: '' });
+        for (let i = 0; i < tambahKanan; i++) kanan.push({ t: '' });
+        pel.forEach(n => { kanan.push({ t: 'Ditandatangani secara elektronik', c: abu, g: QR }, { t: n, a: 10 }); });
+        const tinggi = (a) => a.reduce((s2, it) => s2 + (it.g || 0) + LH + (it.a || 0), 0);
+        y += 14;
+        ensure(Math.max(tinggi(kiri), tinggi(kanan)));
+        const gambar = (arr, x) => {
+            let yy = y;
+            arr.forEach(it => { yy += it.g || 0; font(11, false, it.c); if (it.t) doc.text(it.t, x, yy + 9.35); yy += LH + (it.a || 0); });
+            return yy;
+        };
+        gambar(kiri, ML);
+        y = gambar(kanan, kolB);
+
+        // ---- Dokumentasi (hanya bila ada foto) ----
+        const foto = fotoAda(k);
+        if (foto.length) {
+            doc.addPage(); y = MT;
+            para('DOKUMENTASI KEGIATAN', { bold: true, align: 'center' });
+            para('Surat Tugas Nomor ' + (k.nomor_st || ''), { align: 'center', after: 12 });
+            const cw = 225, maxW = 212, maxH = 175, baris2h = maxH + 34;
+            for (let i = 0; i < foto.length; i += 2) {
+                ensure(baris2h);
+                [foto[i], foto[i + 1]].forEach((f, j) => {
+                    if (!f) return;
+                    const sk = Math.min(maxW / f.w, maxH / f.h), w = f.w * sk, h = f.h * sk;
+                    const x0 = ML + j * cw + (cw - w) / 2;
+                    try { doc.addImage(f.d, 'JPEG', x0, y + (maxH - h) / 2, w, h); } catch (_) { /* lewati foto rusak */ }
+                    if (f.ket) { font(9, false); doc.text(doc.splitTextToSize(f.ket, cw - 10), ML + j * cw + cw / 2, y + maxH + 13, { align: 'center' }); }
+                });
+                y += baris2h;
+            }
+        }
+        return doc;
+    }
+
+    let jspdfPromise = null;
+    function muatJsPdf() {
+        if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf);
+        if (jspdfPromise) return jspdfPromise;
+        const sumber = ['https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js', 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'];
+        jspdfPromise = (async () => {
+            for (const src of sumber) {
+                try {
+                    await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error('gagal ' + src)); document.head.appendChild(sc); });
+                    if (window.jspdf && window.jspdf.jsPDF) return window.jspdf;
+                } catch (e) { /* coba sumber berikutnya */ }
+            }
+            jspdfPromise = null;
+            throw new Error('Gagal memuat pustaka pembuat PDF (periksa koneksi internet).');
+        })();
+        return jspdfPromise;
+    }
+
     let docxPromise = null;
     function muatDocx() {
         if (window.docx) return Promise.resolve(window.docx);
@@ -522,17 +702,24 @@
             } catch (e) { if (!diam) pesan(elPesan, '❌ ' + (e.message || e), 'text-red-600'); return false; }
         };
 
-        const unduh = async (btn, elPesan) => {
+        const unduh = async (btn, elPesan, format) => {
             bacaForm();
             btn.disabled = true;
             try {
-                pesan(elPesan, 'Menyiapkan berkas Word…', 'text-sky-700');
-                const D = await muatDocx();
-                const doc = bangunDocx(D, Object.assign({}, k, { nomor_st: g.nomor_st, tgl_st: g.tgl_st || k.tgl_st }), null, logoBytes());
-                const blob = await D.Packer.toBlob(doc);
+                const isi = Object.assign({}, k, { nomor_st: g.nomor_st, tgl_st: g.tgl_st || k.tgl_st });
+                let blob;
+                if (format === 'pdf') {
+                    pesan(elPesan, 'Menyiapkan PDF…', 'text-sky-700');
+                    const JS = await muatJsPdf();
+                    blob = bangunPdf(JS, isi).output('blob');
+                } else {
+                    pesan(elPesan, 'Menyiapkan berkas Word…', 'text-sky-700');
+                    const D = await muatDocx();
+                    blob = await D.Packer.toBlob(bangunDocx(D, isi, null, logoBytes()));
+                }
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
-                a.download = 'LPT ' + String(g.nomor_st).replace(/[\\/:*?"<>|]/g, '-') + '.docx';
+                a.download = 'LPT ' + String(g.nomor_st).replace(/[\\/:*?"<>|]/g, '-') + (format === 'pdf' ? '.pdf' : '.docx');
                 document.body.appendChild(a); a.click(); a.remove();
                 setTimeout(() => URL.revokeObjectURL(a.href), 4000);
                 pesan(elPesan, '✅ Berkas diunduh.', 'text-green-700');
@@ -577,6 +764,7 @@
                     <label class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium cursor-pointer"><i class="fa-solid fa-images mr-1"></i>Foto${fotoAda(k).length ? ' (' + fotoAda(k).length + ')' : ''}<input id="lpt-fotofile" type="file" accept="image/*" multiple class="hidden"></label>
                     <button id="lpt-simpan" class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Simpan</button>
                     <button id="lpt-docx" class="px-3 py-1.5 bg-sky-700 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-word mr-1"></i>Unduh .docx</button>
+                    <button id="lpt-pdf" class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-pdf mr-1"></i>Unduh PDF</button>
                     <span id="lpt-stinfo" class="text-xs text-slate-500"></span>
                 </div>
                 <div id="lpt-status" class="text-xs min-h-[16px]"></div>
@@ -588,6 +776,7 @@
             $('fotofile').onchange = function () { tambahFoto(this.files); };
             $('simpan').onclick = async () => { await simpan(false, $('msg')); };
             $('docx').onclick = function () { unduh(this, $('msg')); };
+            $('pdf').onclick = function () { unduh(this, $('msg'), 'pdf'); };
             $('ai').onclick = () => jalankanAI();
         }
 
@@ -641,6 +830,7 @@
                 <div class="flex flex-wrap justify-end gap-2">
                     <button id="lpt-simpan" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Simpan konsep</button>
                     <button id="lpt-docx" class="px-4 py-2 bg-sky-700 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-word mr-1"></i>Unduh .docx</button>
+                    <button id="lpt-pdf" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-pdf mr-1"></i>Unduh PDF</button>
                 </div>`;
             popup.querySelectorAll('.lpt-ta').forEach(el => { autoTinggi(el); el.addEventListener('input', () => autoTinggi(el)); });
             tampilStInfo();
@@ -649,6 +839,7 @@
             popup.querySelectorAll('.lpt-fotodel').forEach(b => { b.onclick = () => { bacaForm(); k.foto.splice(Number(b.dataset.i), 1); renderEdit(); }; });
             $('simpan').onclick = async () => { bacaForm(); await simpan(false, $('msg')); };
             $('docx').onclick = function () { unduh(this, $('msg')); };
+            $('pdf').onclick = function () { unduh(this, $('msg'), 'pdf'); };
             $('ai').onclick = () => jalankanAI();
         }
 
@@ -701,6 +892,6 @@
     window.stBuka = stBuka;
     window.lptBukaEditor = bukaEditorLpt;
     window.lptIsPerjadin = isPerjadin;
-    window.lptInternal = { bangunDocx, tglIndo, rentangTugas, nomorStBersih, htmlPratinjau, logoBytes, urutkanSesuaiTeks };
+    window.lptInternal = { bangunDocx, tglIndo, rentangTugas, nomorStBersih, htmlPratinjau, logoBytes, urutkanSesuaiTeks, bangunPdf };
     if (typeof module !== 'undefined') module.exports = window.lptInternal;
 })();
