@@ -2187,12 +2187,15 @@ async function kgOpenNominatifPopup() {
 
     kgShowLoading(true);
 
-    let ppkNama = 'BAYU ADINEGORO', ppkNip = '198802242008121002';
-    let bpNama = 'ACHMAD CHABIB NURSALIM', bpNip = '199101162013101002';
+    // Pejabat per kantor; bila belum diisi di Pengaturan > Pejabat, dikosongkan (bukan nama kantor lain).
+    let ppkNama = '..............................', ppkNip = '..............................';
+    let bpNama = '..............................', bpNip = '..............................';
 
     try {
         await waitSupabaseAuthReady();
-        const { data: pj, error: pjErr } = await sb.from('pejabat').select('*').eq('id', 'main').maybeSingle();
+        let { data: pj, error: pjErr } = await sb.from('pejabat').select('*').eq('kantor_id', getKantorAktif()).maybeSingle();
+        // SQL supabase-pejabat-kantor.sql belum dijalankan: pakai baris lama agar cetak tidak kosong.
+        if (pjErr && /kantor_id/i.test(pjErr.message || '')) ({ data: pj, error: pjErr } = await sb.from('pejabat').select('*').eq('id', 'main').maybeSingle());
         if (pjErr) throw new Error(pjErr.message);
         if (pj?.ppk_nama) ppkNama = pj.ppk_nama;
         if (pj?.ppk_nip) ppkNip = String(pj.ppk_nip);

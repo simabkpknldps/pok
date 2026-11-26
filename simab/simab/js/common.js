@@ -811,8 +811,10 @@ async function csLoadPejabatData(popup) {
 
     try {
         await waitSupabaseAuthReady();
-        const { data, error } = await sb.from('pejabat').select('*').eq('id', 'main').maybeSingle();
-        if (error) throw new Error(error.message);
+        const kantor = typeof getKantorAktif === 'function' ? getKantorAktif() : '';
+        if (!kantor) throw new Error('Kantor aktif tidak diketahui. Silakan login ulang.');
+        const { data, error } = await sb.from('pejabat').select('*').eq('kantor_id', kantor).maybeSingle();
+        if (error) throw new Error(/kantor_id/i.test(error.message || '') ? 'Kolom kantor_id pada tabel pejabat belum ada. Jalankan supabase-pejabat-kantor.sql di Supabase.' : error.message);
 
         popup.querySelector('#cs-ppkNama').value = data?.ppk_nama || '';
         popup.querySelector('#cs-ppkNip').value = data?.ppk_nip || '';
@@ -862,10 +864,16 @@ function csBindPejabatButtons(popup) {
 
         try {
             await waitSupabaseAuthReady();
-            const { error } = await sb.from('pejabat')
-                .update({ ppk_nama: ppkNama, ppk_nip: ppkNip, bendahara_nama: bendaharaNama, bendahara_nip: bendaharaNip })
-                .eq('id', 'main');
-            if (error) throw new Error(error.message);
+            const kantor = typeof getKantorAktif === 'function' ? getKantorAktif() : '';
+            if (!kantor) throw new Error('Kantor aktif tidak diketahui. Silakan login ulang.');
+            const isi = { ppk_nama: ppkNama, ppk_nip: ppkNip, bendahara_nama: bendaharaNama, bendahara_nip: bendaharaNip };
+            // Ubah baris milik kantor ini; bila belum ada, buat baru (tiap kantor punya barisnya sendiri).
+            const up = await sb.from('pejabat').update(isi).eq('kantor_id', kantor).select('id');
+            if (up.error) throw new Error(/kantor_id/i.test(up.error.message || '') ? 'Kolom kantor_id pada tabel pejabat belum ada. Jalankan supabase-pejabat-kantor.sql di Supabase.' : up.error.message);
+            if (!up.data || !up.data.length) {
+                const ins = await sb.from('pejabat').insert(Object.assign({ id: 'kantor_' + kantor, kantor_id: kantor }, isi));
+                if (ins.error) throw new Error(ins.error.message);
+            }
 
             showToast('Data pejabat berhasil diubah');
             inputs.forEach(inp => {
