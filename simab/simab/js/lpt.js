@@ -162,6 +162,32 @@
     }
 
     // ------------------------------------------------------------------
+    // Foto dokumentasi: dikecilkan di browser (maks 1280 px, JPEG) lalu disimpan di konsep.
+    // ------------------------------------------------------------------
+    const MAKS_FOTO = 12;
+    function dataUrlKeBytes(d) {
+        const b = atob(String(d).split(',')[1] || ''); const u = new Uint8Array(b.length);
+        for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+        return u;
+    }
+    function kompresFoto(file) {
+        return new Promise((res, rej) => {
+            const url = URL.createObjectURL(file); const im = new Image();
+            im.onload = () => {
+                const M = 1280; let w = im.naturalWidth, h = im.naturalHeight;
+                const sk = Math.min(1, M / Math.max(w, h)); w = Math.max(1, Math.round(w * sk)); h = Math.max(1, Math.round(h * sk));
+                const c = document.createElement('canvas'); c.width = w; c.height = h;
+                const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(im, 0, 0, w, h);
+                URL.revokeObjectURL(url);
+                res({ d: c.toDataURL('image/jpeg', 0.8), w, h, ket: '' });
+            };
+            im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Foto tidak bisa dibaca: ' + (file.name || ''))); };
+            im.src = url;
+        });
+    }
+    const fotoAda = (k) => (Array.isArray(k.foto) ? k.foto.filter(f => f && f.d) : []);
+
+    // ------------------------------------------------------------------
     // 3) Pembuat .docx (dipisah supaya bisa diuji di Node)
     // ------------------------------------------------------------------
     function bangunDocx(D, k, namaKantor, logoBytes) {
@@ -265,13 +291,39 @@
         });
         body.push(p(tr(''), { spacing: { after: 200 } }), ttd);
 
+        // Halaman dokumentasi: hanya dibuat bila ada foto.
+        const foto = fotoAda(k);
+        const halaman = { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1417, right: 1134 } } };
+        const sections = [{ properties: halaman, children: kop.concat(body) }];
+        if (foto.length) {
+            const wSel = 4677, maxW = 290, maxH = 230;
+            const sel = (f) => new TableCell({
+                width: { size: wSel, type: WidthType.DXA }, borders: noBorders, margins: { top: 60, bottom: 60, left: 80, right: 80 },
+                children: f ? [
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new ImageRun({ type: 'jpg', data: dataUrlKeBytes(f.d), transformation: (() => { const sk = Math.min(maxW / f.w, maxH / f.h); return { width: Math.round(f.w * sk), height: Math.round(f.h * sk) }; })() })] }),
+                    p(tr(f.ket || '', { size: 18 }), { alignment: AlignmentType.CENTER, spacing: { after: 120 } })
+                ] : [p(tr(''), { spacing: { after: 0 } })]
+            });
+            const baris2 = [];
+            for (let i = 0; i < foto.length; i += 2) baris2.push(new TableRow({ cantSplit: true, children: [sel(foto[i]), sel(foto[i + 1])] }));
+            sections.push({
+                properties: halaman,
+                children: [
+                    tengah('DOKUMENTASI KEGIATAN'),
+                    p(tr('Surat Tugas Nomor ' + (k.nomor_st || '')), { alignment: AlignmentType.CENTER, spacing: { after: 240 } }),
+                    new Table({
+                        width: { size: wSel * 2, type: WidthType.DXA }, columnWidths: [wSel, wSel],
+                        borders: { top: tanpaBorder, bottom: tanpaBorder, left: tanpaBorder, right: tanpaBorder, insideHorizontal: tanpaBorder, insideVertical: tanpaBorder },
+                        rows: baris2
+                    })
+                ]
+            });
+        }
+
         return new Document({
             creator: 'SiMAB', title: 'Laporan Pelaksanaan Tugas ' + (k.nomor_st || ''),
             styles: { default: { document: { run: { font: FONT, size: SZ } } } },
-            sections: [{
-                properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1417, right: 1134 } } },
-                children: kop.concat(body)
-            }]
+            sections: sections
         });
     }
 
@@ -383,6 +435,7 @@
                 <div style="width:48%">${k.mengetahui_jabatan ? `<br><br><br>Mengetahui,<br>${esc(k.mengetahui_jabatan)}${tte}${esc(k.mengetahui_nama || '')}` : ''}</div>
                 <div style="width:48%">Dibuat di ${esc(k.tempat || 'Denpasar')}<br>pada tanggal ${esc(tglIndo(k.tgl_laporan))}<br><br>Pembuat Laporan<br>&nbsp;${pel.map(n => `${tte}${esc(n)}`).join('<div style="height:10px"></div>')}</div>
             </div>
+            ${fotoAda(k).length ? `<div style="border-top:2px dashed #cbd5e1;margin:26px -34px 0;padding:18px 34px 0"><div style="${c}">DOKUMENTASI KEGIATAN</div><div style="text-align:center;margin:4px 0 12px">Surat Tugas Nomor ${esc(k.nomor_st || '')}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">${fotoAda(k).map(f => `<div style="text-align:center"><img src="${f.d}" alt="" style="max-width:100%;max-height:190px;object-fit:contain"><div style="font-size:11px;margin-top:3px">${esc(f.ket || '')}</div></div>`).join('')}</div></div>` : ''}
         </div>`;
     }
 
@@ -435,6 +488,23 @@
             if (mode !== 'edit') return;
             KOLOM.forEach(c => { const el = $(c); if (el) k[c] = el.value; });
             const cat = $('catatan'); if (cat) k.catatan = cat.value;
+            popup.querySelectorAll('.lpt-fotoket').forEach(el => { const f = (k.foto || [])[Number(el.dataset.i)]; if (f) f.ket = el.value; });
+        };
+
+        // Tambah foto dari berkas gambar; hasil kompres disimpan ke konsep.
+        const tambahFoto = async (files) => {
+            const daftar = Array.from(files || []).filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name || ''));
+            if (!daftar.length) { pesan($('status'), 'Pilih berkas gambar (JPG/PNG).', 'text-red-600'); return; }
+            bacaForm();
+            k.foto = Array.isArray(k.foto) ? k.foto : [];
+            const sisa = MAKS_FOTO - k.foto.length;
+            if (sisa <= 0) { pesan($('status'), 'Maksimal ' + MAKS_FOTO + ' foto.', 'text-red-600'); return; }
+            pesan($('status'), '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Memproses foto…', 'text-sky-700');
+            let gagal = 0;
+            for (const f of daftar.slice(0, sisa)) { try { k.foto.push(await kompresFoto(f)); } catch (_) { gagal++; } }
+            const ok = await simpan(true);
+            const info = { teks: (gagal ? gagal + ' foto gagal dibaca. ' : '') + (daftar.length > sisa ? 'Hanya ' + sisa + ' foto yang muat (maks ' + MAKS_FOTO + '). ' : '') + '✅ Foto ditambahkan' + (ok ? '.' : ' (belum tersimpan ke server).'), warna: gagal || daftar.length > sisa ? 'text-amber-700' : 'text-green-700' };
+            if (mode === 'edit') { renderEdit(); pesan($('status'), info.teks, info.warna); } else renderPratinjau(info);
         };
 
         const simpan = async (diam, elPesan) => {
@@ -504,6 +574,7 @@
                 <div class="flex flex-wrap items-center gap-2">
                     <button id="lpt-edit" class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium"><i class="fa-solid fa-pen mr-1"></i>Edit</button>
                     <button id="lpt-ai" class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Susun ulang</button>
+                    <label class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium cursor-pointer"><i class="fa-solid fa-images mr-1"></i>Foto${fotoAda(k).length ? ' (' + fotoAda(k).length + ')' : ''}<input id="lpt-fotofile" type="file" accept="image/*" multiple class="hidden"></label>
                     <button id="lpt-simpan" class="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Simpan</button>
                     <button id="lpt-docx" class="px-3 py-1.5 bg-sky-700 text-white rounded-lg text-sm font-medium"><i class="fa-solid fa-file-word mr-1"></i>Unduh .docx</button>
                     <span id="lpt-stinfo" class="text-xs text-slate-500"></span>
@@ -514,6 +585,7 @@
             if (info) pesan($('status'), info.teks, info.warna);
             tampilStInfo();
             $('edit').onclick = () => renderEdit();
+            $('fotofile').onchange = function () { tambahFoto(this.files); };
             $('simpan').onclick = async () => { await simpan(false, $('msg')); };
             $('docx').onclick = function () { unduh(this, $('msg')); };
             $('ai').onclick = () => jalankanAI();
@@ -558,6 +630,13 @@
                     <div>${f('mengetahui_jabatan', 'Mengetahui — jabatan (kosongkan bila tidak ada)', k.mengetahui_jabatan)}</div>
                     <div>${f('mengetahui_nama', 'Mengetahui — nama', k.mengetahui_nama)}</div>
                 </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-600">Foto dokumentasi (halaman tersendiri di akhir dokumen; tanpa foto = tanpa halaman)</span>
+                        <label class="px-3 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium cursor-pointer"><i class="fa-solid fa-plus mr-1"></i>Tambah foto<input id="lpt-fotofile" type="file" accept="image/*" multiple class="hidden"></label>
+                    </div>
+                    <div id="lpt-fotolist" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">${fotoAda(k).map((f, i) => `<div class="flex items-center gap-2 border border-slate-200 rounded-lg p-2"><img src="${f.d}" alt="" style="width:64px;height:48px;object-fit:cover;border-radius:4px;flex:none"><input class="lpt-fotoket flex-1 min-w-0 px-2 py-1 border border-slate-300 rounded text-xs" data-i="${i}" placeholder="Keterangan foto (opsional)" value="${esc(f.ket || '')}"><button type="button" class="lpt-fotodel text-red-500 text-lg leading-none px-1" data-i="${i}" title="Hapus foto">&times;</button></div>`).join('')}</div>
+                </div>
                 <div id="lpt-msg" class="text-xs min-h-[16px]"></div>
                 <div class="flex flex-wrap justify-end gap-2">
                     <button id="lpt-simpan" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">Simpan konsep</button>
@@ -566,6 +645,8 @@
             popup.querySelectorAll('.lpt-ta').forEach(el => { autoTinggi(el); el.addEventListener('input', () => autoTinggi(el)); });
             tampilStInfo();
             $('kembali').onclick = () => { bacaForm(); renderPratinjau(); };
+            $('fotofile').onchange = function () { tambahFoto(this.files); };
+            popup.querySelectorAll('.lpt-fotodel').forEach(b => { b.onclick = () => { bacaForm(); k.foto.splice(Number(b.dataset.i), 1); renderEdit(); }; });
             $('simpan').onclick = async () => { bacaForm(); await simpan(false, $('msg')); };
             $('docx').onclick = function () { unduh(this, $('msg')); };
             $('ai').onclick = () => jalankanAI();
