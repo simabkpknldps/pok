@@ -191,7 +191,7 @@
     // 3) Pembuat .docx (dipisah supaya bisa diuji di Node)
     // ------------------------------------------------------------------
     function bangunDocx(D, k, namaKantor, logoBytes) {
-        const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun, VerticalAlign } = D;
+        const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun, VerticalAlign, Tab } = D;
         const FONT = 'Arial';
         const SZ = 22; // 11pt
         const tr = (text, o) => new TextRun(Object.assign({ text: String(text), font: FONT, size: SZ }, o || {}));
@@ -234,12 +234,13 @@
         ];
 
         const pel = baris(k.pelaksana.replace(/\r/g, '').split('\n').join('\n\n'));
-        const wNo = 700, wNama = 8300;
+        const wNo = 700, wNama = 7935, geser = 720; // tabel sejajar dengan isi paragraf (geser 720 = 1,27 cm)
         const sel = (text, w, o) => new TableCell({
             width: { size: w, type: WidthType.DXA }, margins: { top: 40, bottom: 40, left: 100, right: 100 },
             children: [p(tr(text, o || {}), { spacing: { after: 0 } })]
         });
         const tabelPel = new Table({
+            indent: { size: geser, type: WidthType.DXA },
             width: { size: wNo + wNama, type: WidthType.DXA }, columnWidths: [wNo, wNama],
             rows: [new TableRow({ children: [sel('No', wNo, { bold: true }), sel('Nama', wNama, { bold: true })] })]
                 .concat(pel.map((n, i) => new TableRow({ children: [sel(String(i + 1), wNo), sel(n, wNama)] })))
@@ -255,15 +256,20 @@
         body.push(tengah('LAPORAN'), tengah('TENTANG'), tengah('LAPORAN PELAKSANAAN TUGAS'),
             p(tr(`NOMOR ${k.nomor_lpt || 'LAP-.../KNL.1401.../' + (k.tgl_laporan || '').slice(0, 4)}`, { bold: true }), { alignment: AlignmentType.CENTER, spacing: { after: 240 } }));
         body.push(judul('A. Pendahuluan'));
-        body.push(p(tr('1. Latar Belakang', { bold: false }), { spacing: { after: 60 }, keepNext: true }));
-        body.push(isi(dasarND, 360), tabelPel, p(tr(''), { spacing: { after: 60 } }));
-        body.push(isi(`Sesuai ${kalimatST}.`, 360));
-        body.push(p(tr('2. Maksud dan Tujuan'), { spacing: { after: 60 }, keepNext: true }), ...baris(k.maksud).map(t => isi(t, 360)));
-        body.push(p(tr('3. Dasar'), { spacing: { after: 60 }, keepNext: true }), isi(kalimatST + '.', 360));
-        body.push(judul('B. Kegiatan yang Dilaksanakan'), ...baris(k.kegiatan).map(t => isi(t, 360)));
-        body.push(judul('C. Hasil yang Dicapai'), ...hasil.map((t, i) => p([tr(`${i + 1}.  ${t}`)], { alignment: AlignmentType.JUSTIFIED, indent: { left: 720, hanging: 360 } })));
-        body.push(judul('D. Simpulan dan Saran'), ...baris(k.simpulan).map(t => isi(t, 360)));
-        body.push(judul('E. Penutup'), isi('Demikian laporan pelaksanaan tugas ini kami sampaikan dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.', 360));
+        // Butir bernomor: angka di 360, teks di 720 (tabulasi), isi paragraf juga di 720.
+        const butir = (no, text, o) => new Paragraph(Object.assign({
+            children: [new TextRun({ children: [no, new Tab(), text], font: FONT, size: SZ })],
+            spacing: { after: 100, line: 276 }, indent: { left: 720, hanging: 360 }
+        }, o || {}));
+        body.push(butir('1.', 'Latar Belakang', { spacing: { after: 60 }, keepNext: true }));
+        body.push(isi(dasarND, 720), tabelPel, p(tr(''), { spacing: { after: 60 } }));
+        body.push(isi(`Sesuai ${kalimatST}.`, 720));
+        body.push(butir('2.', 'Maksud dan Tujuan', { spacing: { after: 60 }, keepNext: true }), ...baris(k.maksud).map(t => isi(t, 720)));
+        body.push(butir('3.', 'Dasar', { spacing: { after: 60 }, keepNext: true }), isi(kalimatST + '.', 720));
+        body.push(judul('B. Kegiatan yang Dilaksanakan'), ...baris(k.kegiatan).map(t => isi(t, 720)));
+        body.push(judul('C. Hasil yang Dicapai'), ...hasil.map((t, i) => butir(`${i + 1}.`, t, { alignment: AlignmentType.JUSTIFIED })));
+        body.push(judul('D. Simpulan dan Saran'), ...baris(k.simpulan).map(t => isi(t, 720)));
+        body.push(judul('E. Penutup'), isi('Demikian laporan pelaksanaan tugas ini kami sampaikan dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.', 720));
 
         // Tulisan abu-abu di atas tiap nama + ruang kosong untuk QR TTE (sekitar 2,8 cm, termasuk selisih aman).
         const labelTte = () => p(tr('Ditandatangani secara elektronik', { color: 'BFBFBF', size: 22 }), { spacing: { before: 1560, after: 0 }, keepNext: true });
@@ -402,34 +408,36 @@
             : `Kepala ${kantorSingkat} menugaskan:`;
 
         judul('A. Pendahuluan');
-        para('1. Latar Belakang', { after: 3, keepNext: true });
-        para(dasarND, { indent: 18, justify: true, after: 5 });
+        // Butir bernomor: angka di 18 pt, teks dan isi paragraf di 36 pt (sejajar dengan tabel).
+        const butir = (no, text, o) => { ensure(LH * 3); font(11, false); doc.text(no, ML + 18, y + 9.35); para(text, Object.assign({ indent: 36 }, o || {})); };
+        butir('1.', 'Latar Belakang', { after: 3 });
+        para(dasarND, { indent: 36, justify: true, after: 5 });
 
         // tabel pelaksana
-        const tW = 450, cNo = 35;
+        const tX = ML + 36, tW = W - 36, cNo = 35;
         const barisTabel = (a, b, tebal) => {
             font(11, tebal);
             const ls = doc.splitTextToSize(String(b), tW - cNo - 10);
             const h = ls.length * LH + 6;
             ensure(h);
             doc.setLineWidth(0.5); doc.setDrawColor(0);
-            doc.rect(ML, y, cNo, h); doc.rect(ML + cNo, y, tW - cNo, h);
+            doc.rect(tX, y, cNo, h); doc.rect(tX + cNo, y, tW - cNo, h);
             font(11, tebal);
-            doc.text(String(a), ML + 5, y + 3 + 9.3);
-            ls.forEach((ln, i) => doc.text(ln, ML + cNo + 5, y + 3 + 9.3 + i * LH));
+            doc.text(String(a), tX + 5, y + 3 + 9.3);
+            ls.forEach((ln, i) => doc.text(ln, tX + cNo + 5, y + 3 + 9.3 + i * LH));
             y += h;
         };
         barisTabel('No', 'Nama', true);
         pel.forEach((n, i) => barisTabel(String(i + 1), n, false));
         y += 8;
 
-        para('Sesuai ' + kalimatST + '.', { indent: 18, justify: true, after: 5 });
-        para('2. Maksud dan Tujuan', { after: 3, keepNext: true });
-        baris(k.maksud).forEach(t => para(t, { indent: 18, justify: true, after: 5 }));
-        para('3. Dasar', { after: 3, keepNext: true });
-        para(kalimatST + '.', { indent: 18, justify: true, after: 5 });
+        para('Sesuai ' + kalimatST + '.', { indent: 36, justify: true, after: 5 });
+        butir('2.', 'Maksud dan Tujuan', { after: 3, keepNext: true });
+        baris(k.maksud).forEach(t => para(t, { indent: 36, justify: true, after: 5 }));
+        butir('3.', 'Dasar', { after: 3, keepNext: true });
+        para(kalimatST + '.', { indent: 36, justify: true, after: 5 });
         judul('B. Kegiatan yang Dilaksanakan');
-        baris(k.kegiatan).forEach(t => para(t, { indent: 18, justify: true, after: 5 }));
+        baris(k.kegiatan).forEach(t => para(t, { indent: 36, justify: true, after: 5 }));
         judul('C. Hasil yang Dicapai');
         baris(k.hasil).forEach((t, i) => {
             ensure(LH);
@@ -437,9 +445,9 @@
             para(t, { indent: 36, justify: true, after: 5 });
         });
         judul('D. Simpulan dan Saran');
-        baris(k.simpulan).forEach(t => para(t, { indent: 18, justify: true, after: 5 }));
+        baris(k.simpulan).forEach(t => para(t, { indent: 36, justify: true, after: 5 }));
         judul('E. Penutup');
-        para('Demikian laporan pelaksanaan tugas ini kami sampaikan dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.', { indent: 18, justify: true, after: 5 });
+        para('Demikian laporan pelaksanaan tugas ini kami sampaikan dengan sebenar-benarnya untuk dapat dipergunakan sebagaimana mestinya.', { indent: 36, justify: true, after: 5 });
 
         // ---- Tanda tangan (ruang QR TTE di atas label abu-abu) ----
         const QR = 78, kolB = ML + 225, abu = [191, 191, 191];
@@ -583,7 +591,7 @@
         const kantor = String(namaKantor || 'KANTOR PELAYANAN KEKAYAAN NEGARA DAN LELANG DENPASAR').toUpperCase();
         const kantorSingkat = namaKantor || 'KPKNL Denpasar';
         const kosong = '<span style="background:#fef3c7;color:#92400e;padding:0 4px;border-radius:3px">[belum diisi]</span>';
-        const J = 'text-align:justify;margin:0 0 6px 18px';
+        const J = 'text-align:justify;margin:0 0 6px 36px';
         const para = (s) => pecahBaris(s).map(x => `<p style="${J}">${esc(x)}</p>`).join('') || `<p style="${J}">${kosong}</p>`;
         const head = (t) => `<p style="font-weight:700;margin:14px 0 6px">${t}</p>`;
         const pel = pecahBaris(String(k.pelaksana || '').replace(/\r/g, '').split('\n').join('\n\n'));
@@ -593,7 +601,7 @@
             : `Kepala ${kantorSingkat} menugaskan:`;
         const hasil = pecahBaris(k.hasil);
         const c = 'text-align:center;font-weight:700;line-height:1.35';
-        const tabel = `<table style="border-collapse:collapse;margin:4px 0 8px 18px;width:calc(100% - 18px)"><tr><td style="border:1px solid #333;padding:3px 8px;width:44px;font-weight:700">No</td><td style="border:1px solid #333;padding:3px 8px;font-weight:700">Nama</td></tr>`
+        const tabel = `<table style="font-size:inherit;border-collapse:collapse;margin:4px 0 8px 36px;width:calc(100% - 36px)"><tr><td style="border:1px solid #333;padding:3px 8px;width:44px;font-weight:700">No</td><td style="border:1px solid #333;padding:3px 8px;font-weight:700">Nama</td></tr>`
             + pel.map((n, i) => `<tr><td style="border:1px solid #333;padding:3px 8px">${i + 1}</td><td style="border:1px solid #333;padding:3px 8px">${esc(n)}</td></tr>`).join('') + '</table>';
         const tte = '<div style="color:#bfbfbf;margin-top:92px">Ditandatangani secara elektronik</div>';
         const nomorLpt = k.nomor_lpt ? esc(k.nomor_lpt) : kosong;
@@ -602,11 +610,11 @@
             <div style="border-bottom:2px solid #000;margin:6px 0 14px"></div>
             <div style="${c};margin-bottom:12px">LAPORAN<br>TENTANG<br>LAPORAN PELAKSANAAN TUGAS<br>NOMOR ${nomorLpt}</div>
             ${head('A. Pendahuluan')}
-            <p style="margin:0 0 4px">1. Latar Belakang</p>
+            <p style="margin:0 0 4px 36px;text-indent:-18px">1.&nbsp;&nbsp;Latar Belakang</p>
             <p style="${J}">${esc(dasarND)}</p>${tabel}
             <p style="${J}">Sesuai ${esc(kalimatST)}.</p>
-            <p style="margin:0 0 4px">2. Maksud dan Tujuan</p>${para(k.maksud)}
-            <p style="margin:0 0 4px">3. Dasar</p><p style="${J}">${esc(kalimatST)}.</p>
+            <p style="margin:0 0 4px 36px;text-indent:-18px">2.&nbsp;&nbsp;Maksud dan Tujuan</p>${para(k.maksud)}
+            <p style="margin:0 0 4px 36px;text-indent:-18px">3.&nbsp;&nbsp;Dasar</p><p style="${J}">${esc(kalimatST)}.</p>
             ${head('B. Kegiatan yang Dilaksanakan')}${para(k.kegiatan)}
             ${head('C. Hasil yang Dicapai')}${hasil.length ? hasil.map((t, i) => `<p style="text-align:justify;margin:0 0 6px 36px;text-indent:-18px">${i + 1}.&nbsp; ${esc(t)}</p>`).join('') : `<p style="${J}">${kosong}</p>`}
             ${head('D. Simpulan dan Saran')}${para(k.simpulan)}
