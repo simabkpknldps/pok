@@ -483,7 +483,10 @@ async function initDashboardPage() {
         const data = computeDashboardData(kegiatanRows, pokRows, mpPnbpRows);
         const rpdBerjalanData = computeRpdBerjalanData(kegiatanRows, rpdRows, rpdBerjalanRows);
         const rekapSpmData = computeRekapSpmData(kegiatanRows);
-        container.innerHTML = buildDashboardHtml(data, rpdBerjalanData, rekapSpmData);
+        const perjadinkuRows = computePerjadinkuData(kegiatanRowsRaw, tahunAktif);
+        container.innerHTML = buildDashboardHtml(data, rpdBerjalanData, rekapSpmData, perjadinkuRows);
+        const btnPjd = document.getElementById('dash-pjd-more');
+        if (btnPjd) btnPjd.onclick = () => navigate('perjadin');
         initCharts(data);
         bindGlobalSearchBar();
         bindRpdBerjalanEvents();
@@ -496,7 +499,74 @@ async function initDashboardPage() {
     }
 }
 
-function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
+// ============================================
+// PERJADIN SAYA (berjalan) -- milik user yang login, status != Selesai
+// ============================================
+const PJD_STATUS_URUT = ['Rekam Data', 'Terlaksana', 'LPT', 'Terbayar', 'Selesai'];
+const PJD_STATUS_WARNA = {
+    'Rekam Data': '#f472b6', 'Terlaksana': '#9ca3af', 'LPT': '#f59e0b', 'Terbayar': '#22c55e', 'Selesai': '#3b82f6'
+};
+const PJD_BLN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+// Sama dengan halaman Perjadinku: pelaksana = nama login, MAK 524111/524113, tahun aktif.
+function computePerjadinkuData(kegiatanRowsRaw, tahunAktif) {
+    const nama = (localStorage.getItem('nama') || '').trim().toLowerCase();
+    if (!nama) return [];
+    return (kegiatanRowsRaw || [])
+        .filter(k => {
+            const mak = String(k.mak || '');
+            return String(k.pelaksana || '').trim().toLowerCase() === nama
+                && (mak.includes('524111') || mak.includes('524113'))
+                && Number(k.tahun) === Number(tahunAktif)
+                && PJD_STATUS_URUT.includes(k.status)
+                && k.status !== 'Selesai';
+        })
+        .sort((a, b) => String(a.tgl_mulai || '').localeCompare(String(b.tgl_mulai || '')));
+}
+
+function pjdRentang(g, h) {
+    const a = new Date(g), b = new Date(h || g);
+    if (isNaN(a.getTime())) return '';
+    const dd = d => String(d.getDate()).padStart(2, '0');
+    const f = d => `${dd(d)} ${PJD_BLN[d.getMonth()]}`;
+    if (isNaN(b.getTime()) || a.toDateString() === b.toDateString()) return `${f(a)} ${a.getFullYear()}`;
+    if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) return `${dd(a)}–${dd(b)} ${PJD_BLN[a.getMonth()]} ${a.getFullYear()}`;
+    return `${f(a)} – ${f(b)} ${b.getFullYear()}`;
+}
+
+function renderPerjadinkuCard(rows) {
+    if (!rows || !rows.length) return '';
+    const MAKS = 3;
+    const item = k => {
+        const idx = PJD_STATUS_URUT.indexOf(k.status);
+        const warna = PJD_STATUS_WARNA[k.status] || '#9ca3af';
+        const seg = PJD_STATUS_URUT.map((st, i) => `<div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0">
+                <div style="height:6px;border-radius:99px;background:${i <= idx ? warna : 'var(--divider)'}"></div>
+                <div style="font-size:10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${i === idx ? 'font-weight:700;color:var(--label)' : 'color:var(--label-secondary)'}">${st}</div>
+            </div>`).join('');
+        const jml = Number(k.jumlah) || 0;
+        return `<div class="pb-3.5" style="border-bottom: 1px solid var(--divider);">
+            <div class="flex items-start justify-between gap-3 mb-2">
+                <div class="min-w-0">
+                    <div class="text-[13px] font-medium" style="color: var(--label);">${escapeHtml(k.uraian || '-')}</div>
+                    <div class="text-[11px] mt-0.5" style="color: var(--label-secondary);">${escapeHtml(k.tujuan || '-')} &middot; ${escapeHtml(pjdRentang(k.tgl_mulai, k.tgl_selesai))}${jml ? ' &middot; ' + jml.toLocaleString('id-ID') : ''}</div>
+                </div>
+                <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap" style="background:${warna}22;color:${warna};">${escapeHtml(k.status)}</span>
+            </div>
+            <div style="display:flex;gap:4px">${seg}</div>
+        </div>`;
+    };
+    const sisa = rows.length - MAKS;
+    return `<div class="ios-panel p-5">
+        <div class="flex items-center justify-between mb-3.5">
+            <h3 class="text-[13px] font-semibold" style="color: var(--label);">Perjalanan Dinas Saya <span class="font-normal" style="color: var(--label-secondary);">&middot; ${rows.length} berjalan</span></h3>
+            <button type="button" id="dash-pjd-more" class="text-[12px] font-semibold" style="color: var(--ios-blue);">Lebih banyak${sisa > 0 ? ' (+' + sisa + ')' : ''} <i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+        </div>
+        <div class="space-y-3.5">${rows.slice(0, MAKS).map(item).join('')}</div>
+    </div>`;
+}
+
+function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData, perjadinkuRows) {
     const T = (id) => (typeof window.dashKartuTampil === 'function') ? window.dashKartuTampil(id) : true;
     const kolomLg = { 1: 'lg:grid-cols-1', 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4', 5: 'lg:grid-cols-5' };
     const baris = (items, kelas, lgMax) => {
@@ -533,6 +603,7 @@ function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
         [T('hariini'), hariIni],
         [T('top'), `<div class="ios-panel p-5">${renderTopPerjadin(data.topPerjadin)}</div>`]
     ], '', 5);
+    const kartuPerjadinku = T('perjadinku') ? renderPerjadinkuCard(perjadinkuRows) : '';
     const barisTengah = baris([
         [T('rpd'), `<div id="dash-rpd-card" class="ios-panel p-5">${renderRpdBerjalanTable(rpdBerjalanData)}</div>`],
         [T('spm'), `<div id="dash-spm-card" class="ios-panel p-5 flex flex-col">${renderRekapSpmTable(rekapSpmData)}</div>`]
@@ -541,7 +612,7 @@ function buildDashboardHtml(data, rpdBerjalanData, rekapSpmData) {
         [T('grafikrp'), `<div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Rp)</h3><canvas id="chartRp"></canvas></div>`],
         [T('grafikfrek'), `<div class="ios-panel p-5"><h3 class="text-[13px] font-semibold mb-3.5" style="color: var(--label);">Grafik Realisasi Perjalanan Dinas (Frek)</h3><canvas id="chartFrek"></canvas></div>`]
     ], '', 2);
-    const semua = cari + barisAtas + barisTengah + barisGrafik;
+    const semua = cari + barisAtas + kartuPerjadinku + barisTengah + barisGrafik;
     return `
         <div class="space-y-6">
             ${semua || `<div class="ios-panel p-8 text-center text-sm" style="color: var(--label-secondary);"><i class="fa-solid fa-table-cells-large text-2xl mb-2"></i><div>Semua kartu disembunyikan.</div><div class="mt-1">Aktifkan lewat Pengaturan &rsaquo; Tampilan Dashboard.</div></div>`}
