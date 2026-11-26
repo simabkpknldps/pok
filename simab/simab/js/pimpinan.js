@@ -148,7 +148,7 @@
         const seksiList = Object.entries(seksi).map(([nama, v]) => ({ nama, ...v })).sort((a, b) => b.pagu - a.pagu);
 
         return {
-            tot, sd, jenis, seksiList, status, perhatian: perhatian.slice(0, 6),
+            tot, sd, jenis, seksiList, status, perhatian,
             rpdKum, realKum, bulanIni, jumlahKegiatan: kegRows.length, jumlahAkun: akun.length,
             spm: { belum: spmBelum.size, bulan: spmBulan.size, perjadinBulan, bertugas: bertugas.size }
         };
@@ -206,11 +206,19 @@
         const statusBaris = Object.entries(d.status).map(([s, n]) => `<div style="display:flex;align-items:center;gap:10px"><span style="flex:1;color:#6e6e73">${s}</span><span style="font-weight:700;font-size:16px">${n}</span><span style="padding:2px 10px;border-radius:99px;background:${STATUS_WARNA[s][0]};color:${STATUS_WARNA[s][1]};font-size:11px;font-weight:600">${pctTxt(pct(n, totalStatus))}</span></div>`).join('');
         const statusBar = Object.entries(d.status).map(([s, n]) => `<div style="width:${pct(n, totalStatus)}%;background:${STATUS_WARNA[s][2]}"></div>`).join('');
 
-        const perhatianHtml = d.perhatian.length ? d.perhatian.map(x => `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #eef0f3">
-            <span style="padding:3px 10px;border-radius:99px;background:${x.warna[0]};color:${x.warna[1]};font-size:11px;font-weight:600;flex:none">${x.label}</span>
+        const barisPerhatian = x => `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 0;border-top:1px solid #eef0f3">
             <div style="flex:1 1 260px;min-width:0"><div style="font-size:13px;font-weight:600">${esc(x.a.uraian)}</div><div style="font-size:12px;color:#6e6e73;font-family:ui-monospace,Menlo,monospace;word-break:break-all">${esc(x.a.kode)}</div></div>
-            <div style="text-align:right;flex:none"><div style="font-size:13px;font-weight:600">${x.kanan}</div><div style="font-size:12px;color:#6e6e73">${x.ket}</div></div></div>`).join('')
-            : '<div style="padding:12px 0;border-top:1px solid #eef0f3;font-size:13px;color:#6e6e73">Tidak ada akun yang perlu perhatian khusus saat ini.</div>';
+            <div style="text-align:right;flex:none"><div style="font-size:13px;font-weight:600">${x.kanan}</div><div style="font-size:12px;color:#6e6e73">${x.ket}</div></div></div>`;
+        const KAT_PERHATIAN = [
+            { p: 0, label: 'Melebihi pagu', ikon: 'fa-triangle-exclamation', kosong: 'Tidak ada akun yang melebihi pagu.' },
+            { p: 1, label: 'Sisa menipis', ikon: 'fa-hourglass-end', kosong: 'Tidak ada akun dengan sisa menipis.' },
+            { p: 2, label: 'Diblokir', ikon: 'fa-lock', kosong: 'Tidak ada akun yang diblokir.' },
+            { p: 3, label: 'Serapan rendah', ikon: 'fa-arrow-trend-down', kosong: 'Tidak ada akun dengan serapan rendah.' }
+        ].map(k => ({ ...k, items: d.perhatian.filter(x => x.p === k.p) }));
+        const katAktif = Math.max(0, KAT_PERHATIAN.findIndex(k => k.items.length));
+        const tabPerhatian = KAT_PERHATIAN.map((k, i) => `<button type="button" data-pmp-tab="${i}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:0;cursor:pointer;font-size:13px;white-space:nowrap;text-align:left;font-family:inherit;${i === katAktif ? 'background:#dbeafe;color:#0A2E6E;font-weight:600' : 'background:transparent;color:#6e6e73;font-weight:500'}"><i class="fa-solid ${k.ikon}" style="width:18px;text-align:center"></i><span style="flex:1">${k.label}</span><span style="min-width:22px;text-align:center;padding:1px 7px;border-radius:99px;background:${k.items.length ? '#fff' : 'transparent'};font-size:11px;font-weight:700">${k.items.length}</span></button>`).join('');
+        const panelPerhatian = KAT_PERHATIAN.map((k, i) => `<div data-pmp-panel="${i}" style="${i === katAktif ? '' : 'display:none;'}max-height:420px;overflow-y:auto">${k.items.length ? k.items.map(barisPerhatian).join('') : `<div style="padding:12px 0;font-size:13px;color:#6e6e73">${k.kosong}</div>`}</div>`).join('');
+        const perhatianHtml = `<div style="display:flex;flex-wrap:wrap;gap:16px"><nav style="display:flex;flex-direction:column;gap:4px;flex:0 0 190px">${tabPerhatian}</nav><div style="flex:1 1 320px;min-width:0">${panelPerhatian}</div></div>`;
 
         const mini = (jdl, n) => `<div style="background:#f5f5f7;border-radius:12px;padding:14px"><div style="font-size:12px;color:#6e6e73">${jdl}</div><div style="font-size:24px;font-weight:700;margin-top:4px">${n}</div></div>`;
 
@@ -324,6 +332,18 @@
             const t = el.querySelector('#pmp-tutup'); if (t) t.onclick = keluar;
             const d = el.querySelector('#pmp-dash');
             if (d) d.onclick = () => { if (opsi.dariLogin) window.location.href = 'dashboard.html'; else tutupOverlay(); };
+            const tabs = el.querySelectorAll('[data-pmp-tab]');
+            tabs.forEach(tb => {
+                tb.onclick = () => {
+                    tabs.forEach(x => {
+                        const aktif = x === tb;
+                        x.style.background = aktif ? '#dbeafe' : 'transparent';
+                        x.style.color = aktif ? '#0A2E6E' : '#6e6e73';
+                        x.style.fontWeight = aktif ? '600' : '500';
+                    });
+                    el.querySelectorAll('[data-pmp-panel]').forEach(pn => { pn.style.display = pn.dataset.pmpPanel === tb.dataset.pmpTab ? '' : 'none'; });
+                };
+            });
         };
 
         try {
