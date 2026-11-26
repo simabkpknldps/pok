@@ -42,6 +42,23 @@
         return m ? m[0] : s.replace(/^\s*\((?:RM|PNBP)\)\s*/i, '').trim();
     }
 
+    // Alamat Apps Script KHUSUS unggah/baca PDF ST (GAS_UPLOAD_ST_MANDIRI.gs).
+    // Isi dengan alamat deployment "/exec" skrip itu. Bila kosong, dipakai Apps Script utama SiMAB.
+    const ST_GAS_URL = '';
+
+    async function stPost(payload, timeout) {
+        let url = ST_GAS_URL;
+        try { url = localStorage.getItem('stGasUrl') || url; } catch (_) { /* abaikan */ }
+        if (!url) return apiPost(payload, timeout);
+        const ctl = new AbortController();
+        const tid = setTimeout(() => ctl.abort(), timeout || 60000);
+        try {
+            const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload), signal: ctl.signal });
+            if (!res.ok) throw new Error('Server error: ' + res.status);
+            return await res.json();
+        } finally { clearTimeout(tid); }
+    }
+
     const isPerjadin = (mak) => /52411[13]/.test(String(mak || ''));
     const adaDrive = (l) => /drive\.google\.com|docs\.google\.com/i.test(String(l || ''));
 
@@ -61,7 +78,7 @@
         if (!file) throw new Error('File kosong.');
         if (file.size > 10 * 1024 * 1024) throw new Error('Ukuran file maksimal 10MB.');
         const base64 = await fileKeBase64(file);
-        const res = await apiPost({
+        const res = await stPost({
             action: 'uploadStKegiatan',
             id: meta.id || '',
             fileData: base64,
@@ -70,7 +87,7 @@
             nomorST: nomorStBersih(meta.uraian || '')
         }, 90000);
         if (!res || res.status !== 'success' || !res.link) {
-            throw new Error((res && res.message) || 'Unggah ST ke Drive gagal. Pastikan kode Apps Script terbaru (uploadStKegiatan) sudah dipasang.');
+            throw new Error((res && res.message) || 'Unggah ST ke Drive gagal. Pastikan Apps Script unggah ST (GAS_UPLOAD_ST_MANDIRI.gs) sudah di-deploy dan alamatnya terpasang.');
         }
         return res.link;
     }
@@ -258,7 +275,7 @@
     // 4) Teks ST dari PDF Drive (untuk bahan AI)
     // ------------------------------------------------------------------
     async function teksDariPdfDrive(link) {
-        const r = await apiPost({ action: 'getDokumenFileBase64', link: link }, 60000);
+        const r = await stPost({ action: 'getDokumenFileBase64', link: link }, 60000);
         if (r.status !== 'success' || !r.base64) throw new Error(r.message || 'Gagal mengambil PDF ST.');
         const bin = atob(r.base64);
         const bytes = new Uint8Array(bin.length);
