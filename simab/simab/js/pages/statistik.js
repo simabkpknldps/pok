@@ -253,10 +253,11 @@ function stShowBelumSelesaiBulan(bulanIdx) {
             <tr class="border-t border-slate-100">
                 <td class="p-2 text-slate-700">${r.nama}</td>
                 <td class="p-2 text-slate-700">${r.uraian || '-'}</td>
+                <td class="p-2 text-slate-700">${r.tujuan || '-'}</td>
                 <td class="p-2 text-slate-700 whitespace-nowrap">${stFormatDate(r.tglMulai)}</td>
                 <td class="p-2 text-center">${stStatusBadge(r.status)}</td>
             </tr>`).join('')
-        : '<tr><td colspan="4" class="text-center text-green-700 py-6">Semua kegiatan bulan ini sudah selesai.</td></tr>';
+        : '<tr><td colspan="5" class="text-center text-green-700 py-6">Semua kegiatan bulan ini sudah selesai.</td></tr>';
     const { overlay, popup } = window.commonOpenOverlay(`
         <h3 class="text-center text-sky-700 font-semibold text-base mb-1">Belum Selesai — ${ST_BULAN_LABEL[bulanIdx]}</h3>
         <p class="text-center text-sm text-slate-500 mb-2">${baris.length} belum selesai, ${selesai} sudah selesai</p>
@@ -265,6 +266,7 @@ function stShowBelumSelesaiBulan(bulanIdx) {
                 <thead class="bg-slate-100 sticky top-0"><tr>
                     <th class="p-2 text-left font-semibold">Pegawai</th>
                     <th class="p-2 text-left font-semibold">Nomor ST</th>
+                    <th class="p-2 text-left font-semibold">Lokasi Tujuan</th>
                     <th class="p-2 text-left font-semibold">Tgl Mulai</th>
                     <th class="p-2 text-center font-semibold">Status</th>
                 </tr></thead>
