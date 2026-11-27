@@ -92,7 +92,7 @@ function mnRender() {
         return !q || (String(r.nama || '').toLowerCase().includes(q) || String(r.nip).includes(q));
     }).sort((a, b) => urut[mnStatus(a)] - urut[mnStatus(b)] || String(b.aktif_terakhir || '').localeCompare(String(a.aktif_terakhir || '')) || String(a.nama || '').localeCompare(String(b.nama || '')));
 
-    if (!rows.length) { body.innerHTML = `<tr><td colspan="6" class="text-center py-8" style="color:#6e6e73">Tidak ada data.</td></tr>`; return; }
+    if (!rows.length) { body.innerHTML = `<tr><td colspan="6" class="text-center py-8" style="color:#6e6e73">Tidak ada pegawai yang cocok. Ubah saringan ke "Semua pegawai" untuk melihat yang lain.</td></tr>`; return; }
     const label = { on: 'Online', off: 'Offline', never: 'Belum pernah login' };
     body.innerHTML = rows.map(r => {
         const st = mnStatus(r);
