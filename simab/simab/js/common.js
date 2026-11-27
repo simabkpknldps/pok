@@ -7,6 +7,7 @@ async function logout() {
     try {
         if (window.logAktivitas) await Promise.race([window.logAktivitas('logout', 'sesi', 'Logout'), new Promise(r => setTimeout(r, 1200))]);
     } catch (e) { /* abaikan */ }
+    try { if (window.tandaiKeluarSesi) await window.tandaiKeluarSesi(); } catch (e) { }
     ['nama', 'nip', 'realUrl', 'admin', 'jabatan', 'pangkat', 'kepeg', 'kantor', 'aksesMenu', 'superadmin', 'superadminMode', 'tahunAktif', 'lastActivity', 'wajibGanti']
         .forEach(k => localStorage.removeItem(k));
     window.location.href = 'index.html?reason=logout';
