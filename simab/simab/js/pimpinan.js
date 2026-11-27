@@ -398,6 +398,15 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampil); else tampil();
 })();
 
+// Tombol sidebar "Monitoring User": superadmin dan admin kantor
+(function () {
+    const tampil = () => {
+        const b = document.getElementById('nav-monitoring');
+        if (b && (localStorage.getItem('superadmin') === '1' || localStorage.getItem('admin') === '1')) b.classList.remove('hidden');
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampil); else tampil();
+})();
+
 // Tombol sidebar "Dashboard Pimpinan": superadmin, admin kantor, dan pejabat berjabatan Kepala
 (function () {
     const tampil = () => {

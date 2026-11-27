@@ -23,6 +23,7 @@ const PAGE_INIT = {
     pok_impor: () => window.initPokImporPage && window.initPokImporPage(),
     pegawai_impor: () => window.initPegawaiImporPage && window.initPegawaiImporPage(),
     log: () => window.initLogPage && window.initLogPage(),
+    monitoring: () => window.initMonitoringPage && window.initMonitoringPage(),
     info: () => window.initInfoPage && window.initInfoPage(),
 };
 

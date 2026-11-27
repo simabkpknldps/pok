@@ -1,0 +1,49 @@
+<style>
+    .mn-kpi { background: #fff; border-radius: 18px; padding: 18px 20px; display: flex; gap: 14px; align-items: center; }
+    .mn-kpi .mn-ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: none; font-size: 18px; }
+    .mn-kpi .mn-lbl { font-size: 12px; color: #6e6e73; }
+    .mn-kpi .mn-val { font-size: 22px; font-weight: 700; line-height: 1.25; }
+    .mn-card { background: #fff; border-radius: 18px; padding: 22px; min-width: 0; }
+    .mn-tbl { width: 100%; min-width: 820px; border-collapse: collapse; font-size: 13px; }
+    .mn-tbl thead th { text-align: left; padding: 10px 12px; background: var(--sidebar-bg); }
+    .mn-tbl td { padding: 11px 12px; vertical-align: middle; border-bottom: 1px solid #eef0f3; }
+    .mn-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 9999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+    .mn-pill.on { background: #dcfce7; color: #166534; }
+    .mn-pill.off { background: #e5e7eb; color: #374151; }
+    .mn-pill.never { background: #fef3c7; color: #92400e; }
+    .mn-dot { width: 8px; height: 8px; border-radius: 9999px; background: currentColor; }
+    .mn-pill.on .mn-dot { animation: mnPulse 1.6s infinite; }
+    @keyframes mnPulse { 50% { opacity: .35; } }
+    .mn-in { height: 38px; border-radius: 10px; border: 1px solid #d2d2d7; padding: 0 12px; font-size: 13px; background: #fff; }
+</style>
+<div class="space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h2 class="text-xl font-bold">Monitoring User</h2>
+            <p class="text-sm" style="color:#6e6e73" id="mn-sub">Memuat…</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <input id="mn-cari" class="mn-in" placeholder="Cari nama / NIP…" oninput="mnRender()">
+            <select id="mn-filter" class="mn-in" onchange="mnRender()">
+                <option value="semua">Semua pegawai</option>
+                <option value="online">Sedang online</option>
+                <option value="24j">Aktif 24 jam terakhir</option>
+                <option value="belum">Belum pernah login</option>
+            </select>
+            <button onclick="mnMuat(true)" class="mn-in" style="cursor:pointer"><i class="fa-solid fa-rotate"></i> Segarkan</button>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="mn-kpi"><div class="mn-ico" style="background:#dcfce7;color:#166534"><i class="fa-solid fa-circle-check"></i></div><div><div class="mn-lbl">Online sekarang</div><div class="mn-val" id="mn-k-on">-</div></div></div>
+        <div class="mn-kpi"><div class="mn-ico" style="background:#dbeafe;color:#1e40af"><i class="fa-solid fa-clock"></i></div><div><div class="mn-lbl">Aktif 24 jam terakhir</div><div class="mn-val" id="mn-k-24">-</div></div></div>
+        <div class="mn-kpi"><div class="mn-ico" style="background:#fef3c7;color:#92400e"><i class="fa-solid fa-user-slash"></i></div><div><div class="mn-lbl">Belum pernah login</div><div class="mn-val" id="mn-k-belum">-</div></div></div>
+    </div>
+    <div class="mn-card">
+        <div style="overflow-x:auto">
+            <table class="mn-tbl">
+                <thead><tr><th>Pegawai</th><th>Status</th><th>Halaman</th><th>Login terakhir</th><th>Aktif terakhir</th><th>Perangkat</th></tr></thead>
+                <tbody id="mn-body"><tr><td colspan="6" class="text-center py-8" style="color:#6e6e73">Memuat…</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>

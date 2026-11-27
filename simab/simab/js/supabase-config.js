@@ -236,7 +236,7 @@ window.kgGenerateRandomId = kgGenerateRandomId;
 // =====================================================================
 (function () {
     const LOG_TABEL = 'log_aktivitas';
-    const SKIP_TABEL = new Set([LOG_TABEL, 'jarwo_log', 'notifikasi']);
+    const SKIP_TABEL = new Set([LOG_TABEL, 'jarwo_log', 'notifikasi', 'sesi_user']);
     const SENSITIF = /(rekening|password|passwd|token|secret|api_?key)/i;
 
     const NAMA_TABEL = {
