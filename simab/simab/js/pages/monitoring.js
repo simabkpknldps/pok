@@ -114,6 +114,8 @@ function initMonitoringPage() {
         if (app) app.innerHTML = '<div class="text-center mt-10" style="color:#b91c1c">Halaman ini hanya untuk admin kantor dan superadmin.</div>';
         return;
     }
+    const sel = document.getElementById('mn-filter');
+    if (sel) sel.value = 'online';     // tampilan awal: hanya yang sedang login
     if (mnTimer) clearInterval(mnTimer);
     mnMuat();
     mnTimer = setInterval(() => {
