@@ -114,7 +114,7 @@ function dashGsBuildPopupHtml() {
                                 <th class="p-2.5 text-right font-semibold">Jumlah</th>
                                 <th class="p-2.5 text-left font-semibold">User</th>
                                 <th class="p-2.5 text-center font-semibold">Status</th>
-                                <th class="p-2.5 text-center font-semibold sticky right-0 bg-slate-100">Aksi</th>
+                                <th class="p-2.5 text-center font-semibold">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="kg-dataTableBody"></tbody>

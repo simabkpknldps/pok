@@ -224,3 +224,10 @@ body { font-family: var(--sf); }
 
 .pok-akum{cursor:pointer;}
 .pok-akum:hover{text-decoration:underline;text-decoration-style:dotted;}
+
+/* Kolom Status & Aksi tabel kegiatan dibekukan di kanan saat digeser horizontal */
+#kg-mainDataTable .kg-frz { position: sticky; background: #fff; z-index: 2; }
+#kg-mainDataTable .kg-frz-ak { right: 0; }
+#kg-mainDataTable .kg-frz-st { white-space: nowrap; box-shadow: -8px 0 8px -8px rgba(0,0,0,.18); }
+#kg-mainDataTable .kg-frz-h { background: var(--sidebar-bg, #f1f5f9); z-index: 12; }
+#kg-mainDataTable tbody tr:hover .kg-frz { background: #f8fafc; }
