@@ -279,8 +279,8 @@ function kgRenderTable(rows) {
             <td class="p-2.5 align-top whitespace-nowrap">${formatDate(r.G)}</td>
             <td class="p-2.5 align-top text-right whitespace-nowrap"><button type="button" class="kg-jumlah-link underline decoration-dotted underline-offset-4" data-jumlah="${Math.round(Number(r.M || 0))}" title="Klik untuk salin angka tanpa titik">${jumlahFormatted}</button></td>
             <td class="p-2.5 align-top">${r.N ?? ''}</td>
-            <td class="p-2.5 align-top text-center">${r.P ? `<span class="kg-pil ${kgPilClass(r.P)}">${r.P}</span>` : ''}</td>
-            <td class="p-2 align-top sticky right-0 bg-white">
+            <td class="p-2.5 align-top text-center kg-frz kg-frz-st">${r.P ? `<span class="kg-pil ${kgPilClass(r.P)}">${r.P}</span>` : ''}</td>
+            <td class="p-2 align-top kg-frz kg-frz-ak">
                 <div class="kg-act">
                     <button class="kg-btn-copy" title="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
                     <button class="kg-btn-ubah" title="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -300,6 +300,26 @@ function kgRenderTable(rows) {
 
     tbody.innerHTML = '';
     tbody.appendChild(fragment);
+    kgPasangFreeze();
+}
+
+// Kolom Status dan Aksi tetap terlihat saat tabel digeser ke samping: Aksi menempel di kanan,
+// Status menempel tepat di kirinya (jarak = lebar kolom Aksi, diukur setelah tabel tergambar).
+function kgPasangFreeze() {
+    const tbl = document.getElementById('kg-mainDataTable');
+    if (!tbl) return;
+    const ths = tbl.querySelectorAll('thead th');
+    if (ths.length < 2) return;
+    const thAk = ths[ths.length - 1], thSt = ths[ths.length - 2];
+    thAk.classList.add('kg-frz', 'kg-frz-ak', 'kg-frz-h');
+    thSt.classList.add('kg-frz', 'kg-frz-st', 'kg-frz-h');
+    const atur = () => {
+        const w = Math.ceil(thAk.getBoundingClientRect().width);
+        tbl.querySelectorAll('.kg-frz-st').forEach(el => { el.style.right = w + 'px'; });
+    };
+    atur();
+    requestAnimationFrame(atur);
+    if (!window._kgFrzResize) { window._kgFrzResize = true; window.addEventListener('resize', () => { const t = document.getElementById('kg-mainDataTable'); if (t) kgPasangFreeze(); }); }
 }
 
 
