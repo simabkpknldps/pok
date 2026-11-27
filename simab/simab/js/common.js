@@ -915,20 +915,33 @@ async function refreshNotifikasi() {
         if (error) { console.error('Gagal memuat notifikasi', error); return; }
 
         const rows = data || [];
+        // Update fitur baru (js/fitur-baru.js): tampil di atas, hilang setelah diklik
+        const fitur = (typeof window.fiturBaruBelumDibaca === 'function') ? window.fiturBaruBelumDibaca() : [];
+        const total = rows.length + fitur.length;
 
-        if (rows.length > 0) {
-            badge.textContent = rows.length > 99 ? '99+' : String(rows.length);
+        if (total > 0) {
+            badge.textContent = total > 99 ? '99+' : String(total);
             badge.classList.remove('hidden');
         } else {
             badge.classList.add('hidden');
         }
 
-        if (rows.length === 0) {
+        if (total === 0) {
             listEl.innerHTML = `<div class="p-4 text-center text-slate-400 text-sm">Tidak ada notifikasi</div>`;
             return;
         }
 
-        listEl.innerHTML = rows.map(n => `
+        const htmlFitur = fitur.map(u => `
+            <div class="p-3 flex items-start gap-2 hover:bg-slate-50 cursor-pointer" onclick="notifDropdownOpen=false;document.getElementById('notif-dropdown').classList.add('hidden');bukaFiturUpdate('${u.id}')">
+                <div class="shrink-0" style="width:30px;height:30px;border-radius:9px;background:#e8f1fd;color:#0071e3;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-700">Fitur baru: ${u.judul}</p>
+                    <p class="text-xs text-slate-500">${u.isi}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">${u.tanggal}</p>
+                </div>
+            </div>`).join('');
+
+        listEl.innerHTML = htmlFitur + rows.map(n => `
             <div class="p-3 flex items-start gap-2 hover:bg-slate-50">
                 <div class="flex-1 min-w-0 cursor-pointer notif-item" data-nip="${n.id}" title="Lihat detail rekening">
                     <p class="text-sm font-medium text-slate-700 truncate">${n.nama}</p>
