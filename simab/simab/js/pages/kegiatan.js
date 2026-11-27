@@ -118,6 +118,8 @@ function bindKegiatanEvents() {
     document.getElementById('kg-dataTableBody').addEventListener('click', function (e) {
         const btn = e.target.closest('button');
         if (!btn) return;
+        if (btn.classList.contains('kg-btn-menu')) { kgToggleMenu(btn); return; }
+        if (btn.closest('.kg-menu')) kgTutupMenu(); // pilih item -> menu menutup, aksinya tetap diproses di bawah
         const tr = btn.closest('tr');
         // Privileged = admin ATAU superadmin -> bebas semua aksi, kapan saja.
         // Selain itu (user biasa/aksesMenu) -> begitu status BUKAN "Rekam
@@ -159,6 +161,35 @@ function bindKegiatanEvents() {
             if (isPrivileged) kgShowSP2DPopup(tr); else alert('Anda tidak memiliki kewenangan!');
         }
     });
+}
+
+// Menu titik tiga (Aksi): memakai posisi fixed agar tidak terpotong gulir tabel.
+function kgTutupMenu() {
+    document.querySelectorAll('.kg-menu.kg-menu-buka').forEach(m => {
+        m.classList.remove('kg-menu-buka'); m.style.visibility = '';
+        const td = m.closest('td'); if (td) td.style.zIndex = '';
+    });
+}
+function kgToggleMenu(btn) {
+    const td = btn.closest('td'); const menu = td && td.querySelector('.kg-menu');
+    if (!menu) return;
+    const tadinyaBuka = menu.classList.contains('kg-menu-buka');
+    kgTutupMenu();
+    if (tadinyaBuka) return;
+    menu.style.visibility = 'hidden';
+    menu.classList.add('kg-menu-buka'); td.style.zIndex = '60';
+    const r = btn.getBoundingClientRect(), mh = menu.offsetHeight, mw = menu.offsetWidth;
+    let top = r.bottom + 4;
+    if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+    const left = Math.min(Math.max(8, r.right - mw), window.innerWidth - mw - 8);
+    menu.style.top = top + 'px'; menu.style.left = left + 'px'; menu.style.visibility = 'visible';
+}
+if (!window._kgMenuListener) {
+    window._kgMenuListener = true;
+    document.addEventListener('click', (e) => { if (!e.target.closest('.kg-menu') && !e.target.closest('.kg-btn-menu')) kgTutupMenu(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') kgTutupMenu(); });
+    window.addEventListener('resize', kgTutupMenu);
+    document.addEventListener('scroll', (e) => { if (!(e.target && e.target.closest && e.target.closest('.kg-menu'))) kgTutupMenu(); }, true);
 }
 
 function kgSetTotalJumlahLabel(total) {
@@ -280,18 +311,20 @@ function kgRenderTable(rows) {
             <td class="p-2.5 align-top text-right whitespace-nowrap"><button type="button" class="kg-jumlah-link underline decoration-dotted underline-offset-4" data-jumlah="${Math.round(Number(r.M || 0))}" title="Klik untuk salin angka tanpa titik">${jumlahFormatted}</button></td>
             <td class="p-2.5 align-top">${r.N ?? ''}</td>
             <td class="p-2.5 align-top text-center kg-frz kg-frz-st">${r.P ? `<span class="kg-pil ${kgPilClass(r.P)}">${r.P}</span>` : ''}</td>
-            <td class="p-2 align-top kg-frz kg-frz-ak">
-                <div class="kg-act">
-                    <button class="kg-btn-copy" title="Salin Uraian"><i class="fa-solid fa-clipboard"></i></button>
-                    <button class="kg-btn-ubah" title="Ubah"><i class="fa-solid fa-pen-to-square"></i></button>
-                    ${(!r.P || r.P === 'Rekam Data') ? `<button class="kg-btn-pelaksana" title="Pelaksana"><i class="fa-solid fa-user-check"></i></button>` : ''}
-                    ${kgButuhLPT(r.B) ? `<button class="kg-btn-lpt" title="LPT"><i class="fa-solid fa-file-lines"></i></button>` : ''}
-                    ${(window.lptIsPerjadin && window.lptIsPerjadin(r.B)) ? `<button class="kg-btn-konsep text-emerald-600" title="Generate konsep LPT (Word)"><i class="fa-solid fa-file-pen"></i></button>` : ''}
-                    <button class="kg-btn-bayar" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i></button>
-                    <button class="kg-btn-sp2d" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i></button>
-                    <button class="kg-btn-detil text-sky-600" title="Detil"><i class="fa-solid fa-circle-info"></i></button>
-                    <button class="kg-btn-dokumen ${kgDokBtnStyle(r).cls}" title="${kgDokBtnStyle(r).title}"><i class="fa-solid fa-file-pdf"></i></button>
-                    <span class="kg-act-sep"></span><button class="kg-btn-hapus text-red-500" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            <td class="p-2 align-top text-center kg-frz kg-frz-ak">
+                <button type="button" class="kg-btn-menu" title="Aksi"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                <div class="kg-menu">
+                    <button class="kg-mi kg-btn-copy" title="Salin Uraian"><i class="fa-solid fa-clipboard"></i><span>Salin uraian</span></button>
+                    <button class="kg-mi kg-btn-ubah" title="Ubah"><i class="fa-solid fa-pen-to-square"></i><span>Ubah</span></button>
+                    ${(!r.P || r.P === 'Rekam Data') ? `<button class="kg-mi kg-btn-pelaksana" title="Pelaksana"><i class="fa-solid fa-user-check"></i><span>Pelaksana</span></button>` : ''}
+                    ${kgButuhLPT(r.B) ? `<button class="kg-mi kg-btn-lpt" title="LPT"><i class="fa-solid fa-file-lines"></i><span>LPT</span></button>` : ''}
+                    ${(window.lptIsPerjadin && window.lptIsPerjadin(r.B)) ? `<button class="kg-mi kg-btn-konsep text-emerald-600" title="Generate konsep LPT"><i class="fa-solid fa-file-pen"></i><span>Generate konsep LPT</span></button>` : ''}
+                    <button class="kg-mi kg-btn-bayar" title="Bayar"><i class="fa-solid fa-hand-holding-dollar"></i><span>Bayar</span></button>
+                    <button class="kg-mi kg-btn-sp2d" title="SP2D"><i class="fa-solid fa-money-bill-transfer"></i><span>SP2D</span></button>
+                    <button class="kg-mi kg-btn-detil text-sky-600" title="Detil"><i class="fa-solid fa-circle-info"></i><span>Detil</span></button>
+                    <button class="kg-mi kg-btn-dokumen ${kgDokBtnStyle(r).cls}" title="${kgDokBtnStyle(r).title}"><i class="fa-solid fa-file-pdf"></i><span>Dokumen PDF</span></button>
+                    <div class="kg-mi-sep"></div>
+                    <button class="kg-mi kg-btn-hapus text-red-500" title="Hapus"><i class="fa-solid fa-trash"></i><span>Hapus</span></button>
                 </div>
             </td>
         `;

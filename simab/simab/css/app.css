@@ -231,3 +231,14 @@ body { font-family: var(--sf); }
 #kg-mainDataTable .kg-frz-st { white-space: nowrap; box-shadow: -8px 0 8px -8px rgba(0,0,0,.18); }
 #kg-mainDataTable .kg-frz-h { background: var(--sidebar-bg, #f1f5f9); z-index: 12; }
 #kg-mainDataTable tbody tr:hover .kg-frz { background: #f8fafc; }
+
+/* Menu Aksi (titik tiga) tabel kegiatan */
+.kg-btn-menu { width: 34px; height: 34px; border-radius: 10px; background: #F2F2F5; font-size: 15px; transition: background-color .12s; }
+.kg-btn-menu:hover { background: #E3E3E8; }
+.kg-menu { display: none; position: fixed; z-index: 70; min-width: 210px; padding: 6px; background: #fff; border: 1px solid var(--divider, #e2e8f0); border-radius: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.18); text-align: left; }
+.kg-menu.kg-menu-buka { display: block; }
+.kg-menu .kg-mi { display: flex; align-items: center; gap: 10px; width: 100%; height: auto; padding: 8px 10px; border-radius: 8px; background: transparent; font-size: 13px; text-align: left; white-space: nowrap; }
+.kg-menu .kg-mi:hover { background: #F2F2F5; }
+.kg-menu .kg-mi i { width: 18px; text-align: center; flex: none; }
+.kg-menu .kg-mi span { color: var(--label, #1c1c1e); }
+.kg-menu .kg-mi-sep { height: 1px; background: var(--divider, #e2e8f0); margin: 4px 2px; }
